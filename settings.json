@@ -1,0 +1,26 @@
+{
+    // format on save for everything
+    "editor.formatOnSave": true,
+
+    // JS / TS / JSX / TSX => Prettier
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascriptreact]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+
+    // PHP / Blade => Laravel Pint
+    "[php]": {
+        "editor.defaultFormatter": "amiralizadeh9480.laravel-pint"
+    },
+    "[blade]": {
+        "editor.defaultFormatter": "amiralizadeh9480.laravel-pint"
+    }
+}
