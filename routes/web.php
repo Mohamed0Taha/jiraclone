@@ -25,6 +25,24 @@ Route::get('/', fn () => Inertia::render('Landing'))->name('landing');
 
 /*
 |--------------------------------------------------------------------------
+| Lightweight Health Check (no middleware, no session)
+|--------------------------------------------------------------------------
+| Returns simple JSON so we can see if the framework boots in production
+| without invoking auth, sessions, DB (unless clock/timezone). If this 200s
+| while other pages 500, the issue is likely in auth/session/database code.
+*/
+Route::get('/health', function () {
+    return response()->json([
+        'ok' => true,
+        'time' => now()->toIso8601String(),
+        'env' => app()->environment(),
+        'debug' => config('app.debug'),
+        'laravel' => app()->version(),
+    ]);
+});
+
+/*
+|--------------------------------------------------------------------------
 | Google OAuth
 |--------------------------------------------------------------------------
 */

@@ -1,23 +1,24 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+    {{-- Ziggy (optional if you use route() in JS) --}}
+    @routes
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    {{-- Vite / React entrypoints --}}
+    @viteReactRefresh
+    @vite(['resources/js/app.jsx'])
 
-        <!-- Scripts -->
-        @routes
-        @viteReactRefresh
-        @vite(['resources/js/app.jsx', "resources/js/Pages/{$page['component']}.jsx"])
-        @inertiaHead
-    </head>
-    <body class="font-sans antialiased">
-        @inertia
-    </body>
+    {{-- Inertia head (title, meta, etc.) --}}
+    @inertiaHead
+  </head>
+  <body class="antialiased">
+    {{-- Inertia mount point --}}
+    @inertia
+  </body>
 </html>

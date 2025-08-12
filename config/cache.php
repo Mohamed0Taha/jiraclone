@@ -9,28 +9,18 @@ return [
     | Default Cache Store
     |--------------------------------------------------------------------------
     |
-    | This option controls the default cache store that will be used by the
-    | framework. This connection is utilized if another isn't explicitly
-    | specified when running a cache operation inside the application.
+    | Prefer Laravel 12's CACHE_STORE, but gracefully fall back to the older
+    | CACHE_DRIVER (used by many hosts/docs). Default to "file" so we don't
+    | require a database table in production (e.g. Heroku/ClearDB).
     |
     */
-
-    'default' => env('CACHE_STORE', 'database'),
+    'default' => env('CACHE_STORE', env('CACHE_DRIVER', 'file')),
 
     /*
     |--------------------------------------------------------------------------
     | Cache Stores
     |--------------------------------------------------------------------------
-    |
-    | Here you may define all of the cache "stores" for your application as
-    | well as their drivers. You may even define multiple stores for the
-    | same cache driver to group types of items stored in your caches.
-    |
-    | Supported drivers: "array", "database", "file", "memcached",
-    |                    "redis", "dynamodb", "octane", "null"
-    |
     */
-
     'stores' => [
 
         'array' => [
@@ -89,7 +79,6 @@ return [
         'octane' => [
             'driver' => 'octane',
         ],
-
     ],
 
     /*
@@ -97,12 +86,12 @@ return [
     | Cache Key Prefix
     |--------------------------------------------------------------------------
     |
-    | When utilizing the APC, database, memcached, Redis, and DynamoDB cache
-    | stores, there might be other applications using the same cache. For
-    | that reason, you may prefix every cache key to avoid collisions.
+    | Include APP_ENV so keys from different environments (local, staging,
+    | production) never collide if they share a backend.
     |
     */
-
-    'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
+    'prefix' => env('CACHE_PREFIX',
+        Str::slug((string) env('APP_NAME', 'laravel')) . '-' . env('APP_ENV', 'production') . '-cache-'
+    ),
 
 ];
