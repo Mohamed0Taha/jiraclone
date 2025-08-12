@@ -9,31 +9,27 @@ return [
     | Default Database Connection Name
     |--------------------------------------------------------------------------
     |
-    | Here you may specify which of the database connections below you wish
-    | to use as your default connection for database operations. This is
-    | the connection which will be utilized unless another connection
-    | is explicitly specified when you execute a query / statement.
+    | Local development should use MySQL by default; in production (Heroku),
+    | we'll parse CLEARDB_DATABASE_URL / DATABASE_URL automatically.
     |
     */
-
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => env('DB_CONNECTION', 'mysql'),
 
     /*
     |--------------------------------------------------------------------------
     | Database Connections
     |--------------------------------------------------------------------------
     |
-    | Below are all of the database connections defined for your application.
-    | An example configuration is provided for each database system which
-    | is supported by Laravel. You're free to add / remove connections.
+    | MySQL:
+    | - In Heroku/ClearDB, we rely on the URL in CLEARDB_DATABASE_URL (or JAWSDB* or DATABASE_URL).
+    | - Locally, leave the URL empty and use the discrete DB_* vars in your .env.
     |
     */
-
     'connections' => [
 
         'sqlite' => [
             'driver' => 'sqlite',
-            'url' => env('DB_URL'),
+            'url' => env('DATABASE_URL'),
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
@@ -44,7 +40,8 @@ return [
 
         'mysql' => [
             'driver' => 'mysql',
-            'url' => env('DB_URL'),
+            // Prefer ClearDB/JawsDB URL in hosted envs; fall back to generic DATABASE_URL; otherwise use the discrete vars.
+            'url' => env('CLEARDB_DATABASE_URL', env('JAWSDB_MARIA_URL', env('JAWSDB_URL', env('DATABASE_URL')))),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '3306'),
             'database' => env('DB_DATABASE', 'laravel'),
@@ -59,12 +56,14 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                // If your provider requires SSL but no CA is provided, you can leave this as-is.
+                // To *force* SSL without CA, you could add PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false (not recommended).
             ]) : [],
         ],
 
         'mariadb' => [
             'driver' => 'mariadb',
-            'url' => env('DB_URL'),
+            'url' => env('DATABASE_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '3306'),
             'database' => env('DB_DATABASE', 'laravel'),
@@ -84,7 +83,7 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            'url' => env('DB_URL'),
+            'url' => env('DATABASE_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
             'database' => env('DB_DATABASE', 'laravel'),
@@ -99,7 +98,7 @@ return [
 
         'sqlsrv' => [
             'driver' => 'sqlsrv',
-            'url' => env('DB_URL'),
+            'url' => env('DATABASE_URL'),
             'host' => env('DB_HOST', 'localhost'),
             'port' => env('DB_PORT', '1433'),
             'database' => env('DB_DATABASE', 'laravel'),
@@ -118,13 +117,7 @@ return [
     |--------------------------------------------------------------------------
     | Migration Repository Table
     |--------------------------------------------------------------------------
-    |
-    | This table keeps track of all the migrations that have already run for
-    | your application. Using this information, we can determine which of
-    | the migrations on disk haven't actually been run on the database.
-    |
     */
-
     'migrations' => [
         'table' => 'migrations',
         'update_date_on_publish' => true,
@@ -134,13 +127,7 @@ return [
     |--------------------------------------------------------------------------
     | Redis Databases
     |--------------------------------------------------------------------------
-    |
-    | Redis is an open source, fast, and advanced key-value store that also
-    | provides a richer body of commands than a typical key-value system
-    | such as Memcached. You may define your connection settings here.
-    |
     */
-
     'redis' => [
 
         'client' => env('REDIS_CLIENT', 'phpredis'),
