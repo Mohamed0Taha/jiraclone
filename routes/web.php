@@ -180,13 +180,7 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------
 | Breeze / Auth scaffolding
 |--------------------------------------------------------------------------
-*/
+*/Route::get('/blade-test', fn () => view('app'));
+
 require __DIR__ . '/auth.php';
 
-/* Temp test route */
-Route::get('/test-dashboard', function() {
-    return Inertia::render('Dashboard', [
-        'projects' => [],
-        'test' => 'Dashboard route working!'
-    ]);
-})->middleware('auth')->name('test.dashboard');
