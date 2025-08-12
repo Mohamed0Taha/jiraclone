@@ -1,4 +1,5 @@
 <?php
+
 return [
     'ssr' => false,
     'root_view' => 'app',
