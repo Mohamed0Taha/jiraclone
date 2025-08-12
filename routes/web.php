@@ -1,7 +1,5 @@
 <?php
-// routes/web.php
 
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,16 +25,13 @@ Route::get('/', fn () => Inertia::render('Landing'))->name('landing');
 |--------------------------------------------------------------------------
 | Lightweight Health Check (no middleware, no session)
 |--------------------------------------------------------------------------
-| Returns simple JSON so we can see if the framework boots in production
-| without invoking auth, sessions, DB (unless clock/timezone). If this 200s
-| while other pages 500, the issue is likely in auth/session/database code.
 */
 Route::get('/health', function () {
     return response()->json([
-        'ok' => true,
-        'time' => now()->toIso8601String(),
-        'env' => app()->environment(),
-        'debug' => config('app.debug'),
+        'ok'      => true,
+        'time'    => now()->toIso8601String(),
+        'env'     => app()->environment(),
+        'debug'   => (bool) config('app.debug'),
         'laravel' => app()->version(),
     ]);
 });
@@ -152,27 +147,26 @@ Route::middleware('auth')->group(function () {
         Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
         /* COMMENTS */
-        Route::post('/tasks/{task}/comments',     [CommentController::class, 'store'])->name('comments.store');
-        Route::patch('/tasks/{task}/comments/{comment}',       [CommentController::class, 'update'])->name('comments.update');
-        Route::delete('/tasks/{task}/comments/{comment}',      [CommentController::class, 'destroy'])->name('comments.destroy');
+        Route::post('/tasks/{task}/comments',                [CommentController::class, 'store'])->name('comments.store');
+        Route::patch('/tasks/{task}/comments/{comment}',     [CommentController::class, 'update'])->name('comments.update');
+        Route::delete('/tasks/{task}/comments/{comment}',    [CommentController::class, 'destroy'])->name('comments.destroy');
 
-        /* ✅ TIMELINE - uses TaskController@timeline and matches file at Pages/Timeline/Timeline.jsx */
+        /* ✅ TIMELINE */
         Route::get('/timeline', [TaskController::class, 'timeline'])->name('tasks.timeline');
 
-        /* ✅ AUTOMATIONS - Sophisticated workflow automation system */
-        Route::get('/automations', [AutomationController::class, 'index'])->name('automations.index');
-        Route::post('/automations', [AutomationController::class, 'store'])->name('automations.store');
-        Route::patch('/automations/{automation}', [AutomationController::class, 'update'])->name('automations.update');
-        Route::delete('/automations/{automation}', [AutomationController::class, 'destroy'])->name('automations.destroy');
+        /* ✅ AUTOMATIONS */
+        Route::get('/automations',                    [AutomationController::class, 'index'])->name('automations.index');
+        Route::post('/automations',                   [AutomationController::class, 'store'])->name('automations.store');
+        Route::patch('/automations/{automation}',     [AutomationController::class, 'update'])->name('automations.update');
+        Route::delete('/automations/{automation}',    [AutomationController::class, 'destroy'])->name('automations.destroy');
         Route::patch('/automations/{automation}/toggle', [AutomationController::class, 'toggle'])->name('automations.toggle');
-        Route::post('/automations/{automation}/test', [AutomationController::class, 'test'])->name('automations.test');
+        Route::post('/automations/{automation}/test',    [AutomationController::class, 'test'])->name('automations.test');
         Route::post('/automations/{automation}/execute', [AutomationController::class, 'execute'])->name('automations.execute');
-        Route::post('/automations/process', [AutomationController::class, 'processProject'])->name('automations.process');
-        Route::get('/automations/templates', [AutomationController::class, 'templates'])->name('automations.templates');
+        Route::post('/automations/process',              [AutomationController::class, 'processProject'])->name('automations.process');
 
-        /* PROJECT ASSISTANT - AI Chat API endpoints only (UI is embedded in board) */
-        Route::post('/assistant/chat', [ProjectAssistantController::class, 'chat'])->name('projects.assistant.chat');
-        Route::get('/assistant/suggestions', [ProjectAssistantController::class, 'suggestions'])->name('projects.assistant.suggestions');
+        /* PROJECT ASSISTANT */
+        Route::post('/assistant/chat',        [ProjectAssistantController::class, 'chat'])->name('projects.assistant.chat');
+        Route::get('/assistant/suggestions',  [ProjectAssistantController::class, 'suggestions'])->name('projects.assistant.suggestions');
     });
 });
 
@@ -180,7 +174,5 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------
 | Breeze / Auth scaffolding
 |--------------------------------------------------------------------------
-*/Route::get('/blade-test', fn () => view('app'));
-
+*/
 require __DIR__ . '/auth.php';
-
