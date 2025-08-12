@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
+    {{-- Guard: if this view is rendered outside Inertia, avoid fatal --}}
+    @php
+        $page ??= [
+            'component' => 'Landing',
+            'props'     => [],
+            'url'       => request()->getRequestUri(),
+            'version'   => null,
+        ];
+    @endphp
+
     @routes
     @viteReactRefresh
     @vite(['resources/js/app.jsx'])

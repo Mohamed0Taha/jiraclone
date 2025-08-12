@@ -8,54 +8,40 @@ use App\Listeners\TriggerAutomations;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\URL;   // ⬅️ add this
+use Inertia\Inertia;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-   public function register(): void
-{
-    // Inertia (safe-guard)
-    if (class_exists(\Inertia\ServiceProvider::class)) {
-        $this->app->register(\Inertia\ServiceProvider::class);
+    public function register(): void
+    {
+        if (class_exists(\Inertia\ServiceProvider::class)) {
+            $this->app->register(\Inertia\ServiceProvider::class);
+        }
+        if (class_exists(\Tighten\Ziggy\ZiggyServiceProvider::class)) {
+            $this->app->register(\Tighten\Ziggy\ZiggyServiceProvider::class);
+        }
     }
 
-    // Ziggy service provider
-    if (class_exists(\Tighten\Ziggy\ZiggyServiceProvider::class)) {
-        $this->app->register(\Tighten\Ziggy\ZiggyServiceProvider::class);
-    }
-}
-
-
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        // Keep your Vite prefetch
+        // Force all generated URLs (routes/assets/prefetch) to https in production
+        if (app()->environment('production')) {
+            URL::forceScheme('https');
+        }
+
+        // Your prefetch + events + shared props
         Vite::prefetch(concurrency: 3);
 
-        // Register automation event listeners
         Event::listen(TaskCreated::class, TriggerAutomations::class);
         Event::listen(TaskUpdated::class, TriggerAutomations::class);
 
-        // Share "isPro" with ALL Inertia pages.
         Inertia::share('isPro', function () {
-            /** @var \App\Models\User|null $user */
             $user = Auth::user();
-
-            if (! $user) {
+            if (! $user || ! method_exists($user, 'subscribed')) {
                 return false;
             }
-
-            // Use Cashier's Billable::subscribed()
-            if (! method_exists($user, 'subscribed')) {
-                return false;
-            }
-
             return (bool) $user->subscribed('default');
         });
     }
