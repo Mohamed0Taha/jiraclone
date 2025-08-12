@@ -16,12 +16,19 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Register any application services.
      */
-    public function register(): void
-    {
-        // Ensure Blade directives are available even if discovery is flaky
+   public function register(): void
+{
+    // Inertia (safe-guard)
+    if (class_exists(\Inertia\ServiceProvider::class)) {
         $this->app->register(\Inertia\ServiceProvider::class);
-        $this->app->register(\Tightenco\Ziggy\ZiggyServiceProvider::class);
     }
+
+    // Ziggy service provider
+    if (class_exists(\Tighten\Ziggy\ZiggyServiceProvider::class)) {
+        $this->app->register(\Tighten\Ziggy\ZiggyServiceProvider::class);
+    }
+}
+
 
     /**
      * Bootstrap any application services.
