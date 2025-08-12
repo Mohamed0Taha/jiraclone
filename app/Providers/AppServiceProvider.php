@@ -18,7 +18,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Ensure Blade directives are available even if discovery is flaky
+        $this->app->register(\Inertia\ServiceProvider::class);
+        $this->app->register(\Tightenco\Ziggy\ZiggyServiceProvider::class);
     }
 
     /**
@@ -38,13 +40,12 @@ class AppServiceProvider extends ServiceProvider
             /** @var \App\Models\User|null $user */
             $user = Auth::user();
 
-            if (!$user) {
+            if (! $user) {
                 return false;
             }
 
-            // Avoid IDE warnings by not calling a custom helper here.
-            // Use Cashier's Billable::subscribed() which your User has via the Billable trait.
-            if (!method_exists($user, 'subscribed')) {
+            // Use Cashier's Billable::subscribed()
+            if (! method_exists($user, 'subscribed')) {
                 return false;
             }
 
