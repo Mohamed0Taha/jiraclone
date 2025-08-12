@@ -1,17 +1,14 @@
 <?php
 
 return [
+    'ssr' => false,
 
-    'ssr' => [
-        'enabled' => env('INERTIA_SSR', false),
-        'url' => env('INERTIA_SSR_URL'),
-        'bundle' => base_path('bootstrap/ssr/ssr.mjs'),
-    ],
+    // IMPORTANT: tell Inertia which Blade view to render
+    'root_view' => 'app',
 
-    'testing' => [
-        'assert_with_exact' => false,
-    ],
-
-    // Use the Blade layout we just created
-    'view' => 'app',
+    // cache-busting; ok if manifest not present locally
+    'version' => function () {
+        $manifest = public_path('build/manifest.json');
+        return file_exists($manifest) ? md5_file($manifest) : null;
+    },
 ];
