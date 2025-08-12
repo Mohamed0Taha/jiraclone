@@ -1,142 +1,478 @@
+// resources/js/Pages/ProjectAccordion.jsx
 import React, { useMemo } from "react";
 import { router } from "@inertiajs/react";
 import {
-    Accordion,
-    AccordionDetails,
-    AccordionSummary,
-    Box,
-    Button,
-    Chip,
-    IconButton,
-    Stack,
-    Typography,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Box,
+  Button,
+  Chip,
+  IconButton,
+  Stack,
+  Typography,
+  Tooltip,
+  alpha,
+  LinearProgress,
+  useTheme,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import DeleteIcon from "@mui/icons-material/Delete";
+import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
+import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
+
+/* Match the Board.jsx STATUS_META (keep in sync!) */
+import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
+import RocketLaunchRoundedIcon from "@mui/icons-material/RocketLaunchRounded";
+import RateReviewRoundedIcon from "@mui/icons-material/RateReviewRounded";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 
 /**
- * ProjectAccordion
- *
- * Props
- *  ├ project – {
- *  │     id, name, description,
- *  │     tasks: { todo:[], inprogress:[], done:[] }  // OR flat array
- *  │   }
- *  ├ rowSx   – background / hover styles
- *  └ onDelete(event, project)
+ * Consider extracting STATUS_META + ORDER to a shared file
+ * (e.g. resources/js/config/statuses.js) to avoid duplication.
  */
-export default function ProjectAccordion({ project, rowSx, onDelete }) {
-    /* ---------- normalise to grouped arrays ---------- */
-    const grouped = useMemo(() => {
-        const empty = { todo: [], inprogress: [], done: [] };
+const STATUS_META = {
+  todo: {
+    title: "To Do",
+    accent: "#FFA432",
+    gradient: "linear-gradient(135deg,#FFF8EC 0%,#FFE2BC 100%)",
+    iconBg: "linear-gradient(145deg,#FFD088,#FFAE45)",
+    icon: <LightbulbOutlinedIcon sx={{ fontSize: 15 }} />,
+  },
+  inprogress: {
+    title: "In Progress",
+    accent: "#2C8DFF",
+    gradient: "linear-gradient(135deg,#F1F8FF 0%,#CFE5FF 100%)",
+    iconBg: "linear-gradient(145deg,#77B6FF,#3B8DFF)",
+    icon: <RocketLaunchRoundedIcon sx={{ fontSize: 15 }} />,
+  },
+  review: {
+    title: "Review",
+    accent: "#9C4DFF",
+    gradient: "linear-gradient(135deg,#F9F3FF 0%,#E3D2FF 100%)",
+    iconBg: "linear-gradient(145deg,#C39BFF,#9C4DFF)",
+    icon: <RateReviewRoundedIcon sx={{ fontSize: 15 }} />,
+  },
+  done: {
+    title: "Done",
+    accent: "#22B36B",
+    gradient: "linear-gradient(135deg,#F2FFF5 0%,#CDEFD8 100%)",
+    iconBg: "linear-gradient(145deg,#5FD598,#22B36B)",
+    icon: <CheckCircleRoundedIcon sx={{ fontSize: 15 }} />,
+  },
+};
 
-        /* Case 1: already grouped */
-        if (
-            project.tasks &&
-            Array.isArray(project.tasks.todo) &&
-            Array.isArray(project.tasks.inprogress) &&
-            Array.isArray(project.tasks.done)
-        ) {
-            return project.tasks;
-        }
+const ORDER = ["todo", "inprogress", "review", "done"];
 
-        /* Case 2: flat array with status */
-        if (Array.isArray(project.tasks)) {
-            return project.tasks.reduce(
-                (acc, t) => {
-                    acc[t.status]?.push(t);
-                    return acc;
-                },
-                { ...empty }
-            );
-        }
+export default function ProjectAccordion({
+  project,
+  rowSx = {},
+  onDelete,
+  endActions,
+}) {
+  const theme = useTheme();
 
-        return empty;
-    }, [project.tasks]);
+  /* Normalize tasks */
+  const grouped = useMemo(() => {
+    const empty = ORDER.reduce((a, s) => ({ ...a, [s]: [] }), {});
+    if (project?.tasks && typeof project.tasks === "object" && !Array.isArray(project.tasks)) {
+      const out = { ...empty };
+      ORDER.forEach((s) => {
+        const arr = project.tasks[s];
+        out[s] = Array.isArray(arr) ? arr : [];
+      });
+      return out;
+    }
+    if (Array.isArray(project?.tasks)) {
+      return project.tasks.reduce((acc, t) => {
+        if (t && t.status && acc[t.status]) acc[t.status].push(t);
+        return acc;
+      }, empty);
+    }
+    return empty;
+  }, [project]);
 
-    /* counts for each status */
-    const counts = {
-        todo: grouped.todo.length,
-        inprogress: grouped.inprogress.length,
-        done: grouped.done.length,
-    };
+  const counts = ORDER.reduce((acc, s) => {
+    acc[s] = grouped[s].length;
+    return acc;
+  }, {});
+  const total = ORDER.reduce((sum, s) => sum + counts[s], 0);
+  const done = counts.done;
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
 
-    /* palette for chips */
-    const chipColor = { todo: "warning", inprogress: "info", done: "success" };
+  const gotoBoard = (e) => {
+    e.stopPropagation();
+    router.visit(`/projects/${project.id}/tasks`);
+  };
 
-    const StatusChip = ({ status, label }) => (
-        <Chip
-            label={`${label} (${counts[status]})`}
-            size="small"
-            color={chipColor[status]}
-            sx={{ fontWeight: 500 }}
-        />
-    );
+  const gotoEdit = (e) => {
+    e.stopPropagation();
+    router.visit(`/projects/${project.id}/edit`);
+  };
 
-    const renderTaskChips = (arr, status) =>
-        arr.map((t) => (
-            <Chip
-                key={t.id}
-                label={t.title}
-                color={chipColor[status]}
-                size="small"
-                sx={{ mr: 0.5, mb: 0.5 }}
-            />
-        ));
-
-    /* navigate only when clicking the name */
-    const gotoBoard = (e) => {
-        e.stopPropagation();
-        router.visit(`/projects/${project.id}/tasks`);
-    };
-
+  const StatusPill = ({ status }) => {
+    const meta = STATUS_META[status];
+    const count = counts[status];
     return (
-        <Accordion disableGutters square sx={{ mb: 1, ...rowSx }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 2 }}>
-                <Box display="flex" alignItems="center" width="100%">
-                    <Button
-                        variant="text"
-                        sx={{ px: 0, minWidth: 0, mr: 1, textTransform: "none" }}
-                        onClick={gotoBoard}
-                    >
-                        <Typography fontWeight={600}>{project.name}</Typography>
-                    </Button>
-
-                    <Stack direction="row" spacing={1} sx={{ ml: "auto", mr: 1.5 }}>
-                        <StatusChip status="todo"       label="To Do" />
-                        <StatusChip status="inprogress" label="In Progress" />
-                        <StatusChip status="done"       label="Done" />
-                    </Stack>
-
-                    <IconButton
-                        size="small"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(e, project);
-                        }}
-                    >
-                        <DeleteIcon fontSize="small" />
-                    </IconButton>
-                </Box>
-            </AccordionSummary>
-
-            <AccordionDetails sx={{ bgcolor: "background.paper", px: 2, py: 1 }}>
-                {project.description && (
-                    <Typography variant="body2" color="text.secondary" mb={1}>
-                        {project.description}
-                    </Typography>
-                )}
-
-                <Typography variant="caption" fontWeight={500}>
-                    Tasks:
-                </Typography>
-
-                <Box sx={{ mt: 0.5 }}>
-                    {renderTaskChips(grouped.todo, "todo")}
-                    {renderTaskChips(grouped.inprogress, "inprogress")}
-                    {renderTaskChips(grouped.done, "done")}
-                </Box>
-            </AccordionDetails>
-        </Accordion>
+      <Box
+        key={status}
+        sx={{
+          position: "relative",
+          px: 1.2,
+          py: 0.4,
+          borderRadius: 2,
+          display: "flex",
+          alignItems: "center",
+          gap: 0.65,
+          lineHeight: 1,
+          background: alpha(meta.accent, 0.12),
+          border: `1px solid ${alpha(meta.accent, 0.4)}`,
+          boxShadow: `0 1px 2px ${alpha(meta.accent, 0.25)} inset`,
+        }}
+      >
+        <Box
+          sx={{
+            width: 22,
+            height: 22,
+            borderRadius: "50%",
+            display: "grid",
+            placeItems: "center",
+            background: meta.iconBg,
+            color: "#fff",
+            boxShadow: `0 2px 4px -2px ${alpha(meta.accent, 0.5)}`,
+            fontSize: 12,
+          }}
+        >
+          {meta.icon}
+        </Box>
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: 600,
+            letterSpacing: 0.3,
+            textTransform: "uppercase",
+            fontSize: 10.5,
+            color: alpha(theme.palette.text.primary, 0.8),
+            display: "flex",
+            alignItems: "center",
+            gap: 0.5,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {meta.title}
+          <Box
+            component="span"
+            sx={{
+              px: 0.65,
+              py: 0.1,
+              ml: 0.2,
+              fontSize: 11,
+              lineHeight: 1.15,
+              fontWeight: 600,
+              borderRadius: 1.5,
+              background: alpha(meta.accent, 0.18),
+              color: alpha(theme.palette.text.primary, 0.85),
+            }}
+          >
+            {count}
+          </Box>
+        </Typography>
+      </Box>
     );
+  };
+
+  const TaskChip = ({ t, status }) => {
+    const meta = STATUS_META[status];
+    return (
+      <Chip
+        key={t.id}
+        label={t.title}
+        size="small"
+        variant="outlined"
+        title={t.title}
+        sx={{
+          mr: 0.6,
+          mb: 0.6,
+          borderRadius: 2.5,
+          fontWeight: 500,
+          maxWidth: 190,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          borderColor: alpha(meta.accent, 0.55),
+          color: alpha(theme.palette.text.primary, 0.8),
+          background: alpha(meta.accent, 0.07),
+          "&:hover": {
+            background: alpha(meta.accent, 0.15),
+          },
+        }}
+      />
+    );
+  };
+
+  return (
+    <Accordion
+      disableGutters
+      sx={{
+        borderRadius: 4,
+        overflow: "hidden",
+        position: "relative",
+        border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+        background:
+          "linear-gradient(135deg,rgba(255,255,255,0.85),rgba(255,255,255,0.55))",
+        backdropFilter: "blur(10px)",
+        boxShadow:
+          "0 6px 18px -8px rgba(15,35,60,0.25), 0 1px 0 0 rgba(255,255,255,0.65) inset",
+        transition: "background .35s, box-shadow .35s, transform .35s",
+        "&:before": {
+          content: '""',
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          background:
+            "radial-gradient(circle at 85% 15%, rgba(255,255,255,0.5), transparent 60%)",
+          opacity: 0.8,
+        },
+        "&:hover": {
+          transform: "translateY(-2px)",
+          boxShadow:
+            "0 10px 28px -10px rgba(20,40,70,0.35), 0 1px 0 0 rgba(255,255,255,0.75) inset",
+        },
+        ...rowSx,
+      }}
+    >
+      <AccordionSummary
+        expandIcon={<ExpandMoreRoundedIcon sx={{ color: alpha("#102040", 0.6) }} />}
+        sx={{
+          minHeight: 60,
+          px: 2,
+          "& .MuiAccordionSummary-content": {
+            alignItems: "center",
+            my: 0,
+            gap: 1,
+          },
+        }}
+      >
+        {/* Project name button (solid text color so it never vanishes on hover) */}
+        <Button
+          variant="text"
+          onClick={gotoBoard}
+          sx={{
+            px: 0.75,
+            minWidth: 0,
+            textTransform: "none",
+            fontWeight: 800,
+            fontSize: 16,
+            color: "text.primary",
+            borderRadius: 1.5,
+            maxWidth: { xs: 180, sm: 260, md: 360 },
+            "&:hover": {
+              backgroundColor: alpha(theme.palette.primary.main, 0.08),
+              color: "text.primary",
+            },
+            "&:focus-visible": {
+              outline: `2px solid ${alpha(theme.palette.primary.main, 0.35)}`,
+              outlineOffset: 2,
+            },
+          }}
+        >
+          <Typography
+            component="span"
+            noWrap
+            sx={{ fontSize: "inherit", fontWeight: "inherit" }}
+          >
+            {project.name}
+          </Typography>
+        </Button>
+
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            ml: "auto",
+            mr: 1.5,
+            flexWrap: "wrap",
+            rowGap: 0.6,
+            maxWidth: { xs: "40%", sm: "60%", md: "70%" },
+          }}
+        >
+          {ORDER.map((s) => (
+            <StatusPill key={s} status={s} />
+          ))}
+        </Stack>
+
+        {endActions ? (
+          <Box
+            onClick={(e) => e.stopPropagation()}
+            sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+          >
+            {endActions}
+          </Box>
+        ) : (
+          <Box
+            onClick={(e) => e.stopPropagation()}
+            sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+          >
+            <Tooltip title="Edit project" arrow>
+              <IconButton
+                size="small"
+                onClick={gotoEdit}
+                aria-label={`Edit project ${project.name}`}
+                sx={{
+                  color: alpha("#243A63", 0.7),
+                  "&:hover": { color: alpha("#243A63", 0.95) },
+                }}
+              >
+                <EditRoundedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Delete project" arrow>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.(e, project);
+                }}
+                aria-label={`Delete project ${project.name}`}
+                sx={{
+                  color: alpha("#243A63", 0.7),
+                  "&:hover": { color: alpha("#243A63", 0.95) },
+                }}
+              >
+                <DeleteRoundedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
+      </AccordionSummary>
+
+      <AccordionDetails
+        sx={{
+          bgcolor: "transparent",
+          px: 2,
+          pt: 1.25,
+          pb: 2.2,
+          borderTop: `1px solid ${alpha("#2C3E55", 0.1)}`,
+          position: "relative",
+          "&:before": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            background:
+              "linear-gradient(180deg,rgba(255,255,255,0.6),rgba(255,255,255,0.2))",
+            opacity: 0.5,
+          },
+        }}
+      >
+        {project.description && (
+          <Typography
+            variant="body2"
+            sx={{
+              color: alpha(theme.palette.text.primary, 0.75),
+              mb: 1.4,
+              whiteSpace: "pre-line",
+              fontWeight: 400,
+            }}
+          >
+            {project.description}
+          </Typography>
+        )}
+
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1.5}
+          sx={{ mb: 1 }}
+        >
+          <Typography
+            variant="caption"
+            fontWeight={700}
+            sx={{
+              letterSpacing: 0.6,
+              textTransform: "uppercase",
+              fontSize: 11,
+              color: alpha(theme.palette.text.primary, 0.65),
+            }}
+          >
+            Progress
+          </Typography>
+          <Box sx={{ flexGrow: 1 }}>
+            <LinearProgress
+              variant="determinate"
+              value={pct}
+              sx={{
+                height: 8,
+                borderRadius: 10,
+                background: alpha("#1F3A60", 0.12),
+                "& .MuiLinearProgress-bar": {
+                  borderRadius: 10,
+                  background:
+                    "linear-gradient(90deg,#5FD598 0%,#22B36B 60%,#189455)",
+                  boxShadow: "0 0 6px -1px rgba(34,179,107,.6)",
+                },
+              }}
+            />
+          </Box>
+          <Chip
+            label={`${pct}%`}
+            size="small"
+            sx={{
+              fontWeight: 600,
+              height: 24,
+              background: alpha("#22B36B", 0.12),
+              border: `1px solid ${alpha("#22B36B", 0.4)}`,
+              color: alpha(theme.palette.text.primary, 0.8),
+            }}
+          />
+        </Stack>
+
+        <Typography
+          variant="caption"
+          fontWeight={700}
+          sx={{
+            letterSpacing: 0.6,
+            textTransform: "uppercase",
+            fontSize: 11,
+            color: alpha(theme.palette.text.primary, 0.55),
+          }}
+        >
+          Tasks ({total})
+        </Typography>
+
+        <Box
+          sx={{
+            mt: 0.8,
+            display: "flex",
+            flexWrap: "wrap",
+            maxHeight: 170,
+            overflowY: "auto",
+            pr: 0.5,
+            "&::-webkit-scrollbar": { width: 7 },
+            "&::-webkit-scrollbar-thumb": {
+              borderRadius: 6,
+              backgroundColor: alpha("#1F3A60", 0.35),
+            },
+          }}
+        >
+          {total === 0 && (
+            <Chip
+              label="No tasks yet"
+              size="small"
+              variant="outlined"
+              sx={{
+                fontStyle: "italic",
+                borderRadius: 2,
+                borderColor: alpha("#1F3A60", 0.35),
+              }}
+            />
+          )}
+          {ORDER.map((s) =>
+            grouped[s].map((t) => (
+              <TaskChip key={t.id} t={t} status={s} />
+            ))
+          )}
+        </Box>
+      </AccordionDetails>
+    </Accordion>
+  );
 }

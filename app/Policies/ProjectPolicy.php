@@ -18,10 +18,14 @@ class ProjectPolicy
     /**
      * View a single project – allowed if the user owns it.
      */
-    public function view(User $user, Project $project): bool
-    {
-        return $user->id === $project->user_id;
-    }
+    public function view(User $user, Project $project)
+{
+    // This should return true if user can view the project
+    // Common implementations:
+    return $user->id === $project->user_id; // If project has user_id
+    // OR
+    return $project->users()->where('user_id', $user->id)->exists(); // If many-to-many
+}
 
     /**
      * Create a project – any authenticated user can.

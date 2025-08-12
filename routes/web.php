@@ -1,4 +1,5 @@
 <?php
+// routes/web.php
 
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -9,18 +10,22 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\BillingController;
+use App\Http\Controllers\ProjectAssistantController;
+use App\Http\Controllers\AutomationController;
 use App\Models\Project;
 
 /*
 |--------------------------------------------------------------------------
-| 🌐 Public Landing Page
+| Public Landing
 |--------------------------------------------------------------------------
 */
 Route::get('/', fn () => Inertia::render('Landing'))->name('landing');
 
 /*
 |--------------------------------------------------------------------------
-| 🔐 Google OAuth
+| Google OAuth
 |--------------------------------------------------------------------------
 */
 Route::get('/auth/google',          [GoogleController::class, 'redirectToGoogle'])->name('google.login');
@@ -28,21 +33,19 @@ Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallb
 
 /*
 |--------------------------------------------------------------------------
-| 📊 Dashboard  (auth + verified)
+| Dashboard
 |--------------------------------------------------------------------------
 */
-Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
-    /* 1️⃣  Load every project with its tasks (id + title + status only) */
+Route::get('/dashboard', function (Request $request) {
     $projects = $request->user()->projects()
         ->with(['tasks:id,project_id,title,status'])
         ->get()
         ->map(function ($p) {
-            /* 2️⃣  Group tasks by status and cast to *real* arrays */
-            $group = fn ($status) => $p->tasks
+            $group = fn (string $status) => $p->tasks
                 ->where('status', $status)
-                ->values()                    // Collection → Collection 0-based
-                ->map->only('id', 'title')    // keep it light
-                ->all();                      // 👈 Collection → array
+                ->values()
+                ->map->only('id', 'title')
+                ->all();
 
             return [
                 'id'          => $p->id,
@@ -51,6 +54,7 @@ Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
                 'tasks'       => [
                     'todo'       => $group('todo'),
                     'inprogress' => $group('inprogress'),
+                    'review'     => $group('review'),
                     'done'       => $group('done'),
                 ],
             ];
@@ -59,10 +63,22 @@ Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
     return Inertia::render('Dashboard', ['projects' => $projects]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+/*
+|--------------------------------------------------------------------------
+| Billing
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth'])->group(function () {
+    Route::get('/billing',            [BillingController::class, 'show'])->name('billing.show');
+    Route::post('/billing/checkout',  [BillingController::class, 'createCheckout'])->name('billing.checkout');
+    Route::post('/billing/portal',    [BillingController::class, 'portal'])->name('billing.portal');
+    Route::post('/billing/cancel',    [BillingController::class, 'cancel'])->name('billing.cancel');
+    Route::post('/billing/resume',    [BillingController::class, 'resume'])->name('billing.resume');
+});
 
 /*
 |--------------------------------------------------------------------------
-| 👤 Profile · 📁 Projects · 🗂 Tasks  (auth)
+| Profile / Projects / Tasks
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
@@ -77,46 +93,82 @@ Route::middleware('auth')->group(function () {
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects',       [ProjectController::class, 'store'])->name('projects.store');
 
-    /* 🔄 /projects/{id} → /projects/{id}/tasks */
+    // ✅ Single, canonical AI PDF endpoint
+    Route::post('/projects/{project}/report', [ProjectController::class, 'generateReport'])
+        ->name('projects.report.generate');
+
+    // Edit/Update before show
+    Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])->name('projects.edit');
+    Route::patch('/projects/{project}',     [ProjectController::class, 'update'])->name('projects.update');
+
+    // Show => redirect to tasks board
     Route::get('/projects/{project}', fn (Project $project) =>
         redirect()->route('tasks.index', $project)
     )->name('projects.show');
 
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
 
-    /* Nested task routes */
+    /* Nested project-scoped routes */
     Route::prefix('projects/{project}')->group(function () {
 
-        /* CRUD */
+        /* TASKS: AI generator flow - Must come before parameterized routes */
+        Route::get('/tasks/ai', function (Request $request, Project $project) {
+            return Inertia::render('Tasks/AITasksGenerator', [
+                'project' => $project,
+                'prefill' => $request->only(['count', 'prompt']),
+            ]);
+        })->name('tasks.ai.form');
+
+        Route::post('/tasks/ai',         [TaskController::class, 'generateWithAI'])->name('tasks.ai.generate');
+        Route::post('/tasks/ai/preview', [TaskController::class, 'previewWithAI'])->name('tasks.ai.preview');
+        Route::post('/tasks/ai/accept',  [TaskController::class, 'acceptGenerated'])->name('tasks.ai.accept');
+
+        // Suggestions (GET)
+        Route::get('/tasks/ai/suggestions', [TaskController::class, 'suggestionsAI'])->name('tasks.ai.suggestions');
+
+        /* TASKS: CRUD */
         Route::get('/tasks',           [TaskController::class, 'index'])->name('tasks.index');
+        Route::get('/tasks/{task}',    [TaskController::class, 'show'])->name('tasks.show');
         Route::post('/tasks',          [TaskController::class, 'store'])->name('tasks.store');
         Route::patch('/tasks/{task}',  [TaskController::class, 'update'])->name('tasks.update');
         Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
-        /* === AI generator flow === */
+        /* COMMENTS */
+        Route::post('/tasks/{task}/comments',     [CommentController::class, 'store'])->name('comments.store');
+        Route::patch('/tasks/{task}/comments/{comment}',       [CommentController::class, 'update'])->name('comments.update');
+        Route::delete('/tasks/{task}/comments/{comment}',      [CommentController::class, 'destroy'])->name('comments.destroy');
 
-        /* Generator form — return prior values via ?count=&prompt= */
-        Route::get('/tasks/ai', function (Request $request, Project $project) {
-            return Inertia::render('Tasks/AITasksGenerator', [
-                'project' => $project,
-                'prefill' => $request->only(['count', 'prompt']), // 👈 keep previous inputs
-            ]);
-        })->name('tasks.ai.form');
+        /* ✅ TIMELINE - uses TaskController@timeline and matches file at Pages/Timeline/Timeline.jsx */
+        Route::get('/timeline', [TaskController::class, 'timeline'])->name('tasks.timeline');
 
-        /* Original immediate-save route */
-        Route::post('/tasks/ai', [TaskController::class, 'generateWithAI'])
-             ->name('tasks.ai.generate');
+        /* ✅ AUTOMATIONS - Sophisticated workflow automation system */
+        Route::get('/automations', [AutomationController::class, 'index'])->name('automations.index');
+        Route::post('/automations', [AutomationController::class, 'store'])->name('automations.store');
+        Route::patch('/automations/{automation}', [AutomationController::class, 'update'])->name('automations.update');
+        Route::delete('/automations/{automation}', [AutomationController::class, 'destroy'])->name('automations.destroy');
+        Route::patch('/automations/{automation}/toggle', [AutomationController::class, 'toggle'])->name('automations.toggle');
+        Route::post('/automations/{automation}/test', [AutomationController::class, 'test'])->name('automations.test');
+        Route::post('/automations/{automation}/execute', [AutomationController::class, 'execute'])->name('automations.execute');
+        Route::post('/automations/process', [AutomationController::class, 'processProject'])->name('automations.process');
+        Route::get('/automations/templates', [AutomationController::class, 'templates'])->name('automations.templates');
 
-        /* Preview first, then accept */
-        Route::post('/tasks/ai/preview', [TaskController::class, 'previewWithAI'])
-             ->name('tasks.ai.preview');
-        Route::post('/tasks/ai/accept',  [TaskController::class, 'acceptGenerated'])
-             ->name('tasks.ai.accept');
+        /* PROJECT ASSISTANT - AI Chat API endpoints only (UI is embedded in board) */
+        Route::post('/assistant/chat', [ProjectAssistantController::class, 'chat'])->name('projects.assistant.chat');
+        Route::get('/assistant/suggestions', [ProjectAssistantController::class, 'suggestions'])->name('projects.assistant.suggestions');
     });
 });
 
-/* old /login → landing */
-Route::get('/login', fn () => redirect()->route('landing'));
+/*
+|--------------------------------------------------------------------------
+| Breeze / Auth scaffolding
+|--------------------------------------------------------------------------
+*/
+require __DIR__ . '/auth.php';
 
-/* Breeze auth routes */
-require __DIR__.'/auth.php';
+/* Temp test route */
+Route::get('/test-dashboard', function() {
+    return Inertia::render('Dashboard', [
+        'projects' => [],
+        'test' => 'Dashboard route working!'
+    ]);
+})->middleware('auth')->name('test.dashboard');

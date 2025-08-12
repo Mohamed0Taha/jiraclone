@@ -1,251 +1,1288 @@
-import React, { useState } from "react";
-import { Head, useForm, router } from "@inertiajs/react";
+// resources/js/Pages/Tasks/Board.jsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Head, useForm, router, usePage } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import {
-    Box,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
-    Fab,
-    MenuItem,
-    Stack,
-    TextField,
-    Typography,
+  alpha,
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Fab,
+  IconButton,
+  MenuItem,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
+import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
+import EventAvailableRoundedIcon from "@mui/icons-material/EventAvailableRounded";
+import KeyRoundedIcon from "@mui/icons-material/KeyRounded";
+import ApartmentRoundedIcon from "@mui/icons-material/ApartmentRounded";
+import PublicRoundedIcon from "@mui/icons-material/PublicRounded";
+import PlaceRoundedIcon from "@mui/icons-material/PlaceRounded";
+import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
+import RequestQuoteRoundedIcon from "@mui/icons-material/RequestQuoteRounded";
+import AccountBalanceRoundedIcon from "@mui/icons-material/AccountBalanceRounded";
+import FlagRoundedIcon from "@mui/icons-material/FlagRounded";
+import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
+import SearchIcon from "@mui/icons-material/Search";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import ClearIcon from "@mui/icons-material/Clear";
+
+import { DragDropContext } from "react-beautiful-dnd";
+
+import HeaderBanner from "../Board/HeaderBanner";
+import Column from "../Board/Column";
+import UpgradeDialog from "../Board/UpgradeDialog";
+import AssistantChat from "@/Components/AssistantChat";
+import FloatingActionGroup from "@/Components/FloatingActionGroup";
+
+import {
+  METHODOLOGIES,
+  DEFAULT_METHOD,
+  getStatusMeta,
+  getStatusOrder,
+} from "../Board/meta.jsx";
+
 import TaskCard from "./TaskCard";
+import MembersManagerDialog from "./MembersManagerDialog";
+import AIPdfReportDialog from "./ProjectReportDialog";
 
-export default function Board({ auth, project, tasks, users }) {
-    /* column colours */
-    const columns = [
-        { key: "todo",       title: "To Do",       color: "#fef9c3" },
-        { key: "inprogress", title: "In Progress", color: "#e0f2fe" },
-        { key: "done",       title: "Done",        color: "#dcfce7" },
-    ];
+/** Visual tokens per methodology */
+const METHOD_STYLES = {
+  [METHODOLOGIES.KANBAN]: {
+    accent: "#4F46E5",
+    gradient: "linear-gradient(140deg,#F7FAFF 0%,#F2F6FE 55%,#EDF2FA 100%)",
+    chipBg: (t) => alpha("#4F46E5", 0.08),
+    chipBorder: (t) => alpha("#4F46E5", 0.18),
+  },
+  [METHODOLOGIES.SCRUM]: {
+    accent: "#06B6D4",
+    gradient: "linear-gradient(140deg,#F0FDFF 0%,#ECFEFF 55%,#E0F2FE 100%)",
+    chipBg: (t) => alpha("#06B6D4", 0.1),
+    chipBorder: (t) => alpha("#06B6D4", 0.2),
+  },
+  [METHODOLOGIES.AGILE]: {
+    accent: "#10B981",
+    gradient: "linear-gradient(140deg,#F0FDF4 0%,#ECFDF5 55%,#E7F5EE 100%)",
+    chipBg: (t) => alpha("#10B981", 0.1),
+    chipBorder: (t) => alpha("#10B981", 0.2),
+  },
+  [METHODOLOGIES.WATERFALL]: {
+    accent: "#0EA5E9",
+    gradient: "linear-gradient(140deg,#F0F9FF 0%,#E0F2FE 55%,#DBEAFE 100%)",
+    chipBg: (t) => alpha("#0EA5E9", 0.1),
+    chipBorder: (t) => alpha("#0EA5E9", 0.2),
+  },
+  [METHODOLOGIES.LEAN]: {
+    accent: "#22C55E",
+    gradient: "linear-gradient(140deg,#F0FDF4 0%,#ECFDF5 55%,#E8F5E9 100%)",
+    chipBg: (t) => alpha("#22C55E", 0.1),
+    chipBorder: (t) => alpha("#22C55E", 0.2),
+  },
+};
 
-    /* state */
-    const [taskState, setTaskState]         = useState(tasks);
-    const [openForm, setOpenForm]           = useState(false);
-    const [editMode, setEditMode]           = useState(false);
-    const [editingId, setEditingId]         = useState(null);
-    const [confirmOpen, setConfirmOpen]     = useState(false);
-    const [pendingDeleteId, setPendingDeleteId] = useState(null);
+// Canonical server statuses
+const SERVER_STATUSES = ["todo", "inprogress", "review", "done"];
 
-    const { data, setData, post, patch, reset, processing, errors } = useForm({
-        title: "", description: "", execution_date: "", assignee_id: "", status: "todo",
+// Map methodology → server status
+const METHOD_TO_SERVER = {
+  [METHODOLOGIES.KANBAN]: {
+    todo: "todo",
+    inprogress: "inprogress",
+    review: "review",
+    done: "done",
+  },
+  [METHODOLOGIES.SCRUM]: {
+    backlog: "todo",
+    todo: "todo",
+    inprogress: "inprogress",
+    testing: "review",
+    review: "review",
+    done: "done",
+  },
+  [METHODOLOGIES.AGILE]: {
+    backlog: "todo",
+    todo: "todo",
+    inprogress: "inprogress",
+    testing: "review",
+    review: "review",
+    done: "done",
+  },
+  [METHODOLOGIES.WATERFALL]: {
+    requirements: "todo",
+    design: "inprogress",
+    implementation: "inprogress",
+    verification: "review",
+    maintenance: "done",
+  },
+  [METHODOLOGIES.LEAN]: {
+    backlog: "todo",
+    todo: "inprogress",
+    testing: "review",
+    review: "review",
+    done: "done",
+  },
+};
+
+const SERVER_DEFAULT_TO_METHOD = {
+  [METHODOLOGIES.KANBAN]: {
+    todo: "todo",
+    inprogress: "inprogress",
+    review: "review",
+    done: "done",
+  },
+  [METHODOLOGIES.SCRUM]: {
+    todo: "todo",
+    inprogress: "inprogress",
+    review: "review",
+    done: "done",
+  },
+  [METHODOLOGIES.AGILE]: {
+    todo: "todo",
+    inprogress: "inprogress",
+    review: "review",
+    done: "done",
+  },
+  [METHODOLOGIES.WATERFALL]: {
+    todo: "requirements",
+    inprogress: "design",
+    review: "verification",
+    done: "maintenance",
+  },
+  [METHODOLOGIES.LEAN]: {
+    todo: "backlog",
+    inprogress: "todo",
+    review: "testing",
+    done: "done",
+  },
+};
+
+const phaseStorageKey = (projectId, methodology) =>
+  `phaseMap:${projectId}:${methodology}`;
+
+export default function Board({
+  auth,
+  project = {},
+  tasks = {},
+  users = [],
+  isPro: isProProp,
+}) {
+  const page = usePage();
+  const isPro =
+    typeof isProProp === "boolean"
+      ? isProProp
+      : !!(page?.props && page.props.isPro);
+
+  const initialMethod = (() => {
+    const m = project?.meta?.methodology;
+    const allowed = Object.values(METHODOLOGIES);
+    return allowed.includes(m) ? m : DEFAULT_METHOD;
+  })();
+  const [methodology, setMethodology] = useState(initialMethod);
+
+  const STATUS_META = useMemo(() => getStatusMeta(methodology), [methodology]);
+  const STATUS_ORDER = useMemo(() => getStatusOrder(methodology), [methodology]);
+  const methodStyles =
+    METHOD_STYLES[methodology] || METHOD_STYLES[METHODOLOGIES.KANBAN];
+
+  // Column layout tokens
+  const COLUMN_WIDTH = 320;
+  const COLUMN_GAP = 12;
+
+  const [phaseMap, setPhaseMap] = useState({});
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(
+        phaseStorageKey(project?.id || "p", methodology)
+      );
+      setPhaseMap(raw ? JSON.parse(raw) : {});
+    } catch {
+      setPhaseMap({});
+    }
+  }, [project?.id, methodology]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        phaseStorageKey(project?.id || "p", methodology),
+        JSON.stringify(phaseMap)
+      );
+    } catch {
+      // ignore
+    }
+  }, [phaseMap, project?.id, methodology]);
+
+  const [openForm, setOpenForm] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
+
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+
+  const buildColumnsFromServer = (incomingTasksObj) => {
+    const cols = {};
+    STATUS_ORDER.forEach((k) => (cols[k] = []));
+    SERVER_STATUSES.forEach((serverKey) => {
+      const arr = Array.isArray(incomingTasksObj?.[serverKey])
+        ? incomingTasksObj[serverKey]
+        : [];
+      arr.forEach((task) => {
+        const chosenPhase =
+          phaseMap && STATUS_ORDER.includes(phaseMap[task.id])
+            ? phaseMap[task.id]
+            : SERVER_DEFAULT_TO_METHOD[methodology][serverKey] ||
+              STATUS_ORDER[0];
+        cols[chosenPhase].push({ ...task, status: chosenPhase });
+      });
     });
+    return cols;
+  };
 
-    /* sync helper */
-    const refreshTasks = (page) => {
-        if (page?.props?.tasks) setTaskState(page.props.tasks);
+  // Filter tasks based on search query and priority filter
+  const filterTasks = (tasks) => {
+    if (!Array.isArray(tasks)) return [];
+    if (!searchQuery && !priorityFilter) return tasks;
+
+    return tasks.filter((task) => {
+      if (!task) return false;
+      
+      const matchesSearch = !searchQuery || 
+        (task.title && task.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const matchesPriority = !priorityFilter || task.priority === priorityFilter;
+      
+      return matchesSearch && matchesPriority;
+    });
+  };
+
+  const [taskState, setTaskState] = useState(buildColumnsFromServer(tasks));
+  
+  // Create filtered task state
+  const filteredTaskState = useMemo(() => {
+    const filtered = {};
+    Object.keys(taskState).forEach(statusKey => {
+      filtered[statusKey] = filterTasks(taskState[statusKey] || []);
+    });
+    return filtered;
+  }, [taskState, searchQuery, priorityFilter]);
+
+  useEffect(() => {
+    setTaskState(buildColumnsFromServer(tasks));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, methodology, JSON.stringify(phaseMap)]);
+
+  const pendingTask = useMemo(() => {
+    if (!pendingDeleteId) return null;
+    for (const k of STATUS_ORDER) {
+      const found = (taskState[k] || []).find((t) => t.id === pendingDeleteId);
+      if (found) return found;
+    }
+    return null;
+  }, [pendingDeleteId, taskState, STATUS_ORDER]);
+
+  const { data, setData, post, patch, reset, processing, errors } = useForm({
+    title: "",
+    description: "",
+    start_date: "",
+    end_date: "",
+    assignee_id: "",
+    status: STATUS_ORDER[0] || "todo",
+    priority: "medium",
+    milestone: false,
+  });
+
+  const totalTasks = useMemo(
+    () =>
+      STATUS_ORDER.reduce(
+        (sum, k) => sum + (Array.isArray(filteredTaskState[k]) ? filteredTaskState[k].length : 0),
+        0
+      ),
+    [filteredTaskState, STATUS_ORDER]
+  );
+  const doneKey = STATUS_ORDER[STATUS_ORDER.length - 1];
+  const doneCount = Array.isArray(filteredTaskState[doneKey]) ? filteredTaskState[doneKey].length : 0;
+  const percentDone =
+    totalTasks === 0 ? 0 : Math.round((doneCount / totalTasks) * 100);
+
+  const refreshTasks = (pageObj) => {
+    const incoming = pageObj?.props?.tasks || tasks || {};
+    setTaskState(buildColumnsFromServer(incoming));
+  };
+
+  const showCreate = (status = STATUS_ORDER[0]) => {
+    reset();
+    setEditMode(false);
+    setEditingId(null);
+    const safe = STATUS_ORDER.includes(status) ? status : STATUS_ORDER[0];
+    setData("status", safe);
+    setData("start_date", project?.start_date ?? "");
+    setOpenForm(true);
+  };
+
+  const showEdit = (t) => {
+    setEditMode(true);
+    setEditingId(t.id);
+    setData({
+      title: t.title,
+      description: t.description ?? "",
+      start_date: t.start_date ?? "",
+      end_date: t.end_date ?? "",
+      assignee_id: t.assignee?.id ?? "",
+      status: STATUS_ORDER.includes(t.status) ? t.status : STATUS_ORDER[0],
+      priority: t.priority ?? "medium",
+      milestone: t.milestone ?? false,
+    });
+    setOpenForm(true);
+  };
+
+  const submit = (e) => {
+    e.preventDefault();
+    const routeName = editMode
+      ? route("tasks.update", [project.id, editingId])
+      : route("tasks.store", project.id);
+
+    const serverStatus = METHOD_TO_SERVER[methodology][data.status] || "todo";
+    const payload = { ...data, status: serverStatus };
+
+    const action = editMode ? patch : post;
+    action(routeName, payload, {
+      preserveScroll: true,
+      onSuccess: (p) => {
+        try {
+          const tid = editMode ? editingId : p?.props?.task?.id;
+          if (tid) setPhaseMap((prev) => ({ ...prev, [tid]: data.status }));
+        } catch {}
+        refreshTasks(p);
+        setOpenForm(false);
+        reset();
+      },
+    });
+  };
+
+  const askDelete = (id) => {
+    setPendingDeleteId(id);
+    setConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    router.delete(route("tasks.destroy", [project.id, pendingDeleteId]), {
+      preserveScroll: true,
+      onSuccess: refreshTasks,
+    });
+    setConfirmOpen(false);
+    setPendingDeleteId(null);
+  };
+
+  const onDragEnd = ({ destination, source, draggableId }) => {
+    if (!destination || destination.droppableId === source.droppableId || !draggableId) return;
+
+    const id = Number(draggableId);
+    const from = source.droppableId;
+    const to = destination.droppableId;
+
+    const moving = (taskState[from] || []).find((t) => t.id === id);
+    if (!moving) return;
+
+    const newFrom = (taskState[from] || []).filter((t) => t.id !== id);
+    const newTo = [...(taskState[to] || [])];
+    const movedTask = { ...moving, status: to };
+    newTo.splice(destination.index, 0, movedTask);
+    setTaskState({ ...taskState, [from]: newFrom, [to]: newTo });
+
+    setPhaseMap((prev) => ({ ...prev, [id]: to }));
+
+    const serverStatus = METHOD_TO_SERVER[methodology][to] || "todo";
+    router.patch(route("tasks.update", [project.id, id]), { status: serverStatus }, {
+      preserveScroll: true,
+      onSuccess: refreshTasks,
+    });
+  };
+
+  const titleRef = useRef(null);
+  useEffect(() => {
+    const handler = (e) => {
+      // Don't trigger shortcuts when typing in input fields, textareas, or any form controls
+      const isTypingInInput = e.target.tagName.toLowerCase() === 'input' || 
+                             e.target.tagName.toLowerCase() === 'textarea' ||
+                             e.target.contentEditable === 'true' ||
+                             e.target.closest('.MuiTextField-root') || // MUI TextField
+                             e.target.closest('[role="textbox"]') || // Any textbox role
+                             e.target.closest('form') || // Any form element
+                             openForm || // Don't trigger when modal is open
+                             assistantOpen; // Don't trigger when AI chat is open
+      
+      if (e.key.toLowerCase() === "c" && !openForm && !processing && !isTypingInInput) {
+        showCreate(STATUS_ORDER[0]);
+        setTimeout(() => titleRef.current?.focus(), 40);
+      }
     };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [openForm, processing, STATUS_ORDER, assistantOpen]);
 
-    /* create / edit helpers */
-    const showCreate = () => { reset(); setEditMode(false); setEditingId(null); setOpenForm(true); };
-    const showEdit   = (t) => {
-        setEditMode(true); setEditingId(t.id);
-        setData({
-            title: t.title,
-            description: t.description ?? "",
-            execution_date: t.execution_date ?? "",
-            assignee_id: t.assignee?.id ?? "",
-            status: t.status,
-        });
-        setOpenForm(true);
-    };
+  const requirePro = (openFn) => {
+    if (isPro) openFn(true);
+    else setUpgradeOpen(true);
+  };
 
-    const submit = (e) => {
-        e.preventDefault();
-        const routeName = editMode
-            ? route("tasks.update", [project.id, editingId])
-            : route("tasks.store",  project.id);
+  const fmtDate = (d) => {
+    if (!d) return null;
+    try {
+      const dt = new Date(d);
+      if (Number.isNaN(dt.getTime())) return d;
+      return dt.toLocaleDateString();
+    } catch {
+      return d;
+    }
+  };
+  const stripContextSummary = (text) =>
+    (text || "").replace(/\n?\n?Context Summary:\n(?:- .*\n?)+/gi, "").trim();
 
-        const action = editMode ? patch : post;
-        action(routeName, {
-            ...data,
-            preserveScroll: true,
-            onSuccess: (p) => { refreshTasks(p); setOpenForm(false); reset(); },
-        });
-    };
+  const meta = project?.meta || {};
+  const headerChips = [
+    { icon: <KeyRoundedIcon fontSize="small" />, label: project?.key, show: !!project?.key },
+    { icon: <ApartmentRoundedIcon fontSize="small" />, label: meta.project_type, show: !!meta.project_type },
+    { icon: <PublicRoundedIcon fontSize="small" />, label: meta.domain, show: !!meta.domain },
+    { icon: <PlaceRoundedIcon fontSize="small" />, label: meta.location, show: !!meta.location },
+    { icon: <GroupRoundedIcon fontSize="small" />, label: meta.team_size ? `${meta.team_size} members` : "", show: !!meta.team_size },
+    { icon: <RequestQuoteRoundedIcon fontSize="small" />, label: meta.budget, show: !!meta.budget },
+    { icon: <AccountBalanceRoundedIcon fontSize="small" />, label: meta.primary_stakeholder, show: !!meta.primary_stakeholder },
+  ].filter((c) => c.show);
 
-    /* delete helpers */
-    const askDelete = (id) => { setPendingDeleteId(id); setConfirmOpen(true); };
-    const confirmDelete = () => {
-        router.delete(route("tasks.destroy", [project.id, pendingDeleteId]), {
-            preserveScroll: true,
-            onSuccess: refreshTasks,
-        });
-        setConfirmOpen(false);
-        setPendingDeleteId(null);
-    };
+  const methodLabel = {
+    [METHODOLOGIES.KANBAN]: "Kanban",
+    [METHODOLOGIES.SCRUM]: "Scrum",
+    [METHODOLOGIES.AGILE]: "Agile",
+    [METHODOLOGIES.WATERFALL]: "Waterfall",
+    [METHODOLOGIES.LEAN]: "Lean",
+  }[methodology];
 
-    /* drag & drop */
-    const onDragEnd = ({ destination, source, draggableId }) => {
-        if (!destination || destination.droppableId === source.droppableId) return;
-
-        const id   = Number(draggableId);
-        const from = source.droppableId;
-        const to   = destination.droppableId;
-        const moving = taskState[from].find((t) => t.id === id);
-        if (!moving) return;
-
-        const newFrom = taskState[from].filter((t) => t.id !== id);
-        const newTo   = [...taskState[to]];
-        newTo.splice(destination.index, 0, { ...moving, status: to });
-
-        setTaskState({ ...taskState, [from]: newFrom, [to]: newTo });
-
-        router.patch(route("tasks.update", [project.id, id]), {
-            status: to,
-            preserveScroll: true,
-            onSuccess: refreshTasks,
-        });
-    };
-
+  const ProjectSummaryBar = () => {
+    if (!project) return null;
     return (
-        <>
-            <Head title={`${project.name} – Task Board`} />
+      <Box
+        sx={{
+          mb: 1.25,
+          borderRadius: 2.5,
+          p: 1,
+          background: "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.75))",
+          border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
+          boxShadow: `0 8px 22px -14px rgba(0,0,0,.25)`,
+        }}
+      >
+        <Stack spacing={0.75}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Chip
+              label={`${methodLabel} Mode`}
+              size="small"
+              sx={{
+                height: 22,
+                fontWeight: 700,
+                background: (t) => methodStyles.chipBg(t),
+                border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
+                color: '#000000',
+                '& .MuiChip-label': {
+                  color: '#000000',
+                  fontWeight: 700,
+                },
+              }}
+              color="primary"
+            />
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, letterSpacing: 0.1 }}>
+              {project?.name || "Project"}
+            </Typography>
 
-            <AuthenticatedLayout user={auth.user}>
-                <Box sx={{ p: 3, minHeight: "100vh", bgcolor: "#f1f5f9" }}>
-                    {/* header */}
-                    <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                        <Typography variant="h4" fontWeight={700} sx={{
-                            maxWidth: "65%", whiteSpace: "nowrap",
-                            overflow: "hidden", textOverflow: "ellipsis",
-                        }}>
-                            {project.name} – Task Board
-                        </Typography>
+            <Button
+              size="small"
+              startIcon={<EventAvailableRoundedIcon />}
+              onClick={() => {
+                console.log('📅 Timeline clicked, navigating to:', `/projects/${project.id}/timeline`);
+                router.visit(`/projects/${project.id}/timeline`);
+              }}
+              sx={{
+                ml: 1,
+                textTransform: "none",
+                fontWeight: 700,
+                borderRadius: 2,
+                px: 1.25,
+                py: 0.25,
+                background: (t) => alpha(t.palette.primary.main, 0.08),
+                border: (t) => `1px solid ${alpha(t.palette.primary.main, 0.22)}`,
+                "&:hover": {
+                  background: (t) => alpha(t.palette.primary.main, 0.14),
+                },
+              }}
+            >
+              Timeline
+            </Button>
+          </Stack>
 
-                        <Button
-                            variant="outlined"
-                            sx={{ ml: "auto" }}  /* pinned right */
-                            onClick={() => router.visit(route("tasks.ai.form", project.id))}
-                        >
-                            AI Tasks Generator
-                        </Button>
-                    </Box>
+          {headerChips.length > 0 && (
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" rowGap={0.75}>
+              {headerChips.map((c, i) => (
+                <Chip
+                  key={i}
+                  icon={c.icon}
+                  label={c.label}
+                  size="small"
+                  sx={{
+                    bgcolor: (t) => methodStyles.chipBg(t),
+                    border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
+                    "& .MuiChip-label": { fontWeight: 600 },
+                    height: 24,
+                  }}
+                />
+              ))}
+              {(project?.start_date || project?.end_date) && (
+                <Chip
+                  icon={<CalendarMonthRoundedIcon fontSize="small" />}
+                  label={`${fmtDate(project?.start_date) ?? "—"} → ${fmtDate(project?.end_date) ?? "—"}`}
+                  size="small"
+                  sx={{
+                    bgcolor: (t) => methodStyles.chipBg(t),
+                    border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
+                    "& .MuiChip-label": { fontWeight: 600 },
+                    height: 24,
+                  }}
+                />
+              )}
+            </Stack>
+          )}
 
-                    {/* board */}
-                    <DragDropContext onDragEnd={onDragEnd}>
-                        <Box sx={{ display: "flex", gap: 2, minHeight: "calc(100vh - 160px)" }}>
-                            {columns.map((col) => (
-                                <Droppable key={col.key} droppableId={col.key}>
-                                    {(dropProvided) => (
-                                        <Box
-                                            ref={dropProvided.innerRef}
-                                            {...dropProvided.droppableProps}
-                                            sx={{
-                                                flex: 1, p: 1.5, borderRadius: 2,
-                                                backgroundColor: col.color,
-                                                display: "flex", flexDirection: "column",
-                                            }}
-                                        >
-                                            <Typography align="center" fontWeight={600} mb={1}>
-                                                {col.title}
-                                            </Typography>
-
-                                            <Stack spacing={1} flexGrow={1}>
-                                                {(taskState[col.key] ?? []).map((task, idx) => (
-                                                    <Draggable
-                                                        key={task.id}
-                                                        draggableId={String(task.id)}
-                                                        index={idx}
-                                                    >
-                                                        {(dragProvided) => (
-                                                            <div
-                                                                ref={dragProvided.innerRef}
-                                                                {...dragProvided.draggableProps}
-                                                                {...dragProvided.dragHandleProps}
-                                                                style={dragProvided.draggableProps.style}
-                                                            >
-                                                                <TaskCard
-                                                                    task={task}
-                                                                    onEdit={() => showEdit(task)}
-                                                                    onDelete={() => askDelete(task.id)}
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </Draggable>
-                                                ))}
-                                                {dropProvided.placeholder}
-                                            </Stack>
-                                        </Box>
-                                    )}
-                                </Droppable>
-                            ))}
-                        </Box>
-                    </DragDropContext>
-
-                    {/* FAB */}
-                    <Fab color="primary" sx={{ position: "fixed", bottom: 24, right: 24 }} onClick={showCreate}>
-                        <AddIcon />
-                    </Fab>
-
-                    {/* create / edit dialog */}
-                    <Dialog open={openForm} onClose={() => setOpenForm(false)} maxWidth="sm" fullWidth>
-                        <form onSubmit={submit}>
-                            <DialogTitle>{editMode ? "Edit Task" : "New Task"}</DialogTitle>
-                            <DialogContent dividers>
-                                <Stack spacing={2} sx={{ mt: 1 }}>
-                                    <TextField
-                                        label="Title" required fullWidth
-                                        value={data.title}
-                                        onChange={(e) => setData("title", e.target.value)}
-                                        error={!!errors.title} helperText={errors.title}
-                                    />
-                                    <TextField
-                                        label="Description" multiline minRows={3} fullWidth
-                                        value={data.description}
-                                        onChange={(e) => setData("description", e.target.value)}
-                                        error={!!errors.description} helperText={errors.description}
-                                    />
-                                    <TextField
-                                        label="Execution Date" type="date" fullWidth
-                                        InputLabelProps={{ shrink: true }}
-                                        value={data.execution_date}
-                                        onChange={(e) => setData("execution_date", e.target.value)}
-                                        error={!!errors.execution_date} helperText={errors.execution_date}
-                                    />
-                                    <TextField
-                                        select label="Assign to" fullWidth
-                                        value={data.assignee_id}
-                                        onChange={(e) => setData("assignee_id", e.target.value)}
-                                        error={!!errors.assignee_id} helperText={errors.assignee_id}
-                                    >
-                                        <MenuItem value="">— Unassigned —</MenuItem>
-                                        {users.map((u) => (
-                                            <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
-                                        ))}
-                                    </TextField>
-                                </Stack>
-                            </DialogContent>
-                            <DialogActions>
-                                <Button onClick={() => setOpenForm(false)} disabled={processing}>Cancel</Button>
-                                <Button type="submit" variant="contained" disabled={processing}>
-                                    {editMode ? "Update" : "Create"}
-                                </Button>
-                            </DialogActions>
-                        </form>
-                    </Dialog>
-
-                    {/* delete confirmation */}
-                    <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-                        <DialogTitle>Delete Task</DialogTitle>
-                        <DialogContent>
-                            <DialogContentText>Delete this task permanently?</DialogContentText>
-                        </DialogContent>
-                        <DialogActions>
-                            <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
-                            <Button onClick={confirmDelete} color="error" variant="contained">Delete</Button>
-                        </DialogActions>
-                    </Dialog>
-                </Box>
-            </AuthenticatedLayout>
-        </>
+          {(meta.objectives || meta.constraints) && (
+            <Stack spacing={0.5}>
+              {meta.objectives && (
+                <Stack direction="row" spacing={0.5} alignItems="flex-start">
+                  <FlagRoundedIcon fontSize="small" sx={{ mt: "2px", color: alpha("#16A34A", 0.95) }} />
+                  <Tooltip title={meta.objectives} arrow placement="top">
+                    <Typography variant="body2" sx={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                      {meta.objectives}
+                    </Typography>
+                  </Tooltip>
+                </Stack>
+              )}
+              {meta.constraints && (
+                <Stack direction="row" spacing={0.5} alignItems="flex-start">
+                  <ReportProblemRoundedIcon fontSize="small" sx={{ mt: "2px", color: alpha("#F59E0B", 0.95) }} />
+                  <Tooltip title={meta.constraints} arrow placement="top">
+                    <Typography variant="body2" sx={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                      {meta.constraints}
+                    </Typography>
+                  </Tooltip>
+                </Stack>
+              )}
+            </Stack>
+          )}
+        </Stack>
+      </Box>
     );
+  };
+
+  return (
+    <>
+      <Head title={`${project?.name ?? "Project"} – Task Board`} />
+      <AuthenticatedLayout user={auth?.user}>
+        <Box
+          sx={{
+            minHeight: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            background: methodStyles.gradient,
+            p: { xs: 1.5, md: 2 },
+          }}
+          style={{
+            ["--col-w"]: `${COLUMN_WIDTH}px`,
+            ["--col-gap"]: `${COLUMN_GAP}px`,
+          }}
+        >
+          <HeaderBanner
+            projectName={project?.name ?? "Project"}
+            totalTasks={totalTasks}
+            percentDone={percentDone}
+            usersCount={Array.isArray(users) ? users.length : 0}
+            onAiTasks={() => {
+              console.log('🚀 AI Tasks clicked, navigating to:', `/projects/${project.id}/tasks/ai`);
+              router.visit(`/projects/${project.id}/tasks/ai`);
+            }}
+            isPro={isPro}
+            onOpenMembers={() => requirePro(setMembersOpen)}
+            onOpenAutomations={() => {
+              router.visit(`/projects/${project.id}/automations`);
+            }}
+            onOpenReport={() => requirePro(setReportOpen)}
+            onOpenDetails={() => setDetailsOpen(true)}
+            onOpenAssistant={() => setAssistantOpen(true)}
+          />
+
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+            <TextField
+              select
+              size="small"
+              label="Methodology"
+              value={methodology}
+              onChange={(e) => {
+                const next = e.target.value;
+                setMethodology(next);
+                setData("status", getStatusOrder(next)[0] || "todo");
+              }}
+              sx={{
+                minWidth: 180,
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: (t) => methodStyles.chipBorder(t),
+                },
+              }}
+            >
+              <MenuItem value={METHODOLOGIES.KANBAN}>Kanban</MenuItem>
+              <MenuItem value={METHODOLOGIES.SCRUM}>Scrum</MenuItem>
+              <MenuItem value={METHODOLOGIES.AGILE}>Agile</MenuItem>
+              <MenuItem value={METHODOLOGIES.WATERFALL}>Waterfall</MenuItem>
+              <MenuItem value={METHODOLOGIES.LEAN}>Lean</MenuItem>
+            </TextField>
+            <Chip
+              size="small"
+              label={methodLabel}
+              sx={{
+                fontWeight: 700,
+                height: 22,
+                background: (t) => methodStyles.chipBg(t),
+                border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
+              }}
+            />
+          </Stack>
+
+          {/* Search and Filter Bar */}
+          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+            <TextField
+              size="small"
+              placeholder="Search tasks by name or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{
+                flexGrow: 1,
+                maxWidth: 400,
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: 'rgba(255, 255, 255, 1)',
+                  },
+                },
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: (t) => methodStyles.chipBorder(t),
+                },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchQuery('')}
+                      sx={{ color: 'text.secondary' }}
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>Priority Filter</InputLabel>
+              <Select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+                label="Priority Filter"
+                sx={{
+                  borderRadius: 2,
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: 'rgba(255, 255, 255, 1)',
+                  },
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: (t) => methodStyles.chipBorder(t),
+                  },
+                }}
+                startAdornment={
+                  <FilterListIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                }
+              >
+                <MenuItem value="">All Priorities</MenuItem>
+                <MenuItem value="low">
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#4caf50' }} />
+                    <span>Low</span>
+                  </Stack>
+                </MenuItem>
+                <MenuItem value="medium">
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#2196f3' }} />
+                    <span>Medium</span>
+                  </Stack>
+                </MenuItem>
+                <MenuItem value="high">
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#ff9800' }} />
+                    <span>High</span>
+                  </Stack>
+                </MenuItem>
+                <MenuItem value="urgent">
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#f44336' }} />
+                    <span>Urgent</span>
+                  </Stack>
+                </MenuItem>
+              </Select>
+            </FormControl>
+
+            {(searchQuery || priorityFilter) && (
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => {
+                  setSearchQuery('');
+                  setPriorityFilter('');
+                }}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  },
+                  borderColor: (t) => methodStyles.chipBorder(t),
+                }}
+              >
+                Clear Filters
+              </Button>
+            )}
+          </Stack>
+
+          {/* Filter Status Indicator */}
+          {(searchQuery || priorityFilter) && (
+            <Box sx={{ 
+              mb: 2, 
+              p: 1.5, 
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: 2,
+              border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <FilterListIcon sx={{ color: 'text.secondary' }} />
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {totalTasks === 0 ? 'No tasks found' : `Showing ${totalTasks} task${totalTasks === 1 ? '' : 's'}`}
+                  {searchQuery && ` matching "${searchQuery}"`}
+                  {priorityFilter && ` with ${priorityFilter} priority`}
+                </Typography>
+              </Stack>
+              <Button
+                size="small"
+                onClick={() => {
+                  setSearchQuery('');
+                  setPriorityFilter('');
+                }}
+                sx={{ textTransform: 'none' }}
+              >
+                Clear
+              </Button>
+            </Box>
+          )}
+
+          <ProjectSummaryBar />
+
+          <DragDropContext key={methodology} onDragEnd={onDragEnd}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "stretch",
+                gap: "var(--col-gap)",
+                pb: 3,
+                overflowX: "auto",
+                overflowY: "hidden",
+                scrollSnapType: "x proximity",
+                "&::-webkit-scrollbar": { height: 8 },
+                "&::-webkit-scrollbar-thumb": {
+                  background: alpha("#000", 0.2),
+                  borderRadius: 8,
+                },
+              }}
+            >
+              {STATUS_ORDER.map((statusKey) => (
+                <Column
+                  key={statusKey}
+                  statusKey={statusKey}
+                  tasks={filteredTaskState[statusKey] || []}
+                  onAddTask={showCreate}
+                  statusMeta={STATUS_META}
+                  project={project}
+                  showProjectSummary={false}
+                  renderTaskCard={(task, dragSnapshot) => (
+                    <Box
+                      sx={{
+                        transition: "transform .18s, box-shadow .22s",
+                        transform: dragSnapshot.isDragging ? "rotate(1.5deg) scale(1.02)" : "none",
+                        boxShadow: dragSnapshot.isDragging
+                          ? `0 8px 20px -6px ${alpha(
+                              STATUS_META[statusKey]?.accent || methodStyles.accent,
+                              0.45
+                            )}`
+                          : "0 1px 3px rgba(0,0,0,.12)",
+                        borderRadius: 2,
+                      }}
+                    >
+                      <TaskCard
+                        task={task}
+                        onEdit={() => showEdit(task)}
+                        onDelete={() => askDelete(task.id)}
+                        onClick={() => {
+                          console.log('📋 Task clicked, navigating to:', `/projects/${project.id}/tasks/${task.id}`);
+                          router.visit(`/projects/${project.id}/tasks/${task.id}`);
+                        }}
+                        accent={STATUS_META[statusKey]?.accent || methodStyles.accent}
+                      />
+                    </Box>
+                  )}
+                />
+              ))}
+            </Box>
+          </DragDropContext>
+
+          <FloatingActionGroup
+            onAddTask={() => {
+              showCreate(STATUS_ORDER[0]);
+              setTimeout(() => titleRef.current?.focus(), 60);
+            }}
+            onOpenAssistant={() => setAssistantOpen(true)}
+            methodStyles={methodStyles}
+            assistantOpen={assistantOpen}
+          />
+
+          <Dialog
+            open={openForm}
+            onClose={() => setOpenForm(false)}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 3,
+                overflow: "hidden",
+                background: "linear-gradient(140deg,rgba(255,255,255,0.95),rgba(255,255,255,0.8))",
+                backdropFilter: "blur(12px)",
+                border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
+              },
+            }}
+          >
+            <form onSubmit={submit}>
+              <DialogTitle sx={{ fontWeight: 700, pr: 6, display: "flex", alignItems: "center", gap: 1 }}>
+                {editMode ? "Edit Task" : "Create Task"}
+                <Chip 
+                  size="small" 
+                  label={editMode ? "Editing" : "New"} 
+                  sx={{ 
+                    fontWeight: 700, 
+                    height: 22,
+                    bgcolor: editMode ? '#ffc107' : '#17a2b8',
+                    color: editMode ? '#212529' : '#ffffff',
+                    border: 'none',
+                    fontSize: '0.75rem',
+                    '& .MuiChip-label': {
+                      fontWeight: 700,
+                      color: editMode ? '#212529' : '#ffffff',
+                      px: 1,
+                    }
+                  }} 
+                />
+                <IconButton size="small" aria-label="Close" onClick={() => setOpenForm(false)} sx={{ ml: "auto" }}>
+                  <CloseRoundedIcon fontSize="small" />
+                </IconButton>
+              </DialogTitle>
+
+              <DialogContent 
+                dividers 
+                sx={{ 
+                  display: "flex", 
+                  flexDirection: "column", 
+                  gap: 1.5, 
+                  pt: 2,
+                  maxHeight: "60vh",
+                  overflowY: "auto",
+                  "&::-webkit-scrollbar": {
+                    width: "6px",
+                  },
+                  "&::-webkit-scrollbar-track": {
+                    background: "rgba(0,0,0,0.1)",
+                    borderRadius: "3px",
+                  },
+                  "&::-webkit-scrollbar-thumb": {
+                    background: "rgba(0,0,0,0.3)",
+                    borderRadius: "3px",
+                    "&:hover": {
+                      background: "rgba(0,0,0,0.5)",
+                    },
+                  },
+                }}
+              >
+                <TextField
+                  label="Title"
+                  required
+                  fullWidth
+                  inputRef={titleRef}
+                  value={data.title}
+                  onChange={(e) => setData("title", e.target.value)}
+                  error={!!errors.title}
+                  helperText={errors.title}
+                  placeholder="Concise task name"
+                  variant="outlined"
+                  size="small"
+                />
+                <TextField
+                  label="Description"
+                  multiline
+                  minRows={3}
+                  fullWidth
+                  value={data.description}
+                  onChange={(e) => setData("description", e.target.value)}
+                  error={!!errors.description}
+                  helperText={errors.description || "Add optional context, acceptance criteria, etc."}
+                  placeholder="Add more context..."
+                  size="small"
+                />
+
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                  <TextField
+                    label="Start Date"
+                    type="date"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    value={data.start_date}
+                    onChange={(e) => setData("start_date", e.target.value)}
+                    error={!!errors.start_date}
+                    helperText={errors.start_date || "Optional"}
+                    size="small"
+                    InputProps={{
+                      startAdornment: (
+                        <CalendarMonthRoundedIcon fontSize="small" sx={{ mr: 1, color: "text.disabled" }} />
+                      ),
+                    }}
+                  />
+                  <TextField
+                    label="Due / Execution Date"
+                    type="date"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    value={data.end_date}
+                    onChange={(e) => setData("end_date", e.target.value)}
+                    error={!!errors.end_date}
+                    helperText={errors.end_date || "Optional"}
+                    size="small"
+                    InputProps={{
+                      startAdornment: (
+                        <CalendarMonthRoundedIcon fontSize="small" sx={{ mr: 1, color: "text.disabled" }} />
+                      ),
+                    }}
+                  />
+                  <TextField
+                    select
+                    label="Assign To"
+                    fullWidth
+                    value={data.assignee_id}
+                    onChange={(e) => setData("assignee_id", e.target.value)}
+                    error={!!errors.assignee_id}
+                    helperText={errors.assignee_id || "Optional"}
+                    size="small"
+                    InputProps={{
+                      startAdornment: (
+                        <PersonRoundedIcon fontSize="small" sx={{ mr: 1, color: "text.disabled" }} />
+                      ),
+                    }}
+                  >
+                    <MenuItem value="">— Unassigned —</MenuItem>
+                    {Array.isArray(users) &&
+                      users.map((u) => (
+                        <MenuItem key={u.id} value={u.id}>
+                          {u.name}
+                        </MenuItem>
+                      ))}
+                  </TextField>
+                </Stack>
+
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                  <TextField
+                    select
+                    label="Priority"
+                    fullWidth
+                    value={data.priority}
+                    onChange={(e) => setData("priority", e.target.value)}
+                    error={!!errors.priority}
+                    helperText={errors.priority || "Task priority level"}
+                    size="small"
+                  >
+                    <MenuItem value="low">Low</MenuItem>
+                    <MenuItem value="medium">Medium</MenuItem>
+                    <MenuItem value="high">High</MenuItem>
+                    <MenuItem value="urgent">Urgent</MenuItem>
+                  </TextField>
+                  
+                  <TextField
+                    select
+                    label="Milestone"
+                    fullWidth
+                    value={data.milestone}
+                    onChange={(e) => setData("milestone", e.target.value === 'true')}
+                    error={!!errors.milestone}
+                    helperText={errors.milestone || "Mark as project milestone"}
+                    size="small"
+                    InputProps={{
+                      startAdornment: (
+                        <FlagRoundedIcon fontSize="small" sx={{ mr: 1, color: "text.disabled" }} />
+                      ),
+                    }}
+                  >
+                    <MenuItem value={false}>Regular Task</MenuItem>
+                    <MenuItem value={true}>Milestone</MenuItem>
+                  </TextField>
+                </Stack>
+
+                <TextField
+                  select
+                  label="Status"
+                  fullWidth
+                  value={data.status}
+                  onChange={(e) => setData("status", e.target.value)}
+                  helperText="Choose where it should appear on the board."
+                  size="small"
+                >
+                  {STATUS_ORDER.map((s) => (
+                    <MenuItem key={s} value={s}>
+                      {STATUS_META[s]?.title || s}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </DialogContent>
+
+              <DialogActions sx={{ px: 2, py: 1.5 }}>
+                <Button onClick={() => setOpenForm(false)} disabled={processing}>
+                  Cancel
+                </Button>
+                {editMode && (
+                  <Tooltip title="Delete task">
+                    <IconButton
+                      color="error"
+                      onClick={() => {
+                        setOpenForm(false);
+                        askDelete(editingId);
+                      }}
+                      size="small"
+                      sx={{ mr: "auto" }}
+                    >
+                      <DeleteOutlineIcon />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={processing}
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 700,
+                    px: 2.2,
+                    py: 0.6,
+                    background: methodStyles.accent,
+                    boxShadow: "0 6px 16px -8px rgba(0,0,0,.28)",
+                    "&:hover": { opacity: 0.95 },
+                  }}
+                >
+                  {processing ? (editMode ? "Updating…" : "Creating…") : editMode ? "Update Task" : "Create Task"}
+                </Button>
+              </DialogActions>
+            </form>
+          </Dialog>
+
+          <Dialog
+            open={detailsOpen}
+            onClose={() => setDetailsOpen(false)}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 3,
+                overflow: "hidden",
+                background: "linear-gradient(145deg,rgba(255,255,255,.96),rgba(255,255,255,.86))",
+                border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
+                backdropFilter: "blur(12px)",
+              },
+            }}
+          >
+            <DialogTitle sx={{ fontWeight: 900 }}>
+              {project?.name || "Project"} — Details
+            </DialogTitle>
+            <DialogContent dividers sx={{ display: "grid", gap: 1 }}>
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                {headerChips.map((c, i) => (
+                  <Chip
+                    key={i}
+                    icon={c.icon}
+                    label={c.label}
+                    size="small"
+                    sx={{
+                      fontWeight: 600,
+                      background: (t) => methodStyles.chipBg(t),
+                      border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
+                      height: 24,
+                    }}
+                  />
+                ))}
+                {(project?.start_date || project?.end_date) && (
+                  <Chip
+                    icon={<CalendarMonthRoundedIcon fontSize="small" />}
+                    label={`${fmtDate(project?.start_date) ?? "—"} → ${fmtDate(project?.end_date) ?? "—"}`}
+                    size="small"
+                    sx={{
+                      fontWeight: 600,
+                      background: (t) => methodStyles.chipBg(t),
+                      border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
+                      height: 24,
+                    }}
+                  />
+                )}
+              </Stack>
+
+              {project?.description && (
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="overline" sx={{ opacity: 0.7 }}>
+                    Description
+                  </Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: "pre-line", mt: 0.5 }}>
+                    {stripContextSummary(project.description)}
+                  </Typography>
+                </Box>
+              )}
+
+              {(meta.objectives || meta.constraints) && (
+                <Stack spacing={1} sx={{ mt: 0.6 }}>
+                  {meta.objectives && (
+                    <Stack direction="row" spacing={0.6}>
+                      <FlagRoundedIcon fontSize="small" sx={{ mt: 0.25, opacity: 0.8 }} />
+                      <Typography variant="body2" sx={{ whiteSpace: "pre-line" }}>
+                        {meta.objectives}
+                      </Typography>
+                    </Stack>
+                  )}
+                  {meta.constraints && (
+                    <Stack direction="row" spacing={0.6}>
+                      <ReportProblemRoundedIcon fontSize="small" sx={{ mt: 0.25, opacity: 0.8 }} />
+                      <Typography variant="body2" sx={{ whiteSpace: "pre-line" }}>
+                        {meta.constraints}
+                      </Typography>
+                    </Stack>
+                  )}
+                </Stack>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ px: 2, py: 1.25 }}>
+              <Button onClick={() => setDetailsOpen(false)}>Close</Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog
+            open={confirmOpen}
+            onClose={() => {
+              setConfirmOpen(false);
+              setPendingDeleteId(null);
+            }}
+            maxWidth="xs"
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 3,
+                background: (t) =>
+                  `linear-gradient(140deg, ${alpha(t.palette.error.light, 0.15)}, #fff)`,
+                border: (t) => `1px solid ${alpha(t.palette.error.main, 0.35)}`,
+                backdropFilter: "blur(10px)",
+              },
+            }}
+          >
+            <DialogTitle sx={{ fontWeight: 800, pr: 6 }}>Delete Task</DialogTitle>
+            <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Typography variant="body2">
+                Are you sure you want to permanently delete
+                {pendingTask ? ' "' + pendingTask.title + '"' : " this task"}? This action cannot be undone.
+              </Typography>
+            </DialogContent>
+            <DialogActions sx={{ px: 2, py: 1.25 }}>
+              <Button
+                onClick={() => {
+                  setConfirmOpen(false);
+                  setPendingDeleteId(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={confirmDelete} color="error" variant="contained" sx={{ fontWeight: 700, textTransform: "none" }}>
+                Delete
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <MembersManagerDialog open={membersOpen} onClose={() => setMembersOpen(false)} project={project} members={Array.isArray(users) ? users : []} />
+
+          <AIPdfReportDialog
+            key={reportOpen ? "open" : "closed"}
+            open={reportOpen}
+            onClose={() => setReportOpen(false)}
+            project={project}
+            tasks={taskState}
+            users={users}
+          />
+
+          <UpgradeDialog open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
+
+          <AssistantChat
+            project={project}
+            open={assistantOpen}
+            onClose={() => setAssistantOpen(false)}
+          />
+        </Box>
+      </AuthenticatedLayout>
+    </>
+  );
 }
