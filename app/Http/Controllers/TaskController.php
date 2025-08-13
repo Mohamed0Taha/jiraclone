@@ -14,6 +14,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Log;
 use App\Services\TaskGeneratorService;
 use App\Services\SuggestionChipService;
+use Illuminate\Support\Facades\Session;
 
 class TaskController extends Controller
 {
@@ -83,7 +84,6 @@ class TaskController extends Controller
     /* ------------------------------------------------ Timeline -------- */
     public function timeline(Project $project)
     {
-        // Re-enable this once you’re done testing without auth:
         $this->authorize('view', $project);
 
         Log::info("🔥 TASKCONTROLLER TIMELINE METHOD CALLED FOR PROJECT {$project->id}");
@@ -124,7 +124,7 @@ class TaskController extends Controller
             'sample_task' => collect($tasks)->flatten()->first()
         ]);
 
-        // IMPORTANT: this must match resources/js/Pages/Timeline/Timeline.jsx
+        // IMPORTANT: must match resources/js/Pages/Timeline/Timeline.jsx
         return Inertia::render('Timeline/Timeline', compact('project', 'tasks', 'users'));
     }
 
@@ -156,7 +156,6 @@ class TaskController extends Controller
             'milestone'      => $val['milestone']      ?? false,
         ]);
 
-        // Fire the TaskCreated event for automation triggers
         TaskCreated::dispatch($task);
 
         return back()->with('success', 'Task created.');
@@ -167,8 +166,6 @@ class TaskController extends Controller
     {
         $this->authorize('update', $task);
 
-        $originalTask = $task->getOriginal();
-        
         $validated = $request->validate([
             'title'          => 'sometimes|required|string|max:255',
             'description'    => 'sometimes|nullable|string',
@@ -182,7 +179,6 @@ class TaskController extends Controller
 
         $task->update($validated);
 
-        // Fire the TaskUpdated event for automation triggers
         $changes = array_keys($validated);
         TaskUpdated::dispatch($task, $changes);
 
@@ -202,13 +198,12 @@ class TaskController extends Controller
     {
         $this->authorize('view', $project);
 
-        // Load task with all comments and their replies
         $task->load([
             'creator:id,name',
             'assignee:id,name',
             'comments' => function ($query) {
                 $query->with(['user:id,name', 'replies.user:id,name'])
-                      ->whereNull('parent_id') // Only top-level comments
+                      ->whereNull('parent_id')
                       ->orderBy('created_at');
             }
         ]);
@@ -259,7 +254,21 @@ class TaskController extends Controller
             'prompt' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $tasks = $generator->generateTasks($project, $val['count'], $val['prompt'] ?? '');
+        $apiKey = config('services.openai.api_key');
+        if (empty($apiKey)) {
+            if ($request->expectsJson() || $request->header('X-Inertia')) {
+                return redirect()->back()->withErrors(['ai' => 'Missing OPENAI_API_KEY on server.'])->withInput();
+            }
+            return redirect()->back()->withErrors(['ai' => 'Missing OPENAI_API_KEY on server.'])->withInput();
+        }
+
+        try {
+            $tasks = $generator->generateTasks($project, $val['count'], $val['prompt'] ?? '');
+        } catch (\Throwable $e) {
+            return back()
+                ->withErrors(['ai' => 'AI error: ' . $e->getMessage()])
+                ->withInput();
+        }
 
         foreach ($tasks as $t) {
             if (!($t['title'] ?? null)) continue;
@@ -289,18 +298,61 @@ class TaskController extends Controller
             'prompt' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $apiKey = config('services.openai.api_key');
+        if (empty($apiKey)) {
+            $payload = [
+                'message' => 'AI is not configured on this server. Set OPENAI_API_KEY.',
+                'errors'  => ['api' => ['Missing OPENAI_API_KEY on server']],
+            ];
+            if ($request->expectsJson() || $request->header('X-Inertia')) {
+                return response()->json($payload, 422);
+            }
+            return back()->withErrors($payload['errors'])->withInput();
+        }
+
         try {
             $tasks = $generator->generateTasks($project, $val['count'], $val['prompt'] ?? '');
         } catch (\Throwable $e) {
-            return back()
-                ->withErrors(['ai' => 'AI error: ' . $e->getMessage()])
-                ->withInput();
+            $payload = [
+                'message' => 'AI error: ' . $e->getMessage(),
+                'errors'  => ['ai' => ['AI error: ' . $e->getMessage()]],
+            ];
+            if ($request->expectsJson() || $request->header('X-Inertia')) {
+                return response()->json($payload, 422);
+            }
+            return back()->withErrors($payload['errors'])->withInput();
+        }
+
+        // Stash preview in session, then 303 redirect to a GET that renders it (Inertia best practice)
+        Session::put("ai_preview.{$project->id}", [
+            'generated'     => $tasks,
+            'originalInput' => $val,
+            'ts'            => now()->toISOString(),
+        ]);
+
+        return redirect()
+            ->route('tasks.ai.preview.show', $project)
+            ->setStatusCode(303);
+    }
+
+    /**
+     * GET view for the preview (reads from session).
+     */
+    public function showAIPreview(Project $project)
+    {
+        $this->authorize('view', $project);
+
+        $data = Session::get("ai_preview.{$project->id}");
+        if (!$data) {
+            return redirect()
+                ->route('tasks.ai', $project)
+                ->withErrors(['ai' => 'No pending AI preview found. Please generate again.']);
         }
 
         return Inertia::render('Tasks/AITasksPreview', [
             'project'       => $project,
-            'generated'     => $tasks,
-            'originalInput' => $val,
+            'generated'     => $data['generated'] ?? [],
+            'originalInput' => $data['originalInput'] ?? [],
         ]);
     }
 
@@ -329,6 +381,9 @@ class TaskController extends Controller
             ]);
         }
 
+        // Clear preview after acceptance
+        Session::forget("ai_preview.{$project->id}");
+
         return redirect()
             ->route('tasks.index', $project)
             ->with('success', count($tasks) . ' AI-generated tasks added.');
@@ -344,14 +399,12 @@ class TaskController extends Controller
         try {
             $suggestions = $chips->fromProject($project, $max);
         } catch (\Throwable $e) {
-            // Log the error for debugging
             Log::error('SuggestionChipService failed', [
                 'project_id' => $project->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
-            // Return fallback suggestions
             $suggestions = [
                 'Define project milestones',
                 'Create task checklist',

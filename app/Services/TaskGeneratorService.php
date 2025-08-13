@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Project;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 use OpenAI\Laravel\Facades\OpenAI;
 use RuntimeException;
 use Carbon\Carbon;
@@ -16,7 +17,7 @@ use Carbon\Carbon;
  * - Granular and actionable with specific deliverables
  * - Include industry best practices and proper terminology
  * - Contain detailed acceptance criteria and dependencies
- * - Professionally scoped for 1-3 days of work per task
+ * - Professionally scoped for 1–3 days of work per task
  *
  * Additional metadata includes: category, priority, estimated hours, dependencies, deliverables
  *
@@ -24,15 +25,10 @@ use Carbon\Carbon;
  */
 class TaskGeneratorService
 {
-    /**
-     * Maximum tasks to request from the LLM in a single API call.
-     * Keeping this to 8 avoids token limits when each task has a long description.
-     */
+    /** Maximum tasks to request from the LLM in a single API call. */
     protected int $maxTasksPerCall = 8;
 
-    /**
-     * Number of retries per batch if the model returns fewer tasks than requested.
-     */
+    /** Number of retries per batch if the model returns fewer tasks than requested. */
     protected int $batchRetries = 2;
 
     /**
@@ -45,20 +41,26 @@ class TaskGeneratorService
      */
     public function generateTasks(Project $project, int $num, string $userPrompt = ''): array
     {
+        // Inertia-friendly guard: let controller catch and redirect with an error flash
+        $apiKey = config('services.openai.api_key') ?: env('OPENAI_API_KEY');
+        if (!is_string($apiKey) || trim($apiKey) === '') {
+            throw new RuntimeException('AI is not configured on this server. Set OPENAI_API_KEY.');
+        }
+
+        // Clamp request size (hard cap to keep things safe)
+        $num = max(1, min(50, $num));
+
         if ($num < 1) {
             return [];
         }
 
         $system = $this->systemPrompt();
 
-        $pStart = optional($project->start_date)->toDateString();
-        $pEnd   = optional($project->end_date)->toDateString();
-
         // Analyze project context to determine domain and complexity
         $projectContext = $this->analyzeProjectContext($project, $userPrompt);
 
-        $allTasks = [];
-        $remaining = $num;
+        $allTasks   = [];
+        $remaining  = $num;
         $startIndex = 1;
 
         // Generate tasks in batches until we reach $num.
@@ -66,12 +68,9 @@ class TaskGeneratorService
             $batchTarget = min($this->maxTasksPerCall, $remaining);
 
             // For large totals, shorten per-task description to avoid token limits.
-            $longForm = $num <= $this->maxTasksPerCall; // if small request, keep the fuller 200–400 range
-            $descWordRange = $longForm ? '200-400' : '120-220';
-
-            // Build user prompt for this batch with indexing to reduce duplication
-            $indexEnd = $startIndex + $batchTarget - 1;
-            $batchCount = $batchTarget;
+            $longForm       = $num <= $this->maxTasksPerCall;
+            $descWordRange  = $longForm ? '200-400' : '120-220';
+            $indexEnd       = $startIndex + $batchTarget - 1;
 
             $batchPrompt = $this->buildBatchPrompt(
                 project: $project,
@@ -79,101 +78,76 @@ class TaskGeneratorService
                 userPrompt: $userPrompt,
                 indexStart: $startIndex,
                 indexEnd: $indexEnd,
-                batchCount: $batchCount,
+                batchCount: $batchTarget,
                 descWordRange: $descWordRange,
                 totalRequested: $num,
-                alreadyChosenTitles: array_map(
-                    static fn (array $t) => $t['title'],
-                    $allTasks
-                )
+                alreadyChosenTitles: array_map(static fn (array $t) => $t['title'], $allTasks)
             );
 
-            // Compute a conservative max_tokens for the batch to ensure valid JSON and avoid truncation
             $maxTokens = $this->computeMaxTokensForBatch($batchTarget, $longForm);
 
             $batchTasks = [];
-            $attempt = 0;
+            $attempt    = 0;
 
             // Try up to $batchRetries+1 times to fill this batch
             do {
-                $response = OpenAI::chat()->create([
-                    'model'           => 'gpt-4o-mini',
-                    'temperature'     => 0.7,
-                    'response_format' => ['type' => 'json_object'],
-                    'max_tokens'      => $maxTokens,
-                    'messages'        => [
-                        ['role' => 'system', 'content' => $system],
-                        ['role' => 'user',   'content' => $batchPrompt],
-                    ],
-                ]);
+                try {
+                    $response = OpenAI::chat()->create([
+                        'model'           => 'gpt-4o-mini',
+                        'temperature'     => 0.7,
+                        'response_format' => ['type' => 'json_object'],
+                        'max_tokens'      => $maxTokens,
+                        'messages'        => [
+                            ['role' => 'system', 'content' => $system],
+                            ['role' => 'user',   'content' => $batchPrompt],
+                        ],
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::error('OpenAI batch call failed', [
+                        'project_id' => $project->id,
+                        'attempt'    => $attempt,
+                        'error'      => $e->getMessage(),
+                    ]);
+                    // Bubble a friendly error to the controller (Inertia-safe)
+                    throw new RuntimeException('Failed to contact AI service. Please try again.');
+                }
 
-                $raw = $response['choices'][0]['message']['content'] ?? '';
+                $raw = (string)($response['choices'][0]['message']['content'] ?? '');
                 $raw = preg_replace('/^```(?:json)?|```$/m', '', trim($raw));
 
-                // Decode JSON strictly
+                $decoded = null;
                 try {
                     $decoded = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
                 } catch (\Throwable $e) {
-                    $decoded = null;
-                }
-
-                $receivedTasks = [];
-                if (is_array($decoded) && isset($decoded['tasks']) && is_array($decoded['tasks'])) {
-                    $receivedTasks = $decoded['tasks'];
-                }
-
-                // Normalize and map tasks; de-duplicate against what we already have
-                $normalized = [];
-                foreach ($receivedTasks as $task) {
-                    [$s, $e] = $this->normalizeRange(
-                        $this->normalizeDate($task['start_date'] ?? null),
-                        $this->normalizeDate($task['end_date'] ?? null),
-                        $project
-                    );
-
-                    // Calculate estimated hours using our logic (honours any AI estimate as a base)
-                    $estimatedHours = $this->calculateEstimatedHours(
-                        (string)($task['complexity'] ?? 'Medium'),
-                        (string)($task['category'] ?? 'Development'),
-                        $task['estimated_hours'] ?? null
-                    );
-
-                    $mapped = [
-                        'title'           => Str::limit((string)($task['title'] ?? ''), 100, ''),
-                        'description'     => (string)($task['description'] ?? ''),
-                        'start_date'      => $s,
-                        'end_date'        => $e,
-                        'category'        => (string)($task['category'] ?? 'Development'),
-                        'priority'        => (string)($task['priority'] ?? 'Medium'),
-                        'estimated_hours' => $estimatedHours,
-                        'complexity'      => (string)($task['complexity'] ?? 'Medium'),
-                        'dependencies'    => (string)($task['dependencies'] ?? ''),
-                        'deliverables'    => (string)($task['deliverables'] ?? ''),
-                    ];
-
-                    // Skip empty titles to avoid nonsense entries
-                    if ($mapped['title'] !== '') {
-                        $normalized[] = $mapped;
+                    // Try to salvage by extracting the first outer JSON object (defensive)
+                    if (preg_match('/\{.*\}/s', $raw, $m)) {
+                        try {
+                            $decoded = json_decode($m[0], true, flags: JSON_THROW_ON_ERROR);
+                        } catch (\Throwable $e2) {
+                            $decoded = null;
+                        }
                     }
                 }
 
-                // Remove duplicates by title vs already chosen and within this batch
+                $receivedTasks = (is_array($decoded) && isset($decoded['tasks']) && is_array($decoded['tasks']))
+                    ? $decoded['tasks']
+                    : [];
+
+                // Normalize & de-duplicate
+                $normalized = $this->normalizeMapTasks($receivedTasks, $project);
                 $normalized = $this->dedupeByTitle($normalized);
                 $normalized = $this->removeTitlesAlreadyChosen($normalized, $allTasks);
 
-                // If model returned more than we asked for, trim; if fewer, we'll retry once or twice
                 if (count($normalized) > $batchTarget) {
                     $normalized = array_slice($normalized, 0, $batchTarget);
                 }
 
                 $batchTasks = $normalized;
 
-                // If we didn't get enough, tighten prompt (shorter descriptions) and retry
+                // If not enough, retry with tighter prompt and lower token budget
                 if (count($batchTasks) < $batchTarget && $attempt < $this->batchRetries) {
-                    // For retries, we reduce the word range further and reduce temperature slightly to improve compliance
                     $descWordRange = '90-140';
-
-                    $batchPrompt = $this->buildBatchPrompt(
+                    $batchPrompt   = $this->buildBatchPrompt(
                         project: $project,
                         projectContext: $projectContext,
                         userPrompt: $userPrompt,
@@ -182,74 +156,62 @@ class TaskGeneratorService
                         batchCount: $batchTarget,
                         descWordRange: $descWordRange,
                         totalRequested: $num,
-                        alreadyChosenTitles: array_map(
-                            static fn (array $t) => $t['title'],
-                            $allTasks
-                        )
+                        alreadyChosenTitles: array_map(static fn (array $t) => $t['title'], $allTasks)
                     );
-
-                    // Slightly lower the max tokens so the model aims for brevity
                     $maxTokens = $this->computeMaxTokensForBatch($batchTarget, false);
                 }
 
                 $attempt++;
             } while (count($batchTasks) < $batchTarget && $attempt <= $this->batchRetries);
 
-            // Add what we did get
+            // Add what we got from this batch
             foreach ($batchTasks as $t) {
                 $allTasks[] = $t;
             }
 
             $added = count($batchTasks);
             if ($added === 0) {
-                // If we failed to add anything for this batch, bail to prevent infinite loops
+                // Prevent infinite looping
                 break;
             }
 
-            $remaining -= $added;
+            $remaining  -= $added;
             $startIndex += $added;
         }
 
-        // If, for any reason, we still didn't reach the exact requested number, pad with compact tasks
+        // Pad with compact tasks if still short
         if (count($allTasks) < $num) {
-            $needed = $num - count($allTasks);
+            $needed   = $num - count($allTasks);
             $padStart = $startIndex;
             $padEnd   = $padStart + $needed - 1;
 
-            $allTasks = array_merge(
-                $allTasks,
-                $this->generateCompactFallback(
-                    project: $project,
-                    projectContext: $projectContext,
-                    userPrompt: $userPrompt,
-                    remaining: $needed,
-                    indexStart: $padStart,
-                    indexEnd: $padEnd,
-                    totalRequested: $num
-                )
+            $fallback = $this->generateCompactFallback(
+                project: $project,
+                projectContext: $projectContext,
+                userPrompt: $userPrompt,
+                remaining: $needed,
+                indexStart: $padStart,
+                indexEnd: $padEnd,
+                totalRequested: $num
             );
+
+            $allTasks = array_merge($allTasks, $fallback);
         }
 
-        // If we somehow overshot (shouldn't happen), trim to exact count
         if (count($allTasks) > $num) {
             $allTasks = array_slice($allTasks, 0, $num);
         }
 
-        // Re-index numerically
         return array_values($allTasks);
     }
 
-    /**
-     * Build the system prompt string.
-     */
+    /** Build the system prompt string. */
     protected function systemPrompt(): string
     {
         return 'You are an expert senior project manager with 15+ years of experience across software development, business operations, marketing, and technical implementation. You create highly detailed, actionable tasks that professionals would actually execute in real-world scenarios. Always return STRICT, VALID JSON that exactly matches the requested schema and task count. Do not include any prose outside JSON.';
     }
 
-    /**
-     * Build a batch user prompt. We include indexing metadata and already chosen titles to reduce duplicates.
-     */
+    /** Build a batch user prompt (indexing + already chosen titles to reduce dupes). */
     protected function buildBatchPrompt(
         Project $project,
         array $projectContext,
@@ -266,15 +228,13 @@ class TaskGeneratorService
 
         $already = '';
         if (!empty($alreadyChosenTitles)) {
-            // Provide the model with existing titles so it avoids overlap
             $escaped = array_map(static fn ($t) => str_replace('"', '\"', $t), $alreadyChosenTitles);
             $already = "AVOID DUPLICATES WITH THESE EXISTING TITLES:\n- " . implode("\n- ", $escaped) . "\n\n";
         }
 
-        // Precompute labels to avoid expressions inside interpolation (which PHP disallows in strings)
         $batchRangeLabel = "{$indexStart}-{$indexEnd}";
 
-        $prompt = <<<PROMPT
+        return <<<PROMPT
 🎯 PROJECT ANALYSIS:
 Name: {$project->name}
 Description: {$project->description}
@@ -345,59 +305,40 @@ CRITICAL:
 - DO NOT include any content outside the JSON object.
 - Ensure each title is unique and not in the provided existing titles list.
 PROMPT;
-
-        return $prompt;
     }
 
-    /**
-     * Compute a conservative max_tokens budget for a batch.
-     * We approximate tokens as ~1.35x words + JSON overhead.
-     */
+    /** Compute a conservative max_tokens budget for a batch. */
     protected function computeMaxTokensForBatch(int $batchTarget, bool $longForm): int
     {
-        // Approx words per description
-        $wordsPerTask = $longForm ? 320 : 160; // center of 200–400 vs 120–220 / retries 90–140
-        $tokensPerTask = (int)round($wordsPerTask * 1.35) + 120; // JSON + field overhead
-        $approx = ($tokensPerTask * $batchTarget) + 600; // margin for braces and misc
-
-        // Cap to a reasonable range for this model; adjust as needed
-        $approx = max(2000, min(7000, $approx));
-
-        return $approx;
+        $wordsPerTask   = $longForm ? 320 : 160;
+        $tokensPerTask  = (int) round($wordsPerTask * 1.35) + 120; // JSON + field overhead
+        $approx         = ($tokensPerTask * $batchTarget) + 600;   // margin
+        return max(2000, min(7000, $approx));
     }
 
-    /**
-     * Analyze project context to determine type and complexity for better task generation
-     */
+    /** Analyze project context to determine type and complexity. */
     protected function analyzeProjectContext(Project $project, string $userPrompt): array
     {
-        $name = strtolower($project->name ?? '');
+        $name        = strtolower($project->name ?? '');
         $description = strtolower($project->description ?? '');
-        $prompt = strtolower($userPrompt);
+        $prompt      = strtolower($userPrompt);
+        $text        = $name . ' ' . $description . ' ' . $prompt;
 
-        $text = $name . ' ' . $description . ' ' . $prompt;
-
-        $type = 'General';
+        $type       = 'General';
         $complexity = 'Medium';
 
         if (preg_match('/\b(app|mobile|ios|android|react|vue|angular|frontend|backend|api|database|web|website|platform)\b/', $text)) {
-            $type = 'Software Development';
-            $complexity = 'High';
+            $type = 'Software Development'; $complexity = 'High';
         } elseif (preg_match('/\b(marketing|campaign|seo|social|content|brand|advertising|digital|growth)\b/', $text)) {
-            $type = 'Marketing & Growth';
-            $complexity = 'Medium';
+            $type = 'Marketing & Growth';   $complexity = 'Medium';
         } elseif (preg_match('/\b(design|ui|ux|prototype|wireframe|figma|sketch|brand|logo|visual)\b/', $text)) {
-            $type = 'Design & UX';
-            $complexity = 'Medium';
+            $type = 'Design & UX';          $complexity = 'Medium';
         } elseif (preg_match('/\b(research|analysis|study|survey|market|user|data|analytics)\b/', $text)) {
-            $type = 'Research & Analysis';
-            $complexity = 'Medium';
+            $type = 'Research & Analysis';  $complexity = 'Medium';
         } elseif (preg_match('/\b(infrastructure|devops|deployment|ci\/cd|cloud|aws|docker|kubernetes|security)\b/', $text)) {
-            $type = 'Infrastructure & Operations';
-            $complexity = 'High';
+            $type = 'Infrastructure & Operations'; $complexity = 'High';
         } elseif (preg_match('/\b(ecommerce|shop|store|payment|stripe|commerce|sales|product)\b/', $text)) {
-            $type = 'E-commerce';
-            $complexity = 'High';
+            $type = 'E-commerce';           $complexity = 'High';
         }
 
         if (preg_match('/\b(enterprise|large|complex|advanced|sophisticated|scalable|distributed)\b/', $text)) {
@@ -406,18 +347,13 @@ PROMPT;
             $complexity = 'Low';
         }
 
-        return [
-            'type'       => $type,
-            'complexity' => $complexity
-        ];
+        return ['type' => $type, 'complexity' => $complexity];
     }
 
-    /**
-     * Calculate estimated hours based on task complexity and category
-     */
+    /** Calculate estimated hours based on task complexity and category. */
     protected function calculateEstimatedHours(string $complexity, string $category, $aiEstimate = null): int
     {
-        $baseHours = is_numeric($aiEstimate) ? (int)$aiEstimate : null;
+        $baseHours = is_numeric($aiEstimate) ? (int) $aiEstimate : null;
 
         if (!$baseHours) {
             $categoryBaseHours = [
@@ -431,18 +367,12 @@ PROMPT;
                 'Operations'  => 28,
                 'Management'  => 8,
             ];
-
             $baseHours = $categoryBaseHours[$category] ?? 16;
         }
 
-        $complexityMultipliers = [
-            'Simple'  => 0.6,
-            'Medium'  => 1.0,
-            'Complex' => 1.8,
-        ];
-
-        $multiplier = $complexityMultipliers[$complexity] ?? 1.0;
-        $calculatedHours = (int)round($baseHours * $multiplier);
+        $complexityMultipliers = ['Simple' => 0.6, 'Medium' => 1.0, 'Complex' => 1.8];
+        $multiplier            = $complexityMultipliers[$complexity] ?? 1.0;
+        $calculatedHours       = (int) round($baseHours * $multiplier);
 
         return max(4, min(80, $calculatedHours));
     }
@@ -451,15 +381,13 @@ PROMPT;
     {
         if (empty($value)) return null;
         try {
-            return Carbon::parse((string)$value)->toDateString();
+            return Carbon::parse((string) $value)->toDateString();
         } catch (\Throwable $e) {
             return null;
         }
     }
 
-    /**
-     * Ensure dates are ordered and within project frame (when available)
-     */
+    /** Ensure dates are ordered and within project frame (when available). */
     protected function normalizeRange(?string $start, ?string $end, Project $project): array
     {
         $pStart = optional($project->start_date)->toDateString();
@@ -467,7 +395,6 @@ PROMPT;
 
         if (!$start && $pStart) $start = $pStart;
         if (!$start && !$pStart) $start = now()->toDateString();
-
         if (!$end) $end = $start;
 
         if ($start > $end) [$start, $end] = [$end, $start];
@@ -479,48 +406,72 @@ PROMPT;
         return [$start, $end];
     }
 
-    /**
-     * Remove duplicates within a batch using case-insensitive titles.
-     */
-    protected function dedupeByTitle(array $tasks): array
+    /** Normalize/map model output into your array shape. */
+    protected function normalizeMapTasks(array $receivedTasks, Project $project): array
     {
-        $seen = [];
         $out = [];
-        foreach ($tasks as $t) {
-            $key = mb_strtolower($t['title'] ?? '');
-            if ($key === '') {
-                continue;
+        foreach ($receivedTasks as $task) {
+            [$s, $e] = $this->normalizeRange(
+                $this->normalizeDate($task['start_date'] ?? null),
+                $this->normalizeDate($task['end_date'] ?? null),
+                $project
+            );
+
+            $estimatedHours = $this->calculateEstimatedHours(
+                (string)($task['complexity'] ?? 'Medium'),
+                (string)($task['category'] ?? 'Development'),
+                $task['estimated_hours'] ?? null
+            );
+
+            $mapped = [
+                'title'           => Str::limit((string)($task['title'] ?? ''), 100, ''),
+                'description'     => (string)($task['description'] ?? ''),
+                'start_date'      => $s,
+                'end_date'        => $e,
+                'category'        => (string)($task['category'] ?? 'Development'),
+                'priority'        => (string)($task['priority'] ?? 'Medium'),
+                'estimated_hours' => $estimatedHours,
+                'complexity'      => (string)($task['complexity'] ?? 'Medium'),
+                'dependencies'    => (string)($task['dependencies'] ?? ''),
+                'deliverables'    => (string)($task['deliverables'] ?? ''),
+            ];
+
+            if ($mapped['title'] !== '') {
+                $out[] = $mapped;
             }
-            if (isset($seen[$key])) {
-                continue;
-            }
-            $seen[$key] = true;
-            $out[] = $t;
         }
         return $out;
     }
 
-    /**
-     * Remove tasks that duplicate titles already chosen in previous batches.
-     */
+    /** Remove duplicates within a list using case-insensitive titles. */
+    protected function dedupeByTitle(array $tasks): array
+    {
+        $seen = [];
+        $out  = [];
+        foreach ($tasks as $t) {
+            $key = mb_strtolower($t['title'] ?? '');
+            if ($key === '' || isset($seen[$key])) continue;
+            $seen[$key] = true;
+            $out[]      = $t;
+        }
+        return $out;
+    }
+
+    /** Remove tasks that duplicate titles already chosen in previous batches. */
     protected function removeTitlesAlreadyChosen(array $candidateTasks, array $chosenTasks): array
     {
-        if (empty($chosenTasks)) {
-            return $candidateTasks;
-        }
+        if (empty($chosenTasks)) return $candidateTasks;
+
         $chosen = [];
         foreach ($chosenTasks as $t) {
             $key = mb_strtolower($t['title'] ?? '');
-            if ($key !== '') {
-                $chosen[$key] = true;
-            }
+            if ($key !== '') $chosen[$key] = true;
         }
+
         $out = [];
         foreach ($candidateTasks as $t) {
             $key = mb_strtolower($t['title'] ?? '');
-            if ($key === '' || isset($chosen[$key])) {
-                continue;
-            }
+            if ($key === '' || isset($chosen[$key])) continue;
             $out[] = $t;
         }
         return $out;
@@ -528,7 +479,6 @@ PROMPT;
 
     /**
      * As a last resort, fill remaining tasks with compact tasks to meet the exact requested count.
-     * These are shorter but still structured and useful.
      */
     protected function generateCompactFallback(
         Project $project,
@@ -539,11 +489,9 @@ PROMPT;
         int $indexEnd,
         int $totalRequested
     ): array {
-        if ($remaining < 1) {
-            return [];
-        }
+        if ($remaining < 1) return [];
 
-        $system = $this->systemPrompt();
+        $system     = $this->systemPrompt();
         $batchCount = $remaining;
 
         $compactPrompt = $this->buildBatchPrompt(
@@ -558,18 +506,27 @@ PROMPT;
             alreadyChosenTitles: []
         );
 
-        $response = OpenAI::chat()->create([
-            'model'           => 'gpt-4o-mini',
-            'temperature'     => 0.5, // lower for stricter compliance
-            'response_format' => ['type' => 'json_object'],
-            'max_tokens'      => $this->computeMaxTokensForBatch($remaining, false),
-            'messages'        => [
-                ['role' => 'system', 'content' => $system],
-                ['role' => 'user',   'content' => $compactPrompt],
-            ],
-        ]);
+        try {
+            $response = OpenAI::chat()->create([
+                'model'           => 'gpt-4o-mini',
+                'temperature'     => 0.5,
+                'response_format' => ['type' => 'json_object'],
+                'max_tokens'      => $this->computeMaxTokensForBatch($remaining, false),
+                'messages'        => [
+                    ['role' => 'system', 'content' => $system],
+                    ['role' => 'user',   'content' => $compactPrompt],
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('OpenAI compact fallback failed', [
+                'project_id' => $project->id,
+                'error'      => $e->getMessage(),
+            ]);
+            // If AI is unreachable even for fallback, just return empty; controller already has UX
+            return [];
+        }
 
-        $raw = $response['choices'][0]['message']['content'] ?? '';
+        $raw = (string)($response['choices'][0]['message']['content'] ?? '');
         $raw = preg_replace('/^```(?:json)?|```$/m', '', trim($raw));
 
         try {
@@ -580,39 +537,9 @@ PROMPT;
 
         $result = [];
         if (is_array($decoded) && isset($decoded['tasks']) && is_array($decoded['tasks'])) {
-            foreach ($decoded['tasks'] as $task) {
-                [$s, $e] = $this->normalizeRange(
-                    $this->normalizeDate($task['start_date'] ?? null),
-                    $this->normalizeDate($task['end_date'] ?? null),
-                    $project
-                );
-
-                $estimatedHours = $this->calculateEstimatedHours(
-                    (string)($task['complexity'] ?? 'Medium'),
-                    (string)($task['category'] ?? 'Development'),
-                    $task['estimated_hours'] ?? null
-                );
-
-                $mapped = [
-                    'title'           => Str::limit((string)($task['title'] ?? ''), 100, ''),
-                    'description'     => (string)($task['description'] ?? ''),
-                    'start_date'      => $s,
-                    'end_date'        => $e,
-                    'category'        => (string)($task['category'] ?? 'Development'),
-                    'priority'        => (string)($task['priority'] ?? 'Medium'),
-                    'estimated_hours' => $estimatedHours,
-                    'complexity'      => (string)($task['complexity'] ?? 'Medium'),
-                    'dependencies'    => (string)($task['dependencies'] ?? ''),
-                    'deliverables'    => (string)($task['deliverables'] ?? ''),
-                ];
-
-                if ($mapped['title'] !== '') {
-                    $result[] = $mapped;
-                }
-            }
+            $result = $this->normalizeMapTasks($decoded['tasks'], $project);
         }
 
-        // Trim to exact count if needed (we won't fabricate tasks here)
         if (count($result) > $remaining) {
             $result = array_slice($result, 0, $remaining);
         }

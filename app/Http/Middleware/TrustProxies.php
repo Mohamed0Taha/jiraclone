@@ -8,14 +8,14 @@ use Illuminate\Http\Middleware\TrustProxies as Middleware;
 class TrustProxies extends Middleware
 {
     /**
-     * The trusted proxies for this application.
+     * Trust all proxies (Heroku router).
      *
      * @var array|string|null
      */
     protected $proxies = '*';
 
     /**
-     * The headers that should be used to detect proxies.
+     * Use AWS/ELB header set that Heroku provides.
      *
      * @var int
      */

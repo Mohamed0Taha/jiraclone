@@ -25,12 +25,17 @@ import HelpRoundedIcon from "@mui/icons-material/HelpRounded";
 import TipsAndUpdatesRoundedIcon from "@mui/icons-material/TipsAndUpdatesRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
+import { getCsrfToken } from "@/csrf";
 
 /** GET suggestions (no CSRF). `max` is clamped 3..10 for backend service. */
 async function loadAISuggestions(projectId, max = 8) {
   const clamped = Math.max(3, Math.min(10, max || 8));
   const url = route("tasks.ai.suggestions", projectId) + `?max=${encodeURIComponent(clamped)}`;
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  const res = await fetch(url, {
+    // Explicitly tell server we want JSON and we're NOT doing an Inertia visit
+    headers: { Accept: "application/json" },
+    credentials: "same-origin",
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   return Array.isArray(data?.suggestions)
@@ -45,7 +50,7 @@ function includesLine(haystack, needle) {
 
 export default function AITasksGenerator({ auth, project, prefill = {} }) {
   const theme = useTheme();
-  const { processing } = usePage().props;
+  const { processing, errors = {} } = usePage().props;
   const [count, setCount] = useState(Number(prefill.count) || 5);
   const [prompt, setPrompt] = useState(prefill.prompt || "");
   const [chips, setChips] = useState([]);
@@ -118,13 +123,20 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
 
   const generate = () => {
     setIsGenerating(true);
+    const token = getCsrfToken() || "";
     router.post(
-      route("tasks.ai.preview", project.id), 
-      { count, prompt }, 
-      { 
+      route("tasks.ai.preview", project.id),
+      { count, prompt },
+      {
         preserveScroll: true,
+        headers: {
+          // Ensure Laravel's VerifyCsrfToken sees the token for fetch/Inertia
+          "X-XSRF-TOKEN": token,
+          // Make it crystal clear we expect an Inertia page back
+          Accept: "text/html, application/xhtml+xml",
+        },
         onFinish: () => setIsGenerating(false),
-        onError: () => setIsGenerating(false)
+        onError: () => setIsGenerating(false),
       }
     );
   };
@@ -222,6 +234,22 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
               >
                 Project: <strong>{project?.name}</strong>
               </Typography>
+
+              {errors?.ai && (
+                <Box
+                  sx={{
+                    mb: 2,
+                    p: 1.5,
+                    borderRadius: 2,
+                    border: `1px solid ${alpha(theme.palette.error.main, 0.35)}`,
+                    backgroundColor: alpha(theme.palette.error.main, 0.06),
+                  }}
+                >
+                  <Typography color="error" fontWeight={700}>
+                    {errors.ai}
+                  </Typography>
+                </Box>
+              )}
 
               <Divider sx={{ mb: 2.5 }} />
 
@@ -408,7 +436,15 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                         />
                       ))
                     : chips.map((s, idx) => {
-                        const pal = chipPalettes[idx % chipPalettes.length];
+                        const palettes = [
+                          { bg: alpha(theme.palette.info.main, 0.12), brd: alpha(theme.palette.info.main, 0.35) },
+                          { bg: alpha(theme.palette.success.main, 0.12), brd: alpha(theme.palette.success.main, 0.35) },
+                          { bg: alpha(theme.palette.warning.main, 0.12), brd: alpha(theme.palette.warning.main, 0.35) },
+                          { bg: alpha(theme.palette.secondary.main, 0.12), brd: alpha(theme.palette.secondary.main, 0.35) },
+                          { bg: alpha(theme.palette.primary.main, 0.12), brd: alpha(theme.palette.primary.main, 0.35) },
+                          { bg: alpha(theme.palette.error.main, 0.10), brd: alpha(theme.palette.error.main, 0.30) },
+                        ];
+                        const pal = palettes[idx % palettes.length];
                         return (
                           <Chip
                             key={`${idx}-${s}`}

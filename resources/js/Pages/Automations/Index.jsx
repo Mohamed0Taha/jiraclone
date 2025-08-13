@@ -1,4 +1,3 @@
-// resources/js/Pages/Automations/Index.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -37,6 +36,12 @@ import { router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import WorkflowBuilder from './components/WorkflowBuilder';
 import WorkflowTemplates from './components/WorkflowTemplates';
+
+/* ------------------------------ CSRF Helper ------------------------------ */
+function getCsrfToken() {
+  const el = document.head.querySelector('meta[name="csrf-token"]');
+  return el ? el.getAttribute('content') || '' : '';
+}
 
 /* ------------------------------ Error Boundary ----------------------------- */
 class ErrorBoundary extends React.Component {
@@ -95,13 +100,6 @@ function Metric({ label, children, value }) {
 }
 
 /* ------------------------------ Workflow Card ------------------------------ */
-/**
- * Strict, uniform layout:
- * - Header row: left (identity) + right (controls).
- * - Body row: left (description/actions) + right (metrics).
- * Using CSS Grid keeps controls in the exact same spot for every card,
- * regardless of description length or actions wrapping.
- */
 function WorkflowCard({
   theme,
   workflow,
@@ -148,17 +146,16 @@ function WorkflowCard({
       }}
     >
       <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-        {/* GRID: keeps elements locked in consistent places */}
         <Box
           sx={{
             display: 'grid',
             gridTemplateColumns: {
               xs: '1fr',
-              md: '1fr 340px', // left grows, right metrics fixed width
+              md: '1fr 340px',
             },
             gridTemplateRows: {
               xs: 'auto auto auto auto',
-              md: 'auto auto', // header + body
+              md: 'auto auto',
             },
             gridTemplateAreas: {
               xs: `
@@ -178,7 +175,6 @@ function WorkflowCard({
             minWidth: 0,
           }}
         >
-          {/* Header Left: Identity */}
           <Box gridArea="headerLeft" sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0 }}>
               <Avatar
@@ -200,10 +196,7 @@ function WorkflowCard({
                   <Typography
                     variant="h6"
                     fontWeight={900}
-                    sx={{
-                      minWidth: 0,
-                      lineHeight: 1.2,
-                    }}
+                    sx={{ minWidth: 0, lineHeight: 1.2 }}
                     title={workflow.name}
                   >
                     <Box
@@ -251,7 +244,6 @@ function WorkflowCard({
             </Stack>
           </Box>
 
-          {/* Header Right: Controls (LOCKED position) */}
           <Box
             gridArea="headerRight"
             sx={{
@@ -265,8 +257,8 @@ function WorkflowCard({
               <IconButton
                 onClick={() => onToggle(workflow.id)}
                 sx={{
-                  width: controlButtonSize,
-                  height: controlButtonSize,
+                  width: 42,
+                  height: 42,
                   borderRadius: 2,
                   border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                   bgcolor: alpha(
@@ -290,8 +282,8 @@ function WorkflowCard({
               <IconButton
                 onClick={() => onEdit(workflow)}
                 sx={{
-                  width: controlButtonSize,
-                  height: controlButtonSize,
+                  width: 42,
+                  height: 42,
                   borderRadius: 2,
                   border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                   bgcolor: alpha(theme.palette.info.main, 0.10),
@@ -307,8 +299,8 @@ function WorkflowCard({
               <IconButton
                 onClick={() => onDelete(workflow.id)}
                 sx={{
-                  width: controlButtonSize,
-                  height: controlButtonSize,
+                  width: 42,
+                  height: 42,
                   borderRadius: 2,
                   border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                   bgcolor: alpha(theme.palette.error.main, 0.10),
@@ -321,7 +313,6 @@ function WorkflowCard({
             </Tooltip>
           </Box>
 
-          {/* Body Left: Description + Actions */}
           <Box gridArea="bodyLeft" sx={{ minWidth: 0 }}>
             <Typography
               color="text.secondary"
@@ -379,7 +370,6 @@ function WorkflowCard({
             </Stack>
           </Box>
 
-          {/* Body Right: Metrics (same width for every card) */}
           <Box gridArea="bodyRight" sx={{ minWidth: 0 }}>
             <Stack
               direction={{ xs: 'row', md: 'column' }}
@@ -413,7 +403,6 @@ function WorkflowCard({
           </Box>
         </Box>
 
-        {/* Divider only for small screens for clearer separation */}
         {!isMdUp && <Divider sx={{ mt: 2 }} />}
       </CardContent>
     </Card>
@@ -480,7 +469,11 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
 
   const handleDeleteWorkflow = (id) => {
     setWorkflows((prev) => prev.filter((w) => w.id !== id));
-    // router.delete(`/projects/${project.id}/automations/${id}`)
+    // If you wire deletion, remember CSRF header the same way.
+    // const token = getCsrfToken();
+    // router.delete(`/projects/${project.id}/automations/${id}`, {
+    //   headers: { 'X-CSRF-TOKEN': token, 'X-Requested-With': 'XMLHttpRequest' },
+    // });
   };
 
   const formatLastRun = (dateString) => {
@@ -511,22 +504,38 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
                 is_active: wf.status === 'active',
               };
 
+              const token = getCsrfToken();
+              const headers = {
+                'X-CSRF-TOKEN': token,
+                'X-Requested-With': 'XMLHttpRequest',
+              };
+
               if (selectedWorkflow && selectedWorkflow._persisted && selectedWorkflow.id) {
-                router.patch(`/projects/${project.id}/automations/${selectedWorkflow.id}`, automationData, {
-                  onSuccess: () => {
-                    setSelectedWorkflow(null);
-                    setView('list');
-                  },
-                  onError: (errors) => console.error('Update validation errors:', errors),
-                });
+                router.patch(
+                  `/projects/${project.id}/automations/${selectedWorkflow.id}`,
+                  { ...automationData, _token: token },
+                  {
+                    headers,
+                    onSuccess: () => {
+                      setSelectedWorkflow(null);
+                      setView('list');
+                    },
+                    onError: (errors) => console.error('Update validation errors:', errors),
+                  }
+                );
               } else {
-                router.post(`/projects/${project.id}/automations`, automationData, {
-                  onSuccess: () => {
-                    setSelectedWorkflow(null);
-                    setView('list');
-                  },
-                  onError: (errors) => console.error('Create validation errors:', errors),
-                });
+                router.post(
+                  `/projects/${project.id}/automations`,
+                  { ...automationData, _token: token },
+                  {
+                    headers,
+                    onSuccess: () => {
+                      setSelectedWorkflow(null);
+                      setView('list');
+                    },
+                    onError: (errors) => console.error('Create validation errors:', errors),
+                  }
+                );
               }
             }}
           />
@@ -555,7 +564,6 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
   return (
     <AuthenticatedLayout user={auth.user}>
       <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1200, mx: 'auto' }}>
-        {/* Header */}
         <Paper
           elevation={0}
           sx={{
@@ -659,7 +667,6 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
           </Stack>
         </Paper>
 
-        {/* Workflows List */}
         <Paper elevation={0} sx={{ borderRadius: 4, overflow: 'hidden', bgcolor: 'transparent' }}>
           <Box
             sx={{
