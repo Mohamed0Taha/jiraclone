@@ -319,16 +319,13 @@ class TaskController extends Controller
             return back()->withErrors($payload['errors'])->withInput();
         }
 
-        // Stash preview in session, then 303 redirect to a GET that renders it (Inertia best practice)
-        Session::put("ai_preview.{$project->id}", [
+        // Instead of using session, pass data directly via Inertia render
+        // This fixes session persistence issues on Heroku
+        return Inertia::render('Tasks/AITasksPreview', [
+            'project'       => $project,
             'generated'     => $tasks,
             'originalInput' => $val,
-            'ts'            => now()->toISOString(),
         ]);
-
-        return redirect()
-            ->route('tasks.ai.preview.show', $project)
-            ->setStatusCode(303);
     }
 
     /**
@@ -423,14 +420,15 @@ class TaskController extends Controller
     {
         $this->authorize('view', $project);
 
-        $data = Session::get("ai_preview.{$project->id}");
-        if (!$data) {
-            return redirect()
-                ->route('tasks.ai.form', $project)
-                ->withErrors(['ai' => 'No pending AI preview found. Please generate again.']);
-        }
+        $val = $request->validate([
+            'generated' => ['required', 'array'],
+            'generated.*.title' => ['required', 'string', 'max:255'],
+            'generated.*.description' => ['nullable', 'string'],
+            'generated.*.start_date' => ['nullable', 'string'],
+            'generated.*.end_date' => ['nullable', 'string'],
+        ]);
 
-        $generated = $data['generated'] ?? [];
+        $generated = $val['generated'] ?? [];
         $accepted = 0;
 
         foreach ($generated as $t) {
@@ -448,22 +446,17 @@ class TaskController extends Controller
             $accepted++;
         }
 
-        // Clear the session data
-        Session::forget("ai_preview.{$project->id}");
-
         return redirect()
             ->route('tasks.index', $project)
             ->with('success', "$accepted AI-generated tasks added to the project.");
     }
 
     /**
-     * Reject the AI preview and clear session.
+     * Reject the AI preview (no session cleanup needed anymore).
      */
     public function rejectAIPreview(Project $project)
     {
         $this->authorize('view', $project);
-
-        Session::forget("ai_preview.{$project->id}");
 
         return redirect()
             ->route('tasks.ai.form', $project)

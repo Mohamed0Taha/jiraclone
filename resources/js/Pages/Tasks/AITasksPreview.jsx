@@ -37,6 +37,7 @@ export default function AITasksPreview({
 
   const accept = () =>
     router.post(route("tasks.ai.accept", project.id), {
+      generated: generated,
       preserveScroll: true,
     });
 
