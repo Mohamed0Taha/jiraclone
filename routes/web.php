@@ -21,6 +21,11 @@ use App\Models\Project;
 */
 Route::get('/', fn () => Inertia::render('Landing'))->name('landing');
 
+// Temporary test route for debugging AI
+Route::get('/test-ai', function () {
+    return view('test-ai');
+});
+
 /*
 |--------------------------------------------------------------------------
 | Lightweight Health Check (no middleware, no session)
