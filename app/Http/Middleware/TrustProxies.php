@@ -7,9 +7,17 @@ use Illuminate\Http\Middleware\TrustProxies as Middleware;
 
 class TrustProxies extends Middleware
 {
-    // Trust the Heroku router
+    /**
+     * The trusted proxies for this application.
+     *
+     * @var array|string|null
+     */
     protected $proxies = '*';
 
-    // Works well on Heroku; if you still get scheme issues, try HEADER_X_FORWARDED_ALL
+    /**
+     * The headers that should be used to detect proxies.
+     *
+     * @var int
+     */
     protected $headers = Request::HEADER_X_FORWARDED_AWS_ELB;
 }
