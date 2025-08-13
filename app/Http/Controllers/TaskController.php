@@ -294,7 +294,7 @@ class TaskController extends Controller
         $this->authorize('view', $project);
 
         $val = $request->validate([
-            'count'  => ['required', 'integer', 'min:1', 'max:50'],
+            'count'  => ['required', 'integer', 'min:1', 'max:10'],
             'prompt' => ['nullable', 'string', 'max:2000'],
         ]);
 

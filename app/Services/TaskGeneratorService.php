@@ -56,6 +56,13 @@ class TaskGeneratorService
 
         try {
             // Use simplified single call approach for better Heroku performance
+            Log::info('TaskGeneratorService: Starting AI call', [
+                'project_id' => $project->id,
+                'project_name' => $project->name,
+                'count' => $num,
+                'prompt_length' => strlen($userPrompt),
+            ]);
+            
             $response = OpenAI::chat()->create([
                 'model'           => config('openai.model', 'gpt-4o'),
                 'temperature'     => 0.7,
@@ -66,11 +73,18 @@ class TaskGeneratorService
                     ['role' => 'user',   'content' => $this->buildSimplePrompt($project, $userPrompt, $num)],
                 ],
             ]);
+            
+            Log::info('TaskGeneratorService: AI call successful', [
+                'project_id' => $project->id,
+                'response_length' => strlen($response['choices'][0]['message']['content'] ?? ''),
+            ]);
+            
         } catch (\Throwable $e) {
             Log::error('OpenAI call failed', [
                 'project_id' => $project->id,
                 'error'      => $e->getMessage(),
                 'trace'      => $e->getTraceAsString(),
+                'class'      => get_class($e),
             ]);
             // Temporarily show actual error for debugging
             throw new RuntimeException('AI Service Error: ' . $e->getMessage());
