@@ -5,11 +5,13 @@ namespace App\Providers;
 use App\Events\TaskCreated;
 use App\Events\TaskUpdated;
 use App\Listeners\TriggerAutomations;
+use App\Models\User;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
+use Laravel\Cashier\Billable;
 use Inertia\Inertia;
 
 class AppServiceProvider extends ServiceProvider
@@ -48,11 +50,17 @@ class AppServiceProvider extends ServiceProvider
 
         // Shared prop for all Inertia pages
         Inertia::share('isPro', function () {
+            /** @var User|null $user */
             $user = Auth::user();
 
-            return $user && method_exists($user, 'subscribed')
-                ? (bool) $user->subscribed('default')
-                : false;
+            // Check if user exists and has Cashier's Billable trait
+            if (!$user || !method_exists($user, 'subscribed')) {
+                return false;
+            }
+
+            // The subscribed method exists via Laravel Cashier's Billable trait
+            /** @var User&Billable $user */
+            return (bool) $user->subscribed('default');
         });
     }
 }
