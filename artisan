@@ -1,26 +1,38 @@
-cat > artisan <<'PHP'
 #!/usr/bin/env php
 <?php
 
 use Illuminate\Contracts\Console\Kernel;
+use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\Console\Output\ConsoleOutput;
 
 define('LARAVEL_START', microtime(true));
 
-require __DIR__.'/vendor/autoload.php';
+/*
+|--------------------------------------------------------------------------
+| Register The Composer Autoloader
+|--------------------------------------------------------------------------
+*/
+require __DIR__ . '/vendor/autoload.php';
 
-$app = require __DIR__.'/bootstrap/app.php';
+/*
+|--------------------------------------------------------------------------
+| Bootstrap The Application
+|--------------------------------------------------------------------------
+*/
+$app = require __DIR__ . '/bootstrap/app.php';
 
-/** @var \Illuminate\Foundation\Application $app */
+/*
+|--------------------------------------------------------------------------
+| Run The Artisan Application
+|--------------------------------------------------------------------------
+*/
 $kernel = $app->make(Kernel::class);
 
 $status = $kernel->handle(
-    $input = new Symfony\Component\Console\Input\ArgvInput,
-    new Symfony\Component\Console\Output\ConsoleOutput
+    $input = new ArgvInput,
+    new ConsoleOutput
 );
 
 $kernel->terminate($input, $status);
 
 exit($status);
-PHP
-
-chmod +x artisan
