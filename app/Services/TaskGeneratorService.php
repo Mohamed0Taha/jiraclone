@@ -107,9 +107,10 @@ class TaskGeneratorService
                         'project_id' => $project->id,
                         'attempt'    => $attempt,
                         'error'      => $e->getMessage(),
+                        'trace'      => $e->getTraceAsString(),
                     ]);
-                    // Bubble a friendly error to the controller (Inertia-safe)
-                    throw new RuntimeException('Failed to contact AI service. Please try again.');
+                    // Temporarily show actual error for debugging
+                    throw new RuntimeException('AI Service Error: ' . $e->getMessage());
                 }
 
                 $raw = (string)($response['choices'][0]['message']['content'] ?? '');
