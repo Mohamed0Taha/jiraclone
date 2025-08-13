@@ -309,8 +309,27 @@ class TaskController extends Controller
         }
 
         try {
+            Log::info('TaskGeneratorService: About to generate tasks', [
+                'project_id' => $project->id,
+                'count' => $val['count'],
+                'prompt' => $val['prompt'] ?? 'none'
+            ]);
+            
             $tasks = $generator->generateTasks($project, $val['count'], $val['prompt'] ?? '');
+            
+            Log::info('TaskGeneratorService: Tasks generated successfully', [
+                'project_id' => $project->id,
+                'task_count' => count($tasks),
+                'first_task' => $tasks[0]['title'] ?? 'none'
+            ]);
+            
         } catch (\Throwable $e) {
+            Log::error('TaskGeneratorService: Generation failed', [
+                'project_id' => $project->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             $payload = [
                 'message' => 'AI error: ' . $e->getMessage(),
                 'errors'  => ['ai' => ['AI error: ' . $e->getMessage()]],
@@ -318,6 +337,11 @@ class TaskController extends Controller
             // For Inertia requests, always redirect back with errors, never return JSON
             return back()->withErrors($payload['errors'])->withInput();
         }
+
+        Log::info('TaskGeneratorService: About to render preview', [
+            'project_id' => $project->id,
+            'task_count' => count($tasks)
+        ]);
 
         // Instead of using session, pass data directly via Inertia render
         // This fixes session persistence issues on Heroku
@@ -329,8 +353,10 @@ class TaskController extends Controller
     }
 
     /**
-     * GET view for the preview (reads from session).
+     * REMOVED: Old session-based preview method that was causing "No pending AI preview found" errors on Heroku
+     * Now using direct rendering in previewWithAI method above
      */
+    /*
     public function showAIPreview(Project $project)
     {
         $this->authorize('view', $project);
@@ -348,6 +374,7 @@ class TaskController extends Controller
             'originalInput' => $data['originalInput'] ?? [],
         ]);
     }
+    */
 
     public function acceptGenerated(Request $request, Project $project): RedirectResponse
     {

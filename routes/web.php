@@ -139,7 +139,6 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/tasks/ai',         [TaskController::class, 'generateWithAI'])->name('tasks.ai.generate');
         Route::post('/tasks/ai/preview', [TaskController::class, 'previewWithAI'])->name('tasks.ai.preview');
-        Route::get('/tasks/ai/preview',  [TaskController::class, 'showAIPreview'])->name('tasks.ai.preview.show');
         Route::post('/tasks/ai/accept',  [TaskController::class, 'acceptAIPreview'])->name('tasks.ai.accept');
         Route::post('/tasks/ai/reject',  [TaskController::class, 'rejectAIPreview'])->name('tasks.ai.reject');
 
