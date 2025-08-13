@@ -48,6 +48,119 @@ class TaskGeneratorService
         }
 
         // Clamp request size (hard cap to keep things safe)
+        $num = max(1, min(10, $num));
+
+        if ($num < 1) {
+            return [];
+        }
+
+        try {
+            // Use simplified single call approach for better Heroku performance
+            $response = OpenAI::chat()->create([
+                'model'           => config('openai.model', 'gpt-4o'),
+                'temperature'     => 0.7,
+                'response_format' => ['type' => 'json_object'],
+                'max_tokens'      => 1500, // Reduced for faster response
+                'messages'        => [
+                    ['role' => 'system', 'content' => $this->getSimpleSystemPrompt()],
+                    ['role' => 'user',   'content' => $this->buildSimplePrompt($project, $userPrompt, $num)],
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('OpenAI call failed', [
+                'project_id' => $project->id,
+                'error'      => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
+            ]);
+            // Temporarily show actual error for debugging
+            throw new RuntimeException('AI Service Error: ' . $e->getMessage());
+        }
+
+        $raw = (string)($response['choices'][0]['message']['content'] ?? '');
+        $raw = preg_replace('/^```(?:json)?|```$/m', '', trim($raw));
+
+        $decoded = null;
+        try {
+            $decoded = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
+        } catch (\Throwable $e) {
+            // Try to salvage by extracting the first outer JSON object
+            if (preg_match('/\{.*\}/s', $raw, $m)) {
+                try {
+                    $decoded = json_decode($m[0], true, flags: JSON_THROW_ON_ERROR);
+                } catch (\Throwable $e2) {
+                    $decoded = null;
+                }
+            }
+        }
+
+        $tasks = (is_array($decoded) && isset($decoded['tasks']) && is_array($decoded['tasks']))
+            ? $decoded['tasks']
+            : [];
+
+        // Normalize tasks
+        $normalized = $this->normalizeMapTasks($tasks, $project);
+        
+        return array_slice($normalized, 0, $num);
+    }
+
+    /**
+     * Simplified system prompt for faster generation
+     */
+    protected function getSimpleSystemPrompt(): string
+    {
+        return "You are a professional project manager. Generate realistic, actionable tasks for projects.
+
+Return JSON with this exact structure:
+{
+  \"tasks\": [
+    {
+      \"title\": \"Task name (3-8 words)\",
+      \"description\": \"Brief description (20-50 words)\", 
+      \"category\": \"Development|Design|Testing|Documentation|Planning\",
+      \"priority\": \"Low|Medium|High\",
+      \"estimated_hours\": 4,
+      \"complexity\": \"Simple|Medium|Complex\",
+      \"dependencies\": \"None or brief dependency\",
+      \"deliverables\": \"What will be delivered\"
+    }
+  ]
+}
+
+Make tasks specific, realistic, and properly scoped for 2-8 hours of work each.";
+    }
+
+    /**
+     * Build simple prompt for faster generation
+     */
+    protected function buildSimplePrompt(Project $project, string $userPrompt, int $num): string
+    {
+        $prompt = "Project: {$project->name}\n";
+        
+        if ($project->description) {
+            $prompt .= "Description: {$project->description}\n";
+        }
+        
+        if ($userPrompt) {
+            $prompt .= "Additional guidance: {$userPrompt}\n";
+        }
+        
+        $prompt .= "\nGenerate exactly {$num} professional tasks for this project. Be specific and actionable.";
+        
+        return $prompt;
+    }
+
+    /**
+     * Legacy method for backward compatibility - uses complex batching
+     */
+    public function generateTasksLegacy(Project $project, int $num, string $userPrompt = ''): array
+    {
+        // Inertia-friendly guard: let controller catch and redirect with an error flash
+        $apiKey = config('openai.api_key') ?: env('OPENAI_API_KEY');
+        if (!is_string($apiKey) || trim($apiKey) === '') {
+            throw new RuntimeException('AI is not configured on this server. Set OPENAI_API_KEY.');
+        }
+
+        // Clamp request size (hard cap to keep things safe)
         $num = max(1, min(50, $num));
 
         if ($num < 1) {
