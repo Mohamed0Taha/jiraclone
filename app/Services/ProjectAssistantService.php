@@ -310,7 +310,7 @@ Provide helpful, concise responses about this project only. Focus on task manage
     {
         try {
             $response = OpenAI::chat()->create([
-                'model' => 'gpt-4o-mini',
+                'model' => config('openai.model', 'gpt-4o'),
                 'messages' => $messages,
                 'max_tokens' => 300,
                 'temperature' => 0.7,

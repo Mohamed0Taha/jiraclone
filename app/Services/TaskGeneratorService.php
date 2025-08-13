@@ -42,7 +42,7 @@ class TaskGeneratorService
     public function generateTasks(Project $project, int $num, string $userPrompt = ''): array
     {
         // Inertia-friendly guard: let controller catch and redirect with an error flash
-        $apiKey = config('services.openai.api_key') ?: env('OPENAI_API_KEY');
+        $apiKey = config('openai.api_key') ?: env('OPENAI_API_KEY');
         if (!is_string($apiKey) || trim($apiKey) === '') {
             throw new RuntimeException('AI is not configured on this server. Set OPENAI_API_KEY.');
         }
@@ -93,7 +93,7 @@ class TaskGeneratorService
             do {
                 try {
                     $response = OpenAI::chat()->create([
-                        'model'           => 'gpt-4o-mini',
+                        'model'           => config('openai.model', 'gpt-4o'),
                         'temperature'     => 0.7,
                         'response_format' => ['type' => 'json_object'],
                         'max_tokens'      => $maxTokens,
@@ -508,7 +508,7 @@ PROMPT;
 
         try {
             $response = OpenAI::chat()->create([
-                'model'           => 'gpt-4o-mini',
+                'model'           => config('openai.model', 'gpt-4o'),
                 'temperature'     => 0.5,
                 'response_format' => ['type' => 'json_object'],
                 'max_tokens'      => $this->computeMaxTokensForBatch($remaining, false),

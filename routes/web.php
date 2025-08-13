@@ -130,12 +130,13 @@ Route::middleware('auth')->group(function () {
                 'project' => $project,
                 'prefill' => $request->only(['count', 'prompt']),
             ]);
-        })->name('tasks.ai'); // ← canonical name used elsewhere
+        })->name('tasks.ai.form');
 
-        Route::post('/tasks/ai',               [TaskController::class, 'generateWithAI'])->name('tasks.ai.generate');
-        Route::post('/tasks/ai/preview',       [TaskController::class, 'previewWithAI'])->name('tasks.ai.preview');
-        Route::get('/tasks/ai/preview',        [TaskController::class, 'showAIPreview'])->name('tasks.ai.preview.show'); // ← GET for 303 redirect target
-        Route::post('/tasks/ai/accept',        [TaskController::class, 'acceptGenerated'])->name('tasks.ai.accept');
+        Route::post('/tasks/ai',         [TaskController::class, 'generateWithAI'])->name('tasks.ai.generate');
+        Route::post('/tasks/ai/preview', [TaskController::class, 'previewWithAI'])->name('tasks.ai.preview');
+        Route::get('/tasks/ai/preview',  [TaskController::class, 'showAIPreview'])->name('tasks.ai.preview.show');
+        Route::post('/tasks/ai/accept',  [TaskController::class, 'acceptAIPreview'])->name('tasks.ai.accept');
+        Route::post('/tasks/ai/reject',  [TaskController::class, 'rejectAIPreview'])->name('tasks.ai.reject');
 
         // Suggestions (GET)
         Route::get('/tasks/ai/suggestions', [TaskController::class, 'suggestionsAI'])->name('tasks.ai.suggestions');
@@ -148,22 +149,22 @@ Route::middleware('auth')->group(function () {
         Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
         /* COMMENTS */
-        Route::post('/tasks/{task}/comments',             [CommentController::class, 'store'])->name('comments.store');
-        Route::patch('/tasks/{task}/comments/{comment}',  [CommentController::class, 'update'])->name('comments.update');
-        Route::delete('/tasks/{task}/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+        Route::post('/tasks/{task}/comments',                [CommentController::class, 'store'])->name('comments.store');
+        Route::patch('/tasks/{task}/comments/{comment}',     [CommentController::class, 'update'])->name('comments.update');
+        Route::delete('/tasks/{task}/comments/{comment}',    [CommentController::class, 'destroy'])->name('comments.destroy');
 
         /* ✅ TIMELINE */
         Route::get('/timeline', [TaskController::class, 'timeline'])->name('tasks.timeline');
 
         /* ✅ AUTOMATIONS */
-        Route::get('/automations',                        [AutomationController::class, 'index'])->name('automations.index');
-        Route::post('/automations',                       [AutomationController::class, 'store'])->name('automations.store');
-        Route::patch('/automations/{automation}',         [AutomationController::class, 'update'])->name('automations.update');
-        Route::delete('/automations/{automation}',        [AutomationController::class, 'destroy'])->name('automations.destroy');
-        Route::patch('/automations/{automation}/toggle',  [AutomationController::class, 'toggle'])->name('automations.toggle');
-        Route::post('/automations/{automation}/test',     [AutomationController::class, 'test'])->name('automations.test');
-        Route::post('/automations/{automation}/execute',  [AutomationController::class, 'execute'])->name('automations.execute');
-        Route::post('/automations/process',               [AutomationController::class, 'processProject'])->name('automations.process');
+        Route::get('/automations',                    [AutomationController::class, 'index'])->name('automations.index');
+        Route::post('/automations',                   [AutomationController::class, 'store'])->name('automations.store');
+        Route::patch('/automations/{automation}',     [AutomationController::class, 'update'])->name('automations.update');
+        Route::delete('/automations/{automation}',    [AutomationController::class, 'destroy'])->name('automations.destroy');
+        Route::patch('/automations/{automation}/toggle', [AutomationController::class, 'toggle'])->name('automations.toggle');
+        Route::post('/automations/{automation}/test',    [AutomationController::class, 'test'])->name('automations.test');
+        Route::post('/automations/{automation}/execute', [AutomationController::class, 'execute'])->name('automations.execute');
+        Route::post('/automations/process',              [AutomationController::class, 'processProject'])->name('automations.process');
 
         /* PROJECT ASSISTANT */
         Route::post('/assistant/chat',        [ProjectAssistantController::class, 'chat'])->name('projects.assistant.chat');

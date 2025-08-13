@@ -25,7 +25,8 @@ import HelpRoundedIcon from "@mui/icons-material/HelpRounded";
 import TipsAndUpdatesRoundedIcon from "@mui/icons-material/TipsAndUpdatesRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
-import { getCsrfToken } from "@/csrf";
+import { getCsrfToken } from "@/utils/csrf";
+
 
 /** GET suggestions (no CSRF). `max` is clamped 3..10 for backend service. */
 async function loadAISuggestions(projectId, max = 8) {

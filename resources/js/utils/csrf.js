@@ -1,15 +1,43 @@
-// resources/js/csrf.js
-export function getCsrfToken() {
-  // Prefer meta tag in the root Blade
-  const meta = document.querySelector('meta[name="csrf-token"]');
-  if (meta?.content) return meta.content;
+// resources/js/utils/csrf.js
 
-  // Fallback to XSRF-TOKEN cookie (Laravel writes this for web requests)
-  const m = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
-  if (!m) return null;
-  try {
-    return decodeURIComponent(m[1]);
-  } catch {
-    return m[1];
+function readMetaToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta) {
+    const content = meta.getAttribute('content');
+    if (content && content.length > 0) return content;
   }
+  return null;
+}
+
+function readCookie(name) {
+  const match = document.cookie.match(
+    new RegExp('(?:^|; )' + name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + '=([^;]*)')
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+export function getCsrfToken() {
+  const meta = readMetaToken();
+  if (meta) return meta;
+  const cookie = readCookie('XSRF-TOKEN');
+  if (cookie) return cookie;
+  return null;
+}
+
+export function withCsrf(init = {}) {
+  const token = getCsrfToken();
+  const baseHeaders = init.headers ? { ...init.headers } : {};
+  const headers = {
+    ...baseHeaders,
+    'X-Requested-With': 'XMLHttpRequest',
+  };
+  if (token) {
+    headers['X-CSRF-TOKEN'] = token;
+    headers['X-XSRF-TOKEN'] = token;
+  }
+  return {
+    ...init,
+    headers,
+    credentials: 'same-origin',
+  };
 }

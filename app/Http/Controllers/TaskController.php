@@ -254,7 +254,7 @@ class TaskController extends Controller
             'prompt' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $apiKey = config('services.openai.api_key');
+        $apiKey = config('openai.api_key');
         if (empty($apiKey)) {
             if ($request->expectsJson() || $request->header('X-Inertia')) {
                 return redirect()->back()->withErrors(['ai' => 'Missing OPENAI_API_KEY on server.'])->withInput();
@@ -298,15 +298,13 @@ class TaskController extends Controller
             'prompt' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $apiKey = config('services.openai.api_key');
+        $apiKey = config('openai.api_key');
         if (empty($apiKey)) {
             $payload = [
                 'message' => 'AI is not configured on this server. Set OPENAI_API_KEY.',
                 'errors'  => ['api' => ['Missing OPENAI_API_KEY on server']],
             ];
-            if ($request->expectsJson() || $request->header('X-Inertia')) {
-                return response()->json($payload, 422);
-            }
+            // For Inertia requests, always redirect back with errors, never return JSON
             return back()->withErrors($payload['errors'])->withInput();
         }
 
@@ -317,9 +315,7 @@ class TaskController extends Controller
                 'message' => 'AI error: ' . $e->getMessage(),
                 'errors'  => ['ai' => ['AI error: ' . $e->getMessage()]],
             ];
-            if ($request->expectsJson() || $request->header('X-Inertia')) {
-                return response()->json($payload, 422);
-            }
+            // For Inertia requests, always redirect back with errors, never return JSON
             return back()->withErrors($payload['errors'])->withInput();
         }
 
@@ -345,7 +341,7 @@ class TaskController extends Controller
         $data = Session::get("ai_preview.{$project->id}");
         if (!$data) {
             return redirect()
-                ->route('tasks.ai', $project)
+                ->route('tasks.ai.form', $project)
                 ->withErrors(['ai' => 'No pending AI preview found. Please generate again.']);
         }
 
@@ -418,5 +414,59 @@ class TaskController extends Controller
             'project_id'  => $project->id,
             'suggestions' => $suggestions,
         ]);
+    }
+
+    /**
+     * Accept the previewed tasks and save them to the project.
+     */
+    public function acceptAIPreview(Request $request, Project $project)
+    {
+        $this->authorize('view', $project);
+
+        $data = Session::get("ai_preview.{$project->id}");
+        if (!$data) {
+            return redirect()
+                ->route('tasks.ai.form', $project)
+                ->withErrors(['ai' => 'No pending AI preview found. Please generate again.']);
+        }
+
+        $generated = $data['generated'] ?? [];
+        $accepted = 0;
+
+        foreach ($generated as $t) {
+            if (!($t['title'] ?? null)) continue;
+
+            $project->tasks()->create([
+                'title'          => $t['title'],
+                'description'    => $t['description']    ?? '',
+                'start_date'     => $t['start_date']     ?? null,
+                'end_date'       => $t['end_date']       ?? null,
+                'status'         => 'todo',
+                'creator_id'     => $request->user()->id,
+                'milestone'      => $t['milestone']      ?? false,
+            ]);
+            $accepted++;
+        }
+
+        // Clear the session data
+        Session::forget("ai_preview.{$project->id}");
+
+        return redirect()
+            ->route('tasks.index', $project)
+            ->with('success', "$accepted AI-generated tasks added to the project.");
+    }
+
+    /**
+     * Reject the AI preview and clear session.
+     */
+    public function rejectAIPreview(Project $project)
+    {
+        $this->authorize('view', $project);
+
+        Session::forget("ai_preview.{$project->id}");
+
+        return redirect()
+            ->route('tasks.ai.form', $project)
+            ->with('info', 'AI preview discarded. You can generate new tasks.');
     }
 }

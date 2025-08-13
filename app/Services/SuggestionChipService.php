@@ -132,7 +132,7 @@ class SuggestionChipService
 
         try {
             $response = OpenAI::chat()->create([
-                'model'           => 'gpt-4o-mini',
+                'model'           => config('openai.model', 'gpt-4o'),
                 'temperature'     => 0.55,
                 'response_format' => ['type' => 'json_object'],
                 'max_tokens'      => 1800,

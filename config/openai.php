@@ -17,6 +17,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | OpenAI Model
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify which OpenAI model to use. Use a stable (non-preview)
+    | model for production. Examples: gpt-4o, gpt-4-turbo, gpt-3.5-turbo
+    */
+    'model' => env('OPENAI_MODEL', 'gpt-4o'),
+
+    /*
+    |--------------------------------------------------------------------------
     | OpenAI API Project
     |--------------------------------------------------------------------------
     |
