@@ -94,4 +94,16 @@ class ProjectAssistantController extends Controller
             'message' => 'Conversation history cleared successfully.',
         ]);
     }
+
+    /**
+     * Test the assistant functionality
+     */
+    public function test(Project $project): JsonResponse
+    {
+        Gate::authorize('view', $project);
+
+        $result = $this->assistantService->testAssistant($project);
+
+        return response()->json($result);
+    }
 }

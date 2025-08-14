@@ -41,13 +41,34 @@ class ProjectAssistantService
 
     public function processMessage(Project $project, string $message, array $conversationHistory = []): string
     {
+        // Log for debugging
+        Log::info('ProjectAssistant: Processing message', [
+            'project_id' => $project->id,
+            'message' => $message,
+            'conversation_count' => count($conversationHistory)
+        ]);
+
         // Step 1: Content sanitation - check if message is project-related
-        if (!$this->isProjectRelatedQuery($message)) {
-            return $this->getOffTopicResponse();
+        $isProjectRelated = $this->isProjectRelatedQuery($message);
+        Log::info('ProjectAssistant: Project related check', [
+            'message' => $message,
+            'is_project_related' => $isProjectRelated
+        ]);
+        
+        if (!$isProjectRelated) {
+            $response = $this->getOffTopicResponse();
+            Log::info('ProjectAssistant: Off-topic response', ['response' => $response]);
+            return $response;
         }
 
         // Step 2: Security filtering
-        if ($this->containsSecurityRisks($message)) {
+        $hasSecurityRisks = $this->containsSecurityRisks($message);
+        Log::info('ProjectAssistant: Security check', [
+            'message' => $message,
+            'has_security_risks' => $hasSecurityRisks
+        ]);
+        
+        if ($hasSecurityRisks) {
             return "I can't provide information about sensitive system details. Please ask about project-related topics like tasks, timelines, team members, or project goals.";
         }
 
@@ -58,11 +79,26 @@ class ProjectAssistantService
         // Step 4: Prepare conversation for OpenAI
         $messages = $this->prepareConversation($systemPrompt, $conversationHistory, $message);
 
+        // Log the messages being sent to OpenAI
+        Log::info('ProjectAssistant: Sending to OpenAI', [
+            'messages_count' => count($messages),
+            'system_prompt_length' => strlen($systemPrompt),
+            'user_message' => $message
+        ]);
+
         // Step 5: Get AI response
         $response = $this->callOpenAI($messages);
 
         // Step 6: Sanitize and validate response
-        return $this->sanitizeResponse($response, $project);
+        $finalResponse = $this->sanitizeResponse($response, $project);
+        
+        Log::info('ProjectAssistant: Final response', [
+            'raw_response_length' => strlen($response),
+            'final_response_length' => strlen($finalResponse),
+            'final_response' => $finalResponse
+        ]);
+
+        return $finalResponse;
     }
 
     public function getConversationSuggestions(Project $project): array
@@ -97,7 +133,8 @@ class ProjectAssistantService
             'timeline', 'schedule', 'assignee', 'assigned', 'priority', 'urgent',
             'todo', 'done', 'complete', 'finish', 'start', 'end', 'date',
             'methodology', 'kanban', 'scrum', 'agile', 'waterfall', 'lean',
-            'story', 'epic', 'sprint', 'backlog', 'review', 'testing'
+            'story', 'epic', 'sprint', 'backlog', 'review', 'testing',
+            'summary', 'overview', 'analyze', 'analysis', 'report', 'update'
         ];
 
         $messageLower = strtolower($message);
@@ -109,17 +146,25 @@ class ProjectAssistantService
             }
         }
 
-        // Also allow general questions that could be project-related
+        // Allow most question words and commands - be more permissive
         $generalPatterns = [
             'what', 'how', 'when', 'who', 'where', 'why', 'which',
             'show', 'tell', 'explain', 'describe', 'list', 'count',
-            'status', 'progress', 'update', 'summary', 'overview'
+            'status', 'progress', 'update', 'summary', 'overview',
+            'help', 'can you', 'could you', 'please', 'need', 'want',
+            'current', 'recent', 'latest', 'next', 'upcoming',
+            'hello', 'hi', 'hey', 'thanks', 'thank you'
         ];
 
         foreach ($generalPatterns as $pattern) {
             if (strpos($messageLower, $pattern) !== false) {
                 return true;
             }
+        }
+
+        // If message is short (likely a greeting or simple question), allow it
+        if (strlen(trim($message)) < 50) {
+            return true;
         }
 
         return false;
@@ -309,6 +354,12 @@ Provide helpful, concise responses about this project only. Focus on task manage
     private function callOpenAI(array $messages): string
     {
         try {
+            Log::info('ProjectAssistant: Making OpenAI API call', [
+                'model' => config('openai.model', 'gpt-4o'),
+                'messages_count' => count($messages),
+                'api_key_set' => !empty(config('openai.api_key'))
+            ]);
+
             $response = OpenAI::chat()->create([
                 'model' => config('openai.model', 'gpt-4o'),
                 'messages' => $messages,
@@ -316,17 +367,32 @@ Provide helpful, concise responses about this project only. Focus on task manage
                 'temperature' => 0.7,
             ]);
 
+            Log::info('ProjectAssistant: OpenAI response received', [
+                'choices_count' => count($response['choices'] ?? []),
+                'response_type' => get_class($response)
+            ]);
+
             $content = $response['choices'][0]['message']['content'] ?? '';
             
             if (empty($content)) {
+                Log::warning('ProjectAssistant: Empty response from OpenAI', [
+                    'full_response' => $response
+                ]);
                 throw new Exception('Empty response from OpenAI');
             }
+
+            Log::info('ProjectAssistant: Valid response extracted', [
+                'content_length' => strlen($content),
+                'content_preview' => substr($content, 0, 100) . '...'
+            ]);
 
             return trim($content);
         } catch (\Exception $e) {
             Log::error('OpenAI API Error', [
                 'error' => $e->getMessage(),
-                'messages' => $messages
+                'error_class' => get_class($e),
+                'messages' => $messages,
+                'api_key_configured' => !empty(config('openai.api_key'))
             ]);
             throw new Exception('Failed to get AI response: ' . $e->getMessage());
         }
@@ -334,12 +400,23 @@ Provide helpful, concise responses about this project only. Focus on task manage
 
     private function sanitizeResponse(string $response, Project $project): string
     {
+        Log::info('ProjectAssistant: Sanitizing response', [
+            'response_length' => strlen($response),
+            'response_preview' => substr($response, 0, 100) . '...'
+        ]);
+
         // Additional response filtering to ensure it's project-focused
         $projectName = strtolower($project->name);
         $responseLower = strtolower($response);
 
-        // Check if response mentions the project or project-related terms
-        $projectTerms = ['task', 'project', 'team', 'deadline', 'progress', 'status'];
+        // Check if response mentions the project or project-related terms (expanded list)
+        $projectTerms = [
+            'task', 'project', 'team', 'deadline', 'progress', 'status',
+            'work', 'complete', 'done', 'todo', 'assign', 'member',
+            'timeline', 'schedule', 'goal', 'objective', 'milestone',
+            'can', 'help', 'assist', 'information', 'about', 'regarding',
+            'current', 'update', 'summary', 'overview', 'details'
+        ];
         $hasProjectTerms = false;
 
         foreach ($projectTerms as $term) {
@@ -349,8 +426,12 @@ Provide helpful, concise responses about this project only. Focus on task manage
             }
         }
 
-        // If response doesn't seem project-related, provide a fallback
-        if (!$hasProjectTerms && strlen($response) > 50) {
+        // Only apply fallback if response is long AND completely unrelated
+        // Reduced threshold and made more lenient
+        if (!$hasProjectTerms && strlen($response) > 150) {
+            Log::warning('ProjectAssistant: Response seems unrelated, using fallback', [
+                'original_response' => $response
+            ]);
             return "I can help you with questions about your project tasks, timelines, team members, and progress. What specific aspect of the project would you like to know about?";
         }
 
@@ -359,6 +440,39 @@ Provide helpful, concise responses about this project only. Focus on task manage
             $response = substr($response, 0, self::MAX_RESPONSE_LENGTH) . '...';
         }
 
+        Log::info('ProjectAssistant: Response sanitized successfully', [
+            'final_response_length' => strlen($response)
+        ]);
+
         return $response;
+    }
+
+    /**
+     * Test method to verify the assistant is working
+     */
+    public function testAssistant(Project $project): array
+    {
+        $testMessage = "What is this project about?";
+        
+        try {
+            $response = $this->processMessage($project, $testMessage);
+            
+            return [
+                'success' => true,
+                'test_message' => $testMessage,
+                'response' => $response,
+                'response_length' => strlen($response),
+                'project_name' => $project->name,
+                'api_key_configured' => !empty(config('openai.api_key'))
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'test_message' => $testMessage,
+                'project_name' => $project->name,
+                'api_key_configured' => !empty(config('openai.api_key'))
+            ];
+        }
     }
 }
