@@ -1,0 +1,3 @@
+Subject: {{ $subjectLine }}
+
+{{ $contentText }}

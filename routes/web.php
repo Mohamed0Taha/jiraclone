@@ -86,7 +86,7 @@ Route::get('/dashboard', function (Request $request) {
 | Billing
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/billing',            [BillingController::class, 'show'])->name('billing.show');
     Route::post('/billing/checkout',  [BillingController::class, 'createCheckout'])->name('billing.checkout');
     Route::post('/billing/portal',    [BillingController::class, 'portal'])->name('billing.portal');

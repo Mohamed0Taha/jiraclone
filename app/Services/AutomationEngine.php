@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
+use App\Mail\AutomationNotification;
 
 class AutomationEngine
 {
@@ -288,9 +289,7 @@ class AutomationEngine
             // Replace placeholders
             $message = $this->replacePlaceholders($message, $automation);
 
-            Mail::raw($message, function ($mail) use ($recipient, $subject) {
-                $mail->to($recipient)->subject($subject);
-            });
+            Mail::to($recipient)->send(new AutomationNotification($subject, $message));
 
             Log::info("Email sent for automation {$automation->id}");
             return true;

@@ -1,3 +1,22 @@
+## Environment
+
+Copy `.env.example` to `.env`, then set database and app keys.
+
+### Email (SMTP via Mailtrap)
+Add the following to your `.env` to enable email for verification, password reset, and automations:
+
+```
+MAIL_MAILER=smtp
+MAIL_HOST=sandbox.smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=08ff2db59d640d
+MAIL_PASSWORD=e183aac708c48e
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS=no-reply@example.com
+MAIL_FROM_NAME="Laravel React Automation"
+```
+
+On Heroku, set these with `heroku config:set`.
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
