@@ -41,13 +41,12 @@ import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ClearIcon from "@mui/icons-material/Clear";
-
 import { DragDropContext } from "react-beautiful-dnd";
 
 import HeaderBanner from "../Board/HeaderBanner";
 import Column from "../Board/Column";
 import UpgradeDialog from "../Board/UpgradeDialog";
-import AssistantChat from "@/Components/AssistantChat";
+import AssistantChat from "./AssistantChat"; // ⬅️ now a local thin wrapper; Board stays lean
 import FloatingActionGroup from "@/Components/FloatingActionGroup";
 
 import {
@@ -520,7 +519,6 @@ export default function Board({
               size="small"
               startIcon={<EventAvailableRoundedIcon />}
               onClick={() => {
-                console.log('📅 Timeline clicked, navigating to:', `/projects/${project.id}/timeline`);
                 router.visit(`/projects/${project.id}/timeline`);
               }}
               sx={{
@@ -625,7 +623,6 @@ export default function Board({
             percentDone={percentDone}
             usersCount={Array.isArray(users) ? users.length : 0}
             onAiTasks={() => {
-              console.log('🚀 AI Tasks clicked, navigating to:', `/projects/${project.id}/tasks/ai`);
               router.visit(`/projects/${project.id}/tasks/ai`);
             }}
             isPro={isPro}
@@ -873,7 +870,6 @@ export default function Board({
                         onEdit={() => showEdit(task)}
                         onDelete={() => askDelete(task.id)}
                         onClick={() => {
-                          console.log('📋 Task clicked, navigating to:', `/projects/${project.id}/tasks/${task.id}`);
                           router.visit(`/projects/${project.id}/tasks/${task.id}`);
                         }}
                         accent={STATUS_META[statusKey]?.accent || methodStyles.accent}
@@ -1276,6 +1272,8 @@ export default function Board({
 
           <UpgradeDialog open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
 
+          {/* AssistantChat now lives locally and preserves the original design.
+              The typing indicator overlay is added by the wrapper without changing the UI. */}
           <AssistantChat
             project={project}
             open={assistantOpen}

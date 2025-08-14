@@ -27,10 +27,143 @@ import {
   Minimize as MinimizeIcon,
   ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
+import { keyframes } from '@emotion/react';
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
+
+// Robot typing animation keyframes
+const robotBounce = keyframes`
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  40% {
+    transform: translateY(-3px) rotate(-2deg);
+  }
+  60% {
+    transform: translateY(-1px) rotate(1deg);
+  }
+`;
+
+const typingDot = keyframes`
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+`;
+
+const shimmer = keyframes`
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+`;
+
+// Robot typing animation component
+function RobotTypingIndicator() {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        p: 2,
+        borderRadius: 2,
+        bgcolor: 'grey.50',
+        border: '1px solid',
+        borderColor: 'primary.100',
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: '-100%',
+          width: '100%',
+          height: '100%',
+          background: 'linear-gradient(90deg, transparent, rgba(25, 118, 210, 0.1), transparent)',
+          animation: `${shimmer} 2s ease-in-out infinite`,
+        },
+      }}
+    >
+      {/* Robot avatar with bouncing animation */}
+      <Box
+        sx={{
+          width: 32,
+          height: 32,
+          borderRadius: '50%',
+          bgcolor: 'primary.main',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          animation: `${robotBounce} 2s ease-in-out infinite`,
+          boxShadow: '0 2px 8px rgba(25, 118, 210, 0.3)',
+        }}
+      >
+        <SmartToyIcon sx={{ fontSize: 18 }} />
+      </Box>
+
+      {/* Typing message */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+          🤖 Assistant is crafting a response
+        </Typography>
+        
+        {/* Animated typing dots */}
+        <Box sx={{ display: 'flex', gap: 0.3, alignItems: 'center' }}>
+          {[0, 1, 2].map((index) => (
+            <Box
+              key={index}
+              sx={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                bgcolor: 'primary.main',
+                animation: `${typingDot} 1.4s ease-in-out infinite`,
+                animationDelay: `${index * 0.2}s`,
+              }}
+            />
+          ))}
+        </Box>
+      </Box>
+
+      {/* Small sparkling effects */}
+      <Box
+        sx={{
+          position: 'absolute',
+          right: 16,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          display: 'flex',
+          gap: 0.5,
+        }}
+      >
+        {[0, 1, 2].map((index) => (
+          <Box
+            key={index}
+            sx={{
+              width: 3,
+              height: 3,
+              borderRadius: '50%',
+              bgcolor: 'secondary.main',
+              opacity: 0.6,
+              animation: `${typingDot} 1.8s ease-in-out infinite`,
+              animationDelay: `${index * 0.3}s`,
+            }}
+          />
+        ))}
+      </Box>
+    </Box>
+  );
+}
 
 export default function AssistantChat({ project, open, onClose }) {
   const [message, setMessage] = useState('');
@@ -138,10 +271,20 @@ export default function AssistantChat({ project, open, onClose }) {
     });
   };
 
-  const getMessageAvatar = (role) => {
+  const getMessageAvatar = (role, isLatest = false) => {
     if (role === 'assistant') {
       return (
-        <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+        <Avatar 
+          sx={{ 
+            bgcolor: 'primary.main', 
+            width: 32, 
+            height: 32,
+            ...(isLatest && {
+              animation: `${robotBounce} 3s ease-in-out infinite`,
+              boxShadow: '0 0 12px rgba(25, 118, 210, 0.4)',
+            }),
+          }}
+        >
           <SmartToyIcon sx={{ fontSize: 18 }} />
         </Avatar>
       );
@@ -312,56 +455,64 @@ export default function AssistantChat({ project, open, onClose }) {
           )}
 
           <Stack spacing={2}>
-            {conversation.map((msg, index) => (
-              <Box
-                key={index}
-                sx={{
-                  display: 'flex',
-                  flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                  gap: 1,
-                  alignItems: 'flex-start',
-                }}
-              >
-                {getMessageAvatar(msg.role)}
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Paper
-                    elevation={1}
-                    sx={{
-                      p: 1.5,
-                      bgcolor: msg.role === 'user' ? 'primary.main' : 'grey.100',
-                      color: msg.role === 'user' ? 'white' : 'text.primary',
-                      borderRadius: 2,
-                      maxWidth: '85%',
-                      ml: msg.role === 'user' ? 'auto' : 0,
-                      mr: msg.role === 'assistant' ? 'auto' : 0,
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                      {msg.content}
-                    </Typography>
-                    <Typography
-                      variant="caption"
+            {conversation.map((msg, index) => {
+              const isLastAssistantMessage = msg.role === 'assistant' && 
+                index === conversation.length - 1 && 
+                conversation.length > 0;
+              
+              return (
+                <Box
+                  key={index}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+                    gap: 1,
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  {getMessageAvatar(msg.role, isLastAssistantMessage)}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Paper
+                      elevation={1}
                       sx={{
-                        opacity: 0.7,
-                        fontSize: '0.7rem',
-                        mt: 0.5,
-                        display: 'block',
+                        p: 1.5,
+                        bgcolor: msg.role === 'user' ? 'primary.main' : 'grey.100',
+                        color: msg.role === 'user' ? 'white' : 'text.primary',
+                        borderRadius: 2,
+                        maxWidth: '85%',
+                        ml: msg.role === 'user' ? 'auto' : 0,
+                        mr: msg.role === 'assistant' ? 'auto' : 0,
+                        ...(isLastAssistantMessage && {
+                          borderLeft: '3px solid',
+                          borderLeftColor: 'primary.main',
+                          bgcolor: 'primary.50',
+                        }),
                       }}
                     >
-                      {formatTime(msg.timestamp)}
-                    </Typography>
-                  </Paper>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        {msg.content}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          opacity: 0.7,
+                          fontSize: '0.7rem',
+                          mt: 0.5,
+                          display: 'block',
+                        }}
+                      >
+                        {formatTime(msg.timestamp)}
+                      </Typography>
+                    </Paper>
+                  </Box>
                 </Box>
-              </Box>
-            ))}
+              );
+            })}
           </Stack>
 
           {isLoading && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-              <CircularProgress size={20} />
-              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                Assistant is thinking...
-              </Typography>
+            <Box sx={{ p: 1 }}>
+              <RobotTypingIndicator />
             </Box>
           )}
 

@@ -118,47 +118,82 @@ class TaskGeneratorService
     }
 
     /**
-     * Simplified system prompt for faster generation
+     * Advanced system prompt for detailed task generation
      */
     protected function getSimpleSystemPrompt(): string
     {
-        return "You are a professional project manager. Generate realistic, actionable tasks for projects.
+        return "You are a senior project manager with 15+ years of experience across enterprise software development, digital transformation, and complex project delivery. You create highly detailed, professional-grade tasks that reflect real-world industry standards and best practices.
+
+Generate tasks that are:
+- ENTERPRISE-LEVEL: Include technical depth, compliance considerations, and scalability factors
+- STRATEGICALLY ALIGNED: Consider business objectives, user experience, and technical architecture
+- RISK-AWARE: Include validation, testing, documentation, and stakeholder alignment steps
+- PROFESSIONALLY SCOPED: Each task represents 1-3 days of focused expert work
+- TECHNICALLY PRECISE: Use specific tools, frameworks, methodologies, and industry terminology
 
 Return JSON with this exact structure:
 {
   \"tasks\": [
     {
-      \"title\": \"Task name (3-8 words)\",
-      \"description\": \"Brief description (20-50 words)\", 
-      \"category\": \"Development|Design|Testing|Documentation|Planning\",
-      \"priority\": \"Low|Medium|High\",
-      \"estimated_hours\": 4,
-      \"complexity\": \"Simple|Medium|Complex\",
-      \"dependencies\": \"None or brief dependency\",
-      \"deliverables\": \"What will be delivered\"
+      \"title\": \"Specific, action-oriented professional title (60-90 characters)\",
+      \"description\": \"Comprehensive description including: business context, technical requirements, deliverables, acceptance criteria, tools/technologies, validation steps, and expected business impact (150-250 words)\", 
+      \"category\": \"Strategic Planning|Technical Architecture|Development|Design & UX|Quality Assurance|DevOps & Infrastructure|Security & Compliance|Data & Analytics|Business Intelligence|Stakeholder Management\",
+      \"priority\": \"Critical|High|Medium|Low\",
+      \"estimated_hours\": \"16-72 (realistic professional estimate)\",
+      \"complexity\": \"Enterprise|Advanced|Intermediate|Standard\",
+      \"dependencies\": \"Specific prerequisites, approvals, or parallel work streams required\",
+      \"deliverables\": \"Detailed list of specific artifacts, documents, or implementations that will be produced\"
     }
   ]
 }
 
-Make tasks specific, realistic, and properly scoped for 2-8 hours of work each.";
+Focus on creating tasks that demonstrate deep domain expertise and consider the full project lifecycle from conception to deployment and maintenance.";
     }
 
     /**
-     * Build simple prompt for faster generation
+     * Build comprehensive prompt for advanced task generation
      */
     protected function buildSimplePrompt(Project $project, string $userPrompt, int $num): string
     {
-        $prompt = "Project: {$project->name}\n";
+        // Analyze project context for intelligent task generation
+        $projectContext = $this->analyzeProjectContext($project, $userPrompt);
+        
+        $prompt = "🎯 PROJECT ANALYSIS:\n";
+        $prompt .= "Name: {$project->name}\n";
         
         if ($project->description) {
             $prompt .= "Description: {$project->description}\n";
         }
         
-        if ($userPrompt) {
-            $prompt .= "Additional guidance: {$userPrompt}\n";
+        $prompt .= "Project Type: {$projectContext['type']}\n";
+        $prompt .= "Complexity Level: {$projectContext['complexity']}\n";
+        
+        if ($project->start_date) {
+            $prompt .= "Start Date: {$project->start_date->toDateString()}\n";
+        }
+        if ($project->end_date) {
+            $prompt .= "End Date: {$project->end_date->toDateString()}\n";
         }
         
-        $prompt .= "\nGenerate exactly {$num} professional tasks for this project. Be specific and actionable.";
+        $prompt .= "\n📋 SPECIFIC REQUIREMENTS:\n";
+        if ($userPrompt) {
+            $prompt .= "{$userPrompt}\n\n";
+        }
+        
+        $prompt .= "🚀 TASK GENERATION BRIEF:\n";
+        $prompt .= "Generate exactly {$num} enterprise-level, detailed tasks that reflect industry best practices for {$projectContext['type']} projects.\n\n";
+        
+        $prompt .= "Consider the following aspects:\n";
+        $prompt .= "- Technical architecture and implementation details\n";
+        $prompt .= "- Quality assurance and testing strategies\n";
+        $prompt .= "- Security, compliance, and risk mitigation\n";
+        $prompt .= "- Stakeholder communication and project management\n";
+        $prompt .= "- Documentation and knowledge transfer\n";
+        $prompt .= "- Performance optimization and scalability\n";
+        $prompt .= "- Integration points and dependency management\n";
+        $prompt .= "- User experience and business value delivery\n\n";
+        
+        $prompt .= "Ensure tasks demonstrate deep professional expertise and are appropriately complex for {$projectContext['complexity']} level projects.";
         
         return $prompt;
     }
@@ -452,27 +487,45 @@ PROMPT;
         $prompt      = strtolower($userPrompt);
         $text        = $name . ' ' . $description . ' ' . $prompt;
 
-        $type       = 'General';
-        $complexity = 'Medium';
+        $type       = 'General Business Project';
+        $complexity = 'Intermediate';
 
-        if (preg_match('/\b(app|mobile|ios|android|react|vue|angular|frontend|backend|api|database|web|website|platform)\b/', $text)) {
-            $type = 'Software Development'; $complexity = 'High';
-        } elseif (preg_match('/\b(marketing|campaign|seo|social|content|brand|advertising|digital|growth)\b/', $text)) {
-            $type = 'Marketing & Growth';   $complexity = 'Medium';
-        } elseif (preg_match('/\b(design|ui|ux|prototype|wireframe|figma|sketch|brand|logo|visual)\b/', $text)) {
-            $type = 'Design & UX';          $complexity = 'Medium';
-        } elseif (preg_match('/\b(research|analysis|study|survey|market|user|data|analytics)\b/', $text)) {
-            $type = 'Research & Analysis';  $complexity = 'Medium';
-        } elseif (preg_match('/\b(infrastructure|devops|deployment|ci\/cd|cloud|aws|docker|kubernetes|security)\b/', $text)) {
-            $type = 'Infrastructure & Operations'; $complexity = 'High';
-        } elseif (preg_match('/\b(ecommerce|shop|store|payment|stripe|commerce|sales|product)\b/', $text)) {
-            $type = 'E-commerce';           $complexity = 'High';
+        // Enhanced project type detection with more sophisticated patterns
+        if (preg_match('/\b(enterprise|saas|platform|microservices|distributed|scalable|cloud-native|api-first)\b/', $text)) {
+            $type = 'Enterprise Software Architecture'; $complexity = 'Enterprise';
+        } elseif (preg_match('/\b(app|mobile|ios|android|react|vue|angular|frontend|backend|api|database|web|website|fullstack|devops)\b/', $text)) {
+            $type = 'Software Development & Engineering'; $complexity = 'Advanced';
+        } elseif (preg_match('/\b(ai|machine learning|ml|data science|analytics|big data|neural|algorithm|artificial intelligence)\b/', $text)) {
+            $type = 'AI & Data Science'; $complexity = 'Enterprise';
+        } elseif (preg_match('/\b(blockchain|crypto|defi|smart contract|web3|nft|cryptocurrency)\b/', $text)) {
+            $type = 'Blockchain & Web3 Development'; $complexity = 'Enterprise';
+        } elseif (preg_match('/\b(security|penetration|audit|compliance|gdpr|hipaa|sox|iso27001|cybersecurity)\b/', $text)) {
+            $type = 'Security & Compliance'; $complexity = 'Advanced';
+        } elseif (preg_match('/\b(infrastructure|devops|deployment|ci\/cd|cloud|aws|azure|gcp|docker|kubernetes|terraform)\b/', $text)) {
+            $type = 'DevOps & Cloud Infrastructure'; $complexity = 'Advanced';
+        } elseif (preg_match('/\b(fintech|financial|banking|payment|trading|investment|insurance|regulatory)\b/', $text)) {
+            $type = 'Financial Technology'; $complexity = 'Enterprise';
+        } elseif (preg_match('/\b(ecommerce|marketplace|shop|store|payment|stripe|commerce|sales|product|inventory)\b/', $text)) {
+            $type = 'E-commerce & Digital Commerce'; $complexity = 'Advanced';
+        } elseif (preg_match('/\b(marketing|campaign|seo|social|content|brand|advertising|digital|growth|conversion)\b/', $text)) {
+            $type = 'Digital Marketing & Growth'; $complexity = 'Intermediate';
+        } elseif (preg_match('/\b(design|ui|ux|prototype|wireframe|figma|sketch|brand|logo|visual|user experience)\b/', $text)) {
+            $type = 'Design & User Experience'; $complexity = 'Intermediate';
+        } elseif (preg_match('/\b(research|analysis|study|survey|market|user|data|analytics|business intelligence)\b/', $text)) {
+            $type = 'Research & Business Intelligence'; $complexity = 'Intermediate';
+        } elseif (preg_match('/\b(healthcare|medical|patient|clinical|hospital|telemedicine|health tech)\b/', $text)) {
+            $type = 'Healthcare Technology'; $complexity = 'Enterprise';
+        } elseif (preg_match('/\b(education|learning|training|course|student|academic|edtech|lms)\b/', $text)) {
+            $type = 'Educational Technology'; $complexity = 'Advanced';
         }
 
-        if (preg_match('/\b(enterprise|large|complex|advanced|sophisticated|scalable|distributed)\b/', $text)) {
-            $complexity = 'High';
-        } elseif (preg_match('/\b(simple|basic|small|minimal|prototype|mvp|proof)\b/', $text)) {
-            $complexity = 'Low';
+        // Enhanced complexity assessment
+        if (preg_match('/\b(enterprise|large scale|mission critical|high availability|fault tolerant|global|international|multi-tenant)\b/', $text)) {
+            $complexity = 'Enterprise';
+        } elseif (preg_match('/\b(advanced|sophisticated|complex|technical|professional|comprehensive|strategic)\b/', $text)) {
+            $complexity = 'Advanced';
+        } elseif (preg_match('/\b(simple|basic|small|minimal|prototype|mvp|proof of concept|starter|beginner)\b/', $text)) {
+            $complexity = 'Standard';
         }
 
         return ['type' => $type, 'complexity' => $complexity];
@@ -485,24 +538,41 @@ PROMPT;
 
         if (!$baseHours) {
             $categoryBaseHours = [
-                'Research'    => 16,
-                'Planning'    => 24,
-                'Development' => 32,
-                'Design'      => 20,
-                'Content'     => 12,
-                'QA'          => 20,
-                'Marketing'   => 16,
-                'Operations'  => 28,
-                'Management'  => 8,
+                'Strategic Planning'      => 32,
+                'Technical Architecture'  => 40,
+                'Development'            => 32,
+                'Design & UX'            => 28,
+                'Quality Assurance'      => 24,
+                'DevOps & Infrastructure' => 36,
+                'Security & Compliance'   => 28,
+                'Data & Analytics'       => 30,
+                'Business Intelligence'   => 26,
+                'Stakeholder Management'  => 16,
+                'Research'               => 20,
+                'Planning'               => 24,
+                'Design'                 => 20,
+                'Content'                => 12,
+                'QA'                     => 20,
+                'Marketing'              => 16,
+                'Operations'             => 28,
+                'Management'             => 8,
             ];
-            $baseHours = $categoryBaseHours[$category] ?? 16;
+            $baseHours = $categoryBaseHours[$category] ?? 24;
         }
 
-        $complexityMultipliers = ['Simple' => 0.6, 'Medium' => 1.0, 'Complex' => 1.8];
-        $multiplier            = $complexityMultipliers[$complexity] ?? 1.0;
-        $calculatedHours       = (int) round($baseHours * $multiplier);
+        $complexityMultipliers = [
+            'Standard'    => 0.7, 
+            'Intermediate' => 1.0, 
+            'Advanced'    => 1.6, 
+            'Enterprise'  => 2.2,
+            'Simple'      => 0.6, 
+            'Medium'      => 1.0, 
+            'Complex'     => 1.8
+        ];
+        $multiplier = $complexityMultipliers[$complexity] ?? 1.0;
+        $calculatedHours = (int) round($baseHours * $multiplier);
 
-        return max(4, min(80, $calculatedHours));
+        return max(8, min(72, $calculatedHours));
     }
 
     protected function normalizeDate($value): ?string
