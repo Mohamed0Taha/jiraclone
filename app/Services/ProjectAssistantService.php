@@ -12,11 +12,20 @@ class ProjectAssistantService
     private const MAX_CONTEXT_LENGTH = 4000;
     private const MAX_RESPONSE_LENGTH = 1000;
     
-    // Security keywords that should trigger content filtering
-    private const SECURITY_FILTERS = [
-        'password', 'secret', 'key', 'token', 'credential', 'api_key',
-        'database', 'connection', 'server', 'admin', 'root', 'config',
-        'env', 'environment', 'private', 'confidential', 'sensitive'
+    // Targeted security patterns to detect requests for secrets/credentials (avoid generic words like "key")
+    private const SECURITY_PATTERNS = [
+        '/\\bpasswords?\\b/i',
+        '/\\bsecrets?\\b/i',
+        '/\\b(api[-_ ]?key|private[-_ ]?key|ssh[-_ ]?key|secret[-_ ]?key)\\b/i',
+        '/\\b(access[-_ ]?token|refresh[-_ ]?token|bearer|jwt)\\b/i',
+        '/\\bcredentials?\\b/i',
+        '/\\b(connection\\s*(string|details|info))\\b/i',
+        '/\\b(db|database)\\s*(password|credentials|connection)\\b/i',
+        '/\\b\.env\\b/i',
+        '/\\benvironment\\s*(variables|secrets|keys)\\b/i',
+        '/\\badmin\\s*(password|credentials)\\b/i',
+        '/\\broot\\s*(password|credentials)\\b/i',
+        '/\\bserver\\s*(credentials|password)\\b/i',
     ];
 
     public function buildProjectContext(Project $project): array
@@ -101,6 +110,78 @@ class ProjectAssistantService
         return $finalResponse;
     }
 
+    /**
+     * Lightweight deterministic fallback when OpenAI is unavailable.
+     * Returns a concise answer derived from project data.
+     */
+    public function fallbackAnswer(Project $project, string $message): string
+    {
+        $project->loadMissing(['tasks.assignee', 'tasks.creator', 'user']);
+
+        $tasks = $project->tasks ?? collect();
+        $total = $tasks->count();
+        $byStatus = $tasks->groupBy('status');
+        $overdue = $tasks->filter(fn ($t) => $t->end_date && $t->end_date < now() && $t->status !== 'done');
+
+        $lines = [];
+        $lines[] = "Project: {$project->name}";
+        if (!empty($project->description)) {
+            $lines[] = 'About: ' . trim(str_replace(["\r", "\n"], ' ', (string) $project->description));
+        }
+        $lines[] = "Tasks: total {$total} (" .
+            'todo ' . ($byStatus->get('todo', collect())->count()) . ', ' .
+            'in progress ' . ($byStatus->get('inprogress', collect())->count()) . ', ' .
+            'review ' . ($byStatus->get('review', collect())->count()) . ', ' .
+            'done ' . ($byStatus->get('done', collect())->count()) . ')';
+
+        if ($overdue->count() > 0) {
+            $lines[] = 'Overdue: ' . $overdue->count();
+        }
+
+        // Upcoming deadlines (next 3)
+        $upcoming = $tasks
+            ->filter(fn ($t) => $t->end_date && $t->status !== 'done' && $t->end_date >= now())
+            ->sortBy('end_date')
+            ->take(3)
+            ->map(fn ($t) => ($t->title ?? 'Untitled') . ' — due ' . $t->end_date->format('M j'))
+            ->values();
+        if ($upcoming->isNotEmpty()) {
+            $lines[] = 'Upcoming: ' . $upcoming->implode('; ');
+        }
+
+        // Top assignees by count
+        $byAssignee = $tasks->whereNotNull('assignee_id')->groupBy('assignee_id')->map->count()->sortDesc();
+        if ($byAssignee->isNotEmpty()) {
+            $top = $byAssignee->take(3)->map(function ($count, $userId) use ($project) {
+                $u = $project->tasks->firstWhere('assignee_id', $userId)?->assignee;
+                return ($u?->name ?? 'User ' . $userId) . " ({$count})";
+            })->implode(', ');
+            $lines[] = 'Load: ' . $top;
+        }
+
+        // Tailor to common intents
+        $lower = strtolower($message);
+        if (str_contains($lower, 'overdue')) {
+            if ($overdue->isEmpty()) return 'There are no overdue tasks right now.';
+            $list = $overdue->take(5)->map(fn ($t) => ($t->title ?? 'Untitled') . ' (was due ' . $t->end_date->format('M j') . ')')->implode("\n- ");
+            return "Overdue tasks (showing up to 5):\n- {$list}";
+        }
+        if (str_contains($lower, 'status') || str_contains($lower, 'progress')) {
+            return implode("\n", $lines);
+        }
+        if (str_contains($lower, 'who') || str_contains($lower, 'assignee') || str_contains($lower, 'team')) {
+            if ($byAssignee->isEmpty()) return 'No task assignees yet.';
+            $detail = $byAssignee->map(function ($count, $userId) use ($project) {
+                $u = $project->tasks->firstWhere('assignee_id', $userId)?->assignee;
+                return '- ' . ($u?->name ?? ('User ' . $userId)) . ": {$count} task(s)";
+            })->implode("\n");
+            return "Assignments:\n{$detail}";
+        }
+
+        // Default concise summary
+        return implode("\n", $lines);
+    }
+
     public function getConversationSuggestions(Project $project): array
     {
         $suggestions = [
@@ -172,12 +253,20 @@ class ProjectAssistantService
 
     private function containsSecurityRisks(string $message): bool
     {
-        $messageLower = strtolower($message);
-        
-        foreach (self::SECURITY_FILTERS as $filter) {
-            if (strpos($messageLower, $filter) !== false) {
+        // Avoid common false positives like "key deliverables", "key milestones", etc.
+        if (preg_match('/\\bkey\\s+(deliverables?|milestones?|tasks?|features?|points?)\\b/i', $message)) {
+            return false;
+        }
+
+        foreach (self::SECURITY_PATTERNS as $pattern) {
+            if (preg_match($pattern, $message)) {
                 return true;
             }
+        }
+
+        // Heuristic: looks like a raw secret (long base64/hex-like token)
+        if (preg_match('/([A-Za-z0-9+\\/]{24,}|[A-Fa-f0-9]{32,})/', $message)) {
+            return true;
         }
 
         return false;

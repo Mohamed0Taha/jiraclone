@@ -51,10 +51,14 @@ class ProjectAssistantController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
+            // Graceful fallback derived from project data
+            $fallback = $this->assistantService->fallbackAnswer($project, (string) $request->input('message'));
             return response()->json([
-                'success' => false,
-                'error' => 'I apologize, but I encountered an error while processing your request. Please try again.',
-            ], 500);
+                'success' => true,
+                'response' => $fallback,
+                'timestamp' => now()->toISOString(),
+                'warning' => 'OpenAI unavailable, served deterministic summary.',
+            ], 200);
         }
     }
 

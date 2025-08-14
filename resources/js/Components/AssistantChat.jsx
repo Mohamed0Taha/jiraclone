@@ -207,23 +207,22 @@ export default function AssistantChat({ project, open, onClose }) {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!message.trim() || isLoading) return;
+  // Shared submit logic for manual input and suggestion clicks
+  const submitUserMessage = async (userMessage) => {
+    if (!userMessage?.trim() || isLoading) return;
 
-    const userMessage = message.trim();
     setMessage('');
     setError(null);
-    setShowSuggestions(false); // Hide suggestions once user starts chatting
-    
+    setShowSuggestions(false); // Hide suggestions once the conversation starts
+
     // Add user message to conversation
-    const newConversation = [...conversation, { role: 'user', content: userMessage, timestamp: new Date() }];
+    const newConversation = [...conversation, { role: 'user', content: userMessage.trim(), timestamp: new Date() }];
     setConversation(newConversation);
     setIsLoading(true);
 
     try {
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-      
+
       const response = await fetch(route('projects.assistant.chat', project.id), {
         method: 'POST',
         headers: {
@@ -232,7 +231,8 @@ export default function AssistantChat({ project, open, onClose }) {
           'X-CSRF-TOKEN': csrfToken,
         },
         body: JSON.stringify({
-          message: userMessage,
+          message: userMessage.trim(),
+          // Keep history consistent with previous behavior: exclude the just-typed message
           conversation_history: conversation.map(msg => ({
             role: msg.role,
             content: msg.content
@@ -259,8 +259,16 @@ export default function AssistantChat({ project, open, onClose }) {
     }
   };
 
-  const handleSuggestionClick = (suggestion) => {
-    setMessage(suggestion);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!message.trim() || isLoading) return;
+    const userMessage = message.trim();
+    await submitUserMessage(userMessage);
+  };
+
+  const handleSuggestionClick = async (suggestion) => {
+    if (isLoading) return;
+    await submitUserMessage(suggestion);
     inputRef.current?.focus();
   };
 
@@ -430,6 +438,7 @@ export default function AssistantChat({ project, open, onClose }) {
                           variant="outlined"
                           size="small"
                           onClick={() => handleSuggestionClick(suggestion)}
+                          disabled={isLoading}
                           sx={{
                             justifyContent: 'flex-start',
                             textAlign: 'left',
