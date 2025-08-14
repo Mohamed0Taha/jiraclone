@@ -35,18 +35,23 @@ class AutomationEngine
      */
     public function executeAutomation(Automation $automation)
     {
-        Log::info("Executing automation: {$automation->name}");
+        Log::info("Executing automation: {$automation->name} (ID: {$automation->id})");
 
         // Check if trigger conditions are met
         if (!$this->checkTriggerConditions($automation)) {
+            Log::info("Trigger conditions not met for automation: {$automation->name}");
             return false;
         }
+
+        Log::info("Trigger conditions met for automation: {$automation->name}");
 
         // Execute all actions
         $success = true;
         foreach ($automation->actions as $action) {
+            Log::info("Executing action for automation {$automation->id}: " . json_encode($action));
             if (!$this->executeAction($action, $automation)) {
                 $success = false;
+                Log::error("Action failed for automation {$automation->id}");
             }
         }
 
@@ -69,21 +74,27 @@ class AutomationEngine
                 return $this->checkScheduleTrigger($config, $automation);
             
             case 'Task Created':
+            case 'task_created':
                 return $this->checkTaskCreatedTrigger($config, $automation);
             
             case 'Task Updated':
+            case 'task_updated':
                 return $this->checkTaskUpdatedTrigger($config, $automation);
             
             case 'Task Due Date':
+            case 'task_due_date':
                 return $this->checkTaskDueDateTrigger($config, $automation);
             
             case 'Task Priority':
+            case 'task_priority':
                 return $this->checkTaskPriorityTrigger($config, $automation);
             
             case 'Project Status':
+            case 'project_status':
                 return $this->checkProjectStatusTrigger($config, $automation);
             
             default:
+                Log::warning("Unknown trigger type: {$trigger}");
                 return false;
         }
     }
@@ -181,8 +192,8 @@ class AutomationEngine
     private function checkTaskUpdatedTrigger(array $config, Automation $automation): bool
     {
         $timeWindow = $config['time_window'] ?? 5; // minutes
-        $statusChanges = $config['status_changes'] ?? [];
-
+        
+        // Get recently updated tasks
         $recentlyUpdated = Task::where('project_id', $automation->project_id)
             ->where('updated_at', '>=', Carbon::now()->subMinutes($timeWindow))
             ->where('updated_at', '>', function($query) {
@@ -193,14 +204,41 @@ class AutomationEngine
             ->get();
 
         if ($recentlyUpdated->isEmpty()) {
+            Log::info("No recently updated tasks found for automation {$automation->id}");
             return false;
         }
 
-        // If specific status changes are configured
+        // Check for specific status changes if configured
+        $fromStatus = $config['from_status'] ?? null;
+        $toStatus = $config['to_status'] ?? null;
+        $field = $config['field'] ?? 'status';
+
+        // If specific status transition is configured
+        if ($toStatus && $toStatus !== 'Any') {
+            $statusField = strtolower($field) === 'status' ? 'status' : $field;
+            // Make status comparison case-insensitive
+            $targetStatus = strtolower($toStatus);
+            $matchingTasks = $recentlyUpdated->filter(function($task) use ($statusField, $targetStatus) {
+                $taskStatus = $task->{$statusField} ?? '';
+                return strtolower($taskStatus) === $targetStatus;
+            });
+            
+            if ($matchingTasks->isEmpty()) {
+                Log::info("No tasks with status '{$toStatus}' found for automation {$automation->id}");
+                return false;
+            }
+            
+            Log::info("Found " . $matchingTasks->count() . " tasks with status '{$toStatus}' for automation {$automation->id}");
+            return true;
+        }
+
+        // Fallback to old format
+        $statusChanges = $config['status_changes'] ?? [];
         if (!empty($statusChanges)) {
             return $recentlyUpdated->whereIn('status', $statusChanges)->isNotEmpty();
         }
 
+        Log::info("Task updated trigger fired for automation {$automation->id} - " . $recentlyUpdated->count() . " tasks updated");
         return true;
     }
 
@@ -256,6 +294,7 @@ class AutomationEngine
 
         switch ($type) {
             case 'Email':
+            case 'send_email': // Support both formats
                 return $this->sendEmailAction($action, $automation);
             
             case 'Slack':
@@ -282,16 +321,19 @@ class AutomationEngine
     private function sendEmailAction(array $action, Automation $automation): bool
     {
         try {
-            $recipient = $action['recipient'] ?? $automation->project->user->email;
-            $subject = $action['subject'] ?? "Automation: {$automation->name}";
-            $message = $action['message'] ?? "Automation '{$automation->name}' has been triggered.";
+            // Handle both old and new config formats
+            $config = $action['config'] ?? $action;
+            
+            $recipient = $config['to'] ?? $config['recipient'] ?? $automation->project->user->email;
+            $subject = $config['subject'] ?? "Automation: {$automation->name}";
+            $message = $config['body'] ?? $config['message'] ?? "Automation '{$automation->name}' has been triggered.";
 
             // Replace placeholders
             $message = $this->replacePlaceholders($message, $automation);
 
             Mail::to($recipient)->send(new AutomationNotification($subject, $message));
 
-            Log::info("Email sent for automation {$automation->id}");
+            Log::info("Email sent for automation {$automation->id} to {$recipient}");
             return true;
         } catch (\Exception $e) {
             Log::error("Failed to send email for automation {$automation->id}: {$e->getMessage()}");
