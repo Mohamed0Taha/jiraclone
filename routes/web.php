@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -27,8 +28,8 @@ Route::get('/test-ai', function () {
 });
 
 // Debug route for email verification issues
-Route::get('/debug-verification', function () {
-    $user = auth()->user();
+Route::get('/debug-email', function () {
+    $user = Auth::user();
     if (!$user) {
         return 'Please log in first';
     }
@@ -46,7 +47,7 @@ Route::get('/debug-verification', function () {
         'app_url' => config('app.url'),
         'verification_url' => $url,
         'current_url' => request()->getSchemeAndHttpHost(),
-        'is_verified' => $user->hasVerifiedEmail(),
+        'is_verified' => !is_null($user->email_verified_at),
     ];
 })->middleware('auth');
 

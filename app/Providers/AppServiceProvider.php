@@ -53,8 +53,8 @@ class AppServiceProvider extends ServiceProvider
         Inertia::share('isPro', function () {
             $user = Auth::user();
 
-            return $user && method_exists($user, 'subscribed')
-                ? (bool) $user->subscribed('default')
+            return $user && method_exists($user, 'subscribed') && call_user_func([$user, 'subscribed'], 'default')
+                ? true
                 : false;
         });
     }
