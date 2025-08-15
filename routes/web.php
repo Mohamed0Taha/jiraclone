@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\ProfileController;
@@ -33,21 +34,21 @@ Route::get('/debug-email', function () {
     if (!$user) {
         return 'Please log in first';
     }
-    
+
     $url = \Illuminate\Support\Facades\URL::temporarySignedRoute(
         'verification.verify',
         now()->addMinutes(60),
         ['id' => $user->id, 'hash' => sha1($user->email)]
     );
-    
+
     return [
-        'user_id' => $user->id,
-        'email' => $user->email,
-        'email_hash' => sha1($user->email),
-        'app_url' => config('app.url'),
-        'verification_url' => $url,
-        'current_url' => request()->getSchemeAndHttpHost(),
-        'is_verified' => !is_null($user->email_verified_at),
+        'user_id'         => $user->id,
+        'email'           => $user->email,
+        'email_hash'      => sha1($user->email),
+        'app_url'         => config('app.url'),
+        'verification_url'=> $url,
+        'current_url'     => request()->getSchemeAndHttpHost(),
+        'is_verified'     => !is_null($user->email_verified_at),
     ];
 })->middleware('auth');
 
@@ -73,6 +74,37 @@ Route::get('/health', function () {
 */
 Route::get('/auth/google',          [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
+
+/*
+|--------------------------------------------------------------------------
+| Email Verification (fixed)
+|--------------------------------------------------------------------------
+| NOTE: 'signed:relative' ignores host/scheme differences behind proxies (Heroku).
+*/
+Route::middleware('auth')->group(function () {
+    // Notice page
+    Route::get('/email/verify', function () {
+        return Inertia::render('Auth/VerifyEmail', [
+            'status' => session('status'),
+        ]);
+    })->name('verification.notice');
+
+    // The actual verification link
+    Route::get('/verify-email/{id}/{hash}', function (EmailVerificationRequest $request) {
+        $request->fulfill();
+        return redirect()->intended('/dashboard')->with('verified', true);
+    })->middleware(['signed:relative', 'throttle:6,1'])
+      ->name('verification.verify');
+
+    // Resend link
+    Route::post('/email/verification-notification', function (Request $request) {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect()->intended('/dashboard');
+        }
+        $request->user()->sendEmailVerificationNotification();
+        return back()->with('status', 'verification-link-sent');
+    })->middleware(['throttle:6,1'])->name('verification.send');
+});
 
 /*
 |--------------------------------------------------------------------------
