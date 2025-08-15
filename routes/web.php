@@ -24,38 +24,41 @@ use App\Models\Project;
 */
 Route::get('/', fn () => Inertia::render('Landing'))->name('landing');
 
-// Temporary test route for debugging AI
+/* Optional quick test page */
 Route::get('/test-ai', fn () => view('test-ai'));
 
-// Debug route for email verification issues — now uses a RELATIVE signature
+/*
+|--------------------------------------------------------------------------
+| Email Debug Helper (shows a RELATIVE-signed link)
+|--------------------------------------------------------------------------
+*/
 Route::get('/debug-email', function () {
     $user = Auth::user();
     if (!$user) {
-        return 'Please log in first';
+        return response('Please log in first', 401);
     }
 
     $relative = URL::temporarySignedRoute(
         'verification.verify',
         now()->addMinutes(60),
         ['id' => $user->id, 'hash' => sha1($user->email)],
-        absolute: false // ← critical: sign as relative
+        false // ← RELATIVE signature
     );
 
     return [
-        'user_id'          => $user->id,
-        'email'            => $user->email,
-        'email_hash'       => sha1($user->email),
-        'app_url'          => config('app.url'),
-        'relative_link'    => $relative,
-        'full_link'        => rtrim(config('app.url'), '/') . $relative,
-        'current_host'     => request()->getSchemeAndHttpHost(),
-        'is_verified'      => !is_null($user->email_verified_at),
+        'user_id'        => $user->id,
+        'email'          => $user->email,
+        'relative_link'  => $relative,
+        'full_link'      => rtrim(config('app.url'), '/') . $relative,
+        'app_url'        => config('app.url'),
+        'current_host'   => request()->getSchemeAndHttpHost(),
+        'is_verified'    => (bool) $user->email_verified_at,
     ];
 })->middleware('auth');
 
 /*
 |--------------------------------------------------------------------------
-| Lightweight Health Check
+| Lightweight Health Check (no session)
 |--------------------------------------------------------------------------
 */
 Route::get('/health', fn () => response()->json([
@@ -76,25 +79,25 @@ Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallb
 
 /*
 |--------------------------------------------------------------------------
-| Email Verification (RELATIVE signed links)
+| Email Verification (RELATIVE-signed links)
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
-    // Notice page
+    // Notice screen
     Route::get('/email/verify', function () {
         return Inertia::render('Auth/VerifyEmail', [
             'status' => session('status'),
         ]);
     })->name('verification.notice');
 
-    // The actual verification link
+    // Verification link target
     Route::get('/verify-email/{id}/{hash}', function (EmailVerificationRequest $request) {
         $request->fulfill();
         return redirect()->intended('/dashboard')->with('verified', true);
     })->middleware(['signed:relative', 'throttle:6,1'])
       ->name('verification.verify');
 
-    // Resend link
+    // Resend verification email
     Route::post('/email/verification-notification', function (Request $request) {
         if ($request->user()->hasVerifiedEmail()) {
             return redirect()->intended('/dashboard');
@@ -151,16 +154,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Profile / Projects / Tasks
+| Profile / Projects / Tasks / Comments / Automations / Assistant
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
-    // Profile
+
+    /* Profile */
     Route::get('/profile',    [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile',  [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Projects
+    /* Projects */
     Route::get('/projects',        [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects',       [ProjectController::class, 'store'])->name('projects.store');
@@ -180,9 +184,10 @@ Route::middleware('auth')->group(function () {
 
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
 
-    // Nested project-scoped routes
+    /* Nested project-scoped routes */
     Route::prefix('projects/{project}')->group(function () {
-        // TASKS: AI generator flow
+
+        /* TASKS: AI generator flow */
         Route::get('/tasks/ai', function (Request $request, Project $project) {
             return Inertia::render('Tasks/AITasksGenerator', [
                 'project' => $project,
@@ -198,22 +203,22 @@ Route::middleware('auth')->group(function () {
         // Suggestions (GET)
         Route::get('/tasks/ai/suggestions', [TaskController::class, 'suggestionsAI'])->name('tasks.ai.suggestions');
 
-        // TASKS: CRUD
+        /* TASKS: CRUD */
         Route::get('/tasks',           [TaskController::class, 'index'])->name('tasks.index');
         Route::get('/tasks/{task}',    [TaskController::class, 'show'])->name('tasks.show');
         Route::post('/tasks',          [TaskController::class, 'store'])->name('tasks.store');
         Route::patch('/tasks/{task}',  [TaskController::class, 'update'])->name('tasks.update');
         Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
-        // COMMENTS
+        /* COMMENTS */
         Route::post('/tasks/{task}/comments',             [CommentController::class, 'store'])->name('comments.store');
         Route::patch('/tasks/{task}/comments/{comment}',  [CommentController::class, 'update'])->name('comments.update');
         Route::delete('/tasks/{task}/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 
-        // TIMELINE
+        /* TIMELINE */
         Route::get('/timeline', [TaskController::class, 'timeline'])->name('tasks.timeline');
 
-        // AUTOMATIONS
+        /* AUTOMATIONS */
         Route::get('/automations',                       [AutomationController::class, 'index'])->name('automations.index');
         Route::post('/automations',                      [AutomationController::class, 'store'])->name('automations.store');
         Route::patch('/automations/{automation}',        [AutomationController::class, 'update'])->name('automations.update');
@@ -223,7 +228,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/automations/{automation}/execute', [AutomationController::class, 'execute'])->name('automations.execute');
         Route::post('/automations/process',              [AutomationController::class, 'processProject'])->name('automations.process');
 
-        // PROJECT ASSISTANT
+        /* PROJECT ASSISTANT */
         Route::post('/assistant/chat',        [ProjectAssistantController::class, 'chat'])->name('projects.assistant.chat');
         Route::get('/assistant/suggestions',  [ProjectAssistantController::class, 'suggestions'])->name('projects.assistant.suggestions');
         Route::get('/assistant/test',         [ProjectAssistantController::class, 'test'])->name('projects.assistant.test');
