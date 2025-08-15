@@ -26,6 +26,30 @@ Route::get('/test-ai', function () {
     return view('test-ai');
 });
 
+// Debug route for email verification issues
+Route::get('/debug-verification', function () {
+    $user = auth()->user();
+    if (!$user) {
+        return 'Please log in first';
+    }
+    
+    $url = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $user->id, 'hash' => sha1($user->email)]
+    );
+    
+    return [
+        'user_id' => $user->id,
+        'email' => $user->email,
+        'email_hash' => sha1($user->email),
+        'app_url' => config('app.url'),
+        'verification_url' => $url,
+        'current_url' => request()->getSchemeAndHttpHost(),
+        'is_verified' => $user->hasVerifiedEmail(),
+    ];
+})->middleware('auth');
+
 /*
 |--------------------------------------------------------------------------
 | Lightweight Health Check (no middleware, no session)

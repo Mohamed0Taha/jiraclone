@@ -34,9 +34,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Force HTTPS in production (fixes mixed content & callback URL)
+        // Force HTTPS and root URL in production (fixes signed URL validation behind proxies like Heroku/Cloudflare)
         if (app()->environment('production')) {
             URL::forceScheme('https');
+            if ($root = config('app.url')) {
+                URL::forceRootUrl($root);
+            }
         }
 
         // Assets prefetch

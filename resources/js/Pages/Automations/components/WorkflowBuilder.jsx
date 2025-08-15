@@ -439,19 +439,7 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
             </Typography>
           </Box>
 
-          <Tooltip title={!canSave ? 'Add a trigger and at least one action' : 'Save & Activate'}>
-            <span>
-              <Button
-                variant="contained"
-                startIcon={<PlayIcon />}
-                onClick={handleSave}
-                disabled={!canSave}
-                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, px: 3 }}
-              >
-                Save & Activate
-              </Button>
-            </span>
-          </Tooltip>
+          {/* Save action moved to sticky bottom bar */}
         </Stack>
       </Paper>
 
@@ -510,20 +498,20 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                   }}
                   sx={{
                     cursor: 'pointer',
-                    border: isSelected ? `3px solid ${theme.palette[trigger.color].main}` : `2px solid transparent`,
+                    border: isSelected ? `3px solid ${theme.palette[trigger.color || 'primary'].main}` : `2px solid transparent`,
                     borderRadius: 3,
                     transition: 'all .2s',
                     transform: isSelected ? 'scale(1.01)' : 'scale(1)',
                     background: isSelected
-                      ? `linear-gradient(135deg, ${alpha(theme.palette[trigger.color].main, 0.08)} 0%, ${alpha(
-                          theme.palette[trigger.color].main,
+                      ? `linear-gradient(135deg, ${alpha(theme.palette[trigger.color || 'primary'].main, 0.08)} 0%, ${alpha(
+                          theme.palette[trigger.color || 'primary'].main,
                           0.02
                         )} 100%)`
                       : 'white',
                     '&:hover': {
                       transform: 'scale(1.01)',
-                      boxShadow: `0 10px 25px ${alpha(theme.palette[trigger.color].main, 0.18)}`,
-                      border: `3px solid ${alpha(theme.palette[trigger.color].main, 0.5)}`,
+                      boxShadow: `0 10px 25px ${alpha(theme.palette[trigger.color || 'primary'].main, 0.18)}`,
+                      border: `3px solid ${alpha(theme.palette[trigger.color || 'primary'].main, 0.5)}`,
                     },
                   }}
                 >
@@ -538,7 +526,7 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                           alignItems: 'center',
                           justifyContent: 'center',
                           color: 'white',
-                          background: `linear-gradient(135deg, ${theme.palette[trigger.color].main} 0%, ${theme.palette[trigger.color].dark} 100%)`,
+                          background: `linear-gradient(135deg, ${theme.palette[trigger.color || 'primary'].main} 0%, ${theme.palette[trigger.color || 'primary'].dark} 100%)`,
                         }}
                       >
                         {trigger.icon}
@@ -615,12 +603,12 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                     fontWeight: 700,
                     px: 1.5,
                     py: 1,
-                    borderColor: theme.palette[a.color].main,
-                    color: theme.palette[a.color].main,
-                    background: alpha(theme.palette[a.color].main, 0.04),
+                    borderColor: theme.palette[a.color || 'primary'].main,
+                    color: theme.palette[a.color || 'primary'].main,
+                    background: alpha(theme.palette[a.color || 'primary'].main, 0.04),
                     '&:hover': {
-                      borderColor: theme.palette[a.color].dark,
-                      background: alpha(theme.palette[a.color].main, 0.1),
+                      borderColor: theme.palette[a.color || 'primary'].dark,
+                      background: alpha(theme.palette[a.color || 'primary'].main, 0.1),
                       transform: 'translateY(-1px)',
                     },
                   }}
@@ -633,7 +621,7 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: theme.palette[a.color].main,
+                        backgroundColor: theme.palette[a.color || 'primary'].main,
                         color: 'white',
                         '& svg': { fontSize: 14 },
                       }}
@@ -658,13 +646,34 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
             <Stack spacing={2}>
               {actions.map((action, idx) => {
                 const def = ACTIONS.find((x) => x.id === action.type);
+                if (!def) {
+                  return (
+                    <Card key={action.id} sx={{ border: '2px solid #ff9800', borderRadius: 3 }}>
+                      <CardContent sx={{ p: 2.5 }}>
+                        <Typography variant="subtitle1" fontWeight={800} color="warning.main">
+                          Unknown Action: {action.type}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          This action type is not recognized. Please remove it or choose a different action.
+                        </Typography>
+                        <Box sx={{ mt: 2 }}>
+                          <Tooltip title="Remove">
+                            <IconButton color="error" onClick={() => removeAction(action.id)}>
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  );
+                }
                 return (
                   <Card
                     key={action.id}
                     sx={{
-                      border: `2px solid ${alpha(theme.palette[def.color].main, 0.2)}`,
+                      border: `2px solid ${alpha(theme.palette[def?.color || 'primary'].main, 0.2)}`,
                       borderRadius: 3,
-                      background: `linear-gradient(135deg, ${alpha(theme.palette[def.color].main, 0.05)} 0%, white 60%)`,
+                      background: `linear-gradient(135deg, ${alpha(theme.palette[def?.color || 'primary'].main, 0.05)} 0%, white 60%)`,
                     }}
                   >
                     <CardContent sx={{ p: 2.5 }}>
@@ -678,13 +687,13 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                             alignItems: 'center',
                             justifyContent: 'center',
                             color: 'white',
-                            background: `linear-gradient(135deg, ${theme.palette[def.color].main} 0%, ${theme.palette[def.color].dark} 100%)`,
+                            background: `linear-gradient(135deg, ${theme.palette[def?.color || 'primary'].main} 0%, ${theme.palette[def?.color || 'primary'].dark} 100%)`,
                           }}
                         >
-                          {def.icon}
+                          {def?.icon}
                         </Box>
                         <Typography variant="subtitle1" fontWeight={800}>
-                          Step {idx + 1}: {def.name}
+                          Step {idx + 1}: {def?.name || 'Unknown Action'}
                         </Typography>
                         <Box sx={{ flex: 1 }} />
                         <Tooltip title="Remove">
@@ -695,11 +704,11 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                       </Stack>
 
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                        {def.description}
+                        {def?.description || 'No description available'}
                       </Typography>
 
                       <Stack spacing={2}>
-                        {(def.fields || []).map((f) => (
+                        {(def?.fields || []).map((f) => (
                           <Box key={f.name}>
                             {renderField(f, action.config[f.name], (v) => setActionConfig(action.id, f.name, v))}
                           </Box>
@@ -725,6 +734,67 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
           </Alert>
         )}
       </Stack>
+
+      {/* Sticky bottom action bar */}
+      <Paper
+        elevation={8}
+        sx={{
+          position: 'sticky',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          p: 2,
+          mt: 3,
+          backdropFilter: 'blur(8px)',
+          background: (theme) => `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.7)}, ${theme.palette.background.paper})`,
+          borderTop: (theme) => `1px solid ${alpha(theme.palette.divider, 0.4)}`,
+        }}
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'center' }} justifyContent="space-between">
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Chip
+              label={isActive ? 'Will activate on save' : 'Will be paused on save'}
+              color={isActive ? 'success' : 'warning'}
+              sx={{ fontWeight: 700 }}
+            />
+            <FormControlLabel
+              control={<Switch checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />}
+              label={isActive ? 'Active' : 'Paused'}
+            />
+          </Stack>
+          <Stack direction="row" spacing={1.5} justifyContent="flex-end">
+            <Button
+              variant="text"
+              onClick={onBack}
+              sx={{ textTransform: 'none', fontWeight: 700 }}
+            >
+              Cancel
+            </Button>
+            <Tooltip title={!canSave ? 'Add a trigger and at least one action' : 'Save workflow'}>
+              <span>
+                <Button
+                  variant="contained"
+                  startIcon={<PlayIcon />}
+                  onClick={handleSave}
+                  disabled={!canSave}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 800,
+                    px: 3,
+                    borderRadius: 3,
+                    background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                    boxShadow: (theme) => `0 10px 24px ${alpha(theme.palette.primary.main, 0.3)}`,
+                  }}
+                >
+                  Save Workflow
+                </Button>
+              </span>
+            </Tooltip>
+          </Stack>
+        </Stack>
+      </Paper>
 
       <Snackbar
         open={Boolean(snack)}

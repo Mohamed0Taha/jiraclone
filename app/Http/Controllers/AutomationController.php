@@ -127,13 +127,19 @@ class AutomationController extends Controller
             ->with('automation', $automation);
     }
 
-    public function destroy(Project $project, Automation $automation)
+    public function destroy(Request $request, Project $project, Automation $automation)
     {
         $automationName = $automation->name;
         $automation->delete();
 
         Log::info("Automation deleted: {$automationName}");
-
+        // If this is an Inertia request, respond with a redirect (required by Inertia)
+        if ($request->header('X-Inertia')) {
+            return redirect()
+                ->route('automations.index', $project)
+                ->with('success', 'Automation deleted successfully');
+        }
+        // Fallback for non-Inertia calls
         return response()->json([
             'success' => true,
             'message' => 'Automation deleted successfully'
