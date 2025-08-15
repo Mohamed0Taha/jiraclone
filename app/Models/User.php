@@ -6,32 +6,36 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Laravel\Sanctum\HasApiTokens;          // ✅ for API tokens / sessions
 use Laravel\Cashier\Billable;
 use App\Notifications\CustomVerifyEmail;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasFactory, Notifiable, Billable;
+    use HasApiTokens, HasFactory, Notifiable, Billable;
 
-    protected $fillable = ['name','email','password'];
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        // 'google_id', // ← uncomment only if you add this column to users table
+    ];
 
-    protected $hidden = ['password','remember_token'];
+    protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'trial_ends_at' => 'datetime',
+            'password'          => 'hashed',
+            'trial_ends_at'     => 'datetime',
         ];
     }
 
     /**
-     * Send the email verification notification.
-     *
-     * @return void
+     * Send the email verification notification (your custom Mailable).
      */
-    public function sendEmailVerificationNotification()
+    public function sendEmailVerificationNotification(): void
     {
         $this->notify(new CustomVerifyEmail);
     }
@@ -41,9 +45,9 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Project::class);
     }
 
-    // Convenience helper:
+    // Convenience helper
     public function onPro(): bool
     {
-        return $this->subscribed('default'); // 'default' is the subscription name we'll use
+        return (bool) $this->subscribed('default');
     }
 }

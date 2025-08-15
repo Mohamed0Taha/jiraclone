@@ -3,45 +3,52 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use App\Models\User;
 
 class GoogleController extends Controller
 {
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')->stateless()->redirect();
+        // keep stateful now that HTTPS/proxy is fixed
+        return Socialite::driver('google')->redirect();
     }
 
-    public function handleGoogleCallback()
+    public function handleGoogleCallback(Request $request)
     {
-        $google = Socialite::driver('google')->stateless()->user();
+        $g = Socialite::driver('google')->user();
 
-        // Create or update the user
-        $user = User::updateOrCreate(
-            ['email' => $google->getEmail()],
-            [
-                'name'     => $google->getName() ?: ($google->getNickname() ?: 'Google User'),
-                'password' => Hash::make(Str::random(40)),
-            ]
-        );
+        // Find by email
+        $user = User::firstWhere('email', $g->getEmail());
 
-        // Ensure they are marked verified
-        if (is_null($user->email_verified_at)) {
-            // If your User model uses MustVerifyEmail, this also fires events:
-            if (method_exists($user, 'markEmailAsVerified')) {
-                $user->markEmailAsVerified();
-            } else {
-                $user->forceFill(['email_verified_at' => now()])->save();
+        if (! $user) {
+            // Create WITHOUT verifying email
+            $user = User::create([
+                'name'     => $g->getName() ?: $g->getNickname() ?: 'Google User',
+                'email'    => $g->getEmail(),
+                'password' => bcrypt(Str::random(40)),
+                // keep email_verified_at NULL (default)
+                'google_id' => $g->getId(),
+            ]);
+        } else {
+            // Optionally keep a reference to Google
+            if (empty($user->google_id)) {
+                $user->google_id = $g->getId();
+                $user->save();
             }
         }
 
         Auth::login($user, remember: true);
 
-        // Always go to the dashboard on the current host
-        return to_route('dashboard');
+        if (! $user->hasVerifiedEmail()) {
+            // Send (or re-send) verification email and show the notice page
+            $user->sendEmailVerificationNotification();
+            return redirect()->route('verification.notice');
+        }
+
+        return redirect()->intended(route('dashboard'));
     }
 }
