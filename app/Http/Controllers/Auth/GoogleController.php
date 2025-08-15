@@ -3,45 +3,36 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Laravel\Socialite\Facades\Socialite;
-use Laravel\Socialite\Two\User as SocialiteUser;
-use Laravel\Socialite\Contracts\Provider;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\RedirectResponse;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
+use Laravel\Socialite\Facades\Socialite;
 
 class GoogleController extends Controller
 {
-    /**
-     * Redirect the user to the Google authentication page.
-     */
-    public function redirectToGoogle(): RedirectResponse
+    public function redirectToGoogle()
     {
-        return Socialite::driver('google')->redirect();
+        // stateless avoids "Invalid state" if sessions/cookies are tricky in prod
+        return Socialite::driver('google')->stateless()->redirect();
     }
 
-    /**
-     * Obtain the user information from Google.
-     */
-    public function handleGoogleCallback(): RedirectResponse
+    public function handleGoogleCallback()
     {
-        // Get the Google provider instance
-        /** @var \Laravel\Socialite\Two\GoogleProvider $provider */
-        $provider = Socialite::driver('google');
-        
-        // Use stateless mode to avoid session storage
-        $gUser = $provider->stateless()->user();
+        $google = Socialite::driver('google')->stateless()->user();
 
         $user = User::firstOrCreate(
-            ['email' => $gUser->getEmail()],
+            ['email' => $google->getEmail()],
             [
-                'name'     => $gUser->getName() ?: $gUser->getNickname(),
-                'password' => bcrypt(uniqid()), // random placeholder
+                'name'               => $google->getName() ?: ($google->getNickname() ?: 'Google User'),
+                'password'           => Hash::make(Str::random(40)),
+                'email_verified_at'  => now(),
             ]
         );
 
-        Auth::login($user);
+        Auth::login($user, remember: true);
 
-        return redirect()->route('dashboard');
+        // IMPORTANT: do NOT use ->intended(); it may contain the wrong host
+        return to_route('dashboard');
     }
 }
