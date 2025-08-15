@@ -2,39 +2,41 @@
 
 namespace App\Notifications;
 
-use Illuminate\Auth\Notifications\VerifyEmail as BaseVerifyEmail;
+use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\URL;
 
-class CustomVerifyEmail extends BaseVerifyEmail
+class CustomVerifyEmail extends Notification
 {
-    /**
-     * Build the verification URL using a RELATIVE signature.
-     */
-    protected function verificationUrl($notifiable): string
+    public function via($notifiable): array
     {
-        // Generate a signed *relative* URL (no host in the signature)
-        $relative = URL::temporarySignedRoute(
-            'verification.verify',
-            now()->addMinutes(config('auth.verification.expire', 60)),
-            [
-                'id'   => $notifiable->getKey(),
-                'hash' => sha1($notifiable->getEmailForVerification()),
-            ],
-            absolute: false // ← important
-        );
-
-        // Email buttons need an absolute link. Prepend APP_URL but keep the
-        // relative signature intact to survive proxies.
-        return rtrim(config('app.url'), '/') . $relative;
+        return ['mail'];
     }
 
     public function toMail($notifiable): MailMessage
     {
+        $minutes  = (int) config('auth.verification.expire', 60);
+
+        // Build a RELATIVE signed URL (host/scheme ignored by the validator)
+        $relative = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes($minutes),
+            [
+                'id'   => $notifiable->getKey(),
+                'hash' => sha1($notifiable->getEmailForVerification()),
+            ],
+            false // ← CRITICAL: relative signature
+        );
+
+        // Prefix with your public host for the email button
+        $full = rtrim(config('app.url'), '/') . $relative;
+
         return (new MailMessage)
             ->subject('Verify Email Address')
+            ->greeting('Hello!')
             ->line('Please click the button below to verify your email address.')
-            ->action('Verify Email Address', $this->verificationUrl($notifiable))
-            ->line('If you did not create an account, no further action is required.');
+            ->action('Verify Email Address', $full)
+            ->line('If you’re having trouble clicking the button, copy and paste this URL into your web browser:')
+            ->line($full);
     }
 }

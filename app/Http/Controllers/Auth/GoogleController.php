@@ -3,52 +3,59 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Laravel\Socialite\Facades\Socialite;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Str;
 
 class GoogleController extends Controller
 {
     public function redirectToGoogle()
     {
-        // keep stateful now that HTTPS/proxy is fixed
-        return Socialite::driver('google')->redirect();
+        // stateless() avoids CSRF/state issues behind proxies
+        return Socialite::driver('google')->stateless()->redirect();
     }
 
     public function handleGoogleCallback(Request $request)
     {
-        $g = Socialite::driver('google')->user();
+        $g = Socialite::driver('google')->stateless()->user();
 
-        // Find by email
-        $user = User::firstWhere('email', $g->getEmail());
+        $user = User::where('email', $g->getEmail())->first();
 
-        if (! $user) {
-            // Create WITHOUT verifying email
+        if (!$user) {
             $user = User::create([
-                'name'     => $g->getName() ?: $g->getNickname() ?: 'Google User',
-                'email'    => $g->getEmail(),
-                'password' => bcrypt(Str::random(40)),
-                // keep email_verified_at NULL (default)
-                'google_id' => $g->getId(),
+                'name'                 => $g->getName() ?: $g->getNickname() ?: 'Google User',
+                'email'                => $g->getEmail(),
+                'password'             => bcrypt(Str::random(40)),
+                'google_id'            => $g->getId(),
+                'google_avatar'        => $g->getAvatar(),
+                'google_token'         => $g->token ?? null,
+                'google_refresh_token' => $g->refreshToken ?? null,
             ]);
+
+            // 🔔 Trigger ONE verification email via the framework
+            event(new Registered($user));
         } else {
-            // Optionally keep a reference to Google
-            if (empty($user->google_id)) {
-                $user->google_id = $g->getId();
-                $user->save();
-            }
+            // Keep profile fresh
+            $user->forceFill([
+                'google_id'            => $g->getId(),
+                'google_avatar'        => $g->getAvatar(),
+                'google_token'         => $g->token ?? $user->google_token,
+                'google_refresh_token' => $g->refreshToken ?? $user->google_refresh_token,
+            ])->save();
+
+            // ❌ Do NOT send verification here; the Registered event already handles it at account creation.
         }
 
         Auth::login($user, remember: true);
 
-        if (! $user->hasVerifiedEmail()) {
-            // Send (or re-send) verification email and show the notice page
-            $user->sendEmailVerificationNotification();
+        // If not verified, show the “verify email” notice (no re-send here)
+        if (!$user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
         }
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended('/dashboard');
     }
 }
