@@ -26,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
             $this->app->register(\Tighten\Ziggy\ZiggyServiceProvider::class);
         }
 
-        // Socialite — explicit is fine (auto-discovery usually handles it)
+        // Socialite (usually auto-discovered, but explicit is fine)
         if (class_exists(\Laravel\Socialite\SocialiteServiceProvider::class)) {
             $this->app->register(\Laravel\Socialite\SocialiteServiceProvider::class);
         }
@@ -34,9 +34,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // ✅ Critical for Heroku/any proxy: ensure signed URLs match the public host & https
+        // Ensure signed URLs validate correctly behind proxies (Heroku/Cloudflare)
         if (app()->environment('production')) {
             URL::forceScheme('https');
+
+            // Only force a root URL if APP_URL is set, to avoid CLI/testing oddities
             if ($root = config('app.url')) {
                 URL::forceRootUrl($root);
             }
@@ -49,9 +51,8 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(TaskCreated::class, TriggerAutomations::class);
         Event::listen(TaskUpdated::class, TriggerAutomations::class);
 
-        // Shared prop for all Inertia pages (guard for environments without Cashier)
+        // Shared prop for all Inertia pages (Cashier-safe)
         Inertia::share('isPro', function (): bool {
-            /** @var \App\Models\User|null $user */
             $user = Auth::user();
             return $user && method_exists($user, 'subscribed') && $user->subscribed('default');
         });
