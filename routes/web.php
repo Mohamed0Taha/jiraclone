@@ -5,7 +5,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
+
+use Illuminate\Auth\Events\Verified;
+use App\Models\User;
 
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\ProfileController;
@@ -34,25 +36,23 @@ Route::get('/test-ai', fn () => view('test-ai'));
 */
 Route::get('/debug-email', function () {
     $user = Auth::user();
-    if (!$user) {
-        return response('Please log in first', 401);
-    }
+    if (!$user) return response('Please log in first', 401);
 
     $relative = URL::temporarySignedRoute(
         'verification.verify',
         now()->addMinutes(60),
         ['id' => $user->id, 'hash' => sha1($user->email)],
-        false // ← RELATIVE signature
+        false // RELATIVE signature
     );
 
     return [
-        'user_id'        => $user->id,
-        'email'          => $user->email,
-        'relative_link'  => $relative,
-        'full_link'      => rtrim(config('app.url'), '/') . $relative,
-        'app_url'        => config('app.url'),
-        'current_host'   => request()->getSchemeAndHttpHost(),
-        'is_verified'    => (bool) $user->email_verified_at,
+        'user_id'       => $user->id,
+        'email'         => $user->email,
+        'relative_link' => $relative,
+        'full_link'     => rtrim(config('app.url'), '/') . $relative,
+        'app_url'       => config('app.url'),
+        'current_host'  => request()->getSchemeAndHttpHost(),
+        'is_verified'   => (bool) $user->email_verified_at,
     ];
 })->middleware('auth');
 
@@ -79,33 +79,53 @@ Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallb
 
 /*
 |--------------------------------------------------------------------------
-| Email Verification (RELATIVE-signed links)
+| Email Verification (robust & proxy-safe)
 |--------------------------------------------------------------------------
+| 1) Notice page requires auth.
+| 2) The verify link itself is PUBLIC (not behind auth) to avoid signature breakage.
+| 3) We validate a RELATIVE signature and ignore common tracking params.
+| 4) We verify the user's email and log them in.
 */
-Route::middleware('auth')->group(function () {
-    // Notice screen
-    Route::get('/email/verify', function () {
-        return Inertia::render('Auth/VerifyEmail', [
-            'status' => session('status'),
-        ]);
-    })->name('verification.notice');
 
-    // Verification link target
-    Route::get('/verify-email/{id}/{hash}', function (EmailVerificationRequest $request) {
-        $request->fulfill();
-        return redirect()->intended('/dashboard')->with('verified', true);
-    })->middleware(['signed:relative', 'throttle:6,1'])
-      ->name('verification.verify');
+// Notice screen (requires auth)
+Route::get('/email/verify', function () {
+    return Inertia::render('Auth/VerifyEmail', ['status' => session('status')]);
+})->middleware('auth')->name('verification.notice');
 
-    // Resend verification email
-    Route::post('/email/verification-notification', function (Request $request) {
-        if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended('/dashboard');
-        }
-        $request->user()->sendEmailVerificationNotification();
-        return back()->with('status', 'verification-link-sent');
-    })->middleware(['throttle:6,1'])->name('verification.send');
-});
+// Verification link target (PUBLIC)
+Route::get('/verify-email/{id}/{hash}', function (Request $request, $id, $hash) {
+    // Validate the RELATIVE signed URL and ignore email-tracking params if present
+    $ignored = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content'];
+    if (! URL::hasValidSignature($request, false, $ignored)) {
+        abort(403, 'Invalid signature.');
+    }
+
+    $user = User::findOrFail($id);
+
+    // Ensure the hash matches the user's current email
+    if (! hash_equals(sha1($user->getEmailForVerification()), (string) $hash)) {
+        abort(403, 'Invalid verification hash.');
+    }
+
+    if (! $user->hasVerifiedEmail()) {
+        $user->markEmailAsVerified();
+        event(new Verified($user));
+    }
+
+    // Log the user in after verification
+    Auth::login($user);
+
+    return redirect()->intended('/dashboard')->with('verified', true);
+})->middleware('throttle:6,1')->name('verification.verify');
+
+// Resend verification email (requires auth)
+Route::post('/email/verification-notification', function (Request $request) {
+    if ($request->user()->hasVerifiedEmail()) {
+        return redirect()->intended('/dashboard');
+    }
+    $request->user()->sendEmailVerificationNotification();
+    return back()->with('status', 'verification-link-sent');
+})->middleware(['auth','throttle:6,1'])->name('verification.send');
 
 /*
 |--------------------------------------------------------------------------
@@ -120,7 +140,7 @@ Route::get('/dashboard', function (Request $request) {
             $group = fn (string $status) => $p->tasks
                 ->where('status', $status)
                 ->values()
-                ->map->only('id', 'title')
+                ->map->only('id','title')
                 ->all();
 
             return [
@@ -137,14 +157,14 @@ Route::get('/dashboard', function (Request $request) {
         });
 
     return Inertia::render('Dashboard', ['projects' => $projects]);
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth','verified'])->name('dashboard');
 
 /*
 |--------------------------------------------------------------------------
 | Billing
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth','verified'])->group(function () {
     Route::get('/billing',            [BillingController::class, 'show'])->name('billing.show');
     Route::post('/billing/checkout',  [BillingController::class, 'createCheckout'])->name('billing.checkout');
     Route::post('/billing/portal',    [BillingController::class, 'portal'])->name('billing.portal');
@@ -158,7 +178,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
-
     /* Profile */
     Route::get('/profile',    [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile',  [ProfileController::class, 'update'])->name('profile.update');
@@ -186,12 +205,11 @@ Route::middleware('auth')->group(function () {
 
     /* Nested project-scoped routes */
     Route::prefix('projects/{project}')->group(function () {
-
         /* TASKS: AI generator flow */
         Route::get('/tasks/ai', function (Request $request, Project $project) {
             return Inertia::render('Tasks/AITasksGenerator', [
                 'project' => $project,
-                'prefill' => $request->only(['count', 'prompt']),
+                'prefill' => $request->only(['count','prompt']),
             ]);
         })->name('tasks.ai.form');
 
