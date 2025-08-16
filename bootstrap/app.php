@@ -1,6 +1,7 @@
 <?php
+
 use Illuminate\Foundation\Application;
-use Illuminate\Http\Request;
+use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -10,19 +11,18 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Trust Heroku proxy headers EXCEPT X_FORWARDED_HOST to avoid signed URL mismatches.
-        $middleware->trustProxies(
-            at: '*',
-            headers: Request::HEADER_X_FORWARDED_FOR
-                | Request::HEADER_X_FORWARDED_PORT
-                | Request::HEADER_X_FORWARDED_PROTO
-            //  🚫 do NOT include HEADER_X_FORWARDED_HOST
-        );
+        // ✅ Trust proxies (Heroku/Cloudflare) so X-Forwarded-* is honored
+        if (class_exists(\App\Http\Middleware\TrustProxies::class)) {
+            $middleware->trustProxies(at: \App\Http\Middleware\TrustProxies::class);
+        }
 
+        // Web stack
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
     })
-    ->withExceptions(function ($exceptions) {})
+    ->withExceptions(function (Exceptions $exceptions): void {
+        //
+    })
     ->create();

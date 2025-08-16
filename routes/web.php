@@ -96,16 +96,7 @@ Route::get('/email/verify', function () {
 Route::get('/verify-email/{id}/{hash}', function (Request $request, $id, $hash) {
     // Validate the RELATIVE signed URL and ignore email-tracking params if present
     $ignored = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content'];
-    
-    // Try relative signature validation first (this handles proxy/tunnel scenarios)
-    $isValid = URL::hasValidSignature($request, false, $ignored);
-    
-    // If relative signature validation fails, try with absolute validation as fallback
-    if (!$isValid) {
-        $isValid = URL::hasValidSignature($request, true, $ignored);
-    }
-    
-    if (!$isValid) {
+    if (! URL::hasValidSignature($request, false, $ignored)) {
         abort(403, 'Invalid signature.');
     }
 
