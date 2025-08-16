@@ -1,7 +1,8 @@
 // resources/js/Pages/Auth/VerifyEmail.jsx
 import * as React from 'react';
 import { Head, router } from '@inertiajs/react';
-import route from 'ziggy-js';
+import { route } from 'ziggy-js';
+
 import { Container, Paper, Box, Typography, Button, Alert, Stack } from '@mui/material';
 
 export default function VerifyEmail({ status }) {
