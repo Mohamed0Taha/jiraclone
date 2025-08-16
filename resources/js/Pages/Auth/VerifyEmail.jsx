@@ -1,47 +1,48 @@
-import PrimaryButton from '@/Components/PrimaryButton';
-import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+// resources/js/Pages/Auth/VerifyEmail.jsx
+import * as React from 'react';
+import { Head, router } from '@inertiajs/react';
+import route from 'ziggy-js';
+import { Container, Paper, Box, Typography, Button, Alert, Stack } from '@mui/material';
 
 export default function VerifyEmail({ status }) {
-    const { post, processing } = useForm({});
+  return (
+    <>
+      <Head title="Verify your email" />
+      <Container maxWidth="sm" sx={{ py: 6 }}>
+        <Paper elevation={4} sx={{ p: 4, borderRadius: 3 }}>
+          <Box display="flex" alignItems="center" gap={1.5} mb={2}>
+            <img src="/images/logo-email.png" alt="Logo" width={28} height={28} style={{ borderRadius: 6 }} />
+            <Typography variant="subtitle2" fontWeight={800} color="primary">
+              {import.meta.env.VITE_APP_NAME || 'App'}
+            </Typography>
+          </Box>
 
-    const submit = (e) => {
-        e.preventDefault();
+          <Typography variant="h5" fontWeight={800} gutterBottom color="primary">
+            Check your email
+          </Typography>
+          <Typography color="text.secondary" mb={2}>
+            We’ve sent a verification link to your inbox.
+          </Typography>
 
-        post(route('verification.send'));
-    };
+          {status === 'verification-link-sent' && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              A new verification link has been sent.
+            </Alert>
+          )}
 
-    return (
-        <GuestLayout>
-            <Head title="Email Verification" />
-
-            <div className="mb-4 text-sm text-gray-600">
-                Thanks for signing up! Before getting started, could you verify your email address
-                by clicking on the link we just emailed to you? If you didn't receive the email, we
-                will gladly send you another.
-            </div>
-
-            {status === 'verification-link-sent' && (
-                <div className="mb-4 text-sm font-medium text-green-600">
-                    A new verification link has been sent to the email address you provided during
-                    registration.
-                </div>
-            )}
-
-            <form onSubmit={submit}>
-                <div className="mt-4 flex items-center justify-between">
-                    <PrimaryButton disabled={processing}>Resend Verification Email</PrimaryButton>
-
-                    <Link
-                        href={route('logout')}
-                        method="post"
-                        as="button"
-                        className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                    >
-                        Log Out
-                    </Link>
-                </div>
-            </form>
-        </GuestLayout>
-    );
+          <Stack direction="row" spacing={1.5} mt={1}>
+            <Button variant="contained" onClick={() => router.post(route('verification.send'))}>
+              Resend link
+            </Button>
+            <Button variant="outlined" onClick={() => router.visit(route('dashboard'))}>
+              Go to dashboard
+            </Button>
+            <Button color="inherit" onClick={() => router.post(route('logout'))}>
+              Log out
+            </Button>
+          </Stack>
+        </Paper>
+      </Container>
+    </>
+  );
 }
