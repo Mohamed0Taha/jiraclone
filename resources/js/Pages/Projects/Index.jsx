@@ -22,8 +22,10 @@ import {
   FolderOpen as FolderOpenIcon,
   Person as PersonIcon,
   AdminPanelSettings as AdminIcon,
-  Crown as CrownIcon,
+ 
 } from '@mui/icons-material';
+import CrownIcon from '@mui/icons-material/WorkspacePremiumRounded';
+
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 export default function ProjectsIndex({ projects, auth }) {
