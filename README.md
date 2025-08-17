@@ -14,7 +14,7 @@ MAIL_USERNAME=08ff2db59d640d
 MAIL_PASSWORD=e183aac708c48e
 MAIL_ENCRYPTION=null
 MAIL_FROM_ADDRESS=no-reply@example.com
-MAIL_FROM_NAME="Laravel React Automation"
+MAIL_FROM_NAME="Dominus"
 ```
 
 On Heroku, set these with `heroku config:set`.

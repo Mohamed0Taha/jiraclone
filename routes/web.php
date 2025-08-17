@@ -26,6 +26,9 @@ use App\Models\Project;
 */
 Route::get('/', fn () => Inertia::render('Landing'))->name('landing');
 
+/* Project Invitation Acceptance (public) */
+Route::get('/invitation/{token}', [App\Http\Controllers\ProjectMemberController::class, 'acceptInvitation'])->name('projects.invitation.accept');
+
 /* Optional quick test page */
 Route::get('/test-ai', fn () => view('test-ai'));
 
@@ -142,28 +145,41 @@ Route::post('/email/verification-notification', function (Request $request) {
 |--------------------------------------------------------------------------
 */
 Route::get('/dashboard', function (Request $request) {
-    $projects = $request->user()->projects()
+    $user = $request->user();
+    
+    // Get projects owned by the user
+    $ownedProjects = $user->projects()
         ->with(['tasks:id,project_id,title,status'])
-        ->get()
-        ->map(function ($p) {
-            $group = fn (string $status) => $p->tasks
-                ->where('status', $status)
-                ->values()
-                ->map->only('id','title')
-                ->all();
+        ->get();
+        
+    // Get projects where the user is a member
+    $memberProjects = $user->memberProjects()
+        ->with(['tasks:id,project_id,title,status'])
+        ->get();
+        
+    // Combine both collections
+    $allProjects = $ownedProjects->merge($memberProjects)->unique('id');
+    
+    $projects = $allProjects->map(function ($p) use ($user) {
+        $group = fn (string $status) => $p->tasks
+            ->where('status', $status)
+            ->values()
+            ->map->only('id','title')
+            ->all();
 
-            return [
-                'id'          => $p->id,
-                'name'        => $p->name,
-                'description' => $p->description,
-                'tasks'       => [
-                    'todo'       => $group('todo'),
-                    'inprogress' => $group('inprogress'),
-                    'review'     => $group('review'),
-                    'done'       => $group('done'),
-                ],
-            ];
-        });
+        return [
+            'id'          => $p->id,
+            'name'        => $p->name,
+            'description' => $p->description,
+            'is_owner'    => $p->user_id === $user->id,
+            'tasks'       => [
+                'todo'       => $group('todo'),
+                'inprogress' => $group('inprogress'),
+                'review'     => $group('review'),
+                'done'       => $group('done'),
+            ],
+        ];
+    });
 
     return Inertia::render('Dashboard', ['projects' => $projects]);
 })->middleware(['auth','verified'])->name('dashboard');
@@ -205,12 +221,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])->name('projects.edit');
     Route::patch('/projects/{project}',     [ProjectController::class, 'update'])->name('projects.update');
 
-    // Show => redirect to tasks board
-    Route::get('/projects/{project}', fn (Project $project) =>
-        redirect()->route('tasks.index', $project)
-    )->name('projects.show');
+    // Show => use controller method with explicit authorization
+    Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
 
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
+
+    /* Project Members Routes */
+    Route::prefix('projects/{project}/members')->group(function () {
+        Route::get('/',                   [App\Http\Controllers\ProjectMemberController::class, 'index'])->name('projects.members.index');
+        Route::post('/invite',            [App\Http\Controllers\ProjectMemberController::class, 'invite'])->name('projects.members.invite');
+        Route::delete('/remove',          [App\Http\Controllers\ProjectMemberController::class, 'remove'])->name('projects.members.remove');
+        Route::patch('/cancel-invitation', [App\Http\Controllers\ProjectMemberController::class, 'cancelInvitation'])->name('projects.members.cancel-invitation');
+    });
 
     /* Nested project-scoped routes */
     Route::prefix('projects/{project}')->group(function () {

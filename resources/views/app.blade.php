@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="app-url" content="{{ rtrim(config('app.url'), '/') }}">
 
-    <title inertia>{{ config('app.name', 'Laravel') }}</title>
+  <title inertia>{{ config('app.name', 'Dominus') }}</title>
 
     @php
         $page ??= [

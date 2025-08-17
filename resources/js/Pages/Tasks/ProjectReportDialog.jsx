@@ -1,7 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
-  Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
-  Divider, LinearProgress, Stack, Typography, alpha
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  LinearProgress,
+  Stack,
+  Typography,
+  alpha,
 } from "@mui/material";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import PictureAsPdfRoundedIcon from "@mui/icons-material/PictureAsPdfRounded";
@@ -9,16 +20,21 @@ import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
 /** Read XSRF-TOKEN cookie (Laravel sets this on web routes). */
 function getXsrfTokenFromCookie() {
-  // cookie is NOT httpOnly by design so JS can read it
   const name = "XSRF-TOKEN=";
   const cookies = document.cookie ? document.cookie.split("; ") : [];
   for (const c of cookies) {
     if (c.startsWith(name)) {
-      // cookie is URL-encoded by Laravel; decode it for the header value
       return decodeURIComponent(c.substring(name.length));
     }
   }
   return null;
+}
+
+/** Cryptographically strong nonce to bust any caching & signal regeneration intention. */
+function makeNonce(bytes = 16) {
+  const arr = new Uint8Array(bytes);
+  window.crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export default function ProjectReportDialog({ open, onClose, project, tasks }) {
@@ -36,6 +52,9 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState(null);
 
+  // Keep a ref of the latest in-flight controller to cancel when re-generating.
+  const controllerRef = useRef(null);
+
   useEffect(() => {
     if (open) {
       setLoading(false);
@@ -43,14 +62,44 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
       setSummary(null);
       setError(null);
     }
+    // Cleanup on unmount: abort any in-flight request.
+    return () => {
+      if (controllerRef.current) {
+        controllerRef.current.abort();
+        controllerRef.current = null;
+      }
+    };
   }, [open]);
 
   const generate = async () => {
-    if (!project?.id) return;
+    if (!project?.id || loading) return;
+
+    // Abort any previous in-flight request just in case.
+    if (controllerRef.current) {
+      try {
+        controllerRef.current.abort();
+      } catch (_) {
+        // ignore
+      }
+      controllerRef.current = null;
+    }
+
     setLoading(true);
     setError(null);
     setDownloadUrl(null);
     setSummary(null);
+
+    // New controller + a manual timeout to avoid "loading forever"
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    const timeoutMs = 90000; // 90s safety timeout; adjust as appropriate
+    const timeoutId = setTimeout(() => {
+      try {
+        controller.abort();
+      } catch (_) {
+        // ignore
+      }
+    }, timeoutMs);
 
     try {
       const xsrf = getXsrfTokenFromCookie();
@@ -60,27 +109,66 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
         );
       }
 
-      const res = await fetch(route("projects.report.generate", project.id), {
+      const nonce = makeNonce();
+      const baseUrl = route("projects.report.generate", project.id);
+      const url = `${baseUrl}?force=1&nonce=${nonce}&t=${Date.now()}`;
+
+      const res = await fetch(url, {
         method: "POST",
-        credentials: "same-origin", // include Laravel session cookie
+        credentials: "same-origin",
+        cache: "no-store",
+        signal: controller.signal,
         headers: {
-          "Accept": "application/json",
+          Accept: "application/json",
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
-          // Laravel accepts either X-CSRF-TOKEN (session) or X-XSRF-TOKEN (cookie)
           "X-XSRF-TOKEN": xsrf,
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+          Pragma: "no-cache",
         },
-        body: JSON.stringify({}), // keep body so some proxies don’t drop headers
+        body: JSON.stringify({
+          force: true,
+          nonce,
+          totals: { ...totals, total, pct },
+          generated_at: new Date().toISOString(),
+        }),
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        // try to read error body for better context
+        let serverMsg = "";
+        try {
+          const maybeJson = await res.json();
+          serverMsg = typeof maybeJson?.message === "string" ? ` — ${maybeJson.message}` : "";
+        } catch (_) {
+          // ignore parse errors
+        }
+        throw new Error(`HTTP ${res.status}${serverMsg}`);
+      }
+
       const json = await res.json();
-      setDownloadUrl(json.download_url);
-      setSummary(json.summary);
+
+      const stampedUrl =
+        json.download_url != null
+          ? `${json.download_url}${json.download_url.includes("?") ? "&" : "?"}t=${Date.now()}&nonce=${nonce}`
+          : null;
+
+      setDownloadUrl(stampedUrl);
+      setSummary(json.summary ?? "");
     } catch (e) {
-      setError(e.message || "Failed to generate report.");
+      if (e?.name === "AbortError") {
+        setError("The report generation took too long and was canceled. Please try again.");
+      } else {
+        setError(e?.message || "Failed to generate report.");
+      }
     } finally {
+      clearTimeout(timeoutId);
+      // Always stop loading; previous version gated this which could leave the spinner on forever.
       setLoading(false);
+      // Clear controllerRef if this request is the one we created
+      if (controllerRef.current === controller) {
+        controllerRef.current = null;
+      }
     }
   };
 
@@ -192,6 +280,7 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
               onClick={generate}
               startIcon={<RefreshRoundedIcon />}
               variant="text"
+              disabled={loading}
               sx={{ textTransform: "none", fontWeight: 600 }}
             >
               Regenerate

@@ -1,20 +1,21 @@
 import "../css/app.css";
 import "./bootstrap";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { createInertiaApp } from "@inertiajs/react";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 
-/* Try to load the MUI theme; if it fails we’ll warn and keep going. */
+/* Try to load the MUI theme; if it fails we'll warn and keep going. */
 let ThemeProvider = React.Fragment;
 let CssBaseline   = React.Fragment;
+let CircularProgress = () => <div>Loading...</div>;
 let theme         = null;
 
 try {
     // eslint-disable-next-line import/extensions
     theme = (await import("./theme")).default;
-    ({ ThemeProvider, CssBaseline } = await import("@mui/material"));
+    ({ ThemeProvider, CssBaseline, CircularProgress } = await import("@mui/material"));
 } catch (err) {
     console.warn(
         "⚠️  MUI theme not applied:",
@@ -25,6 +26,21 @@ try {
 }
 
 const appName = import.meta.env.VITE_APP_NAME || "Laravel";
+
+// Loading component for Suspense
+const LoadingSpinner = () => (
+    <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        flexDirection: 'column',
+        gap: '16px'
+    }}>
+        <CircularProgress />
+        <span>Loading...</span>
+    </div>
+);
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -43,10 +59,14 @@ createInertiaApp({
                 /*  🚫 NO React.StrictMode — prevents double-mount that breaks DnD */
                 <ThemeProvider theme={theme}>
                     <CssBaseline />
-                    <App {...props} />
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <App {...props} />
+                    </Suspense>
                 </ThemeProvider>
             ) : (
-                <App {...props} />
+                <Suspense fallback={<div>Loading...</div>}>
+                    <App {...props} />
+                </Suspense>
             )
         );
     },

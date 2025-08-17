@@ -51,9 +51,9 @@ export default function AuthenticatedLayout({ header, children }) {
                   bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-purple-600
                   bg-clip-text text-transparent select-none
                 "
-                aria-label="Task Master"
+                  aria-label="Dominus"
               >
-                Task&nbsp;Master
+                  Dominus
               </div>
 
               {/* Single Dashboard button */}

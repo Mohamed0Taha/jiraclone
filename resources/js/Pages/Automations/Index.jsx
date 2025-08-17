@@ -378,7 +378,13 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
       <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1200, mx: 'auto' }}>
         <Paper
           elevation={0}
-          sx={{ mb: 4, p: { xs: 2, md: 4 }, borderRadius: 4, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}
+          sx={{ 
+            mb: 4, 
+            p: { xs: 2, md: 4 }, 
+            borderRadius: 4, 
+            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, 
+            color: 'white' 
+          }}
         >
           <Stack direction="row" alignItems="center" spacing={3} sx={{ mb: 3 }}>
             <IconButton onClick={() => router.visit(route('tasks.index', project.id))} sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}>

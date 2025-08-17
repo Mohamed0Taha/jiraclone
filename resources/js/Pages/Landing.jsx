@@ -33,11 +33,11 @@ export default function Landing({ errors }) {
                 <Container maxWidth="sm">
                     <Stack spacing={6} textAlign="center">
                         <Typography variant="h2" sx={{ fontWeight: 800, color: 'primary.main' }}>
-                            TaskMaster
+                            Dominus
                         </Typography>
 
                         <Typography variant="subtitle1" color="text.secondary">
-                            The open-source Jira clone for productive teams.
+                            The open-source project management solution for productive teams.
                         </Typography>
 
                         {/* ----- Google sign-in ----- */}

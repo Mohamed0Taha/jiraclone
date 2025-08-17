@@ -1,5 +1,5 @@
 // resources/js/Pages/Dashboard.jsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback, memo } from "react";
 import { Head, router } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import {
@@ -33,28 +33,40 @@ import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import ProjectAccordion from "./ProjectAccordion";
 
+// Memoized row color generator for better performance
 const useRowColor = () => {
   const theme = useTheme();
-  const basePalette = [
-    theme.palette.primary.light,
-    theme.palette.secondary.light,
-    theme.palette.success.light,
-    theme.palette.info.light,
-    theme.palette.warning.light,
-    theme.palette.error.light,
-  ];
-  return (index) => {
-    const c = basePalette[index % basePalette.length];
-    return {
-      bgcolor: alpha(c, 0.16),
-      transition: "background-color .25s, transform .25s",
-      "&:hover": { bgcolor: alpha(c, 0.30) },
-      "&:focus-within": {
-        outline: `2px solid ${alpha(c, 0.7)}`,
-        outlineOffset: 2,
-      },
+  
+  return useMemo(() => {
+    const basePalette = [
+      theme.palette.primary.light,
+      theme.palette.secondary.light,
+      theme.palette.success.light,
+      theme.palette.info.light,
+      theme.palette.warning.light,
+      theme.palette.error.light,
+    ];
+    
+    // Pre-compute alpha values for performance
+    const alphaValues = basePalette.map(color => ({
+      bg: alpha(color, 0.16),
+      hover: alpha(color, 0.30),
+      focus: alpha(color, 0.7),
+    }));
+    
+    return (index) => {
+      const colors = alphaValues[index % alphaValues.length];
+      return {
+        bgcolor: colors.bg,
+        transition: "background-color .25s, transform .25s",
+        "&:hover": { bgcolor: colors.hover },
+        "&:focus-within": {
+          outline: `2px solid ${colors.focus}`,
+          outlineOffset: 2,
+        },
+      };
     };
-  };
+  }, [theme.palette]);
 };
 
 export default function Dashboard({ auth, projects }) {
@@ -63,58 +75,113 @@ export default function Dashboard({ auth, projects }) {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState(null);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("recent");
 
-  const askDelete = (e, project) => {
+  // Memoized callbacks to prevent unnecessary re-renders
+  const askDelete = useCallback((e, project) => {
     e?.stopPropagation?.();
     e?.preventDefault?.();
     setProjectToDelete(project);
     setConfirmOpen(true);
-  };
-  const confirmDelete = () => {
+  }, []);
+
+  const confirmDelete = useCallback(() => {
     if (projectToDelete) {
       router.delete(`/projects/${projectToDelete.id}`, { preserveScroll: true });
     }
     setConfirmOpen(false);
     setProjectToDelete(null);
-  };
+  }, [projectToDelete]);
 
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState("recent");
+  const handleClearSearch = useCallback(() => setQuery(""), []);
+  const handleCloseDialog = useCallback(() => setConfirmOpen(false), []);
+  const handleQueryChange = useCallback((e) => setQuery(e.target.value), []);
+  const handleSortChange = useCallback((e) => setSort(e.target.value), []);
 
+  // Optimized filtering and sorting logic
   const filtered = useMemo(() => {
-    let list = Array.isArray(projects) ? [...projects] : [];
+    if (!Array.isArray(projects)) return [];
+    
+    let list = projects;
 
+    // Apply filter first (more efficient)
     if (query.trim()) {
       const q = query.toLowerCase();
-      list = list.filter(
-        (p) =>
-          (p.name || "").toLowerCase().includes(q) ||
-          (p.key || "").toLowerCase().includes(q) ||
-          (p.description || "").toLowerCase().includes(q)
-      );
+      list = list.filter(project => {
+        const { name = "", key = "", description = "" } = project;
+        return (
+          name.toLowerCase().includes(q) ||
+          key.toLowerCase().includes(q) ||
+          description.toLowerCase().includes(q)
+        );
+      });
     }
 
+    // Then sort the filtered results
     switch (sort) {
       case "name_asc":
-        list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-        break;
+        return [...list].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
       case "name_desc":
-        list.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
-        break;
+        return [...list].sort((a, b) => (b.name || "").localeCompare(a.name || ""));
       case "recent":
       default:
-        list.sort((a, b) => {
+        return [...list].sort((a, b) => {
           if (a.created_at && b.created_at) {
             return new Date(b.created_at) - new Date(a.created_at);
           }
           return (b.id || 0) - (a.id || 0);
         });
     }
-    return list;
   }, [projects, query, sort]);
 
   const projectCount = Array.isArray(projects) ? projects.length : 0;
   const filteredCount = filtered.length;
+
+  // Memoized styles to prevent object recreation
+  const heroStyles = useMemo(() => ({
+    background: `linear-gradient(115deg, ${alpha(
+      theme.palette.primary.main,
+      0.85
+    )} 0%, ${alpha(theme.palette.secondary.main, 0.85)} 60%, ${alpha(
+      theme.palette.primary.dark,
+      0.9
+    )} 100%)`,
+    color: "#fff",
+    pt: { xs: 6, md: 8 },
+    pb: { xs: 6, md: 9 },
+    position: "relative",
+    overflow: "hidden",
+  }), [theme.palette]);
+
+  const blurBlobStyles = useMemo(() => ({
+    position: "absolute",
+    width: 420,
+    height: 420,
+    top: -120,
+    right: -80,
+    borderRadius: "50%",
+    filter: "blur(80px)",
+    background: `radial-gradient(circle, ${alpha("#fff", 0.15)} 0%, transparent 70%)`,
+  }), []);
+
+  const filterPaperStyles = useMemo(() => ({
+    p: { xs: 2, md: 3 },
+    border: `1px solid ${alpha(theme.palette.divider, 0.7)}`,
+    borderRadius: 4,
+    backdropFilter: "blur(4px)",
+  }), [theme.palette.divider]);
+
+  const projectsPaperStyles = useMemo(() => ({
+    p: { xs: 2.5, md: 4 },
+    border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
+    borderRadius: 4,
+    background:
+      theme.palette.mode === "light"
+        ? "linear-gradient(180deg,#ffffff,#f8f9fb)"
+        : alpha(theme.palette.background.paper, 0.75),
+    backdropFilter: "blur(4px)",
+  }), [theme.palette]);
 
   return (
     <>
@@ -122,35 +189,8 @@ export default function Dashboard({ auth, projects }) {
 
       <AuthenticatedLayout user={auth.user}>
         {/* Hero header */}
-        <Box
-          sx={{
-            background: `linear-gradient(115deg, ${alpha(
-              theme.palette.primary.main,
-              0.85
-            )} 0%, ${alpha(theme.palette.secondary.main, 0.85)} 60%, ${alpha(
-              theme.palette.primary.dark,
-              0.9
-            )} 100%)`,
-            color: "#fff",
-            pt: { xs: 6, md: 8 },
-            pb: { xs: 6, md: 9 },
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-          <Box
-            aria-hidden
-            sx={{
-              position: "absolute",
-              width: 420,
-              height: 420,
-              top: -120,
-              right: -80,
-              borderRadius: "50%",
-              filter: "blur(80px)",
-              background: alpha("#ffffff", 0.15),
-            }}
-          />
+        <Box sx={heroStyles}>
+          <Box aria-hidden sx={blurBlobStyles} />
           <Box
             aria-hidden
             sx={{
@@ -242,19 +282,7 @@ export default function Dashboard({ auth, projects }) {
           <Container maxWidth="lg">
             <Stack spacing={4}>
               {/* Filter + Sort Bar */}
-              <Paper
-                elevation={0}
-                sx={{
-                  p: { xs: 2, md: 3 },
-                  border: `1px solid ${alpha(theme.palette.divider, 0.7)}`,
-                  borderRadius: 4,
-                  background:
-                    theme.palette.mode === "light"
-                      ? "linear-gradient(180deg,#fff, #fcfcfd)"
-                      : alpha(theme.palette.background.paper, 0.6),
-                  backdropFilter: "blur(6px)",
-                }}
-              >
+              <Paper elevation={0} sx={filterPaperStyles}>
                 <Stack
                   direction={{ xs: "column", md: "row" }}
                   spacing={2.5}
@@ -266,7 +294,7 @@ export default function Dashboard({ auth, projects }) {
                     label="Search projects"
                     placeholder="Search by name, key or description..."
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={handleQueryChange}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -288,7 +316,7 @@ export default function Dashboard({ auth, projects }) {
                       <Select
                         size="small"
                         value={sort}
-                        onChange={(e) => setSort(e.target.value)}
+                        onChange={handleSortChange}
                         sx={{ minWidth: 180 }}
                         displayEmpty
                         aria-label="Sort projects"
@@ -309,19 +337,7 @@ export default function Dashboard({ auth, projects }) {
               </Paper>
 
               {/* Projects Section */}
-              <Paper
-                elevation={0}
-                sx={{
-                  p: { xs: 2.5, md: 4 },
-                  border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
-                  borderRadius: 4,
-                  background:
-                    theme.palette.mode === "light"
-                      ? "linear-gradient(180deg,#ffffff,#f8f9fb)"
-                      : alpha(theme.palette.background.paper, 0.75),
-                  backdropFilter: "blur(4px)",
-                }}
-              >
+              <Paper elevation={0} sx={projectsPaperStyles}>
                 <Stack
                   direction={{ xs: "column", sm: "row" }}
                   spacing={2}
@@ -340,7 +356,7 @@ export default function Dashboard({ auth, projects }) {
                     </Typography>
                   </Box>
                   {query && (
-                    <Button size="small" variant="text" onClick={() => setQuery("")} sx={{ textTransform: "none" }}>
+                    <Button size="small" variant="text" onClick={handleClearSearch} sx={{ textTransform: "none" }}>
                       Clear search
                     </Button>
                   )}
@@ -349,7 +365,7 @@ export default function Dashboard({ auth, projects }) {
                 {projectCount === 0 ? (
                   <EmptyState />
                 ) : filteredCount === 0 ? (
-                  <FilteredEmptyState reset={() => setQuery("")} />
+                  <FilteredEmptyState reset={handleClearSearch} />
                 ) : (
                   <Box
                     sx={{
@@ -376,42 +392,7 @@ export default function Dashboard({ auth, projects }) {
                         project={p}
                         rowSx={rowSx(idx)}
                         onDelete={askDelete}
-                        endActions={
-                          <Stack direction="row" spacing={0.5}>
-                            <Tooltip title="Edit project">
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  router.visit(`/projects/${p.id}/edit`);
-                                }}
-                                aria-label={`Edit project ${p.name}`}
-                                sx={{
-                                  color: "rgba(36,58,99,0.75)",
-                                  "&:hover": { color: "rgba(36,58,99,0.95)" },
-                                }}
-                              >
-                                <EditRoundedIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-
-                            <Tooltip title="Delete project">
-                              <IconButton
-                                size="small"
-                                color="error"
-                                aria-label={`Delete project ${p.name}`}
-                                onClick={(e) => askDelete(e, p)}
-                                sx={{
-                                  opacity: 0.8,
-                                  transition: "opacity .2s",
-                                  "&:hover": { opacity: 1 },
-                                }}
-                              >
-                                <DeleteForeverIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Stack>
-                        }
+                        endActions={<ProjectActionButtons project={p} onDelete={askDelete} />}
                       />
                     ))}
                   </Box>
@@ -423,7 +404,7 @@ export default function Dashboard({ auth, projects }) {
       </AuthenticatedLayout>
 
       {/* Delete confirmation dialog */}
-      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} aria-labelledby="delete-project-title">
+      <Dialog open={confirmOpen} onClose={handleCloseDialog} aria-labelledby="delete-project-title">
         <DialogTitle id="delete-project-title" sx={{ fontWeight: 600 }}>
           Delete Project
         </DialogTitle>
@@ -440,7 +421,7 @@ export default function Dashboard({ auth, projects }) {
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setConfirmOpen(false)} sx={{ textTransform: "none" }}>
+          <Button onClick={handleCloseDialog} sx={{ textTransform: "none" }}>
             Cancel
           </Button>
           <Button variant="contained" color="error" onClick={confirmDelete} sx={{ textTransform: "none" }}>
@@ -451,6 +432,52 @@ export default function Dashboard({ auth, projects }) {
     </>
   );
 }
+
+// Memoized action buttons to prevent unnecessary re-renders
+const ProjectActionButtons = memo(({ project, onDelete }) => {
+  const handleEdit = useCallback((e) => {
+    e.stopPropagation();
+    router.visit(`/projects/${project.id}/edit`);
+  }, [project.id]);
+
+  const handleDelete = useCallback((e) => {
+    onDelete(e, project);
+  }, [onDelete, project]);
+
+  return (
+    <Stack direction="row" spacing={0.5}>
+      <Tooltip title="Edit project">
+        <IconButton
+          size="small"
+          onClick={handleEdit}
+          aria-label={`Edit project ${project.name}`}
+          sx={{
+            color: "rgba(36,58,99,0.75)",
+            "&:hover": { color: "rgba(36,58,99,0.95)" },
+          }}
+        >
+          <EditRoundedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+
+      <Tooltip title="Delete project">
+        <IconButton
+          size="small"
+          color="error"
+          aria-label={`Delete project ${project.name}`}
+          onClick={handleDelete}
+          sx={{
+            opacity: 0.8,
+            transition: "opacity .2s",
+            "&:hover": { opacity: 1 },
+          }}
+        >
+          <DeleteForeverIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    </Stack>
+  );
+});
 
 function EmptyState() {
   return (

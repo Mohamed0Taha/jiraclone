@@ -30,6 +30,23 @@ class Project extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function members()
+    {
+        return $this->belongsToMany(User::class, 'project_members')
+                    ->withPivot('role', 'joined_at')
+                    ->withTimestamps();
+    }
+
+    public function invitations()
+    {
+        return $this->hasMany(ProjectInvitation::class);
+    }
+
+    public function pendingInvitations()
+    {
+        return $this->hasMany(ProjectInvitation::class)->where('status', 'pending');
+    }
+
     public function tasks()
     {
         return $this->hasMany(Task::class);

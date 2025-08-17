@@ -10,6 +10,7 @@ import {
   Typography,
   Tooltip,
   IconButton,
+  useTheme,
 } from "@mui/material";
 import AutoGraphRoundedIcon from "@mui/icons-material/AutoGraphRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
@@ -31,6 +32,8 @@ export default function HeaderBanner({
   onOpenDetails,
   onOpenAssistant,
 }) {
+  const theme = useTheme();
+  
   return (
     <Paper
       elevation={0}
@@ -41,11 +44,10 @@ export default function HeaderBanner({
         position: "relative",
         overflow: "hidden",
         background:
-          "linear-gradient(135deg,rgba(255,255,255,0.86),rgba(255,255,255,0.58))",
+          `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.95)}, ${alpha(theme.palette.background.paper, 0.85)})`,
         backdropFilter: "blur(16px)",
-        border: `1px solid ${alpha("#3b82f6", 0.18)}`,
-        boxShadow:
-          "0 10px 32px -10px rgba(30,50,90,.20), 0 2px 4px rgba(0,0,0,.06)",
+        border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
+        boxShadow: theme.shadows[8],
         display: "grid",
         gridTemplateColumns: { xs: "1fr", md: "1fr auto" },
         columnGap: { xs: 0, md: 3 },
@@ -62,7 +64,7 @@ export default function HeaderBanner({
           top: -160,
           right: -140,
           background:
-            "radial-gradient(circle at 60% 40%, rgba(255,255,255,0.65), transparent 65%)",
+            `radial-gradient(circle at 60% 40%, ${alpha(theme.palette.primary.light, 0.3)}, transparent 65%)`,
           pointerEvents: "none",
         }}
       />
@@ -74,7 +76,7 @@ export default function HeaderBanner({
           sx={{
             letterSpacing: "-0.4px",
             background:
-              "linear-gradient(90deg,#0E1730,#1B2747 40%,#26406E 80%)",
+              `linear-gradient(90deg, ${theme.palette.text.primary}, ${alpha(theme.palette.text.primary, 0.8)} 40%, ${alpha(theme.palette.text.primary, 0.6)} 80%)`,
             WebkitBackgroundClip: "text",
             color: "transparent",
           }}
@@ -91,8 +93,8 @@ export default function HeaderBanner({
               sx={{
                 fontWeight: 700,
                 background:
-                  "linear-gradient(120deg,rgba(99,123,255,0.2),rgba(143,167,255,0.15))",
-                border: `1px solid ${alpha("#5B7BFF", 0.35)}`,
+                  `linear-gradient(120deg, ${alpha(theme.palette.primary.main, 0.2)}, ${alpha(theme.palette.primary.light, 0.15)})`,
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.35)}`,
                 height: 30,
               }}
             />
@@ -102,8 +104,8 @@ export default function HeaderBanner({
               sx={{
                 fontWeight: 700,
                 background:
-                  "linear-gradient(120deg,rgba(76,201,140,0.20),rgba(76,201,140,0.10))",
-                border: `1px solid ${alpha("#31B574", 0.4)}`,
+                  `linear-gradient(120deg, ${alpha(theme.palette.success.main, 0.20)}, ${alpha(theme.palette.success.main, 0.10)})`,
+                border: `1px solid ${alpha(theme.palette.success.main, 0.4)}`,
                 height: 30,
               }}
             />
@@ -113,8 +115,8 @@ export default function HeaderBanner({
               sx={{
                 fontWeight: 700,
                 background:
-                  "linear-gradient(120deg,rgba(64,152,255,0.18),rgba(64,152,255,0.08))",
-                border: `1px solid ${alpha("#4098FF", 0.45)}`,
+                  `linear-gradient(120deg, ${alpha(theme.palette.info.main, 0.18)}, ${alpha(theme.palette.info.main, 0.08)})`,
+                border: `1px solid ${alpha(theme.palette.info.main, 0.45)}`,
                 height: 30,
               }}
             />
@@ -139,7 +141,7 @@ export default function HeaderBanner({
                   color: 'secondary.main',
                   '&:hover': {
                     borderColor: 'secondary.dark',
-                    bgcolor: alpha('#9c27b0', 0.04),
+                    bgcolor: alpha(theme.palette.secondary.main, 0.04),
                   },
                 }}
               >
@@ -178,12 +180,11 @@ export default function HeaderBanner({
                 py: 0.7,
                 height: 32,
                 background:
-                  "linear-gradient(135deg,#6366F1,#4F46E5 60%,#4338CA)",
-                boxShadow:
-                  "0 6px 18px -8px rgba(99,102,241,.55), 0 2px 6px rgba(0,0,0,.18)",
+                  `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark} 60%, ${theme.palette.primary.dark})`,
+                boxShadow: theme.shadows[6],
                 "&:hover": {
                   background:
-                    "linear-gradient(135deg,#575AF0,#463FD7 60%,#3B31B8)",
+                    `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main} 60%, ${theme.palette.primary.light})`,
                 },
               }}
             >

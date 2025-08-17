@@ -43,6 +43,24 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Project::class);
     }
 
+    public function memberProjects()
+    {
+        return $this->belongsToMany(Project::class, 'project_members')
+                    ->withPivot('role', 'joined_at')
+                    ->withTimestamps();
+    }
+
+    public function invitations()
+    {
+        return $this->hasMany(ProjectInvitation::class, 'email', 'email');
+    }
+
+    public function pendingInvitations()
+    {
+        return $this->hasMany(ProjectInvitation::class, 'email', 'email')
+                    ->where('status', 'pending');
+    }
+
     public function onPro(): bool
     {
         return (bool) $this->subscribed('default');

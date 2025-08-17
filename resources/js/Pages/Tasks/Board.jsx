@@ -11,7 +11,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Fab,
   IconButton,
   MenuItem,
   Stack,
@@ -23,7 +22,6 @@ import {
   InputLabel,
   Select,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
@@ -46,7 +44,7 @@ import { DragDropContext } from "react-beautiful-dnd";
 import HeaderBanner from "../Board/HeaderBanner";
 import Column from "../Board/Column";
 import UpgradeDialog from "../Board/UpgradeDialog";
-import AssistantChat from "./AssistantChat"; // ⬅️ now a local thin wrapper; Board stays lean
+import AssistantChat from "./AssistantChat";
 import FloatingActionGroup from "@/Components/FloatingActionGroup";
 
 import {
@@ -267,23 +265,23 @@ export default function Board({
 
     return tasks.filter((task) => {
       if (!task) return false;
-      
-      const matchesSearch = !searchQuery || 
-        (task.title && task.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()));
-      
+      const matchesSearch =
+        !searchQuery ||
+        (task.title &&
+          task.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (task.description &&
+          task.description.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesPriority = !priorityFilter || task.priority === priorityFilter;
-      
       return matchesSearch && matchesPriority;
     });
   };
 
   const [taskState, setTaskState] = useState(buildColumnsFromServer(tasks));
-  
+
   // Create filtered task state
   const filteredTaskState = useMemo(() => {
     const filtered = {};
-    Object.keys(taskState).forEach(statusKey => {
+    Object.keys(taskState).forEach((statusKey) => {
       filtered[statusKey] = filterTasks(taskState[statusKey] || []);
     });
     return filtered;
@@ -317,13 +315,19 @@ export default function Board({
   const totalTasks = useMemo(
     () =>
       STATUS_ORDER.reduce(
-        (sum, k) => sum + (Array.isArray(filteredTaskState[k]) ? filteredTaskState[k].length : 0),
+        (sum, k) =>
+          sum +
+          (Array.isArray(filteredTaskState[k])
+            ? filteredTaskState[k].length
+            : 0),
         0
       ),
     [filteredTaskState, STATUS_ORDER]
   );
   const doneKey = STATUS_ORDER[STATUS_ORDER.length - 1];
-  const doneCount = Array.isArray(filteredTaskState[doneKey]) ? filteredTaskState[doneKey].length : 0;
+  const doneCount = Array.isArray(filteredTaskState[doneKey])
+    ? filteredTaskState[doneKey].length
+    : 0;
   const percentDone =
     totalTasks === 0 ? 0 : Math.round((doneCount / totalTasks) * 100);
 
@@ -358,8 +362,13 @@ export default function Board({
     setOpenForm(true);
   };
 
+  // CLOSE MODAL ON CREATE/UPDATE: close immediately when submit is triggered, then proceed.
   const submit = (e) => {
     e.preventDefault();
+
+    // Close the modal right away (user asked for this behavior)
+    setOpenForm(false);
+
     const routeName = editMode
       ? route("tasks.update", [project.id, editingId])
       : route("tasks.store", project.id);
@@ -376,8 +385,11 @@ export default function Board({
           if (tid) setPhaseMap((prev) => ({ ...prev, [tid]: data.status }));
         } catch {}
         refreshTasks(p);
-        setOpenForm(false);
         reset();
+      },
+      onError: () => {
+        // If you prefer to reopen the modal on error, uncomment below:
+        // setOpenForm(true);
       },
     });
   };
@@ -397,7 +409,12 @@ export default function Board({
   };
 
   const onDragEnd = ({ destination, source, draggableId }) => {
-    if (!destination || destination.droppableId === source.droppableId || !draggableId) return;
+    if (
+      !destination ||
+      destination.droppableId === source.droppableId ||
+      !draggableId
+    )
+      return;
 
     const id = Number(draggableId);
     const from = source.droppableId;
@@ -415,30 +432,44 @@ export default function Board({
     setPhaseMap((prev) => ({ ...prev, [id]: to }));
 
     const serverStatus = METHOD_TO_SERVER[methodology][to] || "todo";
-    router.patch(route("tasks.update", [project.id, id]), { status: serverStatus }, {
-      preserveScroll: true,
-      onSuccess: refreshTasks,
-    });
+    router.patch(
+      route("tasks.update", [project.id, id]),
+      { status: serverStatus },
+      {
+        preserveScroll: true,
+        onSuccess: refreshTasks,
+      }
+    );
   };
 
   const titleRef = useRef(null);
+
+  // Keyboard shortcut: Shift + C opens create dialog (never triggers while typing or when modals are open)
   useEffect(() => {
     const handler = (e) => {
-      // Don't trigger shortcuts when typing in input fields, textareas, or any form controls
-      const isTypingInInput = e.target.tagName.toLowerCase() === 'input' || 
-                             e.target.tagName.toLowerCase() === 'textarea' ||
-                             e.target.contentEditable === 'true' ||
-                             e.target.closest('.MuiTextField-root') || // MUI TextField
-                             e.target.closest('[role="textbox"]') || // Any textbox role
-                             e.target.closest('form') || // Any form element
-                             openForm || // Don't trigger when modal is open
-                             assistantOpen; // Don't trigger when AI chat is open
-      
-      if (e.key.toLowerCase() === "c" && !openForm && !processing && !isTypingInInput) {
+      const target = e.target;
+      const tag = target?.tagName?.toLowerCase?.() || "";
+      const isTypingInInput =
+        tag === "input" ||
+        tag === "textarea" ||
+        target?.isContentEditable === true ||
+        !!target?.closest?.(".MuiTextField-root") ||
+        !!target?.closest?.('[role="textbox"]') ||
+        !!target?.closest?.('input, textarea, [contenteditable="true"]') ||
+        !!target?.closest?.("form");
+
+      if (
+        e.shiftKey &&
+        String(e.key || "").toLowerCase() === "c" &&
+        !openForm &&
+        !processing &&
+        !assistantOpen &&
+        !isTypingInInput
+      ) {
         showCreate(STATUS_ORDER[0]);
-        setTimeout(() => titleRef.current?.focus(), 40);
       }
     };
+
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [openForm, processing, STATUS_ORDER, assistantOpen]);
@@ -463,13 +494,33 @@ export default function Board({
 
   const meta = project?.meta || {};
   const headerChips = [
-    { icon: <KeyRoundedIcon fontSize="small" />, label: project?.key, show: !!project?.key },
-    { icon: <ApartmentRoundedIcon fontSize="small" />, label: meta.project_type, show: !!meta.project_type },
+    {
+      icon: <KeyRoundedIcon fontSize="small" />,
+      label: project?.key,
+      show: !!project?.key,
+    },
+    {
+      icon: <ApartmentRoundedIcon fontSize="small" />,
+      label: meta.project_type,
+      show: !!meta.project_type,
+    },
     { icon: <PublicRoundedIcon fontSize="small" />, label: meta.domain, show: !!meta.domain },
     { icon: <PlaceRoundedIcon fontSize="small" />, label: meta.location, show: !!meta.location },
-    { icon: <GroupRoundedIcon fontSize="small" />, label: meta.team_size ? `${meta.team_size} members` : "", show: !!meta.team_size },
-    { icon: <RequestQuoteRoundedIcon fontSize="small" />, label: meta.budget, show: !!meta.budget },
-    { icon: <AccountBalanceRoundedIcon fontSize="small" />, label: meta.primary_stakeholder, show: !!meta.primary_stakeholder },
+    {
+      icon: <GroupRoundedIcon fontSize="small" />,
+      label: meta.team_size ? `${meta.team_size} members` : "",
+      show: !!meta.team_size,
+    },
+    {
+      icon: <RequestQuoteRoundedIcon fontSize="small" />,
+      label: meta.budget,
+      show: !!meta.budget,
+    },
+    {
+      icon: <AccountBalanceRoundedIcon fontSize="small" />,
+      label: meta.primary_stakeholder,
+      show: !!meta.primary_stakeholder,
+    },
   ].filter((c) => c.show);
 
   const methodLabel = {
@@ -488,7 +539,8 @@ export default function Board({
           mb: 1.25,
           borderRadius: 2.5,
           p: 1,
-          background: "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.75))",
+          background:
+            "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.75))",
           border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
           boxShadow: `0 8px 22px -14px rgba(0,0,0,.25)`,
         }}
@@ -503,15 +555,18 @@ export default function Board({
                 fontWeight: 700,
                 background: (t) => methodStyles.chipBg(t),
                 border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
-                color: '#000000',
-                '& .MuiChip-label': {
-                  color: '#000000',
+                color: "#000000",
+                "& .MuiChip-label": {
+                  color: "#000000",
                   fontWeight: 700,
                 },
               }}
               color="primary"
             />
-            <Typography variant="subtitle1" sx={{ fontWeight: 800, letterSpacing: 0.1 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 800, letterSpacing: 0.1 }}
+            >
               {project?.name || "Project"}
             </Typography>
 
@@ -529,7 +584,8 @@ export default function Board({
                 px: 1.25,
                 py: 0.25,
                 background: (t) => alpha(t.palette.primary.main, 0.08),
-                border: (t) => `1px solid ${alpha(t.palette.primary.main, 0.22)}`,
+                border: (t) =>
+                  `1px solid ${alpha(t.palette.primary.main, 0.22)}`,
                 "&:hover": {
                   background: (t) => alpha(t.palette.primary.main, 0.14),
                 },
@@ -540,7 +596,12 @@ export default function Board({
           </Stack>
 
           {headerChips.length > 0 && (
-            <Stack direction="row" spacing={0.75} flexWrap="wrap" rowGap={0.75}>
+            <Stack
+              direction="row"
+              spacing={0.75}
+              flexWrap="wrap"
+              rowGap={0.75}
+            >
               {headerChips.map((c, i) => (
                 <Chip
                   key={i}
@@ -558,7 +619,9 @@ export default function Board({
               {(project?.start_date || project?.end_date) && (
                 <Chip
                   icon={<CalendarMonthRoundedIcon fontSize="small" />}
-                  label={`${fmtDate(project?.start_date) ?? "—"} → ${fmtDate(project?.end_date) ?? "—"}`}
+                  label={`${fmtDate(project?.start_date) ?? "—"} → ${
+                    fmtDate(project?.end_date) ?? "—"
+                  }`}
                   size="small"
                   sx={{
                     bgcolor: (t) => methodStyles.chipBg(t),
@@ -575,9 +638,20 @@ export default function Board({
             <Stack spacing={0.5}>
               {meta.objectives && (
                 <Stack direction="row" spacing={0.5} alignItems="flex-start">
-                  <FlagRoundedIcon fontSize="small" sx={{ mt: "2px", color: alpha("#16A34A", 0.95) }} />
+                  <FlagRoundedIcon
+                    fontSize="small"
+                    sx={{ mt: "2px", color: alpha("#16A34A", 0.95) }}
+                  />
                   <Tooltip title={meta.objectives} arrow placement="top">
-                    <Typography variant="body2" sx={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        overflow: "hidden",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                      }}
+                    >
                       {meta.objectives}
                     </Typography>
                   </Tooltip>
@@ -585,9 +659,20 @@ export default function Board({
               )}
               {meta.constraints && (
                 <Stack direction="row" spacing={0.5} alignItems="flex-start">
-                  <ReportProblemRoundedIcon fontSize="small" sx={{ mt: "2px", color: alpha("#F59E0B", 0.95) }} />
+                  <ReportProblemRoundedIcon
+                    fontSize="small"
+                    sx={{ mt: "2px", color: alpha("#F59E0B", 0.95) }}
+                  />
                   <Tooltip title={meta.constraints} arrow placement="top">
-                    <Typography variant="body2" sx={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        overflow: "hidden",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                      }}
+                    >
                       {meta.constraints}
                     </Typography>
                   </Tooltip>
@@ -683,12 +768,12 @@ export default function Board({
                 maxWidth: 400,
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 2,
-                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  backgroundColor: "rgba(255, 255, 255, 0.8)",
+                  "&:hover": {
+                    backgroundColor: "rgba(255, 255, 255, 0.9)",
                   },
-                  '&.Mui-focused': {
-                    backgroundColor: 'rgba(255, 255, 255, 1)',
+                  "&.Mui-focused": {
+                    backgroundColor: "rgba(255, 255, 255, 1)",
                   },
                 },
                 "& .MuiOutlinedInput-notchedOutline": {
@@ -698,15 +783,15 @@ export default function Board({
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: 'text.secondary' }} />
+                    <SearchIcon sx={{ color: "text.secondary" }} />
                   </InputAdornment>
                 ),
                 endAdornment: searchQuery && (
                   <InputAdornment position="end">
                     <IconButton
                       size="small"
-                      onClick={() => setSearchQuery('')}
-                      sx={{ color: 'text.secondary' }}
+                      onClick={() => setSearchQuery("")}
+                      sx={{ color: "text.secondary" }}
                     >
                       <ClearIcon fontSize="small" />
                     </IconButton>
@@ -723,43 +808,71 @@ export default function Board({
                 label="Priority Filter"
                 sx={{
                   borderRadius: 2,
-                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  backgroundColor: "rgba(255, 255, 255, 0.8)",
+                  "&:hover": {
+                    backgroundColor: "rgba(255, 255, 255, 0.9)",
                   },
-                  '&.Mui-focused': {
-                    backgroundColor: 'rgba(255, 255, 255, 1)',
+                  "&.Mui-focused": {
+                    backgroundColor: "rgba(255, 255, 255, 1)",
                   },
                   "& .MuiOutlinedInput-notchedOutline": {
                     borderColor: (t) => methodStyles.chipBorder(t),
                   },
                 }}
                 startAdornment={
-                  <FilterListIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                  <FilterListIcon sx={{ color: "text.secondary", mr: 1 }} />
                 }
               >
                 <MenuItem value="">All Priorities</MenuItem>
                 <MenuItem value="low">
                   <Stack direction="row" alignItems="center" spacing={1}>
-                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#4caf50' }} />
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        backgroundColor: "#4caf50",
+                      }}
+                    />
                     <span>Low</span>
                   </Stack>
                 </MenuItem>
                 <MenuItem value="medium">
                   <Stack direction="row" alignItems="center" spacing={1}>
-                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#2196f3' }} />
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        backgroundColor: "#2196f3",
+                      }}
+                    />
                     <span>Medium</span>
                   </Stack>
                 </MenuItem>
                 <MenuItem value="high">
                   <Stack direction="row" alignItems="center" spacing={1}>
-                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#ff9800' }} />
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        backgroundColor: "#ff9800",
+                      }}
+                    />
                     <span>High</span>
                   </Stack>
                 </MenuItem>
                 <MenuItem value="urgent">
                   <Stack direction="row" alignItems="center" spacing={1}>
-                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#f44336' }} />
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        backgroundColor: "#f44336",
+                      }}
+                    />
                     <span>Urgent</span>
                   </Stack>
                 </MenuItem>
@@ -771,15 +884,15 @@ export default function Board({
                 size="small"
                 variant="outlined"
                 onClick={() => {
-                  setSearchQuery('');
-                  setPriorityFilter('');
+                  setSearchQuery("");
+                  setPriorityFilter("");
                 }}
                 sx={{
                   borderRadius: 2,
-                  textTransform: 'none',
-                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  textTransform: "none",
+                  backgroundColor: "rgba(255, 255, 255, 0.8)",
+                  "&:hover": {
+                    backgroundColor: "rgba(255, 255, 255, 0.9)",
                   },
                   borderColor: (t) => methodStyles.chipBorder(t),
                 }}
@@ -791,20 +904,26 @@ export default function Board({
 
           {/* Filter Status Indicator */}
           {(searchQuery || priorityFilter) && (
-            <Box sx={{ 
-              mb: 2, 
-              p: 1.5, 
-              backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              borderRadius: 2,
-              border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
+            <Box
+              sx={{
+                mb: 2,
+                p: 1.5,
+                backgroundColor: "rgba(255, 255, 255, 0.9)",
+                borderRadius: 2,
+                border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
               <Stack direction="row" alignItems="center" spacing={1}>
-                <FilterListIcon sx={{ color: 'text.secondary' }} />
+                <FilterListIcon sx={{ color: "text.secondary" }} />
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {totalTasks === 0 ? 'No tasks found' : `Showing ${totalTasks} task${totalTasks === 1 ? '' : 's'}`}
+                  {totalTasks === 0
+                    ? "No tasks found"
+                    : `Showing ${totalTasks} task${
+                        totalTasks === 1 ? "" : "s"
+                      }`}
                   {searchQuery && ` matching "${searchQuery}"`}
                   {priorityFilter && ` with ${priorityFilter} priority`}
                 </Typography>
@@ -812,10 +931,10 @@ export default function Board({
               <Button
                 size="small"
                 onClick={() => {
-                  setSearchQuery('');
-                  setPriorityFilter('');
+                  setSearchQuery("");
+                  setPriorityFilter("");
                 }}
-                sx={{ textTransform: 'none' }}
+                sx={{ textTransform: "none" }}
               >
                 Clear
               </Button>
@@ -855,10 +974,13 @@ export default function Board({
                     <Box
                       sx={{
                         transition: "transform .18s, box-shadow .22s",
-                        transform: dragSnapshot.isDragging ? "rotate(1.5deg) scale(1.02)" : "none",
+                        transform: dragSnapshot.isDragging
+                          ? "rotate(1.5deg) scale(1.02)"
+                          : "none",
                         boxShadow: dragSnapshot.isDragging
                           ? `0 8px 20px -6px ${alpha(
-                              STATUS_META[statusKey]?.accent || methodStyles.accent,
+                              STATUS_META[statusKey]?.accent ||
+                                methodStyles.accent,
                               0.45
                             )}`
                           : "0 1px 3px rgba(0,0,0,.12)",
@@ -870,9 +992,13 @@ export default function Board({
                         onEdit={() => showEdit(task)}
                         onDelete={() => askDelete(task.id)}
                         onClick={() => {
-                          router.visit(`/projects/${project.id}/tasks/${task.id}`);
+                          router.visit(
+                            `/projects/${project.id}/tasks/${task.id}`
+                          );
                         }}
-                        accent={STATUS_META[statusKey]?.accent || methodStyles.accent}
+                        accent={
+                          STATUS_META[statusKey]?.accent || methodStyles.accent
+                        }
                       />
                     </Box>
                   )}
@@ -900,43 +1026,57 @@ export default function Board({
               sx: {
                 borderRadius: 3,
                 overflow: "hidden",
-                background: "linear-gradient(140deg,rgba(255,255,255,0.95),rgba(255,255,255,0.8))",
+                background:
+                  "linear-gradient(140deg,rgba(255,255,255,0.95),rgba(255,255,255,0.8))",
                 backdropFilter: "blur(12px)",
                 border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
               },
             }}
           >
             <form onSubmit={submit}>
-              <DialogTitle sx={{ fontWeight: 700, pr: 6, display: "flex", alignItems: "center", gap: 1 }}>
+              <DialogTitle
+                sx={{
+                  fontWeight: 700,
+                  pr: 6,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
                 {editMode ? "Edit Task" : "Create Task"}
-                <Chip 
-                  size="small" 
-                  label={editMode ? "Editing" : "New"} 
-                  sx={{ 
-                    fontWeight: 700, 
+                <Chip
+                  size="small"
+                  label={editMode ? "Editing" : "New"}
+                  sx={{
+                    fontWeight: 700,
                     height: 22,
-                    bgcolor: editMode ? '#ffc107' : '#17a2b8',
-                    color: editMode ? '#212529' : '#ffffff',
-                    border: 'none',
-                    fontSize: '0.75rem',
-                    '& .MuiChip-label': {
+                    bgcolor: editMode ? "#ffc107" : "#17a2b8",
+                    color: editMode ? "#212529" : "#ffffff",
+                    border: "none",
+                    fontSize: "0.75rem",
+                    "& .MuiChip-label": {
                       fontWeight: 700,
-                      color: editMode ? '#212529' : '#ffffff',
+                      color: editMode ? "#212529" : "#ffffff",
                       px: 1,
-                    }
-                  }} 
+                    },
+                  }}
                 />
-                <IconButton size="small" aria-label="Close" onClick={() => setOpenForm(false)} sx={{ ml: "auto" }}>
+                <IconButton
+                  size="small"
+                  aria-label="Close"
+                  onClick={() => setOpenForm(false)}
+                  sx={{ ml: "auto" }}
+                >
                   <CloseRoundedIcon fontSize="small" />
                 </IconButton>
               </DialogTitle>
 
-              <DialogContent 
-                dividers 
-                sx={{ 
-                  display: "flex", 
-                  flexDirection: "column", 
-                  gap: 1.5, 
+              <DialogContent
+                dividers
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1.5,
                   pt: 2,
                   maxHeight: "60vh",
                   overflowY: "auto",
@@ -977,7 +1117,10 @@ export default function Board({
                   value={data.description}
                   onChange={(e) => setData("description", e.target.value)}
                   error={!!errors.description}
-                  helperText={errors.description || "Add optional context, acceptance criteria, etc."}
+                  helperText={
+                    errors.description ||
+                    "Add optional context, acceptance criteria, etc."
+                  }
                   placeholder="Add more context..."
                   size="small"
                 />
@@ -995,7 +1138,10 @@ export default function Board({
                     size="small"
                     InputProps={{
                       startAdornment: (
-                        <CalendarMonthRoundedIcon fontSize="small" sx={{ mr: 1, color: "text.disabled" }} />
+                        <CalendarMonthRoundedIcon
+                          fontSize="small"
+                          sx={{ mr: 1, color: "text.disabled" }}
+                        />
                       ),
                     }}
                   />
@@ -1011,7 +1157,10 @@ export default function Board({
                     size="small"
                     InputProps={{
                       startAdornment: (
-                        <CalendarMonthRoundedIcon fontSize="small" sx={{ mr: 1, color: "text.disabled" }} />
+                        <CalendarMonthRoundedIcon
+                          fontSize="small"
+                          sx={{ mr: 1, color: "text.disabled" }}
+                        />
                       ),
                     }}
                   />
@@ -1026,7 +1175,10 @@ export default function Board({
                     size="small"
                     InputProps={{
                       startAdornment: (
-                        <PersonRoundedIcon fontSize="small" sx={{ mr: 1, color: "text.disabled" }} />
+                        <PersonRoundedIcon
+                          fontSize="small"
+                          sx={{ mr: 1, color: "text.disabled" }}
+                        />
                       ),
                     }}
                   >
@@ -1056,24 +1208,29 @@ export default function Board({
                     <MenuItem value="high">High</MenuItem>
                     <MenuItem value="urgent">Urgent</MenuItem>
                   </TextField>
-                  
+
                   <TextField
                     select
                     label="Milestone"
                     fullWidth
-                    value={data.milestone}
-                    onChange={(e) => setData("milestone", e.target.value === 'true')}
+                    value={String(data.milestone)}
+                    onChange={(e) =>
+                      setData("milestone", e.target.value === "true")
+                    }
                     error={!!errors.milestone}
                     helperText={errors.milestone || "Mark as project milestone"}
                     size="small"
                     InputProps={{
                       startAdornment: (
-                        <FlagRoundedIcon fontSize="small" sx={{ mr: 1, color: "text.disabled" }} />
+                        <FlagRoundedIcon
+                          fontSize="small"
+                          sx={{ mr: 1, color: "text.disabled" }}
+                        />
                       ),
                     }}
                   >
-                    <MenuItem value={false}>Regular Task</MenuItem>
-                    <MenuItem value={true}>Milestone</MenuItem>
+                    <MenuItem value={"false"}>Regular Task</MenuItem>
+                    <MenuItem value={"true"}>Milestone</MenuItem>
                   </TextField>
                 </Stack>
 
@@ -1127,7 +1284,13 @@ export default function Board({
                     "&:hover": { opacity: 0.95 },
                   }}
                 >
-                  {processing ? (editMode ? "Updating…" : "Creating…") : editMode ? "Update Task" : "Create Task"}
+                  {processing
+                    ? editMode
+                      ? "Updating…"
+                      : "Creating…"
+                    : editMode
+                    ? "Update Task"
+                    : "Create Task"}
                 </Button>
               </DialogActions>
             </form>
@@ -1142,7 +1305,8 @@ export default function Board({
               sx: {
                 borderRadius: 3,
                 overflow: "hidden",
-                background: "linear-gradient(145deg,rgba(255,255,255,.96),rgba(255,255,255,.86))",
+                background:
+                  "linear-gradient(145deg,rgba(255,255,255,.96),rgba(255,255,255,.86))",
                 border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
                 backdropFilter: "blur(12px)",
               },
@@ -1170,7 +1334,9 @@ export default function Board({
                 {(project?.start_date || project?.end_date) && (
                   <Chip
                     icon={<CalendarMonthRoundedIcon fontSize="small" />}
-                    label={`${fmtDate(project?.start_date) ?? "—"} → ${fmtDate(project?.end_date) ?? "—"}`}
+                    label={`${fmtDate(project?.start_date) ?? "—"} → ${
+                      fmtDate(project?.end_date) ?? "—"
+                    }`}
                     size="small"
                     sx={{
                       fontWeight: 600,
@@ -1187,7 +1353,10 @@ export default function Board({
                   <Typography variant="overline" sx={{ opacity: 0.7 }}>
                     Description
                   </Typography>
-                  <Typography variant="body2" sx={{ whiteSpace: "pre-line", mt: 0.5 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ whiteSpace: "pre-line", mt: 0.5 }}
+                  >
                     {stripContextSummary(project.description)}
                   </Typography>
                 </Box>
@@ -1197,7 +1366,10 @@ export default function Board({
                 <Stack spacing={1} sx={{ mt: 0.6 }}>
                   {meta.objectives && (
                     <Stack direction="row" spacing={0.6}>
-                      <FlagRoundedIcon fontSize="small" sx={{ mt: 0.25, opacity: 0.8 }} />
+                      <FlagRoundedIcon
+                        fontSize="small"
+                        sx={{ mt: 0.25, opacity: 0.8 }}
+                      />
                       <Typography variant="body2" sx={{ whiteSpace: "pre-line" }}>
                         {meta.objectives}
                       </Typography>
@@ -1205,7 +1377,10 @@ export default function Board({
                   )}
                   {meta.constraints && (
                     <Stack direction="row" spacing={0.6}>
-                      <ReportProblemRoundedIcon fontSize="small" sx={{ mt: 0.25, opacity: 0.8 }} />
+                      <ReportProblemRoundedIcon
+                        fontSize="small"
+                        sx={{ mt: 0.25, opacity: 0.8 }}
+                      />
                       <Typography variant="body2" sx={{ whiteSpace: "pre-line" }}>
                         {meta.constraints}
                       </Typography>
@@ -1231,17 +1406,24 @@ export default function Board({
               sx: {
                 borderRadius: 3,
                 background: (t) =>
-                  `linear-gradient(140deg, ${alpha(t.palette.error.light, 0.15)}, #fff)`,
+                  `linear-gradient(140deg, ${alpha(
+                    t.palette.error.light,
+                    0.15
+                  )}, #fff)`,
                 border: (t) => `1px solid ${alpha(t.palette.error.main, 0.35)}`,
                 backdropFilter: "blur(10px)",
               },
             }}
           >
             <DialogTitle sx={{ fontWeight: 800, pr: 6 }}>Delete Task</DialogTitle>
-            <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <DialogContent
+              dividers
+              sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+            >
               <Typography variant="body2">
                 Are you sure you want to permanently delete
-                {pendingTask ? ' "' + pendingTask.title + '"' : " this task"}? This action cannot be undone.
+                {pendingTask ? ' "' + pendingTask.title + '"' : " this task"}?
+                This action cannot be undone.
               </Typography>
             </DialogContent>
             <DialogActions sx={{ px: 2, py: 1.25 }}>
@@ -1253,13 +1435,23 @@ export default function Board({
               >
                 Cancel
               </Button>
-              <Button onClick={confirmDelete} color="error" variant="contained" sx={{ fontWeight: 700, textTransform: "none" }}>
+              <Button
+                onClick={confirmDelete}
+                color="error"
+                variant="contained"
+                sx={{ fontWeight: 700, textTransform: "none" }}
+              >
                 Delete
               </Button>
             </DialogActions>
           </Dialog>
 
-          <MembersManagerDialog open={membersOpen} onClose={() => setMembersOpen(false)} project={project} members={Array.isArray(users) ? users : []} />
+          <MembersManagerDialog
+            open={membersOpen}
+            onClose={() => setMembersOpen(false)}
+            project={project}
+            members={Array.isArray(users) ? users : []}
+          />
 
           <AIPdfReportDialog
             key={reportOpen ? "open" : "closed"}
@@ -1270,10 +1462,11 @@ export default function Board({
             users={users}
           />
 
-          <UpgradeDialog open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
+          <UpgradeDialog
+            open={upgradeOpen}
+            onClose={() => setUpgradeOpen(false)}
+          />
 
-          {/* AssistantChat now lives locally and preserves the original design.
-              The typing indicator overlay is added by the wrapper without changing the UI. */}
           <AssistantChat
             project={project}
             open={assistantOpen}

@@ -8,6 +8,7 @@ import {
   Tooltip,
   Stack,
   Chip,
+  useTheme,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import EditIcon from "@mui/icons-material/Edit";
@@ -32,8 +33,11 @@ export default function TaskCard({
   onEdit,
   onDelete,
   onClick,
-  accent = "#3b82f6",
+  accent,
 }) {
+  const theme = useTheme();
+  const defaultAccent = theme.palette.primary.main;
+  
   const stop = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -53,11 +57,11 @@ export default function TaskCard({
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'urgent': return '#f44336'; // red
-      case 'high': return '#ff9800'; // orange
-      case 'medium': return '#2196f3'; // blue
-      case 'low': return '#4caf50'; // green
-      default: return '#2196f3'; // default blue
+      case 'urgent': return theme.palette.error.main;
+      case 'high': return theme.palette.warning.main;
+      case 'medium': return theme.palette.info.main;
+      case 'low': return theme.palette.success.main;
+      default: return theme.palette.info.main;
     }
   };
 
@@ -93,7 +97,7 @@ export default function TaskCard({
   const overdue = !!(endMid && nowMid > endMid && task?.status !== "done");
 
   // Derive a schedule health color from elapsed % of available time (green -> red)
-  let scheduleColor = accent;
+  let scheduleColor = accent || defaultAccent;
   if (task?.status === "done") {
     // Task is complete - always show green regardless of timing
     scheduleColor = (t) => t.palette.success.main;
@@ -126,7 +130,7 @@ export default function TaskCard({
         variant="outlined"
         onClick={onClick}
         sx={{
-          borderLeft: `4px solid ${accent}`,
+          borderLeft: `4px solid ${accent || defaultAccent}`,
           borderRadius: 2,
           overflow: "hidden",
           background: (t) => alpha(t.palette.background.paper, 0.98),
@@ -134,7 +138,7 @@ export default function TaskCard({
           transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
           '&:hover': onClick ? {
             transform: 'translateY(-2px)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            boxShadow: theme.shadows[4],
           } : {},
         }}
       >

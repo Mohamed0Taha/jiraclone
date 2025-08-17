@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -40,11 +41,22 @@ class ProjectController extends Controller
 
     public function index(Request $request)
     {
-        $projects = $request->user()
-            ->projects()
+        $user = $request->user();
+        
+        // Get projects owned by the user
+        $ownedProjects = $user->projects()
             ->with(['tasks:id,project_id,title,status'])
-            ->get()
-            ->map(function (Project $p) {
+            ->get();
+            
+        // Get projects where the user is a member
+        $memberProjects = $user->memberProjects()
+            ->with(['tasks:id,project_id,title,status'])
+            ->get();
+            
+        // Combine both collections
+        $allProjects = $ownedProjects->merge($memberProjects)->unique('id');
+        
+        $projects = $allProjects->map(function (Project $p) use ($user) {
                 $grouped = $p->tasks->groupBy('status');
 
                 $tasks = [];
@@ -58,6 +70,13 @@ class ProjectController extends Controller
                         ->all();
                 }
 
+                // Determine user's role in this project
+                $role = 'owner';
+                if ($p->user_id !== $user->id) {
+                    $membership = $p->members()->where('user_id', $user->id)->first();
+                    $role = $membership ? $membership->pivot->role : 'member';
+                }
+
                 return [
                     'id'          => $p->id,
                     'name'        => $p->name,
@@ -67,6 +86,8 @@ class ProjectController extends Controller
                     'start_date'  => optional($p->start_date)->toDateString(),
                     'end_date'    => optional($p->end_date)->toDateString(),
                     'tasks'       => $tasks,
+                    'user_role'   => $role,
+                    'is_owner'    => $p->user_id === $user->id,
                 ];
             });
 

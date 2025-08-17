@@ -1,7 +1,33 @@
 import React, { useState } from 'react';
 import { useForm, Head } from '@inertiajs/react';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Container,
+  Grid,
+  TextField,
+  Typography,
+  Stack,
+  Paper,
+  useTheme,
+  alpha,
+  Chip,
+  Divider,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Folder as FolderIcon,
+  FolderOpen as FolderOpenIcon,
+  Person as PersonIcon,
+  AdminPanelSettings as AdminIcon,
+  Crown as CrownIcon,
+} from '@mui/icons-material';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
-export default function ProjectsIndex({ projects }) {
+export default function ProjectsIndex({ projects, auth }) {
+    const theme = useTheme();
     const [showForm, setShowForm] = useState(projects.length === 0);
     const { data, setData, post, processing, errors } = useForm({
         name: '',
@@ -13,74 +39,261 @@ export default function ProjectsIndex({ projects }) {
         post('/projects');
     };
 
-    return (
-        <>
-            <Head title="My Projects" />
-            <div className="p-6 max-w-4xl mx-auto">
-                <h1 className="text-3xl font-bold mb-6">Your Projects</h1>
+    // Separate owned and member projects
+    const ownedProjects = projects.filter(p => p.is_owner);
+    const memberProjects = projects.filter(p => !p.is_owner);
 
-                {projects.length === 0 ? (
-                    <div className="text-center py-10">
-                        <p className="text-lg mb-4">You have no projects yet.</p>
-                        {!showForm && (
-                            <button
-                                className="bg-blue-600 text-white px-6 py-3 rounded"
-                                onClick={() => setShowForm(true)}
-                            >
-                                Create Your First Project
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <ul className="space-y-4">
-                        {projects.map((project) => (
-                            <li key={project.id}>
-                                <a
-                                    href={`/projects/${project.id}`}
-                                    className="text-lg text-blue-700 hover:underline"
+    const getRoleIcon = (role) => {
+        switch (role) {
+            case 'owner':
+                return <CrownIcon sx={{ fontSize: 16 }} />;
+            case 'admin':
+                return <AdminIcon sx={{ fontSize: 16 }} />;
+            default:
+                return <PersonIcon sx={{ fontSize: 16 }} />;
+        }
+    };
+
+    const getRoleColor = (role) => {
+        switch (role) {
+            case 'owner':
+                return 'warning';
+            case 'admin':
+                return 'primary';
+            default:
+                return 'default';
+        }
+    };
+
+    const ProjectCard = ({ project }) => (
+        <Grid item xs={12} sm={6} md={4} key={project.id}>
+            <Card 
+                sx={{ 
+                    height: '100%',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    borderRadius: theme.shape.borderRadius,
+                    '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: theme.shadows[8],
+                        borderColor: theme.palette.primary.main,
+                    },
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                }}
+                onClick={() => window.location.href = `/projects/${project.id}`}
+            >
+                <CardContent sx={{ p: 3 }}>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                        <Box 
+                            sx={{ 
+                                p: 1.5, 
+                                borderRadius: 2, 
+                                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.2)}, ${alpha(theme.palette.primary.light, 0.1)})`,
+                                color: theme.palette.primary.main 
+                            }}
+                        >
+                            <FolderIcon sx={{ fontSize: 24 }} />
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                                <Typography 
+                                    variant="h6" 
+                                    component="h2" 
+                                    fontWeight={600}
+                                    noWrap
+                                    title={project.name}
+                                    sx={{ flex: 1 }}
                                 >
                                     {project.name}
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
+                                </Typography>
+                                <Chip
+                                    icon={getRoleIcon(project.user_role)}
+                                    label={project.user_role}
+                                    size="small"
+                                    color={getRoleColor(project.user_role)}
+                                    sx={{ textTransform: 'capitalize' }}
+                                />
+                            </Stack>
+                            {project.description && (
+                                <Typography 
+                                    variant="body2" 
+                                    color="text.secondary" 
+                                    sx={{ 
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                    }}
+                                >
+                                    {project.description}
+                                </Typography>
+                            )}
+                        </Box>
+                    </Stack>
+                </CardContent>
+            </Card>
+        </Grid>
+    );
+
+    return (
+        <AuthenticatedLayout user={auth.user}>
+            <Head title="My Projects" />
+            <Container maxWidth="lg" sx={{ py: 4 }}>
+                <Box sx={{ mb: 4 }}>
+                    <Typography variant="h3" component="h1" fontWeight={700} sx={{ mb: 2 }}>
+                        Your Projects
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                        Manage and organize your work with Dominus projects
+                    </Typography>
+                </Box>
+
+                {projects.length === 0 ? (
+                    <Paper 
+                        sx={{ 
+                            textAlign: 'center', 
+                            py: 10, 
+                            px: 4,
+                            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
+                            border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                            borderRadius: 4
+                        }}
+                    >
+                        <FolderOpenIcon sx={{ fontSize: 80, color: theme.palette.primary.main, mb: 2 }} />
+                        <Typography variant="h5" sx={{ mb: 2 }}>No projects yet</Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+                            Create your first project to get started with Dominus
+                        </Typography>
+                        {!showForm && (
+                            <Button
+                                variant="contained"
+                                size="large"
+                                startIcon={<AddIcon />}
+                                onClick={() => setShowForm(true)}
+                                sx={{
+                                    px: 4,
+                                    py: 1.5,
+                                    borderRadius: theme.shape.borderRadius,
+                                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                                    boxShadow: theme.shadows[4],
+                                    '&:hover': {
+                                        background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                                        boxShadow: theme.shadows[8],
+                                    },
+                                }}
+                            >
+                                Create Your First Project
+                            </Button>
+                        )}
+                    </Paper>
+                ) : (
+                    <Box>
+                        {/* Owned Projects Section */}
+                        {ownedProjects.length > 0 && (
+                            <Box sx={{ mb: 4 }}>
+                                <Typography variant="h5" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CrownIcon color="warning" />
+                                    My Projects ({ownedProjects.length})
+                                </Typography>
+                                <Grid container spacing={3}>
+                                    {ownedProjects.map((project) => (
+                                        <ProjectCard key={`owned-${project.id}`} project={project} />
+                                    ))}
+                                </Grid>
+                            </Box>
+                        )}
+
+                        {/* Member Projects Section */}
+                        {memberProjects.length > 0 && (
+                            <Box>
+                                {ownedProjects.length > 0 && <Divider sx={{ my: 4 }} />}
+                                <Typography variant="h5" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <PersonIcon color="primary" />
+                                    Shared with Me ({memberProjects.length})
+                                </Typography>
+                                <Grid container spacing={3}>
+                                    {memberProjects.map((project) => (
+                                        <ProjectCard key={`member-${project.id}`} project={project} />
+                                    ))}
+                                </Grid>
+                            </Box>
+                        )}
+
+                        {/* Show all projects together if no separation needed */}
+                        {ownedProjects.length === 0 && memberProjects.length === 0 && (
+                            <Grid container spacing={3}>
+                                {projects.map((project) => (
+                                    <ProjectCard key={project.id} project={project} />
+                                ))}
+                            </Grid>
+                        )}
+                    </Box>
                 )}
 
                 {showForm && (
-                    <form onSubmit={submit} className="mt-8 space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium">Project Name</label>
-                            <input
-                                type="text"
-                                className="w-full border rounded p-2"
-                                value={data.name}
-                                onChange={(e) => setData('name', e.target.value)}
-                            />
-                            {errors.name && <p className="text-red-600 text-sm">{errors.name}</p>}
-                        </div>
+                    <Card sx={{ mt: 4, borderRadius: theme.shape.borderRadius }}>
+                        <CardContent sx={{ p: 4 }}>
+                            <Typography variant="h5" sx={{ mb: 3 }}>Create New Project</Typography>
+                            <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Project Name"
+                                    value={data.name}
+                                    onChange={(e) => setData('name', e.target.value)}
+                                    error={!!errors.name}
+                                    helperText={errors.name}
+                                    required
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: theme.shape.borderRadius,
+                                        },
+                                    }}
+                                />
 
-                        <div>
-                            <label className="block text-sm font-medium">Description</label>
-                            <textarea
-                                className="w-full border rounded p-2"
-                                value={data.description}
-                                onChange={(e) => setData('description', e.target.value)}
-                            />
-                            {errors.description && (
-                                <p className="text-red-600 text-sm">{errors.description}</p>
-                            )}
-                        </div>
+                                <TextField
+                                    fullWidth
+                                    label="Description"
+                                    value={data.description}
+                                    onChange={(e) => setData('description', e.target.value)}
+                                    error={!!errors.description}
+                                    helperText={errors.description}
+                                    multiline
+                                    rows={3}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: theme.shape.borderRadius,
+                                        },
+                                    }}
+                                />
 
-                        <button
-                            type="submit"
-                            className="bg-green-600 text-white px-6 py-2 rounded disabled:opacity-50"
-                            disabled={processing}
-                        >
-                            Create Project
-                        </button>
-                    </form>
+                                <Stack direction="row" spacing={2} justifyContent="flex-end">
+                                    <Button 
+                                        variant="outlined" 
+                                        onClick={() => setShowForm(false)}
+                                        sx={{ borderRadius: theme.shape.borderRadius }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        disabled={processing}
+                                        sx={{
+                                            borderRadius: theme.shape.borderRadius,
+                                            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                                            '&:hover': {
+                                                background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                                            },
+                                        }}
+                                    >
+                                        {processing ? 'Creating...' : 'Create Project'}
+                                    </Button>
+                                </Stack>
+                            </Box>
+                        </CardContent>
+                    </Card>
                 )}
-            </div>
-        </>
+            </Container>
+        </AuthenticatedLayout>
     );
 }

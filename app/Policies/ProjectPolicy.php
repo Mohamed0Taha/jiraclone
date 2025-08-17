@@ -16,16 +16,18 @@ class ProjectPolicy
     }
 
     /**
-     * View a single project – allowed if the user owns it.
+     * View a single project – allowed if the user owns it or is a member.
      */
     public function view(User $user, Project $project)
-{
-    // This should return true if user can view the project
-    // Common implementations:
-    return $user->id === $project->user_id; // If project has user_id
-    // OR
-    return $project->users()->where('user_id', $user->id)->exists(); // If many-to-many
-}
+    {
+        // Allow if user is the owner
+        if ($user->id === $project->user_id) {
+            return true;
+        }
+        
+        // Allow if user is a member of the project
+        return $project->members()->where('user_id', $user->id)->exists();
+    }
 
     /**
      * Create a project – any authenticated user can.
@@ -36,7 +38,7 @@ class ProjectPolicy
     }
 
     /**
-     * Update the project – only the owner.
+     * Update the project – only the owner (members can't edit project settings).
      */
     public function update(User $user, Project $project): bool
     {
