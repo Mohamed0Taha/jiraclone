@@ -95,21 +95,20 @@ export default function Landing({ errors }) {
                                     >
                                         Forgot your password?
                                     </Link>
+
+                                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 1 }}>
+                                        Don't have an account?{' '}
+                                        <Link
+                                            href={route('register')}
+                                            underline="hover"
+                                            sx={{ fontWeight: 600, color: 'primary.main' }}
+                                        >
+                                            Sign up for free
+                                        </Link>
+                                    </Typography>
                                 </Stack>
                             </form>
                         </Paper>
-
-                        {/* ----- Sign up section ----- */}
-                        <Typography variant="body2" color="text.secondary">
-                            Don't have an account?{' '}
-                            <Link
-                                href={route('register')}
-                                underline="hover"
-                                sx={{ fontWeight: 600, color: 'primary.main' }}
-                            >
-                                Sign up for free
-                            </Link>
-                        </Typography>
                     </Stack>
                 </Container>
             </Box>
