@@ -98,6 +98,18 @@ export default function Landing({ errors }) {
                                 </Stack>
                             </form>
                         </Paper>
+
+                        {/* ----- Sign up section ----- */}
+                        <Typography variant="body2" color="text.secondary">
+                            Don't have an account?{' '}
+                            <Link
+                                href={route('register')}
+                                underline="hover"
+                                sx={{ fontWeight: 600, color: 'primary.main' }}
+                            >
+                                Sign up for free
+                            </Link>
+                        </Typography>
                     </Stack>
                 </Container>
             </Box>
