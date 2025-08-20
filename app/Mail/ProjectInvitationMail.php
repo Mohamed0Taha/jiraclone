@@ -24,6 +24,7 @@ class ProjectInvitationMail extends Mailable
     {
         return new Envelope(
             subject: 'You\'ve been invited to join a project!',
+            from: new \Illuminate\Mail\Mailables\Address('noreply@taskpilot.us', 'TaskPilot'),
         );
     }
 

@@ -21,6 +21,7 @@ class AutomationNotification extends Mailable
     public function build()
     {
         return $this->subject($this->subjectLine)
+            ->from('taskpilot-bot@taskpilot.us', 'TaskPilot Bot')
             ->text('emails.automation_plain');
     }
 }

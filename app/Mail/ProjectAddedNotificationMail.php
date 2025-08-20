@@ -29,6 +29,7 @@ class ProjectAddedNotificationMail extends Mailable
     {
         return new Envelope(
             subject: 'You\'ve been added to a project!',
+            from: new \Illuminate\Mail\Mailables\Address('noreply@taskpilot.us', 'TaskPilot'),
         );
     }
 
