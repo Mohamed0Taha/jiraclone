@@ -16,8 +16,12 @@ class VerifyCsrfToken extends Middleware
         // Payment provider webhooks
         'stripe/*',
 
-        // TEMPORARY: AI preview endpoint (excluded to bypass CSRF while debugging prod issues)
-        // Remove this once the client reliably sends the CSRF token.
+        // AI endpoints that may have CSRF issues with custom domain
         'projects/*/tasks/ai/preview',
+        'projects/*/tasks/ai/generate',
+        'projects/*/tasks/ai/accept',
+        'projects/*/tasks/ai/reject',
+        'projects/*/assistant/chat',
+        'projects/*/assistant/execute',
     ];
 }
