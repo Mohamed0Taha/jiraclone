@@ -10,4 +10,12 @@ export default defineConfig({
         }),
         react(),
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: undefined,
+            },
+        },
+    },
+    base: process.env.ASSET_URL || '/',
 });

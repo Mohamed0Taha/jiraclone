@@ -338,7 +338,7 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                         </main>
 
                         <footer className="py-16 text-center text-sm text-black dark:text-white/70">
-                            Dominus • Laravel v{laravelVersion} (PHP v{phpVersion})
+                            TaskPilot • Laravel v{laravelVersion} (PHP v{phpVersion})
                         </footer>
                     </div>
                 </div>

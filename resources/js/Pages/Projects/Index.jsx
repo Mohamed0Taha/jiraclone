@@ -146,7 +146,7 @@ export default function ProjectsIndex({ projects, auth }) {
                         Your Projects
                     </Typography>
                     <Typography variant="body1" color="text.secondary">
-                        Manage and organize your work with Dominus projects
+                        Manage and organize your work with TaskPilot projects
                     </Typography>
                 </Box>
 
@@ -164,7 +164,7 @@ export default function ProjectsIndex({ projects, auth }) {
                         <FolderOpenIcon sx={{ fontSize: 80, color: theme.palette.primary.main, mb: 2 }} />
                         <Typography variant="h5" sx={{ mb: 2 }}>No projects yet</Typography>
                         <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                            Create your first project to get started with Dominus
+                            Create your first project to get started with TaskPilot
                         </Typography>
                         {!showForm && (
                             <Button

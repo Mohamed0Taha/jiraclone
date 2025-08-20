@@ -33,7 +33,7 @@ export default function Landing({ errors }) {
                 <Container maxWidth="sm">
                     <Stack spacing={6} textAlign="center">
                         <Typography variant="h2" sx={{ fontWeight: 800, color: 'primary.main' }}>
-                            Dominus
+                            TaskPilot
                         </Typography>
 
                         <Typography variant="subtitle1" color="text.secondary">

@@ -5,109 +5,127 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Services\ProjectAssistantService;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Inertia\Inertia;
-use Inertia\Response;
+use Illuminate\Http\JsonResponse;
+use Throwable;
 
 class ProjectAssistantController extends Controller
 {
-    public function __construct(
-        private ProjectAssistantService $assistantService
-    ) {}
+    public function __construct(private ProjectAssistantService $service)
+    {
+    }
 
-    /**
-     * Send a message to the project assistant
-     */
+    /** POST /projects/{project}/assistant/chat */
     public function chat(Request $request, Project $project): JsonResponse
     {
-        Gate::authorize('view', $project);
+        $this->authorizeView($project);
 
-        $request->validate([
-            'message' => 'required|string|max:1000',
-            'conversation_history' => 'array|max:20',
-            'conversation_history.*.role' => 'required|in:user,assistant',
-            'conversation_history.*.content' => 'required|string|max:2000',
-        ]);
+        $message = (string)$request->input('message', '');
+        // Optionally, you could use a real session/user id here
+        $sessionId = null;
 
         try {
-            $response = $this->assistantService->processMessage(
-                $project,
-                $request->input('message'),
-                $request->input('conversation_history', [])
-            );
-
+            $resp = $this->service->processMessage($project, $message, $sessionId);
+            return response()->json($resp);
+        } catch (Throwable $e) {
+            Log::error('Assistant chat error', ['error' => $e->getMessage()]);
             return response()->json([
-                'success' => true,
-                'response' => $response,
-                'timestamp' => now()->toISOString(),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Project Assistant Error', [
-                'project_id' => $project->id,
-                'user_id' => $request->user()?->id,
-                'message' => $request->input('message'),
-                'error' => $e->getMessage(),
-            ]);
-
-            // Graceful fallback derived from project data
-            $fallback = $this->assistantService->fallbackAnswer($project, (string) $request->input('message'));
-            return response()->json([
-                'success' => true,
-                'response' => $fallback,
-                'timestamp' => now()->toISOString(),
-                'warning' => 'OpenAI unavailable, served deterministic summary.',
-            ], 200);
+                'type' => 'error',
+                'message' => "Error: ".$e->getMessage(),
+            ], 400);
         }
     }
 
-    /**
-     * Get conversation suggestions based on project context
-     */
-    public function suggestions(Project $project): JsonResponse
+    /** POST /projects/{project}/assistant/execute */
+    public function execute(Request $request, Project $project): JsonResponse
     {
-        Gate::authorize('view', $project);
+        if (!$this->canModify($project)) {
+            return response()->json([
+                'type' => 'error',
+                'message' => 'You do not have permission to modify this project.',
+            ], 403);
+        }
 
-        $suggestions = [
-            "What are the key deliverables for this project?",
-            "Show me the project timeline and milestones",
-            "What tasks are currently overdue?",
-            "Who are the team members working on this project?",
-            "What's the current project status?",
-            "What are the main risks and challenges?",
-            "Can you summarize the recent task activities?",
-            "What's needed to complete the next phase?",
-        ];
+        $payload = (array)$request->input('command_data', []);
+
+        try {
+            $resp = $this->service->executeCommand($project, $payload);
+            return response()->json($resp);
+        } catch (Throwable $e) {
+            Log::error('Assistant execute error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'type' => 'error',
+                'message' => "Execution failed: ".$e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /** GET /projects/{project}/assistant/suggestions */
+    public function suggestions(Request $request, Project $project): JsonResponse
+    {
+        $this->authorizeView($project);
+
+    // $labels = $this->service->labelsFor($project); // Removed: method does not exist
+    $labels = []; // TODO: Implement label fetching if needed
+        $todo = $labels['todo']; $inprog = $labels['inprogress']; $rev = $labels['review']; $done = $labels['done'];
 
         return response()->json([
-            'success' => true,
-            'suggestions' => $suggestions,
+            'suggestions' => [
+                "How many tasks are {$done}?",
+                "List overdue tasks",
+                "Who is the project owner?",
+                "What methodology are we using?",
+                "Show tasks assigned to me",
+                "Move tasks in {$rev} to {$done}",
+                "Delete urgent tasks",
+                "Update due date for medium priority to next Friday",
+                "Assign unassigned tasks to Alex",
+                "Create task Implement login",
+                "Set all {$inprog} tasks to {$rev}",
+            ],
         ]);
     }
 
-    /**
-     * Clear conversation history (if needed for privacy)
-     */
-    public function clearHistory(Project $project): JsonResponse
+    /** GET /projects/{project}/assistant/test */
+    public function test(Request $request, Project $project): JsonResponse
     {
-        Gate::authorize('view', $project);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Conversation history cleared successfully.',
-        ]);
+        $this->authorizeView($project);
+        return response()->json(['ok' => true, 'project' => $project->only(['id','name'])]);
     }
 
-    /**
-     * Test the assistant functionality
-     */
-    public function test(Project $project): JsonResponse
+    /*
+    |--------------------------------------------------------------------------
+    | Permissions
+    |--------------------------------------------------------------------------
+    */
+
+    private function authorizeView(Project $project): void
     {
-        Gate::authorize('view', $project);
+        $user = Auth::user();
+        abort_unless($user, 401);
 
-        $result = $this->assistantService->testAssistant($project);
+        if ($user->id === (int)$project->user_id) return;
 
-        return response()->json($result);
+        if (method_exists($project, 'members')) {
+            $isMember = $project->members()->where('users.id', $user->id)->exists();
+            abort_unless($isMember, 403);
+            return;
+        }
+
+        abort_unless(false, 403);
+    }
+
+    private function canModify(Project $project): bool
+    {
+        $user = Auth::user();
+        if (!$user) return false;
+        if ($user->id === (int)$project->user_id) return true;
+
+        if (method_exists($project, 'members')) {
+            return $project->members()->where('users.id', $user->id)->exists();
+        }
+
+        return false;
     }
 }

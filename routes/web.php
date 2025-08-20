@@ -280,6 +280,7 @@ Route::middleware('auth')->group(function () {
         /* PROJECT ASSISTANT */
         Route::post('/assistant/chat',        [ProjectAssistantController::class, 'chat'])->name('projects.assistant.chat');
         Route::get('/assistant/suggestions',  [ProjectAssistantController::class, 'suggestions'])->name('projects.assistant.suggestions');
+        Route::post('/assistant/execute',     [ProjectAssistantController::class, 'execute'])->name('projects.assistant.execute'); // <-- FIXED: correct controller method
         Route::get('/assistant/test',         [ProjectAssistantController::class, 'test'])->name('projects.assistant.test');
     });
 });

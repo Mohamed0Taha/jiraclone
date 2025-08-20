@@ -58,10 +58,10 @@ export default function VerifyEmail({ status }) {
                 }}
                 aria-label="brand-avatar"
               >
-                {(import.meta.env.VITE_APP_NAME || 'Dominus').slice(0, 1)}
+                {(import.meta.env.VITE_APP_NAME || 'TaskPilot').slice(0, 1)}
               </Avatar>
               <Typography variant="h6" fontWeight={600} color="primary.main">
-                {import.meta.env.VITE_APP_NAME || 'Dominus'}
+                {import.meta.env.VITE_APP_NAME || 'TaskPilot'}
               </Typography>
             </Box>
 

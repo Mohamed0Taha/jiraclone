@@ -1,293 +1,956 @@
-// resources/js/Pages/Tasks/AssistantChat.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { alpha, Box, Portal, useTheme } from "@mui/material";
-import { keyframes } from "@emotion/react";
-import OriginalAssistantChat from "@/Components/AssistantChat";
+import React, { useEffect, useRef, useState } from "react";
+import { router } from "@inertiajs/react";
+import {
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+  keyframes,
+  alpha,
+} from "@mui/material";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
+import SendRoundedIcon from "@mui/icons-material/SendRounded";
+import SmartToyRoundedIcon from "@mui/icons-material/SmartToyRounded";
+import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
+import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
+import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
+import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 
-/* ---------------- Keyframes (No changes needed here) ---------------- */
-const kfBounceDot = keyframes`0% { transform: translateY(0); opacity: 0.25; } 50% { transform: translateY(-6px); opacity: 1; } 100% { transform: translateY(0); opacity: 0.25; }`;
-const kfShimmer = keyframes`0% { transform: translateX(-120%); } 100% { transform: translateX(220%); }`;
-const kfFloatUp = keyframes`0% { transform: translateY(8px); opacity: 0; } 25% { opacity: 0.6; } 100% { transform: translateY(-20px); opacity: 0; }`;
-const kfRing = keyframes`0% { transform: scale(0.6); opacity: 0.95; } 100% { transform: scale(1.25); opacity: 0; }`;
-const kfRay = keyframes`0% { transform: scale(0.4); opacity: 0.95; } 100% { transform: scale(1.6); opacity: 0; }`;
+// Animation keyframes
+const pulse = keyframes`
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 1; }
+`;
 
+const float = keyframes`
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
+`;
 
-/**
- * Drop-in wrapper that keeps your ORIGINAL chat UI untouched.
- * It overlays a colorful, cute robot-typing bubble INSIDE the chat box while the assistant is responding,
- * and plays a bubbly "pop" sound with a confetti burst when the response completes.
- *
- * HOW IT WORKS:
- * - This component is now controlled by a simple boolean prop: `isTyping`.
- * - The parent component is responsible for setting `isTyping={true}` when a request starts
- * and `isTyping={false}` when it completes.
- * - This removes all complex, brittle, and unnecessary API patching and DOM scanning.
- */
-export default function AssistantChat({ open, isTyping, robotGifUrl, ...rest }) {
-  const [showPopBurst, setShowPopBurst] = useState(false);
-  const [popBurstKey, setPopBurstKey] = useState(0);
-  const { play: playBubbleSound } = useBubbleAudio();
-  const prevIsTypingRef = useRef(false);
+// Theme colors (from your theme.js)
+const colors = {
+  primary: '#6366F1',
+  secondary: '#22D3EE',
+  success: '#34D399',
+  warning: '#F59E0B',
+  error: '#F87171',
+  info: '#60A5FA',
+  textPrimary: '#1E293B',
+  textSecondary: '#64748B',
+  background: '#FAFBFC',
+  paper: '#FFFFFF',
+};
 
-  const [chatContentEl, setChatContentEl] = useState(null);
+// Chat-specific palette using theme colors
+const palette = {
+  appBg: "linear-gradient(135deg, #1e3a8a, #4f46e5, #7c3aed)",
+  appGlass: alpha(colors.paper, 0.2),
+  titleBg: `linear-gradient(90deg, ${alpha(colors.primary, 0.55)}, ${alpha(colors.secondary, 0.45)})`,
+  ribbonBg: alpha('#233096', 0.65),
+  ribbonBorder: alpha(colors.paper, 0.35),
+  scrollbar: alpha(colors.primary, 0.55),
+  userBubble: `linear-gradient(135deg, ${alpha('#ec4899', 0.9)}, ${alpha('#8b5cf6', 0.85)})`,
+  userBubbleBorder: alpha('#a78bfa', 0.75),
+  asstBubble: `linear-gradient(135deg, ${alpha(colors.info, 0.9)}, ${alpha(colors.secondary, 0.85)})`,
+  asstBubbleBorder: alpha(colors.secondary, 0.75),
+  stripeUser: "linear-gradient(90deg, #f472b6, #a78bfa)",
+  stripeAsst: `linear-gradient(90deg, ${colors.info}, ${colors.secondary})`,
+  chipGold: colors.warning,
+  chipGoldBg: alpha(colors.warning, 0.18),
+  chipGoldHover: alpha(colors.warning, 0.28),
+  sendGradient: `linear-gradient(135deg, ${colors.secondary}, ${colors.primary})`,
+  sendGradientHover: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
+  sendFocusRing: `0 0 0 3px ${alpha(colors.secondary, 0.35)}`,
+  sendShadow: `0 6px 24px ${alpha(colors.primary, 0.35)}`,
+  sendShadowHover: `0 10px 28px ${alpha(colors.primary, 0.5)}`,
+  inputBg: alpha(colors.paper, 0.2),
+  inputBgHover: alpha(colors.paper, 0.25),
+  inputBgFocus: alpha(colors.paper, 0.27),
+  inputRing: `0 0 0 3px ${alpha('#a78bfa', 0.35)}`,
+  borderSoft: alpha(colors.paper, 0.35),
+  snapshotBg: alpha(colors.secondary, 0.12),
+  snapshotBorder: alpha(colors.secondary, 0.35),
+  dangerBorder: alpha(colors.error, 0.85),
+  dangerBg: alpha(colors.error, 0.15),
+  successBg: alpha(colors.success, 0.2),
+  successText: colors.success,
+  cancelBg: alpha(colors.error, 0.18),
+  cancelText: colors.error,
+};
 
-  // When the dialog opens, find the scrollable content area once.
-  // This is a much simpler way to find the container for the pop effect.
-  useEffect(() => {
-    if (open) {
-      // Use a timeout to ensure the dialog has rendered
-      const timer = setTimeout(() => {
-        const content = document.querySelector('.MuiDialogContent-root');
-        if (content) setChatContentEl(content);
-      }, 150);
-      return () => clearTimeout(timer);
-    } else {
-        setChatContentEl(null); // Clean up when closed
+export default function AssistantChat({ project, open, onClose }) {
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [copiedIndex, setCopiedIndex] = useState(null);
+  const [pendingCommand, setPendingCommand] = useState(null);
+
+  const scrollRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const csrfToken = () => {
+    const el = document.querySelector('meta[name="csrf-token"]');
+    return el ? el.getAttribute("content") : "";
+  };
+
+  const apiPost = async (url, body) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CSRF-TOKEN": csrfToken(),
+      },
+      body: JSON.stringify(body || {}),
+      credentials: "same-origin",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data?.message || "Request failed");
     }
+    return data;
+  };
+
+  const apiGet = async (url) => {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data?.message || "Request failed");
+    }
+    return data;
+  };
+
+  const navigateToBoard = () => {
+    const url = `/projects/${project.id}/tasks`;
+    try {
+      router.visit(url, {
+        preserveScroll: true,
+        preserveState: false,
+        replace: true,
+      });
+    } catch {
+      window.location.assign(url);
+    }
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    apiGet(`/projects/${project.id}/assistant/suggestions`)
+      .then((d) => {
+        if (Array.isArray(d?.suggestions)) setSuggestions(d.suggestions);
+      })
+      .catch(() => {});
+  }, [open, project?.id]);
+
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 120);
+    return () => clearTimeout(t);
   }, [open]);
 
-
-  /* ---- When `isTyping` toggles off, play sound + burst ---- */
   useEffect(() => {
-    if (prevIsTypingRef.current && !isTyping) {
-      playBubbleSound();
-      setPopBurstKey((k) => k + 1);
-      setShowPopBurst(true);
-      const timer = setTimeout(() => setShowPopBurst(false), 750);
-      return () => clearTimeout(timer);
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  const isAffirmation = (text) =>
+    /^\s*(yes|yep|yeah|confirm|confirmed|ok|okay|go ahead|proceed|do it|please delete|please proceed|sure)\s*!*\s*$/i.test(
+      text || ""
+    );
+
+  const isCancellation = (text) =>
+    /^\s*(no|cancel|stop|wait|hold on|nevermind|never mind)\s*!*\s*$/i.test(
+      text || ""
+    );
+
+  const executeCommand = async (cmdData, indexToAnnotate) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const data = await apiPost(`/projects/${project.id}/assistant/execute`, { command_data: cmdData });
+
+      setMessages((prev) => {
+        const next = [...prev];
+        const m = next[indexToAnnotate];
+        if (m) {
+          m.executed = true;
+          m.executionResult = data;
+        }
+        next.push({
+          role: "assistant",
+          text: data?.message || "Command executed.",
+          response: data,
+          ts: Date.now(),
+        });
+        return next;
+      });
+
+      setPendingCommand(null);
+      navigateToBoard();
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: `Execution failed: ${e.message}`,
+          error: true,
+          response: { type: "error" },
+          ts: Date.now(),
+        },
+      ]);
+    } finally {
+      setBusy(false);
     }
-    prevIsTypingRef.current = isTyping;
-  }, [isTyping, playBubbleSound]);
+  };
+
+  const sendMessage = async (text) => {
+    if (!text || busy) return;
+
+    const userMsg = { role: "user", text, ts: Date.now() };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+
+    if (pendingCommand && !pendingCommand.executed) {
+      if (isAffirmation(text)) {
+        return executeCommand(pendingCommand.data, pendingCommand.index);
+      }
+      if (isCancellation(text)) {
+        setPendingCommand(null);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", text: "Cancelled. I won't run that command.", ts: Date.now() },
+        ]);
+        return;
+      }
+    }
+
+    setBusy(true);
+    try {
+      const payload = {
+        message: text,
+        conversation_history: messages.map((m) => ({
+          role: m.role,
+          content: m.text,
+        })),
+      };
+
+      const data = await apiPost(`/projects/${project.id}/assistant/chat`, payload);
+      const asstMsg = {
+        role: "assistant",
+        text: data?.message || "",
+        response: data,
+        ts: Date.now(),
+      };
+
+      setMessages((prev) => {
+        const next = [...prev, asstMsg];
+
+        const cmdData = data?.command_data || data?.data;
+        if (data?.requires_confirmation && cmdData) {
+          const idx = next.length - 1;
+          setPendingCommand({ data: cmdData, index: idx });
+        }
+
+        return next;
+      });
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: `Error: ${e.message}`, error: true, ts: Date.now(), response: { type: "error" } },
+      ]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cancelPending = (indexToAnnotate) => {
+    setPendingCommand(null);
+    setMessages((prev) => {
+      const next = [...prev];
+      const m = next[indexToAnnotate];
+      if (m) m.cancelled = true;
+      next.push({
+        role: "assistant",
+        text: "Cancelled. I won't run that command.",
+        ts: Date.now(),
+      });
+      return next;
+    });
+  };
+
+  const handleSuggestion = (s) => sendMessage(s);
+
+  const copyMessage = async (idx, text) => {
+    try {
+      await navigator.clipboard.writeText(text || "");
+      setCopiedIndex(idx);
+      setTimeout(() => setCopiedIndex(null), 1200);
+    } catch {}
+  };
 
   return (
-    <>
-      {/* The original chat component is rendered directly. */}
-      {/* The parent component passes all necessary props through. */}
-      <OriginalAssistantChat open={open} {...rest} />
-
-      {/* The entire animation logic is now clean and self-contained. */}
-      {open && (
-        <Box sx={{ pointerEvents: "none" }}>
-          {/* Typing bubble appears when `isTyping` is true */}
-          {isTyping && (
-             <>
-                {/* Hide default spinner in actions to make the robot the star */}
-                <style>{`.MuiDialog-root .MuiDialogActions-root .MuiCircularProgress-root{visibility:hidden!important;}`}</style>
-                <Box
-                    sx={{
-                        position: 'fixed', // Use fixed position to overlay on the dialog
-                        right: 24,
-                        bottom: 80, // Adjust position as needed
-                        zIndex: 1301, // Higher than dialog z-index
-                    }}
-                    aria-hidden
-                    >
-                    <ColorfulTypingBubble robotGifUrl={robotGifUrl} />
-                </Box>
-            </>
-          )}
-
-          {/* Pop burst effect appears when a response finishes */}
-          {chatContentEl && showPopBurst && (
-            <Portal key={popBurstKey} container={chatContentEl}>
-              <Box
-                sx={{
-                  position: "absolute",
-                  right: 26,
-                  bottom: 120, // Position relative to the chat content area
-                  zIndex: 11,
-                  width: 168,
-                  height: 168,
-                }}
-                aria-hidden
-              >
-                <PopBurst />
-              </Box>
-            </Portal>
-          )}
-        </Box>
-      )}
-    </>
-  );
-}
-
-
-/* ---------------- Presentational Components (Largely Unchanged) ---------------- */
-
-function ColorfulTypingBubble({ robotGifUrl }) {
-  const theme = useTheme();
-  const gradientFrom = theme.palette.mode === "light" ? alpha(theme.palette.primary.light, 0.9) : alpha(theme.palette.primary.dark, 0.9);
-  const gradientTo = theme.palette.mode === "light" ? alpha(theme.palette.secondary.light, 0.9) : alpha(theme.palette.secondary.dark, 0.9);
-  const glass = theme.palette.mode === "light" ? alpha("#ffffff", 0.92) : alpha("#0b0f17", 0.88);
-
-  const defaultGif = robotGifUrl || "https://media.giphy.com/media/6brH8dM3zeMyA/giphy.gif";
-
-  return (
-    <Box
-      sx={{
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        gap: 1,
-        p: 1,
-        pl: 1.1,
-        pr: 1.25,
-        borderRadius: 24,
-        background: glass,
-        border: `1px solid ${alpha(theme.palette.primary.main, 0.35)}`,
-        boxShadow: "0 12px 40px rgba(0,0,0,.25)",
-        backdropFilter: "blur(10px) saturate(1.2)",
-        overflow: "visible",
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          overflow: "hidden",
+          background: palette.appBg,
+          border: "none",
+          boxShadow: "0 30px 60px -12px rgba(31,41,255,0.45)",
+          display: "flex",
+          height: "85vh",
+        },
       }}
     >
-      {/* Rainbow shimmer outline */}
-      <Box sx={{ position: "absolute", inset: 0, borderRadius: 24, p: "1px", background: `linear-gradient(135deg, ${gradientFrom}, ${gradientTo})`, mask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)", WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
-      <Box sx={{ position: "absolute", left: "-35%", top: 0, bottom: 0, width: "38%", background: `linear-gradient(90deg, transparent, ${alpha("#fff", 0.4)}, transparent)`, filter: "blur(5px)", animation: `${kfShimmer} 3s ease-in-out infinite` }} />
+      <DialogTitle
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          pr: 6,
+          py: 1.25,
+          background: palette.titleBg,
+          borderBottom: "1px solid rgba(255,255,255,0.25)",
+          color: "white",
+        }}
+      >
+        <Avatar
+          sx={{
+            width: 32,
+            height: 32,
+            background: `linear-gradient(135deg, ${colors.secondary}, ${colors.primary})`,
+            boxShadow: "0 0 18px rgba(167,139,250,0.65)",
+            animation: `${pulse} 2.2s infinite`,
+          }}
+        >
+          <SmartToyRoundedIcon fontSize="small" />
+        </Avatar>
+        <Typography variant="subtitle1" component="div" sx={{ fontWeight: 800, letterSpacing: 0.15 }}>
+          Project Assistant
+        </Typography>
+        <Chip
+          size="small"
+          label={project?.name || "Project"}
+          sx={{
+            ml: 1,
+            fontWeight: 800,
+            height: 22,
+            background: palette.appGlass,
+            color: "white",
+            border: "1px solid rgba(255,255,255,0.5)",
+          }}
+        />
+        <IconButton onClick={onClose} sx={{ ml: "auto" }} aria-label="Close assistant chat">
+          <CloseRoundedIcon fontSize="small" sx={{ color: "white" }} />
+        </IconButton>
+      </DialogTitle>
 
-      {/* Robot GIF */}
-      <Box component="img" src={defaultGif} alt="Assistant is typing" sx={{ width: 72, height: 72, objectFit: "cover", borderRadius: "50%", boxShadow: `0 8px 24px ${alpha(theme.palette.secondary.main, 0.5)}`, border: `2px solid ${alpha(theme.palette.secondary.main, 0.45)}` }} />
-
-      {/* Animated dots */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.7, mr: 0.25 }}>
-        <TypingDot delay="0s" />
-        <TypingDot delay=".16s" />
-        <TypingDot delay=".32s" />
-      </Box>
-
-      {/* Decorative elements */}
-      <FloatingBubbles count={12} />
-      <Sparkles count={10} />
-    </Box>
-  );
-}
-
-function TypingDot({ delay = "0s" }) {
-  const theme = useTheme();
-  return (
-    <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.95)}, ${alpha(theme.palette.secondary.main, 0.95)})`, animation: `${kfBounceDot} 1.06s ease-in-out infinite`, animationDelay: delay, boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.18)}` }} />
-  );
-}
-
-function FloatingBubbles({ count = 10 }) {
-  const theme = useTheme();
-  const bubbles = useMemo(() => Array.from({ length: count }, () => ({
-    delay: (Math.random() * 1.8).toFixed(2) + "s",
-    duration: (2.8 + Math.random() * 2.0).toFixed(2) + "s",
-    left: (Math.random() * 100).toFixed(2) + "%",
-    size: 4 + Math.round(Math.random() * 7),
-    blur: Math.random() > 0.6 ? 1 : 0,
-  })), [count]);
-
-  return (
-    <Box sx={{ position: "absolute", inset: 0, overflow: "visible" }}>
-      {bubbles.map((b, i) => (
-        <Box key={i} sx={{ position: "absolute", bottom: -6, left: b.left, width: b.size, height: b.size, borderRadius: "50%", background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.45)}, ${alpha(theme.palette.secondary.main, 0.45)})`, boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.15)}`, filter: b.blur ? "blur(0.6px)" : "none", animation: `${kfFloatUp} ${b.duration} ease-in infinite`, animationDelay: b.delay }} />
-      ))}
-    </Box>
-  );
-}
-
-function Sparkles({ count = 8 }) {
-    const theme = useTheme();
-    const points = useMemo(() => Array.from({ length: count }, () => ({
-        left: `${(Math.random() * 100).toFixed(2)}%`,
-        top: `${(Math.random() * 100).toFixed(2)}%`,
-        size: 2 + Math.round(Math.random() * 3),
-        delay: `${(Math.random() * 1.8).toFixed(2)}s`,
-        duration: `${(0.9 + Math.random() * 1.2).toFixed(2)}s`,
-    })), [count]);
-
-    return (
-        <Box sx={{ position: "absolute", inset: 0 }}>
-            {points.map((p, i) => (
-                <Box key={i} sx={{ position: "absolute", left: p.left, top: p.top, width: p.size, height: p.size, borderRadius: "50%", background: `radial-gradient(circle, ${alpha("#fff", 0.95)} 0%, ${alpha(theme.palette.secondary.main, 0.7)} 60%, transparent 70%)`, animation: `${kfFloatUp} ${p.duration} ease-in-out infinite`, animationDelay: p.delay }} />
-            ))}
+      <DialogContent
+        dividers
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 1,
+          px: 0,
+          py: 0,
+          background: "linear-gradient(to bottom, rgba(30,58,138,0.85), rgba(67,56,202,0.85))",
+          overflow: "hidden",
+        }}
+      >
+        {/* Suggestions ribbon */}
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+            position: "sticky",
+            top: 0,
+            zIndex: 2,
+            background: palette.ribbonBg,
+            backdropFilter: "blur(10px)",
+            borderBottom: `1px solid ${palette.ribbonBorder}`,
+          }}
+        >
+          {suggestions.length > 0 ? (
+            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", rowGap: 0.75 }}>
+              <Typography variant="caption" component="span" sx={{ fontWeight: 800, pr: 0.5, alignSelf: "center", color: palette.chipGold }}>
+                Quick actions:
+              </Typography>
+              {suggestions.map((s, i) => (
+                <Chip
+                  key={i}
+                  onClick={() => handleSuggestion(s)}
+                  label={s}
+                  clickable
+                  size="small"
+                  sx={{
+                    border: `1px solid ${palette.chipGold}`,
+                    background: palette.chipGoldBg,
+                    color: palette.chipGold,
+                    "&:hover": {
+                      background: palette.chipGoldHover,
+                      transform: "translateY(-1px)",
+                      boxShadow: "0 3px 10px rgba(255,215,0,0.3)",
+                    },
+                    transition: "all 0.2s ease",
+                    fontWeight: 700,
+                  }}
+                />
+              ))}
+            </Stack>
+          ) : (
+            <Typography variant="caption" component="span" sx={{ opacity: 0.9, color: "#e0fbfc", fontWeight: 600 }}>
+              Ask for summaries, bulk ops, assignments, or reporting. I'll always request confirmation before executing changes.
+            </Typography>
+          )}
         </Box>
-    );
-}
 
-function PopBurst() {
-  const theme = useTheme();
-  return (
-    <Box component="svg" viewBox="0 0 200 200" width="100%" height="100%">
-      <defs>
-        <radialGradient id="burstGrad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={alpha(theme.palette.secondary.main, 0.9)} />
-          <stop offset="50%" stopColor={alpha(theme.palette.primary.main, 0.75)} />
-          <stop offset="100%" stopColor={alpha(theme.palette.primary.main, 0.0)} />
-        </radialGradient>
-      </defs>
-      <Box component="circle" cx="100" cy="100" r="36" sx={{ fill: "url(#burstGrad)", transformOrigin: "100px 100px", animation: `${kfRing} 0.65s ease-out forwards` }} />
-      {Array.from({ length: 12 }).map((_, i) => {
-        const angle = i * 30;
-        return (
-          <Box key={i} component="line" x1="100" y1="100" x2="100" y2="100" sx={{ stroke: i % 2 === 0 ? theme.palette.secondary.main : theme.palette.primary.main, strokeWidth: 4, strokeLinecap: "round", transformOrigin: "100px 100px", animation: `${kfRay} 0.65s ease-out forwards`, transform: `rotate(${angle}deg) translate(18px) scaleX(0.22)`, transformBox: 'fill-box' }} />
-        );
-      })}
-    </Box>
+        {/* Scrollable message area */}
+        <Box
+          ref={scrollRef}
+          sx={{
+            px: 2,
+            py: 1.25,
+            overflowY: "auto",
+            flex: 1,
+            "&::-webkit-scrollbar": { width: 10 },
+            "&::-webkit-scrollbar-thumb": {
+              background: palette.scrollbar,
+              borderRadius: 10,
+            },
+          }}
+        >
+          {messages.length === 0 && (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100%",
+                textAlign: "center",
+                py: 4,
+              }}
+            >
+              <Box
+                sx={{
+                  animation: `${float} 3s ease-in-out infinite`,
+                  mb: 3,
+                }}
+              >
+                <Box
+                  component="img"
+                  src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXZ6OXcxajF5aGIxZHB3dm5xdm95aWUzanJtaWljb2Y2M3VvcGY4aCZlcD12MV9pbnRlcm5alf9naWZfYnlfaWQmY3Q9Zw/LHZyixOnHwDDy/giphy.gif"
+                  alt="Thinking..."
+                  sx={{
+                    height: 180,
+                    width: 180,
+                    borderRadius: "50%",
+                    border: "3px solid rgba(167,139,250,0.45)",
+                    boxShadow: "0 0 36px rgba(99,102,241,0.55)",
+                  }}
+                />
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 900, color: "#e0e7ff", mb: 1 }}>
+                Project Assistant
+              </Typography>
+              <Typography variant="body1" sx={{ color: "rgba(255,255,255,0.95)", maxWidth: 520, mb: 2 }}>
+                I'm here to help you manage your project tasks. Try asking me:
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="center">
+                <Chip
+                  label="Delete all overdue tasks"
+                  sx={{
+                    background: alpha(colors.error, 0.22),
+                    color: colors.error,
+                    fontWeight: 700,
+                    mb: 1,
+                    border: `1px solid ${alpha(colors.error, 0.45)}`,
+                  }}
+                />
+                <Chip
+                  label="Move Review → Done"
+                  sx={{
+                    background: alpha('#a78bfa', 0.22),
+                    color: '#a78bfa',
+                    fontWeight: 700,
+                    mb: 1,
+                    border: `1px solid ${alpha('#a78bfa', 0.45)}`,
+                  }}
+                />
+                <Chip
+                  label="Assign tasks to Alex"
+                  sx={{
+                    background: alpha(colors.secondary, 0.22),
+                    color: colors.secondary,
+                    fontWeight: 700,
+                    mb: 1,
+                    border: `1px solid ${alpha(colors.secondary, 0.45)}`,
+                  }}
+                />
+                <Chip
+                  label="How many tasks are done?"
+                  sx={{
+                    background: palette.chipGoldBg,
+                    color: palette.chipGold,
+                    fontWeight: 700,
+                    mb: 1,
+                    border: `1px solid ${palette.chipGold}`,
+                  }}
+                />
+              </Stack>
+            </Box>
+          )}
+
+          {messages.map((m, idx) => {
+            const cmdData = m?.response?.command_data || m?.response?.data;
+            const needsConfirm = !!(m?.response?.requires_confirmation && cmdData);
+
+            const typeStr = ((cmdData && typeof cmdData.type !== "undefined") ? String(cmdData.type) : "").toLowerCase();
+            const isDeleteCommand = typeStr.includes("delete") || typeStr.includes("destroy") || typeStr.includes("remove");
+
+            const showSnapshot = !!(m?.response?.ui?.show_snapshot);
+            const isUser = m?.role === "user";
+
+            return (
+              <Stack
+                key={idx}
+                direction="row"
+                spacing={1.5}
+                sx={{
+                  my: 1.5,
+                  alignItems: "flex-start",
+                  justifyContent: isUser ? "flex-end" : "flex-start",
+                }}
+              >
+                {!isUser && (
+                  <Avatar
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      mt: 0.5,
+                      background: `linear-gradient(135deg, ${colors.info}, ${colors.secondary})`,
+                      boxShadow: `0 0 16px ${alpha(colors.secondary, 0.6)}`,
+                    }}
+                  >
+                    <SmartToyRoundedIcon fontSize="small" />
+                  </Avatar>
+                )}
+
+                <Box
+                  sx={{
+                    maxWidth: "82%",
+                    p: 1.8,
+                    borderRadius: 3,
+                    background: isUser ? palette.userBubble : palette.asstBubble,
+                    border: isUser ? `1px solid ${palette.userBubbleBorder}` : `1px solid ${palette.asstBubbleBorder}`,
+                    boxShadow: "0 6px 18px rgba(0,0,0,0.25)",
+                    ...(isUser
+                      ? {
+                          borderTopRightRadius: 10,
+                          borderBottomLeftRadius: 18,
+                        }
+                      : {
+                          borderTopLeftRadius: 10,
+                          borderBottomRightRadius: 18,
+                        }),
+                    position: "relative",
+                    overflow: "hidden",
+                    "&::before": {
+                      content: '""',
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 3,
+                      background: isUser ? palette.stripeUser : palette.stripeAsst,
+                    },
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.8 }}>
+                    <Typography variant="caption" component="span" sx={{ fontWeight: 900, color: isUser ? "#fff7ed" : "#ecfeff" }}>
+                      {isUser ? "You" : "Assistant"}
+                    </Typography>
+                    <Typography variant="caption" component="span" sx={{ color: "rgba(255,255,255,0.9)" }}>
+                      {new Date(m?.ts || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </Typography>
+                    {!isUser && (
+                      <Tooltip title="Copy message">
+                        <IconButton
+                          size="small"
+                          onClick={() => copyMessage(idx, m?.text)}
+                          sx={{ ml: "auto" }}
+                          aria-label="Copy assistant message"
+                        >
+                          {copiedIndex === idx ? (
+                            <CheckRoundedIcon fontSize="small" sx={{ color: "#ecfeff" }} />
+                          ) : (
+                            <ContentCopyRoundedIcon fontSize="small" sx={{ color: "rgba(255,255,255,0.95)" }} />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Stack>
+
+                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.7, color: "white", fontWeight: 500 }}>
+                    {m?.text}
+                  </Typography>
+
+                  {needsConfirm && (
+                    <Box
+                      sx={{
+                        mt: 1.8,
+                        p: 1.8,
+                        borderRadius: 2.5,
+                        border: `1px dashed ${isDeleteCommand ? palette.dangerBorder : alpha(colors.warning, 0.85)}`,
+                        background: isDeleteCommand ? palette.dangerBg : alpha(colors.warning, 0.15),
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        component="div"
+                        sx={{
+                          fontWeight: 900,
+                          display: "block",
+                          mb: 0.8,
+                          color: isDeleteCommand ? "#ff4d6d" : palette.chipGold,
+                        }}
+                      >
+                        {isDeleteCommand ? "⚠️ Delete Preview" : "🚀 Command Preview"}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1.5, lineHeight: 1.6, color: "rgba(255,255,255,0.98)" }}>
+                        {m?.response?.message}
+                      </Typography>
+
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color={isDeleteCommand ? "error" : "primary"}
+                          startIcon={<PlayArrowRoundedIcon />}
+                          onClick={() => executeCommand(cmdData, idx)}
+                          disabled={busy || m?.executed || m?.cancelled}
+                          sx={{
+                            textTransform: "none",
+                            fontWeight: 800,
+                            borderRadius: 20,
+                            px: 2,
+                            boxShadow: "0 8px 22px rgba(0,0,0,0.3)",
+                            background: isDeleteCommand ? "linear-gradient(135deg, #ff6b6b, #ff8e53)" : "linear-gradient(135deg, #34d399, #10b981)",
+                            "&:hover": {
+                              transform: "translateY(-1px) scale(1.03)",
+                              boxShadow: "0 10px 26px rgba(0,0,0,0.38)",
+                            },
+                            transition: "all 0.25s ease",
+                          }}
+                          aria-label="Confirm and execute command"
+                        >
+                          {m?.executed ? "Executed" : "Confirm"}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => cancelPending(idx)}
+                          disabled={busy || m?.executed || m?.cancelled}
+                          sx={{
+                            textTransform: "none",
+                            borderRadius: 20,
+                            px: 2,
+                            borderWidth: 1.8,
+                            color: "white",
+                            borderColor: "rgba(255,255,255,0.6)",
+                            "&:hover": {
+                              background: "rgba(255,255,255,0.15)",
+                              borderColor: "rgba(255,255,255,0.9)",
+                            },
+                          }}
+                          aria-label="Cancel command"
+                        >
+                          Cancel
+                        </Button>
+                        {m?.executed && (
+                          <Chip
+                            size="small"
+                            label="✅ Done"
+                            sx={{
+                              ml: 0.5,
+                              fontWeight: 800,
+                              background: palette.successBg,
+                              color: palette.successText,
+                              border: `1px solid ${alpha(colors.success, 0.5)}`,
+                            }}
+                          />
+                        )}
+                        {m?.cancelled && (
+                          <Chip
+                            size="small"
+                            label="❌ Cancelled"
+                            sx={{
+                              ml: 0.5,
+                              fontWeight: 800,
+                              background: palette.cancelBg,
+                              color: palette.cancelText,
+                              border: `1px solid ${alpha(colors.error, 0.45)}`,
+                            }}
+                          />
+                        )}
+                      </Stack>
+                    </Box>
+                  )}
+
+                  {m?.response?.type === "information" && showSnapshot && m?.response?.data && (
+                    <Box
+                      sx={{
+                        mt: 1.8,
+                        p: 1.8,
+                        borderRadius: 2.5,
+                        background: palette.snapshotBg,
+                        border: `1px solid ${palette.snapshotBorder}`,
+                      }}
+                    >
+                      <Typography variant="caption" component="div" sx={{ fontWeight: 900, display: "block", mb: 1, color: "#67e8f9" }}>
+                        📊 Project Snapshot
+                      </Typography>
+                      <Stack direction="row" spacing={1.5} flexWrap="wrap" rowGap={1}>
+                        <Chip
+                          size="small"
+                          label={`Total: ${m?.response?.data?.tasks?.total ?? 0}`}
+                          sx={{
+                            fontWeight: 800,
+                            background: alpha('#a78bfa', 0.22),
+                            color: '#a78bfa',
+                            border: `1px solid ${alpha('#a78bfa', 0.45)}`,
+                          }}
+                        />
+                        {m?.response?.data?.tasks?.by_status &&
+                          Object.entries(m.response.data.tasks.by_status).map(([k, v]) => (
+                            <Chip
+                              key={k}
+                              size="small"
+                              label={`${k}: ${v}`}
+                              sx={{
+                                fontWeight: 800,
+                                background: alpha(colors.secondary, 0.22),
+                                color: colors.secondary,
+                                border: `1px solid ${alpha(colors.secondary, 0.45)}`,
+                              }}
+                            />
+                          ))}
+                        {typeof m?.response?.data?.tasks?.overdue === "number" && (
+                          <Chip
+                            size="small"
+                            label={`⚠️ Overdue: ${m.response.data.tasks.overdue}`}
+                            sx={{
+                              fontWeight: 800,
+                              background: alpha(colors.error, 0.22),
+                              color: colors.error,
+                              border: `1px solid ${alpha(colors.error, 0.45)}`,
+                            }}
+                          />
+                        )}
+                      </Stack>
+                    </Box>
+                  )}
+
+                  {m?.error && (
+                    <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mt: 1.5 }}>
+                      <ErrorOutlineRoundedIcon fontSize="small" sx={{ color: "#ff4d6d" }} />
+                      <Typography variant="caption" component="span" sx={{ color: "#ff4d6d", fontWeight: 600 }}>
+                        Something went wrong. Please adjust and try again.
+                      </Typography>
+                    </Stack>
+                  )}
+                </Box>
+
+                {isUser && (
+                  <Avatar
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      mt: 0.5,
+                      background: "linear-gradient(135deg, #f472b6, #a78bfa)",
+                      boxShadow: "0 0 16px rgba(244,114,182,0.55)",
+                    }}
+                  >
+                    <PersonOutlineRoundedIcon fontSize="small" />
+                  </Avatar>
+                )}
+              </Stack>
+            );
+          })}
+
+          {/* Loading indicator */}
+          {busy && messages.length > 0 && messages[messages.length - 1].role === "user" && (
+            <Stack direction="row" spacing={1.5} sx={{ my: 1.5, alignItems: "flex-start" }}>
+              <Avatar
+                sx={{
+                  width: 36,
+                  height: 36,
+                  mt: 0.5,
+                  background: `linear-gradient(135deg, ${colors.info}, ${colors.secondary})`,
+                  boxShadow: `0 0 16px ${alpha(colors.secondary, 0.6)}`,
+                }}
+              >
+                <SmartToyRoundedIcon fontSize="small" />
+              </Avatar>
+              <Box
+                sx={{
+                  p: 1.8,
+                  borderRadius: 3,
+                  background: palette.asstBubble,
+                  border: `1px solid ${palette.asstBubbleBorder}`,
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.25)",
+                  borderTopLeftRadius: 10,
+                  borderBottomRightRadius: 18,
+                  maxWidth: 320,
+                  position: "relative",
+                  overflow: "hidden",
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 3,
+                    background: palette.stripeAsst,
+                  },
+                }}
+              >
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                  <Typography variant="caption" component="span" sx={{ fontWeight: 900, color: "#ecfeff" }}>
+                    Assistant
+                  </Typography>
+                  <Typography variant="caption" component="span" sx={{ color: "rgba(255,255,255,0.95)" }}>
+                    {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </Typography>
+                </Stack>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <Box
+                    component="img"
+                    src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXZ6OXcxajF5aGIxZHB3dm5xdm95aWUzanJtaWljb2Y2M3VvcGY4aCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LHZyixOnHwDDy/giphy.gif"
+                    alt="Thinking..."
+                    sx={{
+                      height: 60,
+                      width: 60,
+                      borderRadius: 1.5,
+                      mr: 1.5,
+                      border: "1px solid rgba(255,255,255,0.4)",
+                    }}
+                  />
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: "#ecfeff" }}>
+                    Thinking...
+                  </Typography>
+                </Box>
+              </Box>
+            </Stack>
+          )}
+        </Box>
+      </DialogContent>
+
+      <DialogActions
+        sx={{
+          px: 2,
+          py: 1.5,
+          borderTop: `1px solid ${palette.ribbonBorder}`,
+          background: palette.ribbonBg,
+          backdropFilter: "blur(10px)",
+          position: "sticky",
+          bottom: 0,
+          zIndex: 2,
+        }}
+      >
+        <TextField
+          inputRef={inputRef}
+          fullWidth
+          size="small"
+          placeholder="Type your message..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage(input.trim());
+            }
+          }}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              borderRadius: 24,
+              backgroundColor: palette.inputBg,
+              "&:hover": { backgroundColor: palette.inputBgHover },
+              "&.Mui-focused": {
+                backgroundColor: palette.inputBgFocus,
+                boxShadow: palette.inputRing,
+              },
+            },
+            "& .MuiOutlinedInput-input": {
+              py: 1.25,
+              px: 2,
+              color: "white",
+              fontWeight: 500,
+              "&::placeholder": {
+                color: "rgba(255,255,255,0.85)",
+              },
+            },
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderColor: palette.borderSoft,
+              borderWidth: 1.8,
+            },
+          }}
+        />
+        <Button
+          onClick={() => sendMessage(input.trim())}
+          disabled={!input.trim() || busy}
+          variant="contained"
+          sx={{
+            textTransform: "none",
+            fontWeight: 900,
+            borderRadius: 24,
+            px: 2.8,
+            minWidth: 112,
+            height: 42,
+            background: palette.sendGradient,
+            color: "#ffffff",
+            boxShadow: palette.sendShadow,
+            "&:hover": {
+              boxShadow: palette.sendShadowHover,
+              transform: "translateY(-1px) scale(1.03)",
+              background: palette.sendGradientHover,
+            },
+            "&.Mui-focusVisible": {
+              boxShadow: `${palette.sendShadow}, ${palette.sendFocusRing}`,
+            },
+            "&.Mui-disabled": {
+              background: `linear-gradient(135deg, ${alpha(colors.secondary, 0.45)}, ${alpha(colors.primary, 0.45)})`,
+              color: "rgba(255,255,255,0.85)",
+            },
+            transition: "all 0.25s ease",
+          }}
+          startIcon={!busy ? <SendRoundedIcon /> : null}
+          aria-label="Send message"
+        >
+          {busy ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "Send"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
-}
-
-
-/* ---------------- WebAudio bubble sound (Unchanged) ---------------- */
-function useBubbleAudio() {
-  const audioCtxRef = useRef(null);
-  const isUnlockedRef = useRef(false);
-
-  const ensure = React.useCallback(() => {
-    if (audioCtxRef.current) return audioCtxRef.current;
-    const Ctx = typeof window !== "undefined" ? (window.AudioContext || window.webkitAudioContext) : null;
-    if (!Ctx) return null;
-    const ctx = new Ctx();
-    audioCtxRef.current = ctx;
-    return ctx;
-  }, []);
-
-  const unlockAudio = React.useCallback(() => {
-      const ctx = ensure();
-      if (ctx && ctx.state !== 'running' && !isUnlockedRef.current) {
-          ctx.resume().then(() => { isUnlockedRef.current = true; });
-      }
-  }, [ensure]);
-
-  // Add a one-time event listener to unlock audio on the first user interaction
-  useEffect(() => {
-      window.addEventListener('click', unlockAudio, { once: true });
-      window.addEventListener('keydown', unlockAudio, { once: true });
-      return () => {
-          window.removeEventListener('click', unlockAudio);
-          window.removeEventListener('keydown', unlockAudio);
-      };
-  }, [unlockAudio]);
-
-  const play = React.useCallback(() => {
-    const ctx = ensure();
-    if (!ctx || ctx.state !== 'running') return;
-
-    const now = ctx.currentTime;
-    const createOsc = (type, freqStart, freqEnd, freqRampDur, gainStart, gainRampUpDur, gainRampDownDur, startTime, stopTime) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = type;
-
-        osc.frequency.setValueAtTime(freqStart, now);
-        osc.frequency.exponentialRampToValueAtTime(freqEnd, now + freqRampDur);
-
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(gainStart, now + gainRampUpDur);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + gainRampDownDur);
-
-        osc.connect(gain).connect(ctx.destination);
-        osc.start(now + startTime);
-        osc.stop(now + stopTime);
-    };
-
-    // Main "bubble pop" rising tone
-    createOsc("sine", 180, 520, 0.08, 0.45, 0.02, 0.18, 0, 0.22);
-    // Little sparkle overtone
-    createOsc("triangle", 320, 880, 0.06, 0.25, 0.015, 0.12, 0.02, 0.16);
-
-  }, [ensure]);
-
-  return { play };
 }

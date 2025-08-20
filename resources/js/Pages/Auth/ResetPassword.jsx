@@ -81,7 +81,7 @@ export default function ResetPassword({ token, email }) {
                             color="textSecondary"
                             sx={{ mb: 1 }}
                         >
-                            Create a new password for your Dominus account
+                            Create a new password for your TaskPilot account
                         </Typography>
                     </Box>
 

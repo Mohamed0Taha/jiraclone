@@ -29,10 +29,10 @@ export default function GuestLayout({ children }) {
                                     boxShadow: '0 4px 14px rgba(99, 102, 241, 0.25)'
                                 }}
                             >
-                                {(import.meta.env.VITE_APP_NAME || 'Dominus').slice(0, 1)}
+                                {(import.meta.env.VITE_APP_NAME || 'TaskPilot').slice(0, 1)}
                             </Avatar>
                             <Typography variant="h5" fontWeight={700} color="primary.main">
-                                {import.meta.env.VITE_APP_NAME || 'Dominus'}
+                                {import.meta.env.VITE_APP_NAME || 'TaskPilot'}
                             </Typography>
                         </Box>
                     </Link>

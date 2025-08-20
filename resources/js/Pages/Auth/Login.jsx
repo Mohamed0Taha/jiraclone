@@ -82,7 +82,7 @@ export default function Login({ status, canResetPassword }) {
                             color="textSecondary"
                             sx={{ mb: 1 }}
                         >
-                            Sign in to your Dominus account
+                            Sign in to your TaskPilot account
                         </Typography>
                     </Box>
 

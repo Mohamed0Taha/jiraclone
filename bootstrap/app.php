@@ -19,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
             //  🚫 do NOT include HEADER_X_FORWARDED_HOST
         );
 
+        // Add CORS middleware for API and assets
+        $middleware->api(prepend: [
+            \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
+
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,

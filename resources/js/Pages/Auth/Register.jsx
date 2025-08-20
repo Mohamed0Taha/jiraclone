@@ -107,7 +107,7 @@ export default function Register({ message = null, prefill_email = null }) {
                             color="textSecondary"
                             sx={{ mb: 1 }}
                         >
-                            {message ? 'Complete your registration to join the project' : 'Join Dominus and start managing your projects'}
+                            {message ? 'Complete your registration to join the project' : 'Join TaskPilot and start managing your projects'}
                         </Typography>
                     </Box>
 

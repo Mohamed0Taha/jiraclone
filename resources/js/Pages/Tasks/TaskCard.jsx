@@ -27,6 +27,7 @@ import PriorityHighIcon from "@mui/icons-material/PriorityHigh";
  * - Overdue highlighting (if now > due and status !== "done")
  * - Title never overlaps icons (pure flex, no absolute positioning)
  * - Title clamps to 2 lines on narrow widths
+ * - Task ID displayed above title in blue
  */
 export default function TaskCard({
   task,
@@ -152,8 +153,27 @@ export default function TaskCard({
             mb: task?.description || start || end || task?.milestone ? 0.75 : 0.25,
           }}
         >
-          {/* Title (clamped, never runs under actions) */}
+          {/* Task ID + Title */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
+            {/* Task ID - added above title in blue */}
+            {task?.id && (
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  display: 'block',
+                  fontWeight: 600,
+                  letterSpacing: 0.5,
+                  lineHeight: 1.1,
+                  mb: 0.25,
+                  color: 'primary.main' // Changed to blue using theme primary color
+                }}
+                title={`Task ID: ${task.id}`}
+              >
+                #{task.id}
+              </Typography>
+            )}
+            
+            {/* Title */}
             <Typography
               variant="subtitle2"
               fontWeight={700}

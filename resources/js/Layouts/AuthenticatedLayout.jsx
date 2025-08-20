@@ -47,13 +47,19 @@ export default function AuthenticatedLayout({ header, children }) {
               {/* Brand (static text now, not another dashboard link) */}
               <div
                 className="
-                  font-semibold tracking-tight text-lg sm:text-xl
-                  bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-purple-600
+                  font-bold tracking-wide text-lg sm:text-xl
+                  bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600
                   bg-clip-text text-transparent select-none
+                  font-['Inter','system-ui','Segoe_UI','Roboto','Helvetica_Neue','Arial','sans-serif']
+                  drop-shadow-sm
                 "
-                  aria-label="Dominus"
+                  aria-label="TaskPilot"
+                  style={{
+                    fontFamily: '"Inter", "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", sans-serif',
+                    letterSpacing: '0.02em'
+                  }}
               >
-                  Dominus
+                  TaskPilot
               </div>
 
               {/* Single Dashboard button */}
