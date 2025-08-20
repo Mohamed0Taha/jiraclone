@@ -331,12 +331,15 @@ class AutomationEngine
             // Replace placeholders
             $message = $this->replacePlaceholders($message, $automation);
 
+            Log::info("Attempting to send email for automation {$automation->id} to {$recipient} with subject: {$subject}");
+
             Mail::to($recipient)->send(new AutomationNotification($subject, $message));
 
-            Log::info("Email sent for automation {$automation->id} to {$recipient}");
+            Log::info("Email sent successfully for automation {$automation->id} to {$recipient}");
             return true;
         } catch (\Exception $e) {
             Log::error("Failed to send email for automation {$automation->id}: {$e->getMessage()}");
+            Log::error("Stack trace: " . $e->getTraceAsString());
             return false;
         }
     }
