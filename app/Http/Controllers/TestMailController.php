@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use App\Mail\ContactFormMail;
+use App\Notifications\ContactFormNotification;
 
 class TestMailController extends Controller
 {
@@ -20,15 +22,27 @@ class TestMailController extends Controller
                         ->subject('Mail Configuration Test - Raw');
             });
 
-            // Test 2: Contact form template test using Mailable class
+            // Test 2: Contact form using Notification approach (same as signup emails)
             $testUser = Auth::user() ?? (object) ['name' => 'Test User', 'email' => 'test@example.com', 'id' => 999];
             
-            $mail = new ContactFormMail($testUser, 'Test Topic', 'This is a test message to verify the contact form email template works correctly using the Mailable class approach.', now()->format('F j, Y \a\t g:i A'));
-            Mail::to('taha.elfatih@gmail.com')->send($mail);
+            Log::info('Testing ContactFormNotification class', [
+                'test_user' => $testUser,
+                'approach' => 'notification'
+            ]);
+            
+            Notification::route('mail', 'taha.elfatih@gmail.com')
+                ->notify(new ContactFormNotification(
+                    $testUser, 
+                    'Test Topic - Notification', 
+                    'This is a test message using the Notification approach (same as signup emails).', 
+                    now()->format('F j, Y \a\t g:i A')
+                ));
+
+            Log::info('ContactFormNotification test sent successfully');
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Both test emails sent successfully!',
+                'message' => 'Both test emails sent successfully! (Raw + Notification approach)',
                 'config' => [
                     'mailer' => config('mail.default'),
                     'host' => config('mail.mailers.smtp.host'),
@@ -39,7 +53,9 @@ class TestMailController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
-            Log::error('Test email failed: ' . $e->getMessage());
+            Log::error('Test email failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             
             return response()->json([
                 'status' => 'error',

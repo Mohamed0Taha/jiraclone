@@ -27,6 +27,12 @@ class ContactFormMail extends Mailable
         return $this->subject("TaskPilot Support: {$this->topicLabel}")
             ->from(config('mail.from.address'), config('mail.from.name'))
             ->replyTo($this->user->email, $this->user->name)
-            ->view('emails.contact-ticket');
+            ->view('emails.contact-ticket')
+            ->with([
+                'user' => $this->user,
+                'topicLabel' => $this->topicLabel,
+                'message' => $this->message,
+                'submittedAt' => $this->submittedAt,
+            ]);
     }
 }

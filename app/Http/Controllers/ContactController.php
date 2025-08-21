@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use App\Mail\ContactFormMail;
+use App\Notifications\ContactFormNotification;
 
 class ContactController extends Controller
 {
@@ -56,19 +58,23 @@ class ContactController extends Controller
         ]);
 
         try {
-            $mail = new ContactFormMail($user, $topicLabel, $message, now()->format('F j, Y \a\t g:i A'));
-            Mail::to('taha.elfatih@gmail.com')->send($mail);
+            // Use Notification approach (same as signup emails)
+            $adminEmail = 'taha.elfatih@gmail.com';
+            
+            Notification::route('mail', $adminEmail)
+                ->notify(new ContactFormNotification($user, $topicLabel, $message, now()->format('F j, Y \a\t g:i A')));
 
-            Log::info('Contact form email sent successfully', [
+            Log::info('Contact form email sent successfully via Notification', [
                 'user_id' => $user->id,
-                'topic' => $topicLabel
+                'topic' => $topicLabel,
+                'to' => $adminEmail
             ]);
 
             return back()->with('success', 'Your message has been sent successfully! We\'ll get back to you soon.');
 
         } catch (\Exception $e) {
             // Log the specific error for debugging
-            Log::error('Contact form email failed: ' . $e->getMessage(), [
+            Log::error('Contact form notification failed: ' . $e->getMessage(), [
                 'user_id' => $user->id,
                 'user_email' => $user->email,
                 'topic' => $topic,
