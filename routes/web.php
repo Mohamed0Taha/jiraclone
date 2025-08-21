@@ -9,6 +9,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectAssistantController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TestMailController;
 use App\Models\Project;
 use App\Models\User;
 use App\Notifications\CustomVerifyEmail;
@@ -280,6 +281,9 @@ Route::middleware('auth')->group(function () {
     /* Contact Us */
     Route::get('/contact', [ContactController::class, 'show'])->name('contact.show');
     Route::post('/contact', [ContactController::class, 'send'])->name('contact.send');
+    
+    /* Test Mail (temporary) */
+    Route::get('/test-mail', [TestMailController::class, 'testEmail'])->name('test.mail');
 
     /* Projects */
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
