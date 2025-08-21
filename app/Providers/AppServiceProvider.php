@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Auth\Notifications\VerifyEmail; // ⬅️ add
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Route;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -43,6 +44,12 @@ class AppServiceProvider extends ServiceProvider
                 URL::forceRootUrl($appUrl);
             }
         }
+
+        // Register Cashier webhook routes
+        Route::post(
+            'stripe/webhook',
+            '\Laravel\Cashier\Http\Controllers\WebhookController@handleWebhook'
+        )->name('cashier.webhook');
 
         // ✅ Force all verification links to use a RELATIVE signature
         VerifyEmail::createUrlUsing(function ($notifiable) {

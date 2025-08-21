@@ -18,7 +18,6 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
-use Laravel\Cashier\Http\Controllers\WebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,9 +28,6 @@ Route::get('/', fn () => Inertia::render('Landing'))->name('landing');
 
 /* Project Invitation Acceptance (public) */
 Route::get('/invitation/{token}', [App\Http\Controllers\ProjectMemberController::class, 'acceptInvitation'])->name('projects.invitation.accept');
-
-/* Stripe Webhook (must be BEFORE auth middleware) */
-Route::post('/stripe/webhook', [WebhookController::class, 'handleWebhook']);
 
 /*
 |--------------------------------------------------------------------------
