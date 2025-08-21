@@ -30,17 +30,23 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Behind Heroku/Cloudflare etc.
+        // URL configuration for different environments
         if (app()->environment('production')) {
+            // Behind Heroku/Cloudflare etc.
             URL::forceScheme('https');
             if ($root = config('app.url')) {
                 URL::forceRootUrl($root);
+            }
+        } else {
+            // For local development, ensure consistent URL generation
+            if ($appUrl = config('app.url')) {
+                URL::forceRootUrl($appUrl);
             }
         }
 
         // ✅ Force all verification links to use a RELATIVE signature
         VerifyEmail::createUrlUsing(function ($notifiable) {
-            return URL::temporarySignedRoute(
+            $relativeUrl = URL::temporarySignedRoute(
                 'verification.verify',
                 now()->addMinutes(config('auth.verification.expire', 60)),
                 [
@@ -49,6 +55,9 @@ class AppServiceProvider extends ServiceProvider
                 ],
                 false // ← critical: sign as RELATIVE
             );
+            
+            // Return full URL by combining with app URL
+            return rtrim(config('app.url'), '/') . $relativeUrl;
         });
 
         Vite::prefetch(concurrency: 3);

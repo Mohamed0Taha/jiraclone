@@ -3,11 +3,13 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 use Illuminate\Auth\Events\Verified;
 use App\Models\User;
+use App\Notifications\CustomVerifyEmail;
 
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\ProfileController;
@@ -37,27 +39,78 @@ Route::get('/test-ai', fn () => view('test-ai'));
 | Email Debug Helper (shows a RELATIVE-signed link)
 |--------------------------------------------------------------------------
 */
+/*
+|--------------------------------------------------------------------------
+| Email Debug Helper (shows a RELATIVE-signed link)
+|--------------------------------------------------------------------------
+*/
 Route::get('/debug-email', function () {
     $user = Auth::user();
     if (!$user) return response('Please log in first', 401);
 
+    // Generate relative URL
     $relative = URL::temporarySignedRoute(
         'verification.verify',
         now()->addMinutes(60),
         ['id' => $user->id, 'hash' => sha1($user->email)],
         false // RELATIVE signature
     );
+    
+    // Generate full URL
+    $full = rtrim(config('app.url'), '/') . $relative;
 
-    return [
-        'user_id'       => $user->id,
-        'email'         => $user->email,
-        'relative_link' => $relative,
-        'full_link'     => rtrim(config('app.url'), '/') . $relative,
-        'app_url'       => config('app.url'),
-        'current_host'  => request()->getSchemeAndHttpHost(),
-        'is_verified'   => (bool) $user->email_verified_at,
-    ];
-})->middleware('auth');
+    return response()->json([
+        'user_id' => $user->id,
+        'email_hash' => sha1($user->email),
+        'relative_url' => $relative,
+        'full_url' => $full,
+        'app_url' => config('app.url'),
+        'current_url' => request()->getSchemeAndHttpHost(),
+        'is_verified' => $user->email_verified_at !== null,
+    ]);
+})->name('debug.email');
+
+// Test verification URL generation
+Route::get('/test-verify-url', function () {
+    if (!Auth::check()) {
+        return response('Please log in first', 401);
+    }
+    
+    $user = Auth::user();
+    $user->sendEmailVerificationNotification();
+    
+    return response()->json([
+        'message' => 'Verification email sent. Check your email or mailtrap.',
+        'user_email' => $user->email,
+        'is_verified' => $user->email_verified_at !== null,
+    ]);
+})->middleware('auth')->name('test.verify.url');
+
+// Test page for email verification
+Route::get('/test-verification', function () {
+    return view('test-verification');
+})->name('test.verification.page');
+
+// Development only: Manual email verification
+Route::get('/dev-verify-user/{id}', function ($id) {
+    if (!app()->environment(['local', 'testing'])) {
+        abort(404);
+    }
+    
+    $user = User::findOrFail($id);
+    
+    if (!$user->hasVerifiedEmail()) {
+        $user->markEmailAsVerified();
+        event(new Verified($user));
+        $message = "User {$user->email} has been manually verified for development purposes.";
+    } else {
+        $message = "User {$user->email} was already verified.";
+    }
+    
+    Auth::login($user);
+    
+    return redirect('/dashboard')->with('status', $message);
+})->name('dev.verify.user');
 
 /*
 |--------------------------------------------------------------------------
@@ -97,19 +150,57 @@ Route::get('/email/verify', function () {
 
 // Verification link target (PUBLIC)
 Route::get('/verify-email/{id}/{hash}', function (Request $request, $id, $hash) {
-    // Validate the RELATIVE signed URL and ignore email-tracking params if present
+    // Parameters to ignore during signature validation
     $ignored = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content'];
     
-    // Try relative signature validation first (this handles proxy/tunnel scenarios)
-    $isValid = URL::hasValidSignature($request, false, $ignored);
+    $isValid = false;
     
-    // If relative signature validation fails, try with absolute validation as fallback
+    // Method 1: Try relative signature validation first (recommended for dev/proxy environments)
+    try {
+        $isValid = URL::hasValidSignature($request, false, $ignored);
+    } catch (\Exception $e) {
+        // Continue to next method
+    }
+    
+    // Method 2: If relative fails, try absolute validation
     if (!$isValid) {
-        $isValid = URL::hasValidSignature($request, true, $ignored);
+        try {
+            $isValid = URL::hasValidSignature($request, true, $ignored);
+        } catch (\Exception $e) {
+            // Continue to next method
+        }
+    }
+    
+    // Method 3: Manual signature validation for local development
+    if (!$isValid && app()->environment(['local', 'testing'])) {
+        try {
+            $url = $request->url();
+            $queryString = $request->getQueryString();
+            
+            if ($queryString) {
+                // Parse query parameters
+                parse_str($queryString, $params);
+                $signature = $params['signature'] ?? null;
+                
+                if ($signature) {
+                    unset($params['signature']);
+                    
+                    // Rebuild URL without signature for validation
+                    $baseUrl = $url . '?' . http_build_query($params);
+                    
+                    // Generate expected signature
+                    $expectedSignature = hash_hmac('sha256', $baseUrl, config('app.key'));
+                    
+                    $isValid = hash_equals($expectedSignature, $signature);
+                }
+            }
+        } catch (\Exception $e) {
+            // If all methods fail, we'll show the error below
+        }
     }
     
     if (!$isValid) {
-        abort(403, 'Invalid signature.');
+        abort(403, 'Invalid signature. Please request a new verification email.');
     }
 
     $user = User::findOrFail($id);
@@ -291,3 +382,76 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------
 */
 require __DIR__ . '/auth.php';
+
+/*
+|--------------------------------------------------------------------------
+| Email Testing Routes (Local Development)
+|--------------------------------------------------------------------------
+*/
+if (app()->environment('local')) {
+    Route::get('/test-email-production', function () {
+        try {
+            // Get a test user or create one
+            $user = User::first();
+            if (!$user) {
+                $user = User::factory()->make([
+                    'name' => 'Test User',
+                    'email' => 'test@example.com'
+                ]);
+            }
+
+            // Test basic email
+            Mail::raw('This is a test email from TaskPilot local development using production settings.', function ($message) use ($user) {
+                $message->to($user->email)
+                       ->subject('TaskPilot - Production Email Test')
+                       ->from(config('mail.from.address'), config('mail.from.name'));
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test email sent successfully!',
+                'mail_config' => [
+                    'mailer' => config('mail.default'),
+                    'host' => config('mail.mailers.smtp.host'),
+                    'port' => config('mail.mailers.smtp.port'),
+                    'username' => config('mail.mailers.smtp.username'),
+                    'encryption' => config('mail.mailers.smtp.encryption'),
+                    'from_address' => config('mail.from.address'),
+                    'from_name' => config('mail.from.name'),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+    });
+
+    Route::get('/test-verification-email', function () {
+        try {
+            $user = User::first();
+            if (!$user) {
+                return response()->json(['error' => 'No user found. Please register a user first.'], 404);
+            }
+
+            // Send verification email
+            $user->notify(new CustomVerifyEmail());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Verification email sent successfully!',
+                'user_email' => $user->email
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+    });
+}
