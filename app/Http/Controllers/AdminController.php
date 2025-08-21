@@ -10,17 +10,6 @@ use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware(function ($request, $next) {
-            if (!Auth::user()->is_admin) {
-                abort(403, 'Admin access required');
-            }
-            return $next($request);
-        });
-    }
-
     public function dashboard()
     {
         $stats = [
