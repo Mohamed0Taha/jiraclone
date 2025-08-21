@@ -35,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Register premium features middleware alias
         $middleware->alias([
             'subscription' => \App\Http\Middleware\CheckSubscription::class,
+            'admin.only' => \App\Http\Middleware\AdminOnly::class,
         ]);
     })
     ->withExceptions(function ($exceptions) {})
