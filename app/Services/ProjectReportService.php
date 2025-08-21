@@ -3,17 +3,15 @@
 namespace App\Services;
 
 use App\Models\Project;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
-use OpenAI\Laravel\Facades\OpenAI;
-use Illuminate\Support\Str;
+use Carbon\Carbon;
 use Dompdf\Dompdf;
 use Dompdf\Options;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Fortune 500-Grade Professional Project Report Service
- * 
+ *
  * Generates comprehensive, PhD-level analytical reports including:
  * - Executive dashboard with KPIs and trend analysis
  * - Advanced statistical modeling and forecasting
@@ -32,11 +30,11 @@ class ProjectReportService
     {
         $context = $this->buildAdvancedContext($project);
         $analytics = $this->performAdvancedAnalytics($project, $context);
-        
+
         // For now, use enhanced fallback to ensure reliability
         // TODO: Re-enable AI generation when timeout issues are resolved
         $json = $this->getEnhancedFallbackReport($project, $context, $analytics);
-        
+
         // Generate charts and visualization data
         $charts = $this->generateChartData($context, $analytics);
         $json['charts'] = $charts;
@@ -46,12 +44,12 @@ class ProjectReportService
         $path = $this->storePdf($project, $html);
 
         return [
-            'json'         => $json,
-            'html'         => $html,
-            'path'         => $path,
+            'json' => $json,
+            'html' => $html,
+            'path' => $path,
             'download_url' => Storage::url($path),
-            'analytics'    => $analytics,
-            'charts'       => $charts,
+            'analytics' => $analytics,
+            'charts' => $charts,
             'generated_at' => now()->toISOString(),
         ];
     }
@@ -63,7 +61,7 @@ class ProjectReportService
     {
         $contextData = json_decode($context, true);
         $analyticsData = json_decode($analytics, true);
-        
+
         $completionRate = $contextData['progress_metrics']['task_completion_rate'] ?? 0;
         $totalTasks = $contextData['task_analytics']['total_tasks'] ?? 0;
         $completedTasks = $contextData['task_analytics']['task_counts']['completed'] ?? 0;
@@ -83,7 +81,7 @@ class ProjectReportService
             ],
             'domain_expertise' => $domainExpertise,
             'performance_analytics' => [
-                'velocity_analysis' => "Task completion velocity shows " . ($completionRate > 70 ? "strong momentum" : "moderate progress") . " with delivery capacity aligned to project requirements. " . $domainExpertise['performance_insights'],
+                'velocity_analysis' => 'Task completion velocity shows '.($completionRate > 70 ? 'strong momentum' : 'moderate progress').' with delivery capacity aligned to project requirements. '.$domainExpertise['performance_insights'],
                 'quality_metrics' => $domainExpertise['quality_analysis'],
                 'efficiency_indicators' => $domainExpertise['efficiency_metrics'],
                 'predictive_forecast' => $domainExpertise['completion_forecast'],
@@ -97,7 +95,7 @@ class ProjectReportService
             'risk_intelligence' => [
                 'enterprise_risks' => $domainExpertise['risk_assessment'],
                 'scenario_analysis' => $domainExpertise['scenario_planning'],
-                'monte_carlo_insights' => "Simulation analysis indicates 75% probability of on-time completion, 85% probability of budget adherence, with primary risk factors in " . $domainExpertise['critical_risk_factors'],
+                'monte_carlo_insights' => 'Simulation analysis indicates 75% probability of on-time completion, 85% probability of budget adherence, with primary risk factors in '.$domainExpertise['critical_risk_factors'],
                 'regulatory_considerations' => $domainExpertise['regulatory_risks'],
             ],
             'financial_analysis' => [
@@ -122,8 +120,8 @@ class ProjectReportService
                 ],
             ],
             'competitive_intelligence' => [
-                'market_dynamics' => "Current market conditions favor strategic project execution with competitive advantages in operational efficiency and capability development.",
-                'benchmarking_analysis' => "Project performance metrics exceed industry averages by 15-20% in key performance indicators with strategic positioning advantages.",
+                'market_dynamics' => 'Current market conditions favor strategic project execution with competitive advantages in operational efficiency and capability development.',
+                'benchmarking_analysis' => 'Project performance metrics exceed industry averages by 15-20% in key performance indicators with strategic positioning advantages.',
             ],
         ];
     }
@@ -135,7 +133,7 @@ class ProjectReportService
     {
         // Detect project domain from name, description, and task patterns
         $domain = $this->detectProjectDomain($project);
-        
+
         switch ($domain) {
             case 'healthcare':
                 return $this->generateHealthcareExpertise($project, $contextData);
@@ -155,28 +153,28 @@ class ProjectReportService
      */
     protected function detectProjectDomain(Project $project): string
     {
-        $text = strtolower($project->name . ' ' . $project->description);
-        
+        $text = strtolower($project->name.' '.$project->description);
+
         // Healthcare keywords
         if (preg_match('/\b(hospital|medical|healthcare|patient|clinic|nursing|hvac|renovation|modernization|telemedicine|dialysis|safety|security|compliance)\b/', $text)) {
             return 'healthcare';
         }
-        
+
         // Construction keywords
         if (preg_match('/\b(construction|building|renovation|infrastructure|engineering|architecture|facility)\b/', $text)) {
             return 'construction';
         }
-        
+
         // Technology keywords
         if (preg_match('/\b(software|development|api|database|cloud|integration|deployment|testing)\b/', $text)) {
             return 'technology';
         }
-        
+
         // Finance keywords
         if (preg_match('/\b(financial|banking|investment|portfolio|risk|compliance|audit|trading)\b/', $text)) {
             return 'finance';
         }
-        
+
         return 'generic';
     }
 
@@ -188,32 +186,32 @@ class ProjectReportService
         $completionRate = $contextData['progress_metrics']['task_completion_rate'] ?? 0;
         $totalTasks = $contextData['task_analytics']['total_tasks'] ?? 0;
         $overdueCount = $contextData['quality_metrics']['overdue_tasks'] ?? 0;
-        
+
         return [
             'executive_overview' => "The {$project->name} represents a critical healthcare infrastructure modernization initiative with strategic implications for patient care delivery, operational efficiency, and regulatory compliance. Current project completion at {$completionRate}% demonstrates alignment with healthcare facility renovation best practices and Joint Commission accreditation standards.",
-            
-            'financial_analysis' => "Healthcare facility renovation projects typically yield 15-25% operational cost savings through energy efficiency improvements and workflow optimization. Current budget allocation aligns with industry benchmarks of \$200-400 per square foot for comprehensive hospital renovations, with anticipated ROI realization within 18-24 months through reduced operational expenses and enhanced patient throughput capacity.",
-            
-            'executive_recommendations' => $completionRate > 75 
-                ? "Proceed with Phase II implementation focusing on advanced medical technology integration and patient experience enhancement protocols. Prioritize completion of critical care areas to minimize disruption to essential services."
-                : "Implement accelerated project delivery methodology with phased occupancy planning to maintain continuous patient care operations. Engage clinical stakeholders for workflow validation and infection control protocol adherence.",
-            
-            'performance_insights' => "Healthcare project velocity demonstrates adherence to LEAN healthcare principles with emphasis on waste reduction and value stream optimization. Critical path analysis indicates alignment with patient safety requirements and clinical operational continuity.",
-            
-            'quality_analysis' => "Quality performance indicators reflect adherence to CMS quality reporting standards and Joint Commission patient safety goals. " . ($overdueCount === 0 ? "Zero defect tolerance achieved in critical care areas." : "Minor schedule variances identified in {$overdueCount} non-critical areas with immediate corrective action protocols implemented.") . " Infection control protocols maintained at 99.8% compliance rate.",
-            
-            'efficiency_metrics' => "Resource efficiency optimization through evidence-based design principles and LEAN workflow analysis. Patient flow modeling indicates 25-30% improvement in throughput capacity post-renovation, with reduced patient wait times and enhanced clinical staff productivity metrics.",
-            
-            'completion_forecast' => "Predictive modeling utilizing healthcare project historical data indicates completion timeline alignment with patient care continuity requirements. Critical system integration phases scheduled during low-census periods to minimize operational disruption.",
-            
-            'strategic_positioning' => "Project positions healthcare facility as regional leader in patient-centered design and technology integration, supporting value-based care delivery models and population health management initiatives. Competitive advantage through enhanced patient satisfaction scores and clinical outcome improvements.",
-            
-            'scalability_insights' => "Modular design framework enables future expansion capabilities for emerging medical technologies and changing healthcare delivery models. Infrastructure investments support telemedicine integration and remote patient monitoring capabilities.",
-            
-            'compliance_analysis' => "Comprehensive regulatory compliance framework addresses Joint Commission standards, CMS Conditions of Participation, ADA accessibility requirements, and state healthcare facility licensing regulations. Environmental compliance includes LEED certification pursuit for sustainable healthcare design excellence.",
-            
-            'stakeholder_analysis' => "Multi-stakeholder engagement encompasses clinical department heads, infection control specialists, patient safety officers, and community health representatives. Patient and family advisory council input integrated into design validation and operational planning processes.",
-            
+
+            'financial_analysis' => 'Healthcare facility renovation projects typically yield 15-25% operational cost savings through energy efficiency improvements and workflow optimization. Current budget allocation aligns with industry benchmarks of $200-400 per square foot for comprehensive hospital renovations, with anticipated ROI realization within 18-24 months through reduced operational expenses and enhanced patient throughput capacity.',
+
+            'executive_recommendations' => $completionRate > 75
+                ? 'Proceed with Phase II implementation focusing on advanced medical technology integration and patient experience enhancement protocols. Prioritize completion of critical care areas to minimize disruption to essential services.'
+                : 'Implement accelerated project delivery methodology with phased occupancy planning to maintain continuous patient care operations. Engage clinical stakeholders for workflow validation and infection control protocol adherence.',
+
+            'performance_insights' => 'Healthcare project velocity demonstrates adherence to LEAN healthcare principles with emphasis on waste reduction and value stream optimization. Critical path analysis indicates alignment with patient safety requirements and clinical operational continuity.',
+
+            'quality_analysis' => 'Quality performance indicators reflect adherence to CMS quality reporting standards and Joint Commission patient safety goals. '.($overdueCount === 0 ? 'Zero defect tolerance achieved in critical care areas.' : "Minor schedule variances identified in {$overdueCount} non-critical areas with immediate corrective action protocols implemented.").' Infection control protocols maintained at 99.8% compliance rate.',
+
+            'efficiency_metrics' => 'Resource efficiency optimization through evidence-based design principles and LEAN workflow analysis. Patient flow modeling indicates 25-30% improvement in throughput capacity post-renovation, with reduced patient wait times and enhanced clinical staff productivity metrics.',
+
+            'completion_forecast' => 'Predictive modeling utilizing healthcare project historical data indicates completion timeline alignment with patient care continuity requirements. Critical system integration phases scheduled during low-census periods to minimize operational disruption.',
+
+            'strategic_positioning' => 'Project positions healthcare facility as regional leader in patient-centered design and technology integration, supporting value-based care delivery models and population health management initiatives. Competitive advantage through enhanced patient satisfaction scores and clinical outcome improvements.',
+
+            'scalability_insights' => 'Modular design framework enables future expansion capabilities for emerging medical technologies and changing healthcare delivery models. Infrastructure investments support telemedicine integration and remote patient monitoring capabilities.',
+
+            'compliance_analysis' => 'Comprehensive regulatory compliance framework addresses Joint Commission standards, CMS Conditions of Participation, ADA accessibility requirements, and state healthcare facility licensing regulations. Environmental compliance includes LEED certification pursuit for sustainable healthcare design excellence.',
+
+            'stakeholder_analysis' => 'Multi-stakeholder engagement encompasses clinical department heads, infection control specialists, patient safety officers, and community health representatives. Patient and family advisory council input integrated into design validation and operational planning processes.',
+
             'risk_assessment' => [
                 [
                     'category' => 'Clinical Operations Continuity',
@@ -240,50 +238,50 @@ class ProjectReportService
                     'mitigation_strategy' => 'Continuous regulatory monitoring, pre-occupancy inspections, and Joint Commission readiness assessments with corrective action protocols',
                 ],
             ],
-            
-            'scenario_planning' => "Optimal scenario: 10% early completion with zero patient care disruption and 15% operational cost reduction. Conservative scenario: On-time delivery with minimal workflow adjustments. Risk scenario: 15% schedule extension due to complex medical system integration requiring enhanced clinical validation protocols.",
-            
-            'critical_risk_factors' => "medical equipment integration complexity, infection control protocol adherence, and clinical workflow optimization requirements",
-            
-            'regulatory_risks' => "Joint Commission survey readiness, CMS compliance validation, state health department licensing renewals, and environmental safety protocol adherence with continuous monitoring and documentation requirements",
-            
-            'cost_analysis' => "Capital expenditure allocation follows healthcare industry benchmarks with 40% structural/MEP systems, 25% medical technology integration, 20% patient amenities, and 15% regulatory compliance and safety systems. Cost-per-bed analysis indicates favorable variance against national healthcare renovation averages.",
-            
-            'roi_analysis' => "Return on investment driven by operational efficiency gains (35%), patient satisfaction improvements (25%), clinical outcome enhancements (20%), and regulatory compliance benefits (20%). Projected 180% ROI over 5-year analysis period with break-even at 20 months post-completion.",
-            
-            'budget_insights' => "Budget performance tracking demonstrates controlled variance management with healthcare-specific contingency allocation for medical equipment integration and regulatory compliance requirements. Cost containment protocols align with hospital CFO best practices for capital project management.",
-            
-            'value_proposition' => "Strategic value creation encompasses improved patient outcomes, enhanced clinical staff satisfaction, operational cost reduction, regulatory compliance assurance, and competitive market positioning for value-based care contracts and population health management initiatives.",
-            
-            'capex_analysis' => "Capital expenditure optimization through phased implementation, vendor consolidation, and bulk purchasing agreements. Medical equipment leasing options evaluated for cash flow optimization and technology refresh capability.",
-            
+
+            'scenario_planning' => 'Optimal scenario: 10% early completion with zero patient care disruption and 15% operational cost reduction. Conservative scenario: On-time delivery with minimal workflow adjustments. Risk scenario: 15% schedule extension due to complex medical system integration requiring enhanced clinical validation protocols.',
+
+            'critical_risk_factors' => 'medical equipment integration complexity, infection control protocol adherence, and clinical workflow optimization requirements',
+
+            'regulatory_risks' => 'Joint Commission survey readiness, CMS compliance validation, state health department licensing renewals, and environmental safety protocol adherence with continuous monitoring and documentation requirements',
+
+            'cost_analysis' => 'Capital expenditure allocation follows healthcare industry benchmarks with 40% structural/MEP systems, 25% medical technology integration, 20% patient amenities, and 15% regulatory compliance and safety systems. Cost-per-bed analysis indicates favorable variance against national healthcare renovation averages.',
+
+            'roi_analysis' => 'Return on investment driven by operational efficiency gains (35%), patient satisfaction improvements (25%), clinical outcome enhancements (20%), and regulatory compliance benefits (20%). Projected 180% ROI over 5-year analysis period with break-even at 20 months post-completion.',
+
+            'budget_insights' => 'Budget performance tracking demonstrates controlled variance management with healthcare-specific contingency allocation for medical equipment integration and regulatory compliance requirements. Cost containment protocols align with hospital CFO best practices for capital project management.',
+
+            'value_proposition' => 'Strategic value creation encompasses improved patient outcomes, enhanced clinical staff satisfaction, operational cost reduction, regulatory compliance assurance, and competitive market positioning for value-based care contracts and population health management initiatives.',
+
+            'capex_analysis' => 'Capital expenditure optimization through phased implementation, vendor consolidation, and bulk purchasing agreements. Medical equipment leasing options evaluated for cash flow optimization and technology refresh capability.',
+
             'immediate_recommendations' => [
-                $overdueCount > 0 ? "Expedite completion of {$overdueCount} critical care area tasks with clinical operations liaison" : "Maintain accelerated completion of patient care zones",
-                "Implement enhanced infection control monitoring with continuous environmental sampling",
-                "Activate clinical stakeholder validation protocols for workflow optimization",
-                "Initiate Joint Commission pre-survey readiness assessment procedures",
+                $overdueCount > 0 ? "Expedite completion of {$overdueCount} critical care area tasks with clinical operations liaison" : 'Maintain accelerated completion of patient care zones',
+                'Implement enhanced infection control monitoring with continuous environmental sampling',
+                'Activate clinical stakeholder validation protocols for workflow optimization',
+                'Initiate Joint Commission pre-survey readiness assessment procedures',
             ],
-            
+
             'tactical_recommendations' => [
-                "Deploy real-time patient flow modeling systems for operational optimization",
-                "Implement LEAN healthcare waste reduction protocols across all renovation phases",
-                "Establish clinical department liaison network for continuous feedback integration",
-                "Activate biomedical engineering equipment commissioning procedures",
+                'Deploy real-time patient flow modeling systems for operational optimization',
+                'Implement LEAN healthcare waste reduction protocols across all renovation phases',
+                'Establish clinical department liaison network for continuous feedback integration',
+                'Activate biomedical engineering equipment commissioning procedures',
             ],
-            
+
             'strategic_recommendations' => [
-                "Pursue LEED healthcare certification for environmental sustainability leadership",
-                "Integrate evidence-based design principles for patient outcome optimization",
-                "Develop telemedicine capability infrastructure for future care delivery models",
-                "Establish clinical research partnership opportunities for outcome validation studies",
+                'Pursue LEED healthcare certification for environmental sustainability leadership',
+                'Integrate evidence-based design principles for patient outcome optimization',
+                'Develop telemedicine capability infrastructure for future care delivery models',
+                'Establish clinical research partnership opportunities for outcome validation studies',
             ],
-            
+
             'best_practices' => [
-                "Implement Planetree patient-centered design methodology for healing environment creation",
-                "Utilize LEAN healthcare principles for workflow optimization and waste elimination",
-                "Apply evidence-based design research for clinical outcome improvement validation",
-                "Integrate infection prevention and control protocols per CDC and Joint Commission standards",
-                "Employ healthcare construction best practices for phased occupancy and clinical continuity",
+                'Implement Planetree patient-centered design methodology for healing environment creation',
+                'Utilize LEAN healthcare principles for workflow optimization and waste elimination',
+                'Apply evidence-based design research for clinical outcome improvement validation',
+                'Integrate infection prevention and control protocols per CDC and Joint Commission standards',
+                'Employ healthcare construction best practices for phased occupancy and clinical continuity',
             ],
         ];
     }
@@ -295,19 +293,19 @@ class ProjectReportService
     {
         $completionRate = $contextData['progress_metrics']['task_completion_rate'] ?? 0;
         $overdueCount = $contextData['quality_metrics']['overdue_tasks'] ?? 0;
-        
+
         return [
             'executive_overview' => "Project {$project->name} demonstrates strategic alignment with organizational objectives at {$completionRate}% completion.",
-            'financial_analysis' => "Financial performance indicates positive trajectory with industry-standard cost allocation and ROI projections.",
-            'executive_recommendations' => "Continue current execution strategy with focus on quality delivery and stakeholder satisfaction.",
-            'performance_insights' => "Project velocity aligns with industry benchmarks and organizational capacity planning.",
-            'quality_analysis' => "Quality metrics demonstrate acceptable performance standards with continuous improvement opportunities.",
-            'efficiency_metrics' => "Resource utilization indicates optimal allocation with process optimization potential.",
-            'completion_forecast' => "Predictive analysis suggests on-schedule completion with standard variance parameters.",
-            'strategic_positioning' => "Project enhances organizational capabilities and market competitiveness.",
-            'scalability_insights' => "Framework supports future expansion and capability development.",
-            'compliance_analysis' => "Regulatory compliance maintained per industry standards and organizational policies.",
-            'stakeholder_analysis' => "Stakeholder engagement demonstrates effective communication and collaboration protocols.",
+            'financial_analysis' => 'Financial performance indicates positive trajectory with industry-standard cost allocation and ROI projections.',
+            'executive_recommendations' => 'Continue current execution strategy with focus on quality delivery and stakeholder satisfaction.',
+            'performance_insights' => 'Project velocity aligns with industry benchmarks and organizational capacity planning.',
+            'quality_analysis' => 'Quality metrics demonstrate acceptable performance standards with continuous improvement opportunities.',
+            'efficiency_metrics' => 'Resource utilization indicates optimal allocation with process optimization potential.',
+            'completion_forecast' => 'Predictive analysis suggests on-schedule completion with standard variance parameters.',
+            'strategic_positioning' => 'Project enhances organizational capabilities and market competitiveness.',
+            'scalability_insights' => 'Framework supports future expansion and capability development.',
+            'compliance_analysis' => 'Regulatory compliance maintained per industry standards and organizational policies.',
+            'stakeholder_analysis' => 'Stakeholder engagement demonstrates effective communication and collaboration protocols.',
             'risk_assessment' => [
                 [
                     'category' => 'Schedule Risk',
@@ -316,18 +314,18 @@ class ProjectReportService
                     'mitigation_strategy' => 'Enhanced project monitoring and resource allocation optimization',
                 ],
             ],
-            'scenario_planning' => "Multiple scenario analysis indicates favorable outcomes across risk spectrum.",
-            'critical_risk_factors' => "resource allocation and timeline management",
-            'regulatory_risks' => "Standard compliance monitoring and documentation requirements",
-            'cost_analysis' => "Cost structure aligns with industry benchmarks and organizational budgeting standards.",
-            'roi_analysis' => "Return on investment projections indicate positive value creation and organizational benefit.",
-            'budget_insights' => "Budget performance demonstrates controlled variance and effective cost management.",
-            'value_proposition' => "Project delivers strategic value through capability enhancement and operational improvement.",
-            'capex_analysis' => "Capital expenditure optimization through strategic procurement and resource allocation.",
-            'immediate_recommendations' => ["Maintain current execution velocity", "Address any outstanding critical items"],
-            'tactical_recommendations' => ["Implement process optimization initiatives", "Enhance stakeholder communication"],
-            'strategic_recommendations' => ["Develop capability enhancement programs", "Establish performance monitoring systems"],
-            'best_practices' => ["Industry-standard project management methodologies", "Quality assurance protocols"],
+            'scenario_planning' => 'Multiple scenario analysis indicates favorable outcomes across risk spectrum.',
+            'critical_risk_factors' => 'resource allocation and timeline management',
+            'regulatory_risks' => 'Standard compliance monitoring and documentation requirements',
+            'cost_analysis' => 'Cost structure aligns with industry benchmarks and organizational budgeting standards.',
+            'roi_analysis' => 'Return on investment projections indicate positive value creation and organizational benefit.',
+            'budget_insights' => 'Budget performance demonstrates controlled variance and effective cost management.',
+            'value_proposition' => 'Project delivers strategic value through capability enhancement and operational improvement.',
+            'capex_analysis' => 'Capital expenditure optimization through strategic procurement and resource allocation.',
+            'immediate_recommendations' => ['Maintain current execution velocity', 'Address any outstanding critical items'],
+            'tactical_recommendations' => ['Implement process optimization initiatives', 'Enhance stakeholder communication'],
+            'strategic_recommendations' => ['Develop capability enhancement programs', 'Establish performance monitoring systems'],
+            'best_practices' => ['Industry-standard project management methodologies', 'Quality assurance protocols'],
         ];
     }
 
@@ -370,7 +368,7 @@ class ProjectReportService
             ->get();
 
         $byStatus = $tasks->groupBy('status');
-        
+
         // Calculate comprehensive metrics
         $counts = [];
         foreach (['todo', 'inprogress', 'review', 'done'] as $s) {
@@ -383,25 +381,25 @@ class ProjectReportService
 
         // Time and schedule analysis
         $now = Carbon::now();
-        $projectDuration = $project->start_date && $project->end_date 
-            ? $project->start_date->diffInDays($project->end_date) 
+        $projectDuration = $project->start_date && $project->end_date
+            ? $project->start_date->diffInDays($project->end_date)
             : null;
-        
-        $elapsed = $project->start_date 
-            ? $project->start_date->diffInDays($now) 
+
+        $elapsed = $project->start_date
+            ? $project->start_date->diffInDays($now)
             : null;
-        
-        $timeProgress = $projectDuration && $elapsed 
+
+        $timeProgress = $projectDuration && $elapsed
             ? min(100, max(0, round($elapsed / $projectDuration * 100, 2)))
             : null;
 
         // Effort analysis (simplified without estimated_hours)
         $avgTaskDuration = $tasks->where('status', 'done')
-            ->filter(fn($t) => $t->created_at && $t->updated_at)
-            ->avg(fn($t) => $t->created_at->diffInDays($t->updated_at)) ?: 0;
+            ->filter(fn ($t) => $t->created_at && $t->updated_at)
+            ->avg(fn ($t) => $t->created_at->diffInDays($t->updated_at)) ?: 0;
 
         // Velocity calculations (last 30 days)
-        $recentTasks = $tasks->filter(function($task) {
+        $recentTasks = $tasks->filter(function ($task) {
             return $task->updated_at && $task->updated_at >= Carbon::now()->subDays(30);
         });
 
@@ -412,7 +410,7 @@ class ProjectReportService
 
         // Quality metrics
         $qualityMetrics = [
-            'overdue_tasks' => $tasks->filter(function($task) use ($now) {
+            'overdue_tasks' => $tasks->filter(function ($task) use ($now) {
                 return $task->end_date && $task->end_date < $now && $task->status !== 'done';
             })->count(),
             'tasks_without_due_date' => $tasks->where('end_date', null)->count(),
@@ -458,7 +456,7 @@ class ProjectReportService
             'quality_metrics' => $qualityMetrics,
             'resource_metrics' => $resourceMetrics,
             'financial_projections' => $financials,
-            'recent_activity' => $tasks->take(-10)->values()->map(fn($t) => [
+            'recent_activity' => $tasks->take(-10)->values()->map(fn ($t) => [
                 'title' => $t->title,
                 'status' => $t->status,
                 'end_date' => $t->end_date?->toDateString(),
@@ -512,13 +510,15 @@ class ProjectReportService
      */
     protected function calculateAvgCompletionTime($tasks): ?float
     {
-        $completedTasks = $tasks->where('status', 'done')->filter(function($task) {
+        $completedTasks = $tasks->where('status', 'done')->filter(function ($task) {
             return $task->start_date && $task->end_date;
         });
 
-        if ($completedTasks->isEmpty()) return null;
+        if ($completedTasks->isEmpty()) {
+            return null;
+        }
 
-        $totalDays = $completedTasks->sum(function($task) {
+        $totalDays = $completedTasks->sum(function ($task) {
             return $task->start_date->diffInDays($task->end_date) + 1;
         });
 
@@ -527,7 +527,7 @@ class ProjectReportService
 
     protected function calculateWorkloadDistribution($tasks): array
     {
-        $distribution = $tasks->groupBy('assignee_id')->map(function($assigneeTasks) {
+        $distribution = $tasks->groupBy('assignee_id')->map(function ($assigneeTasks) {
             return [
                 'task_count' => $assigneeTasks->count(),
                 'completion_rate' => $assigneeTasks->where('status', 'done')->count() / max(1, $assigneeTasks->count()) * 100,
@@ -556,10 +556,14 @@ class ProjectReportService
 
     protected function calculateBurnRate(Project $project, int $completedHours): ?array
     {
-        if (!$project->start_date) return null;
+        if (! $project->start_date) {
+            return null;
+        }
 
         $daysSinceStart = $project->start_date->diffInDays(Carbon::now());
-        if ($daysSinceStart <= 0) return null;
+        if ($daysSinceStart <= 0) {
+            return null;
+        }
 
         $dailyBurnRate = $completedHours / $daysSinceStart;
         $weeklyBurnRate = $dailyBurnRate * 7;
@@ -575,13 +579,15 @@ class ProjectReportService
     {
         // Cost Performance Index = Earned Value / Actual Cost
         // Simplified calculation based on effort progress
-        if ($effortProgress <= 0) return null;
-        
+        if ($effortProgress <= 0) {
+            return null;
+        }
+
         // Assuming planned value equals effort progress for simplification
         $plannedValue = $effortProgress;
         $earnedValue = $effortProgress; // What we've accomplished
         $actualCost = $effortProgress * 1.1; // Assuming 10% cost overrun typical
-        
+
         return round($earnedValue / $actualCost, 2);
     }
 
@@ -596,7 +602,7 @@ class ProjectReportService
             $remainingWork = $tasks->where('status', '!=', 'done')->sum('estimated_hours');
             $variance = $remainingWork * (random_int(-20, 20) / 100);
             $simulatedWork = $remainingWork + $variance;
-            
+
             // Assume 8 hours per day productivity
             $daysToComplete = max(1, ceil($simulatedWork / 8));
             $completionDates[] = Carbon::now()->addDays($daysToComplete);
@@ -618,10 +624,10 @@ class ProjectReportService
     protected function performTrendAnalysis($tasks): array
     {
         $weeklyCompletion = $tasks->where('status', 'done')
-            ->groupBy(function($task) {
+            ->groupBy(function ($task) {
                 return $task->end_date ? $task->end_date->format('Y-W') : 'unknown';
             })
-            ->map(fn($tasks) => $tasks->count())
+            ->map(fn ($tasks) => $tasks->count())
             ->sortKeys()
             ->take(-8); // Last 8 weeks
 
@@ -630,12 +636,15 @@ class ProjectReportService
             $values = $weeklyCompletion->values()->toArray();
             $recent = array_slice($values, -3);
             $earlier = array_slice($values, 0, -3);
-            
+
             $recentAvg = array_sum($recent) / count($recent);
             $earlierAvg = count($earlier) > 0 ? array_sum($earlier) / count($earlier) : $recentAvg;
-            
-            if ($recentAvg > $earlierAvg * 1.1) $trend = 'improving';
-            elseif ($recentAvg < $earlierAvg * 0.9) $trend = 'declining';
+
+            if ($recentAvg > $earlierAvg * 1.1) {
+                $trend = 'improving';
+            } elseif ($recentAvg < $earlierAvg * 0.9) {
+                $trend = 'declining';
+            }
         }
 
         return [
@@ -654,9 +663,13 @@ class ProjectReportService
         $scheduleRisk = 0;
         if (isset($data['progress_metrics']['schedule_performance_index'])) {
             $spi = $data['progress_metrics']['schedule_performance_index'];
-            if ($spi < 0.8) $scheduleRisk = 30;
-            elseif ($spi < 0.9) $scheduleRisk = 15;
-            elseif ($spi > 1.2) $scheduleRisk = 10;
+            if ($spi < 0.8) {
+                $scheduleRisk = 30;
+            } elseif ($spi < 0.9) {
+                $scheduleRisk = 15;
+            } elseif ($spi > 1.2) {
+                $scheduleRisk = 10;
+            }
         }
         $riskFactors['schedule_risk'] = $scheduleRisk;
 
@@ -664,8 +677,11 @@ class ProjectReportService
         $qualityRisk = 0;
         if (isset($data['quality_metrics']['overdue_tasks'])) {
             $overdueRatio = $data['quality_metrics']['overdue_tasks'] / max(1, $data['task_analytics']['total_tasks']);
-            if ($overdueRatio > 0.2) $qualityRisk = 25;
-            elseif ($overdueRatio > 0.1) $qualityRisk = 15;
+            if ($overdueRatio > 0.2) {
+                $qualityRisk = 25;
+            } elseif ($overdueRatio > 0.1) {
+                $qualityRisk = 15;
+            }
         }
         $riskFactors['quality_risk'] = $qualityRisk;
 
@@ -673,8 +689,11 @@ class ProjectReportService
         $resourceRisk = 0;
         if (isset($data['resource_metrics']['unassigned_tasks'])) {
             $unassignedRatio = $data['resource_metrics']['unassigned_tasks'] / max(1, $data['task_analytics']['total_tasks']);
-            if ($unassignedRatio > 0.3) $resourceRisk = 20;
-            elseif ($unassignedRatio > 0.15) $resourceRisk = 10;
+            if ($unassignedRatio > 0.3) {
+                $resourceRisk = 20;
+            } elseif ($unassignedRatio > 0.15) {
+                $resourceRisk = 10;
+            }
         }
         $riskFactors['resource_risk'] = $resourceRisk;
 
@@ -705,14 +724,14 @@ class ProjectReportService
     {
         $completionRate = $data['progress_metrics']['task_completion_rate'] ?? 0;
         $remainingWork = 100 - $completionRate;
-        
+
         // Simple linear extrapolation
         $currentVelocity = $data['velocity_metrics']['tasks_completed_30d'] ?? 1;
         $totalTasks = $data['task_analytics']['total_tasks'] ?? 1;
         $remainingTasks = $totalTasks * ($remainingWork / 100);
-        
-        $estimatedDaysToComplete = $remainingTasks > 0 && $currentVelocity > 0 
-            ? ceil(($remainingTasks / $currentVelocity) * 30) 
+
+        $estimatedDaysToComplete = $remainingTasks > 0 && $currentVelocity > 0
+            ? ceil(($remainingTasks / $currentVelocity) * 30)
             : 0;
 
         return [
@@ -726,12 +745,12 @@ class ProjectReportService
     {
         $sampleSize = $tasks->count();
         $completedTasks = $tasks->where('status', 'done')->count();
-        
+
         // Basic confidence interval calculation
         $proportion = $sampleSize > 0 ? $completedTasks / $sampleSize : 0;
         $standardError = $sampleSize > 0 ? sqrt(($proportion * (1 - $proportion)) / $sampleSize) : 0;
         $marginOfError = 1.96 * $standardError; // 95% confidence
-        
+
         return [
             'sample_size' => $sampleSize,
             'completion_rate' => round($proportion * 100, 2),
@@ -838,10 +857,10 @@ class ProjectReportService
      */
     protected function renderProfessionalHtml(Project $project, array $data, string $context, string $analytics): string
     {
-        $escape = fn($v) => e((string) $v);
+        $escape = fn ($v) => e((string) $v);
         $contextData = json_decode($context, true);
         $analyticsData = json_decode($analytics, true);
-        
+
         // Executive Summary Section
         $executiveSummary = $data['executive_summary'] ?? [];
         $performanceAnalytics = $data['performance_analytics'] ?? [];
@@ -854,7 +873,7 @@ class ProjectReportService
         // Generate KPI table
         $kpiTable = '';
         foreach ($kpiDashboard as $kpi) {
-            $trendIcon = match($kpi['trend'] ?? 'stable') {
+            $trendIcon = match ($kpi['trend'] ?? 'stable') {
                 'up' => '📈',
                 'down' => '📉',
                 default => '➡️'
@@ -873,7 +892,7 @@ class ProjectReportService
         // Generate risk assessment table
         $riskTable = '';
         foreach ($riskIntelligence['enterprise_risks'] ?? [] as $risk) {
-            $impactColor = match(strtolower($risk['impact'] ?? '')) {
+            $impactColor = match (strtolower($risk['impact'] ?? '')) {
                 'high' => '#ef4444',
                 'medium' => '#f59e0b',
                 default => '#10b981'
@@ -891,17 +910,17 @@ class ProjectReportService
         // Generate recommendations list
         $immediateActions = '';
         foreach ($recommendations['immediate_actions'] ?? [] as $action) {
-            $immediateActions .= '<li>' . $escape($action) . '</li>';
+            $immediateActions .= '<li>'.$escape($action).'</li>';
         }
 
         $tacticalInitiatives = '';
         foreach ($recommendations['tactical_initiatives'] ?? [] as $initiative) {
-            $tacticalInitiatives .= '<li>' . $escape($initiative) . '</li>';
+            $tacticalInitiatives .= '<li>'.$escape($initiative).'</li>';
         }
 
         $strategicInvestments = '';
         foreach ($recommendations['strategic_investments'] ?? [] as $investment) {
-            $strategicInvestments .= '<li>' . $escape($investment) . '</li>';
+            $strategicInvestments .= '<li>'.$escape($investment).'</li>';
         }
 
         $generated = Carbon::now()->format('F j, Y \a\t g:i A T');
@@ -1228,13 +1247,13 @@ HTML;
      */
     protected function renderHtml(Project $project, array $data): string
     {
-        $escape = fn($v) => e((string) $v);
+        $escape = fn ($v) => e((string) $v);
 
         $metrics = '';
         foreach (($data['key_metrics'] ?? []) as $m) {
             $metrics .= '<tr><td style="padding:4px 8px;border:1px solid #ddd;font-weight:600">'.$escape($m['label'] ?? '').'</td>'
-                     .  '<td style="padding:4px 8px;border:1px solid #ddd">'.$escape($m['value'] ?? '').'</td>'
-                     .  '<td style="padding:4px 8px;border:1px solid #ddd;color:#555">'.$escape($m['comment'] ?? '').'</td></tr>';
+                     .'<td style="padding:4px 8px;border:1px solid #ddd">'.$escape($m['value'] ?? '').'</td>'
+                     .'<td style="padding:4px 8px;border:1px solid #ddd;color:#555">'.$escape($m['comment'] ?? '').'</td></tr>';
         }
         if ($metrics === '') {
             $metrics = '<tr><td colspan="3" style="padding:6px 10px;border:1px solid #ddd;color:#666">No key metrics generated.</td></tr>';
@@ -1258,8 +1277,8 @@ HTML;
         }
         $miles = $miles !== '' ? '<ul>'.$miles.'</ul>' : '<p style="color:#666">No upcoming milestones listed.</p>';
 
-        $summary   = nl2br($escape($data['summary'] ?? ''));
-        $overview  = nl2br($escape($data['progress_overview'] ?? ''));
+        $summary = nl2br($escape($data['summary'] ?? ''));
+        $overview = nl2br($escape($data['progress_overview'] ?? ''));
         $generated = date('Y-m-d H:i');
 
         return <<<HTML
@@ -1306,7 +1325,7 @@ HTML;
      */
     protected function storePdf(Project $project, string $html): string
     {
-        $options = new Options();
+        $options = new Options;
         $options->set('isRemoteEnabled', true);
 
         $dompdf = new Dompdf($options);
@@ -1314,10 +1333,10 @@ HTML;
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
 
-        $output   = $dompdf->output();
-        $dir      = 'reports/projects/' . $project->id;
-        $filename = 'report-' . date('Ymd-His') . '.pdf';
-        $path     = $dir . '/' . $filename;
+        $output = $dompdf->output();
+        $dir = 'reports/projects/'.$project->id;
+        $filename = 'report-'.date('Ymd-His').'.pdf';
+        $path = $dir.'/'.$filename;
 
         // Save on the 'public' disk and make sure it's publicly visible
         $disk = Storage::disk('public');

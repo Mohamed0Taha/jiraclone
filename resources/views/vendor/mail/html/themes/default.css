@@ -1,25 +1,47 @@
 /* ===== Brand overrides ===== */
-:root{
-  --brand: #6366F1;       /* primary (button, header text) */
-  --accent: #22D3EE;      /* links */
-  --bg: #fafbfc;          /* page bg */
+:root {
+    --brand: #6366f1; /* primary (button, header text) */
+    --accent: #22d3ee; /* links */
+    --bg: #fafbfc; /* page bg */
 }
 
-body { background-color: var(--bg) !important; }
-.header a { color: var(--brand) !important; }
-h1, h2, h3, h4, h5, h6 { color: #1E293B !important; }
-p, span, td { color: #64748B !important; }
+body {
+    background-color: var(--bg) !important;
+}
+.header a {
+    color: var(--brand) !important;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: #1e293b !important;
+}
+p,
+span,
+td {
+    color: #64748b !important;
+}
 
 /* Primary button */
 .button-primary {
-  background-color: var(--brand) !important;
-  border: 3px solid var(--brand) !important; /* less chunky */
-  border-radius: 8px !important;
-  box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.25) !important;
+    background-color: var(--brand) !important;
+    border: 3px solid var(--brand) !important; /* less chunky */
+    border-radius: 8px !important;
+    box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.25) !important;
 }
 
 /* Links */
-a, a:visited { color: var(--accent) !important; text-decoration: underline; }
+a,
+a:visited {
+    color: var(--accent) !important;
+    text-decoration: underline;
+}
 
 /* Panels/cards (optional) */
-.panel { border-color: rgba(30, 41, 59, 0.08) !important; border-radius: 8px !important; }
+.panel {
+    border-color: rgba(30, 41, 59, 0.08) !important;
+    border-radius: 8px !important;
+}

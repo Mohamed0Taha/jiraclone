@@ -3,12 +3,11 @@
 namespace App\Services;
 
 use App\Models\Project;
-use Illuminate\Support\Str;
 use OpenAI\Laravel\Facades\OpenAI;
 
 /**
  * Enhanced Suggestion Chip Service
- * 
+ *
  * Generates highly sophisticated, contextually relevant suggestion chips that guide users
  * toward creating professional-grade tasks. These chips are:
  * - Domain-specific and industry-aware
@@ -21,7 +20,7 @@ class SuggestionChipService
 {
     /**
      * Build up to $max suggestion chips that are contextually relevant and actionable
-     * 
+     *
      * @return array<int,string>
      */
     public function fromProject(Project $project, int $max = 8): array
@@ -30,7 +29,7 @@ class SuggestionChipService
 
         // Analyze project context for intelligent suggestions
         $projectContext = $this->analyzeProjectContext($project);
-        
+
         // Get recent tasks for context
         $recentTaskTitles = $project->tasks()
             ->latest('id')
@@ -49,10 +48,10 @@ class SuggestionChipService
 
         // If AI fails or returns insufficient suggestions, use enhanced fallback
         $fallbackSuggestions = $this->generateContextualFallback($project, $projectContext, $max - count($suggestions));
-        
+
         return array_slice(
-            array_unique(array_merge($suggestions, $fallbackSuggestions)), 
-            0, 
+            array_unique(array_merge($suggestions, $fallbackSuggestions)),
+            0,
             $max
         );
     }
@@ -132,11 +131,11 @@ class SuggestionChipService
 
         try {
             $response = OpenAI::chat()->create([
-                'model'           => config('openai.model', 'gpt-4o'),
-                'temperature'     => 0.55,
+                'model' => config('openai.model', 'gpt-4o'),
+                'temperature' => 0.55,
                 'response_format' => ['type' => 'json_object'],
-                'max_tokens'      => 1800,
-                'messages'        => [
+                'max_tokens' => 1800,
+                'messages' => [
                     ['role' => 'system', 'content' => $system],
                     ['role' => 'user',   'content' => $prompt],
                 ],
@@ -149,11 +148,12 @@ class SuggestionChipService
             if (is_array($decoded) && isset($decoded['suggestions']) && is_array($decoded['suggestions'])) {
                 $suggestions = [];
                 foreach ($decoded['suggestions'] as $suggestion) {
-                    $cleaned = $this->sanitizeChip((string)$suggestion);
-                    if ($cleaned && !in_array($cleaned, $suggestions, true)) {
+                    $cleaned = $this->sanitizeChip((string) $suggestion);
+                    if ($cleaned && ! in_array($cleaned, $suggestions, true)) {
                         $suggestions[] = $cleaned;
                     }
                 }
+
                 return $suggestions;
             }
         } catch (\Throwable $e) {
@@ -170,7 +170,7 @@ class SuggestionChipService
     {
         $name = strtolower($project->name ?? '');
         $description = strtolower($project->description ?? '');
-        $text = $name . ' ' . $description;
+        $text = $name.' '.$description;
 
         // Determine project type and characteristics
         $type = 'General Business';
@@ -236,9 +236,13 @@ class SuggestionChipService
         $timeline = 'Unknown';
         if ($project->start_date && $project->end_date) {
             $days = $project->start_date->diffInDays($project->end_date);
-            if ($days <= 30) $timeline = 'Short-term (≤1 month)';
-            elseif ($days <= 90) $timeline = 'Medium-term (1-3 months)';
-            else $timeline = 'Long-term (>3 months)';
+            if ($days <= 30) {
+                $timeline = 'Short-term (≤1 month)';
+            } elseif ($days <= 90) {
+                $timeline = 'Medium-term (1-3 months)';
+            } else {
+                $timeline = 'Long-term (>3 months)';
+            }
         }
 
         return [
@@ -255,7 +259,9 @@ class SuggestionChipService
      */
     protected function generateContextualFallback(Project $project, array $context, int $needed): array
     {
-        if ($needed <= 0) return [];
+        if ($needed <= 0) {
+            return [];
+        }
 
         $base = [];
 
@@ -354,6 +360,7 @@ class SuggestionChipService
         }
         // Remove trailing punctuation that adds no value
         $chip = rtrim($chip, '.;,:');
+
         return $chip;
     }
 }

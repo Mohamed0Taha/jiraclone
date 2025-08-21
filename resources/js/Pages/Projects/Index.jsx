@@ -1,28 +1,27 @@
 import React, { useState } from 'react';
 import { useForm, Head } from '@inertiajs/react';
 import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Container,
-  Grid,
-  TextField,
-  Typography,
-  Stack,
-  Paper,
-  useTheme,
-  alpha,
-  Chip,
-  Divider,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    Container,
+    Grid,
+    TextField,
+    Typography,
+    Stack,
+    Paper,
+    useTheme,
+    alpha,
+    Chip,
+    Divider,
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Folder as FolderIcon,
-  FolderOpen as FolderOpenIcon,
-  Person as PersonIcon,
-  AdminPanelSettings as AdminIcon,
- 
+    Add as AddIcon,
+    Folder as FolderIcon,
+    FolderOpen as FolderOpenIcon,
+    Person as PersonIcon,
+    AdminPanelSettings as AdminIcon,
 } from '@mui/icons-material';
 import CrownIcon from '@mui/icons-material/WorkspacePremiumRounded';
 
@@ -42,8 +41,8 @@ export default function ProjectsIndex({ projects, auth }) {
     };
 
     // Separate owned and member projects
-    const ownedProjects = projects.filter(p => p.is_owner);
-    const memberProjects = projects.filter(p => !p.is_owner);
+    const ownedProjects = projects.filter((p) => p.is_owner);
+    const memberProjects = projects.filter((p) => !p.is_owner);
 
     const getRoleIcon = (role) => {
         switch (role) {
@@ -69,8 +68,8 @@ export default function ProjectsIndex({ projects, auth }) {
 
     const ProjectCard = ({ project }) => (
         <Grid item xs={12} sm={6} md={4} key={project.id}>
-            <Card 
-                sx={{ 
+            <Card
+                sx={{
                     height: '100%',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
@@ -82,25 +81,25 @@ export default function ProjectsIndex({ projects, auth }) {
                     },
                     border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
                 }}
-                onClick={() => window.location.href = `/projects/${project.id}`}
+                onClick={() => (window.location.href = `/projects/${project.id}`)}
             >
                 <CardContent sx={{ p: 3 }}>
                     <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                        <Box 
-                            sx={{ 
-                                p: 1.5, 
-                                borderRadius: 2, 
+                        <Box
+                            sx={{
+                                p: 1.5,
+                                borderRadius: 2,
                                 background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.2)}, ${alpha(theme.palette.primary.light, 0.1)})`,
-                                color: theme.palette.primary.main 
+                                color: theme.palette.primary.main,
                             }}
                         >
                             <FolderIcon sx={{ fontSize: 24 }} />
                         </Box>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-                                <Typography 
-                                    variant="h6" 
-                                    component="h2" 
+                                <Typography
+                                    variant="h6"
+                                    component="h2"
                                     fontWeight={600}
                                     noWrap
                                     title={project.name}
@@ -117,10 +116,10 @@ export default function ProjectsIndex({ projects, auth }) {
                                 />
                             </Stack>
                             {project.description && (
-                                <Typography 
-                                    variant="body2" 
-                                    color="text.secondary" 
-                                    sx={{ 
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{
                                         display: '-webkit-box',
                                         WebkitLineClamp: 2,
                                         WebkitBoxOrient: 'vertical',
@@ -151,18 +150,22 @@ export default function ProjectsIndex({ projects, auth }) {
                 </Box>
 
                 {projects.length === 0 ? (
-                    <Paper 
-                        sx={{ 
-                            textAlign: 'center', 
-                            py: 10, 
+                    <Paper
+                        sx={{
+                            textAlign: 'center',
+                            py: 10,
                             px: 4,
                             background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
                             border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                            borderRadius: 4
+                            borderRadius: 4,
                         }}
                     >
-                        <FolderOpenIcon sx={{ fontSize: 80, color: theme.palette.primary.main, mb: 2 }} />
-                        <Typography variant="h5" sx={{ mb: 2 }}>No projects yet</Typography>
+                        <FolderOpenIcon
+                            sx={{ fontSize: 80, color: theme.palette.primary.main, mb: 2 }}
+                        />
+                        <Typography variant="h5" sx={{ mb: 2 }}>
+                            No projects yet
+                        </Typography>
                         <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
                             Create your first project to get started with TaskPilot
                         </Typography>
@@ -193,13 +196,20 @@ export default function ProjectsIndex({ projects, auth }) {
                         {/* Owned Projects Section */}
                         {ownedProjects.length > 0 && (
                             <Box sx={{ mb: 4 }}>
-                                <Typography variant="h5" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography
+                                    variant="h5"
+                                    fontWeight={600}
+                                    sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}
+                                >
                                     <CrownIcon color="warning" />
                                     My Projects ({ownedProjects.length})
                                 </Typography>
                                 <Grid container spacing={3}>
                                     {ownedProjects.map((project) => (
-                                        <ProjectCard key={`owned-${project.id}`} project={project} />
+                                        <ProjectCard
+                                            key={`owned-${project.id}`}
+                                            project={project}
+                                        />
                                     ))}
                                 </Grid>
                             </Box>
@@ -209,13 +219,20 @@ export default function ProjectsIndex({ projects, auth }) {
                         {memberProjects.length > 0 && (
                             <Box>
                                 {ownedProjects.length > 0 && <Divider sx={{ my: 4 }} />}
-                                <Typography variant="h5" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography
+                                    variant="h5"
+                                    fontWeight={600}
+                                    sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}
+                                >
                                     <PersonIcon color="primary" />
                                     Shared with Me ({memberProjects.length})
                                 </Typography>
                                 <Grid container spacing={3}>
                                     {memberProjects.map((project) => (
-                                        <ProjectCard key={`member-${project.id}`} project={project} />
+                                        <ProjectCard
+                                            key={`member-${project.id}`}
+                                            project={project}
+                                        />
                                     ))}
                                 </Grid>
                             </Box>
@@ -235,8 +252,14 @@ export default function ProjectsIndex({ projects, auth }) {
                 {showForm && (
                     <Card sx={{ mt: 4, borderRadius: theme.shape.borderRadius }}>
                         <CardContent sx={{ p: 4 }}>
-                            <Typography variant="h5" sx={{ mb: 3 }}>Create New Project</Typography>
-                            <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <Typography variant="h5" sx={{ mb: 3 }}>
+                                Create New Project
+                            </Typography>
+                            <Box
+                                component="form"
+                                onSubmit={submit}
+                                sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
+                            >
                                 <TextField
                                     fullWidth
                                     label="Project Name"
@@ -269,8 +292,8 @@ export default function ProjectsIndex({ projects, auth }) {
                                 />
 
                                 <Stack direction="row" spacing={2} justifyContent="flex-end">
-                                    <Button 
-                                        variant="outlined" 
+                                    <Button
+                                        variant="outlined"
                                         onClick={() => setShowForm(false)}
                                         sx={{ borderRadius: theme.shape.borderRadius }}
                                     >

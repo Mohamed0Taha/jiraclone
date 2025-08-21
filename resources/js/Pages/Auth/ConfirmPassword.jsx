@@ -1,20 +1,20 @@
 import { useState } from 'react';
-import { 
-    Box, 
-    TextField, 
-    Button, 
-    Typography, 
+import {
+    Box,
+    TextField,
+    Button,
+    Typography,
     useTheme,
     Card,
     CardContent,
     InputAdornment,
-    IconButton
+    IconButton,
 } from '@mui/material';
-import { 
-    Visibility, 
-    VisibilityOff, 
+import {
+    Visibility,
+    VisibilityOff,
     Security as SecurityIcon,
-    Lock as LockIcon
+    Lock as LockIcon,
 } from '@mui/icons-material';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
@@ -22,7 +22,7 @@ import { Head, useForm } from '@inertiajs/react';
 export default function ConfirmPassword() {
     const theme = useTheme();
     const [showPassword, setShowPassword] = useState(false);
-    
+
     const { data, setData, post, processing, errors, reset } = useForm({
         password: '',
     });
@@ -39,44 +39,47 @@ export default function ConfirmPassword() {
         <GuestLayout>
             <Head title="Confirm Password" />
 
-            <Card sx={{ 
-                maxWidth: 480, 
-                mx: 'auto', 
-                p: 2,
-                boxShadow: theme.shadows[8],
-                borderRadius: theme.shape.borderRadius 
-            }}>
+            <Card
+                sx={{
+                    maxWidth: 480,
+                    mx: 'auto',
+                    p: 2,
+                    boxShadow: theme.shadows[8],
+                    borderRadius: theme.shape.borderRadius,
+                }}
+            >
                 <CardContent sx={{ p: 4 }}>
                     <Box sx={{ textAlign: 'center', mb: 3 }}>
-                        <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            mb: 2
-                        }}>
-                            <SecurityIcon sx={{ 
-                                fontSize: 32, 
-                                color: theme.palette.primary.main,
-                                mr: 1
-                            }} />
-                            <Typography 
-                                variant="h4" 
-                                component="h1" 
-                                sx={{ 
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 2,
+                            }}
+                        >
+                            <SecurityIcon
+                                sx={{
+                                    fontSize: 32,
+                                    color: theme.palette.primary.main,
+                                    mr: 1,
+                                }}
+                            />
+                            <Typography
+                                variant="h4"
+                                component="h1"
+                                sx={{
                                     fontWeight: 700,
                                     color: theme.palette.primary.main,
-                                    fontFamily: '"Inter", "Segoe UI", sans-serif'
+                                    fontFamily: '"Inter", "Segoe UI", sans-serif',
                                 }}
                             >
                                 Confirm Password
                             </Typography>
                         </Box>
-                        <Typography 
-                            variant="body1" 
-                            color="textSecondary"
-                            sx={{ mb: 2 }}
-                        >
-                            This is a secure area of the application. Please confirm your password before continuing.
+                        <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
+                            This is a secure area of the application. Please confirm your password
+                            before continuing.
                         </Typography>
                     </Box>
 

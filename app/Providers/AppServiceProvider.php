@@ -67,7 +67,38 @@ class AppServiceProvider extends ServiceProvider
 
         Inertia::share('isPro', function (): bool {
             $user = Auth::user();
-            return $user && method_exists($user, 'subscribed') && $user->subscribed('default');
+            return $user && method_exists($user, 'hasActiveSubscription') && $user->hasActiveSubscription();
+        });
+
+        Inertia::share('isOnTrial', function (): bool {
+            $user = Auth::user();
+            return $user && method_exists($user, 'onTrial') && $user->onTrial('default');
+        });
+
+        // Share complete user plan and tier data
+        Inertia::share('userPlan', function () {
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
+            if (!$user) {
+                return null;
+            }
+
+            $plan = $user->getCurrentPlan();
+            $usageSummary = $user->getUsageSummary();
+
+            return [
+                'plan' => $plan,
+                'has_subscription' => $user->hasActiveSubscription(),
+                'usage' => $usageSummary,
+                'overlays' => [
+                    'ai_assistant' => $user->shouldShowOverlay('ai_assistant'),
+                    'ai_chat' => $user->shouldShowOverlay('ai_chat'),
+                    'automation' => $user->shouldShowOverlay('automation'),
+                    'members' => $user->shouldShowOverlay('members'),
+                    'reports' => $user->shouldShowOverlay('reports'),
+                ],
+                'billing_url' => route('billing.show'),
+            ];
         });
     }
 }

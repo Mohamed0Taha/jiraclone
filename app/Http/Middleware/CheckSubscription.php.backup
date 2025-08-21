@@ -1,0 +1,212 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class CheckSubscription
+{
+    /**
+     * Handle an incoming request for premium features.
+     * Users must have an active subscription or be on trial to access premium features.
+     */
+    public function handle(Request $request, Closure $next, ?string $feature = null): Response
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return $this->handleUnauthorized($request, 'authentication_required');
+        }
+
+        // Check if user has active subscription or is on trial
+        if (! $this->hasActiveSubscription($user)) {
+            return $this->handlePaywall($request, $feature);
+        }
+
+        // Check specific feature limits based on subscription plan
+        if ($feature && ! $this->hasFeatureAccess($user, $feature)) {
+            return $this->handleFeatureLimit($request, $feature);
+        }
+
+        return $next($request);
+    }
+
+    /**
+     * Check if user has active subscription or trial
+     */
+    private function hasActiveSubscription($user): bool
+    {
+        return $user->subscribed('default') || $user->onTrial('default');
+    }
+
+    /**
+     * Check if user has access to specific feature based on their plan
+     */
+    private function hasFeatureAccess($user, string $feature): bool
+    {
+        $subscription = $user->subscription('default');
+        $planName = 'basic'; // default
+
+        if ($subscription) {
+            // Get the plan from the price ID
+            $priceId = $subscription->stripe_price;
+            $planName = $this->getPlanFromPriceId($priceId);
+        } elseif ($user->onTrial('default')) {
+            // Get trial plan from user model
+            $planName = $user->trial_plan ?? 'basic';
+        }
+
+        return $this->checkFeatureLimit($planName, $feature, $user);
+    }
+
+    /**
+     * Get plan name from Stripe price ID
+     */
+    private function getPlanFromPriceId(string $priceId): string
+    {
+        $plans = config('subscriptions.plans');
+
+        foreach ($plans as $key => $plan) {
+            if ($plan['price_id'] === $priceId) {
+                return $key;
+            }
+        }
+
+        return 'basic'; // fallback
+    }
+
+    /**
+     * Check specific feature limits for the plan
+     */
+    private function checkFeatureLimit(string $planName, string $feature, $user): bool
+    {
+        switch ($feature) {
+            case 'ai_task_generation':
+                return $this->checkAiTaskLimit($planName, $user);
+            case 'automation':
+                return $this->checkAutomationAccess($planName);
+            case 'members':
+                return $this->checkMemberAccess($planName);
+            case 'reports':
+                return $this->checkReportAccess($planName);
+            case 'ai_assistant':
+                return $this->checkAiAssistantAccess($planName);
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Check AI task generation limits
+     */
+    private function checkAiTaskLimit(string $planName, $user): bool
+    {
+        $limits = [
+            'basic' => 25,
+            'pro' => 50,
+            'business' => 200,
+        ];
+
+        $limit = $limits[$planName] ?? 0;
+
+        // You would implement usage tracking here
+        // For now, we'll allow access if they have a limit > 0
+        return $limit > 0;
+    }
+
+    /**
+     * Check automation access
+     */
+    private function checkAutomationAccess(string $planName): bool
+    {
+        return in_array($planName, ['pro', 'business']);
+    }
+
+    /**
+     * Check member management access
+     */
+    private function checkMemberAccess(string $planName): bool
+    {
+        return in_array($planName, ['pro', 'business']);
+    }
+
+    /**
+     * Check report access
+     */
+    private function checkReportAccess(string $planName): bool
+    {
+        return in_array($planName, ['basic', 'pro', 'business']);
+    }
+
+    /**
+     * Check AI assistant access
+     */
+    private function checkAiAssistantAccess(string $planName): bool
+    {
+        return in_array($planName, ['basic', 'pro', 'business']);
+    }
+
+    /**
+     * Handle paywall response
+     */
+    private function handlePaywall(Request $request, $feature = null)
+    {
+        // Only return JSON for pure AJAX requests, not Inertia requests
+        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+            return response()->json([
+                'message' => 'Subscription required',
+                'paywall' => true,
+                'feature' => $feature,
+                'upgrade_url' => route('billing.show'),
+            ], 402); // Payment Required
+        }
+
+        return redirect()->route('billing.show')->with('error', 'This feature requires an active subscription.');
+    }
+
+    /**
+     * Handle feature limit exceeded
+     */
+    private function handleFeatureLimit(Request $request, string $feature)
+    {
+        $messages = [
+            'ai_task_generation' => 'You have reached your AI task generation limit. Upgrade for more access.',
+            'automation' => 'Automations are available on Pro and Business plans.',
+            'members' => 'Team collaboration is available on Pro and Business plans.',
+            'reports' => 'Reports are available on all paid plans.',
+            'ai_assistant' => 'AI Assistant is available on all paid plans.',
+        ];
+
+        $message = $messages[$feature] ?? 'This feature is not available on your current plan.';
+
+        // Only return JSON for pure AJAX requests, not Inertia requests
+        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+            return response()->json([
+                'message' => $message,
+                'feature_limit' => true,
+                'feature' => $feature,
+                'upgrade_url' => route('billing.show'),
+            ], 402);
+        }
+
+        return redirect()->route('billing.show')->with('error', $message);
+    }
+
+    /**
+     * Handle authentication required
+     */
+    private function handleUnauthorized(Request $request, string $reason)
+    {
+        // Only return JSON for pure AJAX requests, not Inertia requests
+        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+            return response()->json([
+                'message' => 'Authentication required',
+                'login_required' => true,
+            ], 401);
+        }
+
+        return redirect()->route('login');
+    }
+}

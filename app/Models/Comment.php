@@ -39,7 +39,7 @@ class Comment extends Model
     // Check if this is a reply to another comment
     public function isReply()
     {
-        return !is_null($this->parent_id);
+        return ! is_null($this->parent_id);
     }
 
     // Get only top-level comments (not replies)

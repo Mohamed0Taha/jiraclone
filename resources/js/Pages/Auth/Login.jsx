@@ -1,24 +1,24 @@
 import { useState } from 'react';
-import { 
-    Box, 
-    TextField, 
-    FormControlLabel, 
-    Checkbox, 
-    Button, 
-    Typography, 
+import {
+    Box,
+    TextField,
+    FormControlLabel,
+    Checkbox,
+    Button,
+    Typography,
     Link as MuiLink,
     Alert,
     useTheme,
     Card,
     CardContent,
     InputAdornment,
-    IconButton
+    IconButton,
 } from '@mui/material';
-import { 
-    Visibility, 
-    VisibilityOff, 
-    Email as EmailIcon, 
-    Login as LoginIcon 
+import {
+    Visibility,
+    VisibilityOff,
+    Email as EmailIcon,
+    Login as LoginIcon,
 } from '@mui/icons-material';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
@@ -26,7 +26,7 @@ import { Head, Link, useForm } from '@inertiajs/react';
 export default function Login({ status, canResetPassword }) {
     const theme = useTheme();
     const [showPassword, setShowPassword] = useState(false);
-    
+
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -45,52 +45,51 @@ export default function Login({ status, canResetPassword }) {
         <GuestLayout>
             <Head title="Log in" />
 
-            <Card sx={{ 
-                maxWidth: 480, 
-                mx: 'auto', 
-                p: 2,
-                boxShadow: theme.shadows[8],
-                borderRadius: theme.shape.borderRadius 
-            }}>
+            <Card
+                sx={{
+                    maxWidth: 480,
+                    mx: 'auto',
+                    p: 2,
+                    boxShadow: theme.shadows[8],
+                    borderRadius: theme.shape.borderRadius,
+                }}
+            >
                 <CardContent sx={{ p: 4 }}>
                     <Box sx={{ textAlign: 'center', mb: 3 }}>
-                        <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            mb: 2
-                        }}>
-                            <LoginIcon sx={{ 
-                                fontSize: 32, 
-                                color: theme.palette.primary.main,
-                                mr: 1
-                            }} />
-                            <Typography 
-                                variant="h4" 
-                                component="h1" 
-                                sx={{ 
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 2,
+                            }}
+                        >
+                            <LoginIcon
+                                sx={{
+                                    fontSize: 32,
+                                    color: theme.palette.primary.main,
+                                    mr: 1,
+                                }}
+                            />
+                            <Typography
+                                variant="h4"
+                                component="h1"
+                                sx={{
                                     fontWeight: 700,
                                     color: theme.palette.primary.main,
-                                    fontFamily: '"Inter", "Segoe UI", sans-serif'
+                                    fontFamily: '"Inter", "Segoe UI", sans-serif',
                                 }}
                             >
                                 Welcome back
                             </Typography>
                         </Box>
-                        <Typography 
-                            variant="body1" 
-                            color="textSecondary"
-                            sx={{ mb: 1 }}
-                        >
+                        <Typography variant="body1" color="textSecondary" sx={{ mb: 1 }}>
                             Sign in to your TaskPilot account
                         </Typography>
                     </Box>
 
                     {status && (
-                        <Alert 
-                            severity="success" 
-                            sx={{ mb: 3 }}
-                        >
+                        <Alert severity="success" sx={{ mb: 3 }}>
                             {status}
                         </Alert>
                     )}

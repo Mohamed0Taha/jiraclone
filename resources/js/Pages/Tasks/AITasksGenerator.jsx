@@ -28,6 +28,8 @@ import RemoveRoundedIcon from "@mui/icons-material/RemoveRounded";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import HelpRoundedIcon from "@mui/icons-material/HelpRounded";
 import TipsAndUpdatesRoundedIcon from "@mui/icons-material/TipsAndUpdatesRounded";
+import { useSubscription } from "@/Hooks/useSubscription";
+import FeatureOverlay from "@/Components/FeatureOverlay";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
@@ -67,6 +69,11 @@ const Transition = forwardRef(function Transition(props, ref) {
 export default function AITasksGenerator({ auth, project, prefill = {} }) {
   const theme = useTheme();
   const { processing, errors = {} } = usePage().props;
+  const { userPlan } = useSubscription();
+
+  const handleUpgrade = () => {
+    router.visit(userPlan?.billing_url || '/billing');
+  };
 
   const [count, setCount] = useState(Number(prefill.count) || 5);
   const [prompt, setPrompt] = useState(prefill.prompt || "");
@@ -337,6 +344,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                 overflow: "hidden",
               }}
             >
+              {/* No overlay here; overlay only shown on preview page */}
               <Box
                 aria-hidden
                 sx={{

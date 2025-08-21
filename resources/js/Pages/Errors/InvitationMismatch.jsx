@@ -8,20 +8,21 @@ const InvitationMismatch = ({ invitationEmail, userEmail }) => {
         <Container maxWidth="sm" sx={{ py: 8 }}>
             <Card elevation={3}>
                 <CardContent sx={{ textAlign: 'center', py: 6 }}>
-                    <Warning 
-                        sx={{ 
-                            fontSize: 80, 
-                            color: 'warning.main', 
-                            mb: 2 
-                        }} 
+                    <Warning
+                        sx={{
+                            fontSize: 80,
+                            color: 'warning.main',
+                            mb: 2,
+                        }}
                     />
                     <Typography variant="h4" gutterBottom color="warning.main">
                         Email Mismatch
                     </Typography>
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                        This invitation was sent to {invitationEmail}, but you're logged in as {userEmail}.
+                        This invitation was sent to {invitationEmail}, but you're logged in as{' '}
+                        {userEmail}.
                     </Typography>
-                    
+
                     <Alert severity="info" sx={{ mb: 4, textAlign: 'left' }}>
                         To accept this invitation, please:
                         <br />• Log out and log in with {invitationEmail}
@@ -29,12 +30,7 @@ const InvitationMismatch = ({ invitationEmail, userEmail }) => {
                     </Alert>
 
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-                        <Button
-                            component={Link}
-                            href="/logout"
-                            variant="outlined"
-                            size="large"
-                        >
+                        <Button component={Link} href="/logout" variant="outlined" size="large">
                             Logout
                         </Button>
                         <Button

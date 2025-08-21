@@ -13,26 +13,26 @@ return new class extends Migration
     {
         Schema::create('comments', function (Blueprint $table) {
             $table->id();
-            
+
             // Foreign key to tasks
             $table->foreignId('task_id')
-                  ->constrained()
-                  ->onDelete('cascade');
-            
+                ->constrained()
+                ->onDelete('cascade');
+
             // Foreign key to users (who wrote the comment)
             $table->foreignId('user_id')
-                  ->constrained()
-                  ->onDelete('cascade');
-            
+                ->constrained()
+                ->onDelete('cascade');
+
             // For replies - parent comment
             $table->foreignId('parent_id')
-                  ->nullable()
-                  ->constrained('comments')
-                  ->onDelete('cascade');
-            
+                ->nullable()
+                ->constrained('comments')
+                ->onDelete('cascade');
+
             // Comment content
             $table->text('content');
-            
+
             $table->timestamps();
         });
     }

@@ -1,7 +1,8 @@
 <?php
+
 use Illuminate\Foundation\Application;
-use Illuminate\Http\Request;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -29,6 +30,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\HandleInvitationAfterRegistration::class,
+        ]);
+
+        // Register premium features middleware alias
+        $middleware->alias([
+            'subscription' => \App\Http\Middleware\CheckSubscription::class,
         ]);
     })
     ->withExceptions(function ($exceptions) {})

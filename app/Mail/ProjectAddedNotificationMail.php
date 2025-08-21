@@ -15,7 +15,9 @@ class ProjectAddedNotificationMail extends Mailable
     use Queueable, SerializesModels;
 
     public $project;
+
     public $user;
+
     public $addedBy;
 
     public function __construct(Project $project, User $user, User $addedBy)

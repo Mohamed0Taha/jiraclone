@@ -26,12 +26,12 @@ class TaskPolicy
         if ($user->id === $task->project->user_id) {
             return true;
         }
-        
+
         // Check if user is a member of the project
         if ($task->project->members()->where('user_id', $user->id)->exists()) {
             return true;
         }
-        
+
         // Check if user is the task creator or assignee
         return $user->id === $task->creator_id           // creator
             || $user->id === $task->assignee_id;         // assignee

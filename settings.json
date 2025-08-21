@@ -25,7 +25,5 @@
     },
 
     // Ensure Intelephense indexes dompdf vendor path
-    "intelephense.environment.includePaths": [
-        "vendor/dompdf/dompdf/src"
-    ]
+    "intelephense.environment.includePaths": ["vendor/dompdf/dompdf/src"]
 }

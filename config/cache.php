@@ -91,7 +91,7 @@ return [
     |
     */
     'prefix' => env('CACHE_PREFIX',
-        Str::slug((string) env('APP_NAME', 'laravel')) . '-' . env('APP_ENV', 'production') . '-cache-'
+        Str::slug((string) env('APP_NAME', 'laravel')).'-'.env('APP_ENV', 'production').'-cache-'
     ),
 
 ];

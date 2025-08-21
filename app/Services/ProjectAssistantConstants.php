@@ -1,18 +1,24 @@
 <?php
+
 // File: app/Services/ProjectAssistantConstants.php
 
 namespace App\Services;
 
 final class ProjectAssistantConstants
 {
-    public const SERVER_STATUSES = ['todo','inprogress','review','done'];
-    public const PRIORITIES      = ['low','medium','high','urgent'];
+    public const SERVER_STATUSES = ['todo', 'inprogress', 'review', 'done'];
 
-    public const METH_KANBAN     = 'kanban';
-    public const METH_SCRUM      = 'scrum';
-    public const METH_AGILE      = 'agile';
-    public const METH_WATERFALL  = 'waterfall';
-    public const METH_LEAN       = 'lean';
+    public const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
+
+    public const METH_KANBAN = 'kanban';
+
+    public const METH_SCRUM = 'scrum';
+
+    public const METH_AGILE = 'agile';
+
+    public const METH_WATERFALL = 'waterfall';
+
+    public const METH_LEAN = 'lean';
 
     public const ENHANCED_ACTION_PATTERNS = [
         'find_task' => [
@@ -32,10 +38,10 @@ final class ProjectAssistantConstants
     ];
 
     public const TASK_ID_PATTERNS = [
-        'by_id'           => '/\b(?:task\s+)?#?(\d+)\b/i',
-        'by_assignee'     => '/\b(?:task[s]?\s+)?(?:assigned\s+to|for|by)\s+([a-z0-9._@\-\s]+)\b/i',
-        'by_creator'      => '/\b(?:task[s]?\s+)?(?:created\s+by|from)\s+([a-z0-9._@\-\s]+)\b/i',
-        'by_milestone'    => '/\b(?:task[s]?\s+)?(?:in|from)\s+milestone\s+([a-z0-9._\-\s]+)\b/i',
+        'by_id' => '/\b(?:task\s+)?#?(\d+)\b/i',
+        'by_assignee' => '/\b(?:task[s]?\s+)?(?:assigned\s+to|for|by)\s+([a-z0-9._@\-\s]+)\b/i',
+        'by_creator' => '/\b(?:task[s]?\s+)?(?:created\s+by|from)\s+([a-z0-9._@\-\s]+)\b/i',
+        'by_milestone' => '/\b(?:task[s]?\s+)?(?:in|from)\s+milestone\s+([a-z0-9._\-\s]+)\b/i',
         'by_status_combo' => '/\b([a-z\-\s]+)\s+(?:task[s]?\s+)?(?:assigned\s+to|for)\s+([a-z0-9._@\-\s]+)\b/i',
     ];
 }

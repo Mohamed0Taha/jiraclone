@@ -1,21 +1,21 @@
 import { useState } from 'react';
-import { 
-    Box, 
-    TextField, 
-    Button, 
-    Typography, 
+import {
+    Box,
+    TextField,
+    Button,
+    Typography,
     useTheme,
     Card,
     CardContent,
     InputAdornment,
-    IconButton
+    IconButton,
 } from '@mui/material';
-import { 
-    Visibility, 
-    VisibilityOff, 
+import {
+    Visibility,
+    VisibilityOff,
     Lock as LockIcon,
     Email as EmailIcon,
-    LockReset as LockResetIcon
+    LockReset as LockResetIcon,
 } from '@mui/icons-material';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
@@ -24,7 +24,7 @@ export default function ResetPassword({ token, email }) {
     const theme = useTheme();
     const [showPassword, setShowPassword] = useState(false);
     const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
-    
+
     const { data, setData, post, processing, errors, reset } = useForm({
         token: token,
         email: email,
@@ -44,43 +44,45 @@ export default function ResetPassword({ token, email }) {
         <GuestLayout>
             <Head title="Reset Password" />
 
-            <Card sx={{ 
-                maxWidth: 480, 
-                mx: 'auto', 
-                p: 2,
-                boxShadow: theme.shadows[8],
-                borderRadius: theme.shape.borderRadius 
-            }}>
+            <Card
+                sx={{
+                    maxWidth: 480,
+                    mx: 'auto',
+                    p: 2,
+                    boxShadow: theme.shadows[8],
+                    borderRadius: theme.shape.borderRadius,
+                }}
+            >
                 <CardContent sx={{ p: 4 }}>
                     <Box sx={{ textAlign: 'center', mb: 3 }}>
-                        <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            mb: 2
-                        }}>
-                            <LockResetIcon sx={{ 
-                                fontSize: 32, 
-                                color: theme.palette.primary.main,
-                                mr: 1
-                            }} />
-                            <Typography 
-                                variant="h4" 
-                                component="h1" 
-                                sx={{ 
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 2,
+                            }}
+                        >
+                            <LockResetIcon
+                                sx={{
+                                    fontSize: 32,
+                                    color: theme.palette.primary.main,
+                                    mr: 1,
+                                }}
+                            />
+                            <Typography
+                                variant="h4"
+                                component="h1"
+                                sx={{
                                     fontWeight: 700,
                                     color: theme.palette.primary.main,
-                                    fontFamily: '"Inter", "Segoe UI", sans-serif'
+                                    fontFamily: '"Inter", "Segoe UI", sans-serif',
                                 }}
                             >
                                 Reset Password
                             </Typography>
                         </Box>
-                        <Typography 
-                            variant="body1" 
-                            color="textSecondary"
-                            sx={{ mb: 1 }}
-                        >
+                        <Typography variant="body1" color="textSecondary" sx={{ mb: 1 }}>
                             Create a new password for your TaskPilot account
                         </Typography>
                     </Box>
@@ -178,10 +180,18 @@ export default function ResetPassword({ token, email }) {
                                     <InputAdornment position="end">
                                         <IconButton
                                             aria-label="toggle password confirmation visibility"
-                                            onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
+                                            onClick={() =>
+                                                setShowPasswordConfirmation(
+                                                    !showPasswordConfirmation
+                                                )
+                                            }
                                             edge="end"
                                         >
-                                            {showPasswordConfirmation ? <VisibilityOff /> : <Visibility />}
+                                            {showPasswordConfirmation ? (
+                                                <VisibilityOff />
+                                            ) : (
+                                                <Visibility />
+                                            )}
                                         </IconButton>
                                     </InputAdornment>
                                 ),

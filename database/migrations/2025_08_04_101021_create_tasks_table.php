@@ -13,18 +13,18 @@ return new class extends Migration
 
             // FK to projects
             $table->foreignId('project_id')
-                  ->constrained()
-                  ->onDelete('cascade');
+                ->constrained()
+                ->onDelete('cascade');
 
             // creator and assignee
             $table->foreignId('creator_id')
-                  ->constrained('users')
-                  ->onDelete('cascade');
+                ->constrained('users')
+                ->onDelete('cascade');
 
             $table->foreignId('assignee_id')
-                  ->nullable()                 // nullable, will default in code
-                  ->constrained('users')
-                  ->onDelete('cascade');
+                ->nullable()                 // nullable, will default in code
+                ->constrained('users')
+                ->onDelete('cascade');
 
             // task data
             $table->string('title');

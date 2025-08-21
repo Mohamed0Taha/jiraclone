@@ -1,42 +1,44 @@
-import "../css/app.css";
-import "./bootstrap";
+import '../css/app.css';
+import './bootstrap';
 
-import React, { Suspense } from "react";
-import { createRoot } from "react-dom/client";
-import { createInertiaApp } from "@inertiajs/react";
-import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
+import React, { Suspense } from 'react';
+import { createRoot } from 'react-dom/client';
+import { createInertiaApp } from '@inertiajs/react';
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 
 /* Try to load the MUI theme; if it fails we'll warn and keep going. */
 let ThemeProvider = React.Fragment;
-let CssBaseline   = React.Fragment;
+let CssBaseline = React.Fragment;
 let CircularProgress = () => <div>Loading...</div>;
-let theme         = null;
+let theme = null;
 
 try {
     // eslint-disable-next-line import/extensions
-    theme = (await import("./theme")).default;
-    ({ ThemeProvider, CssBaseline, CircularProgress } = await import("@mui/material"));
+    theme = (await import('./theme')).default;
+    ({ ThemeProvider, CssBaseline, CircularProgress } = await import('@mui/material'));
 } catch (err) {
     console.warn(
-        "⚠️  MUI theme not applied:",
+        '⚠️  MUI theme not applied:',
         err.message,
-        "\nRun `npm i @mui/material @mui/icons-material @emotion/react @emotion/styled` " +
-            "and ensure resources/js/theme.js exists."
+        '\nRun `npm i @mui/material @mui/icons-material @emotion/react @emotion/styled` ' +
+            'and ensure resources/js/theme.js exists.'
     );
 }
 
-const appName = import.meta.env.VITE_APP_NAME || "Laravel";
+const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 // Loading component for Suspense
 const LoadingSpinner = () => (
-    <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        flexDirection: 'column',
-        gap: '16px'
-    }}>
+    <div
+        style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100vh',
+            flexDirection: 'column',
+            gap: '16px',
+        }}
+    >
         <CircularProgress />
         <span>Loading...</span>
     </div>
@@ -46,10 +48,7 @@ createInertiaApp({
     title: (title) => `${title} - ${appName}`,
 
     resolve: (name) =>
-        resolvePageComponent(
-            `./Pages/${name}.jsx`,
-            import.meta.glob("./Pages/**/*.jsx")
-        ),
+        resolvePageComponent(`./Pages/${name}.jsx`, import.meta.glob('./Pages/**/*.jsx')),
 
     setup({ el, App, props }) {
         const root = createRoot(el);
@@ -72,6 +71,6 @@ createInertiaApp({
     },
 
     progress: {
-        color: theme?.palette.primary.main || "#4B5563",
+        color: theme?.palette.primary.main || '#4B5563',
     },
 });

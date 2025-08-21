@@ -7,26 +7,23 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 // Import statements for all the refactored services
-use App\Services\IntentClassifierService;
-use App\Services\QuestionAnsweringService;
-use App\Services\CommandProcessingService;
-use App\Services\CommandExecutionService;
-use App\Services\OpenAIService; // Assuming OpenAIService is also in this namespace
+// Assuming OpenAIService is also in this namespace
 
 /**
  * ProjectAssistantService (Orchestrator)
  *
  * Main entry point that orchestrates the workflow by delegating to specialized services.
  */
-
-use App\Services\ConversationHistoryManager;
-
 class ProjectAssistantService
 {
     private IntentClassifierService $classifier;
+
     private QuestionAnsweringService $qnaService;
+
     private CommandProcessingService $commandProcessor;
+
     private CommandExecutionService $commandExecutor;
+
     private ConversationHistoryManager $historyManager;
 
     public function __construct(
@@ -67,15 +64,17 @@ class ProjectAssistantService
                 Log::debug('[ProjectAssistantService] answer', ['answer' => $answer]);
                 $this->historyManager->addToHistory($project, 'user', $message, $sessionId);
                 $this->historyManager->addToHistory($project, 'assistant', $answer, $sessionId);
+
                 return $this->createResponse('information', $answer, false);
             }
 
             if ($intent['kind'] === 'command') {
                 $planResult = $this->commandProcessor->generatePlan($project, $message, $history, $intent['plan'] ?? []);
                 Log::debug('[ProjectAssistantService] planResult', ['planResult' => $planResult]);
-                if (!empty($planResult['command_data'])) {
+                if (! empty($planResult['command_data'])) {
                     $this->historyManager->addToHistory($project, 'user', $message, $sessionId);
                     $this->historyManager->addToHistory($project, 'assistant', $planResult['preview_message'], $sessionId);
+
                     return [
                         'type' => 'command',
                         'message' => $planResult['preview_message'],
@@ -85,14 +84,16 @@ class ProjectAssistantService
                 }
                 $this->historyManager->addToHistory($project, 'user', $message, $sessionId);
                 $this->historyManager->addToHistory($project, 'assistant', $planResult['preview_message'], $sessionId);
+
                 return $this->createResponse('information', $planResult['preview_message'], false);
             }
 
             $helpArr = $this->qnaService->provideHelp($project);
-            $helpMsg = is_array($helpArr) && isset($helpArr['message']) ? $helpArr['message'] : (string)$helpArr;
+            $helpMsg = is_array($helpArr) && isset($helpArr['message']) ? $helpArr['message'] : (string) $helpArr;
             $this->historyManager->addToHistory($project, 'user', $message, $sessionId);
             $this->historyManager->addToHistory($project, 'assistant', $helpMsg, $sessionId);
             Log::debug('[ProjectAssistantService] helpArr', ['helpArr' => $helpArr]);
+
             return $helpArr;
         } catch (Throwable $e) {
             Log::error('[ProjectAssistantService] Unhandled Exception', [
@@ -101,6 +102,7 @@ class ProjectAssistantService
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return $this->createResponse('error', 'An unexpected error occurred. Please try again.', false);
         }
     }
@@ -109,7 +111,7 @@ class ProjectAssistantService
     {
         return $this->commandExecutor->execute($project, $plan);
     }
-    
+
     private function looksLikeSecrets(string $text): bool
     {
         return preg_match('/\b(api_key|secret=|password=|token=|bearer|PRIVATE KEY)\b/i', $text);

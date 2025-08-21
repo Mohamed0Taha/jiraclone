@@ -12,6 +12,7 @@ class TaskUpdated
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $task;
+
     public $changes;
 
     /**

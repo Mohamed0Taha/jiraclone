@@ -1,10 +1,11 @@
 <?php
+
 // app/Models/Project.php
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Project extends Model
 {
@@ -20,9 +21,9 @@ class Project extends Model
     ];
 
     protected $casts = [
-        'meta'       => 'array',
+        'meta' => 'array',
         'start_date' => 'date:Y-m-d',
-        'end_date'   => 'date:Y-m-d',
+        'end_date' => 'date:Y-m-d',
     ];
 
     public function user()
@@ -33,8 +34,8 @@ class Project extends Model
     public function members()
     {
         return $this->belongsToMany(User::class, 'project_members')
-                    ->withPivot('role', 'joined_at')
-                    ->withTimestamps();
+            ->withPivot('role', 'joined_at')
+            ->withTimestamps();
     }
 
     public function invitations()

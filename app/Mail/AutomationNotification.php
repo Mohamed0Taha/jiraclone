@@ -10,6 +10,7 @@ class AutomationNotification extends Mailable
     use SerializesModels;
 
     public string $subjectLine;
+
     public string $contentText;
 
     public function __construct(string $subjectLine, string $contentText)

@@ -1,4 +1,5 @@
 <?php
+
 // File: app/Services/ProjectAssistantCommon.php
 
 namespace App\Services;
@@ -8,38 +9,42 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Throwable;
 
 trait ProjectAssistantCommon
 {
     // Canonical server-side statuses and priorities
-    private const SERVER_STATUSES = ['todo','inprogress','review','done'];
-    private const PRIORITIES      = ['low','medium','high','urgent'];
+    private const SERVER_STATUSES = ['todo', 'inprogress', 'review', 'done'];
+
+    private const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
     // Supported methodologies
-    private const METH_KANBAN     = 'kanban';
-    private const METH_SCRUM      = 'scrum';
-    private const METH_AGILE      = 'agile';
-    private const METH_WATERFALL  = 'waterfall';
-    private const METH_LEAN       = 'lean';
+    private const METH_KANBAN = 'kanban';
+
+    private const METH_SCRUM = 'scrum';
+
+    private const METH_AGILE = 'agile';
+
+    private const METH_WATERFALL = 'waterfall';
+
+    private const METH_LEAN = 'lean';
 
     // Enhanced action patterns for task identification
     private const ENHANCED_ACTION_PATTERNS = [
         'find_task' => [
             '/\b(?:find|search|locate|show|get)\s+(?:task|tasks)\b/i',
             '/\b(?:which|what)\s+task\b/i',
-            '/\btask\s+(?:by|with|from|created by|assigned to)\b/i'
+            '/\btask\s+(?:by|with|from|created by|assigned to)\b/i',
         ],
         'project_info' => [
             '/\b(?:project|this project)\s+(?:info|details|summary|overview)\b/i',
             '/\bwhen\s+(?:was\s+)?(?:this\s+)?project\s+(?:created|started)\b/i',
-            '/\bproject\s+(?:start|end|due)\s+date\b/i'
+            '/\bproject\s+(?:start|end|due)\s+date\b/i',
         ],
         'update_project' => [
             '/\b(?:update|change|modify|set)\s+project\b/i',
-            '/\bproject\s+(?:name|title|description|due|start)\b/i'
-        ]
+            '/\bproject\s+(?:name|title|description|due|start)\b/i',
+        ],
     ];
 
     // Task identification patterns
@@ -48,17 +53,22 @@ trait ProjectAssistantCommon
         'by_assignee' => '/\b(?:task[s]?\s+)?(?:assigned\s+to|for|by)\s+([a-z0-9._@\-\s]+)\b/i',
         'by_creator' => '/\b(?:task[s]?\s+)?(?:created\s+by|from)\s+([a-z0-9._@\-\s]+)\b/i',
         'by_milestone' => '/\b(?:task[s]?\s+)?(?:in|from)\s+milestone\s+([a-z0-9._\-\s]+)\b/i',
-        'by_status_combo' => '/\b([a-z\-\s]+)\s+(?:task[s]?\s+)?(?:assigned\s+to|for)\s+([a-z0-9._@\-\s]+)\b/i'
+        'by_status_combo' => '/\b([a-z\-\s]+)\s+(?:task[s]?\s+)?(?:assigned\s+to|for)\s+([a-z0-9._@\-\s]+)\b/i',
     ];
 
     private function looksLikeSecrets(string $text): bool
     {
         $needles = [
-            'api_key','api-key','apikey','secret=','password=','pwd=','token=','bearer ','ghp_',
-            '-----BEGIN ','PRIVATE KEY','aws_access_key_id','aws_secret_access_key',
+            'api_key', 'api-key', 'apikey', 'secret=', 'password=', 'pwd=', 'token=', 'bearer ', 'ghp_',
+            '-----BEGIN ', 'PRIVATE KEY', 'aws_access_key_id', 'aws_secret_access_key',
         ];
         $low = strtolower($text);
-        foreach ($needles as $n) if (strpos($low, strtolower($n)) !== false) return true;
+        foreach ($needles as $n) {
+            if (strpos($low, strtolower($n)) !== false) {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -70,20 +80,23 @@ trait ProjectAssistantCommon
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ]));
-        } catch (Throwable $ignore) {}
+        } catch (Throwable $ignore) {
+        }
     }
 
     private function currentMethodology(Project $project): string
     {
         try {
             $meta = $project->meta ?? null;
-            if (is_array($meta) && !empty($meta['methodology'])) {
-                $m = strtolower((string)$meta['methodology']);
-                if (in_array($m, [self::METH_KANBAN,self::METH_SCRUM,self::METH_AGILE,self::METH_WATERFALL,self::METH_LEAN], true)) {
+            if (is_array($meta) && ! empty($meta['methodology'])) {
+                $m = strtolower((string) $meta['methodology']);
+                if (in_array($m, [self::METH_KANBAN, self::METH_SCRUM, self::METH_AGILE, self::METH_WATERFALL, self::METH_LEAN], true)) {
                     return $m;
                 }
             }
-        } catch (Throwable $e) {}
+        } catch (Throwable $e) {
+        }
+
         return self::METH_KANBAN;
     }
 
@@ -92,14 +105,14 @@ trait ProjectAssistantCommon
         switch ($method) {
             case self::METH_SCRUM:
             case self::METH_AGILE:
-                return ['todo'=>'todo','inprogress'=>'inprogress','review'=>'review','done'=>'done'];
+                return ['todo' => 'todo', 'inprogress' => 'inprogress', 'review' => 'review', 'done' => 'done'];
             case self::METH_WATERFALL:
-                return ['todo'=>'requirements','inprogress'=>'design','review'=>'verification','done'=>'maintenance'];
+                return ['todo' => 'requirements', 'inprogress' => 'design', 'review' => 'verification', 'done' => 'maintenance'];
             case self::METH_LEAN:
-                return ['todo'=>'backlog','inprogress'=>'todo','review'=>'testing','done'=>'done'];
+                return ['todo' => 'backlog', 'inprogress' => 'todo', 'review' => 'testing', 'done' => 'done'];
             case self::METH_KANBAN:
             default:
-                return ['todo'=>'todo','inprogress'=>'inprogress','review'=>'review','done'=>'done'];
+                return ['todo' => 'todo', 'inprogress' => 'inprogress', 'review' => 'review', 'done' => 'done'];
         }
     }
 
@@ -108,33 +121,33 @@ trait ProjectAssistantCommon
         switch ($method) {
             case self::METH_WATERFALL:
                 return [
-                    'requirements'=>'todo','specification'=>'todo','analysis'=>'todo',
-                    'design'=>'inprogress','implementation'=>'inprogress','construction'=>'inprogress',
-                    'verification'=>'review','validation'=>'review','testing phase'=>'review',
-                    'maintenance'=>'done','done'=>'done','complete'=>'done'
+                    'requirements' => 'todo', 'specification' => 'todo', 'analysis' => 'todo',
+                    'design' => 'inprogress', 'implementation' => 'inprogress', 'construction' => 'inprogress',
+                    'verification' => 'review', 'validation' => 'review', 'testing phase' => 'review',
+                    'maintenance' => 'done', 'done' => 'done', 'complete' => 'done',
                 ];
             case self::METH_LEAN:
                 return [
-                    'backlog'=>'todo','kanban backlog'=>'todo',
-                    'todo'=>'inprogress','value stream'=>'inprogress',
-                    'testing'=>'review','qa'=>'review',
-                    'done'=>'done','complete'=>'done'
+                    'backlog' => 'todo', 'kanban backlog' => 'todo',
+                    'todo' => 'inprogress', 'value stream' => 'inprogress',
+                    'testing' => 'review', 'qa' => 'review',
+                    'done' => 'done', 'complete' => 'done',
                 ];
             case self::METH_SCRUM:
             case self::METH_AGILE:
                 return [
-                    'product backlog'=>'todo','sprint backlog'=>'todo','backlog'=>'todo','todo'=>'todo',
-                    'inprogress'=>'inprogress','in progress'=>'inprogress','doing'=>'inprogress','wip'=>'inprogress',
-                    'review'=>'review','code review'=>'review','qa'=>'review','testing'=>'review',
-                    'done'=>'done','complete'=>'done','finished'=>'done'
+                    'product backlog' => 'todo', 'sprint backlog' => 'todo', 'backlog' => 'todo', 'todo' => 'todo',
+                    'inprogress' => 'inprogress', 'in progress' => 'inprogress', 'doing' => 'inprogress', 'wip' => 'inprogress',
+                    'review' => 'review', 'code review' => 'review', 'qa' => 'review', 'testing' => 'review',
+                    'done' => 'done', 'complete' => 'done', 'finished' => 'done',
                 ];
             case self::METH_KANBAN:
             default:
                 return [
-                    'todo'=>'todo','to do'=>'todo','backlog'=>'todo',
-                    'inprogress'=>'inprogress','in progress'=>'inprogress','doing'=>'inprogress','wip'=>'inprogress',
-                    'review'=>'review','code review'=>'review','qa'=>'review','testing'=>'review',
-                    'done'=>'done','complete'=>'done','finished'=>'done'
+                    'todo' => 'todo', 'to do' => 'todo', 'backlog' => 'todo',
+                    'inprogress' => 'inprogress', 'in progress' => 'inprogress', 'doing' => 'inprogress', 'wip' => 'inprogress',
+                    'review' => 'review', 'code review' => 'review', 'qa' => 'review', 'testing' => 'review',
+                    'done' => 'done', 'complete' => 'done', 'finished' => 'done',
                 ];
         }
     }
@@ -143,14 +156,22 @@ trait ProjectAssistantCommon
     {
         $method = $this->currentMethodology($project);
         $t = $this->norm($token);
-        if ($t === '') return null;
+        if ($t === '') {
+            return null;
+        }
 
-        if (in_array($t, self::SERVER_STATUSES, true)) return $t;
+        if (in_array($t, self::SERVER_STATUSES, true)) {
+            return $t;
+        }
 
         $phaseToServer = $this->methodPhaseToServer($method);
-        if (array_key_exists($t, $phaseToServer)) return $phaseToServer[$t];
+        if (array_key_exists($t, $phaseToServer)) {
+            return $phaseToServer[$t];
+        }
 
-        if ($t === 'in progress') return 'inprogress';
+        if ($t === 'in progress') {
+            return 'inprogress';
+        }
 
         return null;
     }
@@ -158,14 +179,18 @@ trait ProjectAssistantCommon
     private function resolvePriorityToken(string $token): ?string
     {
         $t = $this->norm($token);
-        if (in_array($t, self::PRIORITIES, true)) return $t;
+        if (in_array($t, self::PRIORITIES, true)) {
+            return $t;
+        }
 
         $map = [
-            'lowest' => 'low','normal' => 'medium','medium priority' => 'medium','moderate' => 'medium',
-            'higher' => 'high','highest' => 'urgent','critical' => 'urgent','blocker' => 'urgent',
-            'p3' => 'low','prio 3' => 'low','p2' => 'medium','prio 2' => 'medium','p1' => 'high','prio 1' => 'high','p0' => 'urgent','prio 0' => 'urgent',
+            'lowest' => 'low', 'normal' => 'medium', 'medium priority' => 'medium', 'moderate' => 'medium',
+            'higher' => 'high', 'highest' => 'urgent', 'critical' => 'urgent', 'blocker' => 'urgent',
+            'p3' => 'low', 'prio 3' => 'low', 'p2' => 'medium', 'prio 2' => 'medium', 'p1' => 'high', 'prio 1' => 'high', 'p0' => 'urgent', 'prio 0' => 'urgent',
         ];
-        if (isset($map[$t])) return $map[$t];
+        if (isset($map[$t])) {
+            return $map[$t];
+        }
 
         return null;
     }
@@ -173,12 +198,14 @@ trait ProjectAssistantCommon
     private function prettyPhase(string $method, string $serverStatus): string
     {
         $map = $this->serverToMethodPhase($method);
+
         return $map[$serverStatus] ?? $serverStatus;
     }
 
     private function labelsFor(Project $project): array
     {
         $method = $this->currentMethodology($project);
+
         return $this->serverToMethodPhase($method);
     }
 
@@ -188,19 +215,21 @@ trait ProjectAssistantCommon
         $t = str_replace(['_', '-'], ' ', $t);
         $t = preg_replace('/\b(status|column|phase|stage)\b/', '', $t);
         $t = preg_replace('/\s+/', ' ', $t);
+
         return trim($t);
     }
 
     private function parseOrdinalWindow(string $mLow): ?array
     {
-        $wordsToNum = ['one'=>1,'two'=>2,'three'=>3,'four'=>4,'five'=>5,'six'=>6,'seven'=>7,'eight'=>8,'nine'=>9,'ten'=>10];
+        $wordsToNum = ['one' => 1, 'two' => 2, 'three' => 3, 'four' => 4, 'five' => 5, 'six' => 6, 'seven' => 7, 'eight' => 8, 'nine' => 9, 'ten' => 10];
 
         if (preg_match('/\b(?:only\s+)?(?:the\s+)?(first|last|top)\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d+)\b/i', $mLow, $mm)) {
             $kind = strtolower($mm[1]);
             $nRaw = strtolower($mm[2]);
-            $n = ctype_digit($nRaw) ? (int)$nRaw : ($wordsToNum[$nRaw] ?? null);
+            $n = ctype_digit($nRaw) ? (int) $nRaw : ($wordsToNum[$nRaw] ?? null);
             if ($n && $n > 0) {
                 $order = ($kind === 'last') ? 'desc' : 'asc';
+
                 return ['limit' => $n, 'order_by' => 'created_at', 'order' => $order];
             }
         }
@@ -208,9 +237,10 @@ trait ProjectAssistantCommon
         if (preg_match('/\b(first|last)\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d+)\b/i', $mLow, $mm)) {
             $kind = strtolower($mm[1]);
             $nRaw = strtolower($mm[2]);
-            $n = ctype_digit($nRaw) ? (int)$nRaw : ($wordsToNum[$nRaw] ?? null);
+            $n = ctype_digit($nRaw) ? (int) $nRaw : ($wordsToNum[$nRaw] ?? null);
             if ($n && $n > 0) {
                 $order = ($kind === 'last') ? 'desc' : 'asc';
+
                 return ['limit' => $n, 'order_by' => 'created_at', 'order' => $order];
             }
         }
@@ -221,7 +251,9 @@ trait ProjectAssistantCommon
     private function parseDate(string $text): ?Carbon
     {
         $text = trim($text);
-        if ($text === '') return null;
+        if ($text === '') {
+            return null;
+        }
         try {
             return Carbon::parse($text);
         } catch (Throwable $e) {
@@ -231,20 +263,22 @@ trait ProjectAssistantCommon
 
     private function normalizeType(?string $type): ?string
     {
-        if (!$type) return null;
+        if (! $type) {
+            return null;
+        }
         $t = strtolower(trim($type));
 
         $map = [
-            'create' => 'create_task','create-task' => 'create_task','new_task' => 'create_task','new-task' => 'create_task',
-            'update' => 'task_update','update_task' => 'task_update','update-task' => 'task_update','edit_task' => 'task_update','edit-task' => 'task_update','move_task' => 'task_update','move-task' => 'task_update',
-            'delete' => 'task_delete','delete_task' => 'task_delete','delete-task' => 'task_delete','remove_task' => 'task_delete','remove-task' => 'task_delete',
-            'bulkupdate' => 'bulk_update','bulk-update' => 'bulk_update','mass_update' => 'bulk_update','mass-update' => 'bulk_update',
-            'assign' => 'bulk_assign','bulk_assign' => 'bulk_assign','bulk-assign' => 'bulk_assign','assign_all' => 'bulk_assign','assign-all' => 'bulk_assign',
-            'bulk-delete' => 'bulk_delete','bulkdelete' => 'bulk_delete','delete_filtered' => 'bulk_delete','delete-filtered' => 'bulk_delete',
-            'delete_overdue' => 'bulk_delete_overdue','delete-overdue' => 'bulk_delete_overdue','bulk_delete_overdue' => 'bulk_delete_overdue','bulk-delete-overdue' => 'bulk_delete_overdue',
-            'delete_all' => 'bulk_delete_all','delete-all' => 'bulk_delete_all','clear_all' => 'bulk_delete_all','clear-all' => 'bulk_delete_all','bulk_delete_all' => 'bulk_delete_all','bulk-delete-all' => 'bulk_delete_all',
-            'find' => 'find_task','find_task' => 'find_task','find-task' => 'find_task','search_task' => 'find_task','search-task' => 'find_task',
-            'update_project' => 'update_project','update-project' => 'update_project','project_update' => 'update_project','project-update' => 'update_project',
+            'create' => 'create_task', 'create-task' => 'create_task', 'new_task' => 'create_task', 'new-task' => 'create_task',
+            'update' => 'task_update', 'update_task' => 'task_update', 'update-task' => 'task_update', 'edit_task' => 'task_update', 'edit-task' => 'task_update', 'move_task' => 'task_update', 'move-task' => 'task_update',
+            'delete' => 'task_delete', 'delete_task' => 'task_delete', 'delete-task' => 'task_delete', 'remove_task' => 'task_delete', 'remove-task' => 'task_delete',
+            'bulkupdate' => 'bulk_update', 'bulk-update' => 'bulk_update', 'mass_update' => 'bulk_update', 'mass-update' => 'bulk_update',
+            'assign' => 'bulk_assign', 'bulk_assign' => 'bulk_assign', 'bulk-assign' => 'bulk_assign', 'assign_all' => 'bulk_assign', 'assign-all' => 'bulk_assign',
+            'bulk-delete' => 'bulk_delete', 'bulkdelete' => 'bulk_delete', 'delete_filtered' => 'bulk_delete', 'delete-filtered' => 'bulk_delete',
+            'delete_overdue' => 'bulk_delete_overdue', 'delete-overdue' => 'bulk_delete_overdue', 'bulk_delete_overdue' => 'bulk_delete_overdue', 'bulk-delete-overdue' => 'bulk_delete_overdue',
+            'delete_all' => 'bulk_delete_all', 'delete-all' => 'bulk_delete_all', 'clear_all' => 'bulk_delete_all', 'clear-all' => 'bulk_delete_all', 'bulk_delete_all' => 'bulk_delete_all', 'bulk-delete-all' => 'bulk_delete_all',
+            'find' => 'find_task', 'find_task' => 'find_task', 'find-task' => 'find_task', 'search_task' => 'find_task', 'search-task' => 'find_task',
+            'update_project' => 'update_project', 'update-project' => 'update_project', 'project_update' => 'update_project', 'project-update' => 'update_project',
         ];
 
         return $map[$t] ?? $t;
@@ -257,8 +291,13 @@ trait ProjectAssistantCommon
             'message' => $message,
             'requires_confirmation' => $requiresConfirmation,
         ];
-        if (!empty($data)) $response['data'] = $data;
-        if ($type === 'information') $response['ui'] = ['show_snapshot' => !empty($data)];
+        if (! empty($data)) {
+            $response['data'] = $data;
+        }
+        if ($type === 'information') {
+            $response['ui'] = ['show_snapshot' => ! empty($data)];
+        }
+
         return $response;
     }
 
@@ -275,20 +314,26 @@ trait ProjectAssistantCommon
     {
         try {
             if (method_exists($project, 'members')) {
-                return $project->members()->get(['users.id','users.name','users.email']);
+                return $project->members()->get(['users.id', 'users.name', 'users.email']);
             }
-        } catch (Throwable $e) {}
+        } catch (Throwable $e) {
+        }
+
         return collect();
     }
 
     private function userIsProjectMember(Project $project, User $user): bool
     {
-        if ((int)$project->user_id === (int)$user->id) return true;
+        if ((int) $project->user_id === (int) $user->id) {
+            return true;
+        }
         try {
             if (method_exists($project, 'members')) {
                 return $project->members()->where('users.id', $user->id)->exists();
             }
-        } catch (Throwable $e) {}
+        } catch (Throwable $e) {
+        }
+
         return false;
     }
 
@@ -296,9 +341,12 @@ trait ProjectAssistantCommon
     {
         try {
             $id = Auth::id();
-            if ($id) return (int)$id;
-        } catch (Throwable $e) {}
+            if ($id) {
+                return (int) $id;
+            }
+        } catch (Throwable $e) {
+        }
+
         return $project->user_id ?? null;
     }
 }
-

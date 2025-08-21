@@ -21,8 +21,6 @@
         },
         "types": ["node"]
     },
-    "include": [
-        "resources/js/**/*"
-    ],
+    "include": ["resources/js/**/*"],
     "exclude": ["node_modules", "public"]
 }

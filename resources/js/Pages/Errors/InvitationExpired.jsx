@@ -8,18 +8,19 @@ const InvitationExpired = () => {
         <Container maxWidth="sm" sx={{ py: 8 }}>
             <Card elevation={3}>
                 <CardContent sx={{ textAlign: 'center', py: 6 }}>
-                    <ErrorOutline 
-                        sx={{ 
-                            fontSize: 80, 
-                            color: 'warning.main', 
-                            mb: 2 
-                        }} 
+                    <ErrorOutline
+                        sx={{
+                            fontSize: 80,
+                            color: 'warning.main',
+                            mb: 2,
+                        }}
                     />
                     <Typography variant="h4" gutterBottom color="error">
                         Invitation Expired
                     </Typography>
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                        This invitation link has expired. Please ask the project owner to send you a new invitation.
+                        This invitation link has expired. Please ask the project owner to send you a
+                        new invitation.
                     </Typography>
                     <Button
                         component={Link}

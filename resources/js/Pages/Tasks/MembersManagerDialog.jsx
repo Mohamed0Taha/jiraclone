@@ -22,10 +22,10 @@ import {
     Divider,
     Tooltip,
 } from '@mui/material';
-import { 
-    PersonAdd, 
-    Delete, 
-    Email, 
+import {
+    PersonAdd,
+    Delete,
+    Email,
     Person,
     Cancel,
     Pending,
@@ -59,24 +59,23 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
             proj.user?.id,
             proj.owner?.id,
         ];
-        const val = candidates.find(v => v !== undefined && v !== null);
+        const val = candidates.find((v) => v !== undefined && v !== null);
         return val === undefined ? null : val;
     };
 
     const extractMemberId = (member) => {
         if (!member) return null;
-        const candidates = [
-            member.id,
-            member.user_id,
-            member.userId,
-            member.user?.id,
-        ];
-        const val = candidates.find(v => v !== undefined && v !== null);
+        const candidates = [member.id, member.user_id, member.userId, member.user?.id];
+        const val = candidates.find((v) => v !== undefined && v !== null);
         return val === undefined ? null : val;
     };
 
     // Normalize once for this render
-    const normalizedOwnerId = project ? (extractProjectOwnerId(project) != null ? String(extractProjectOwnerId(project)) : null) : null;
+    const normalizedOwnerId = project
+        ? extractProjectOwnerId(project) != null
+            ? String(extractProjectOwnerId(project))
+            : null
+        : null;
 
     const isOwnerByIds = (ownerId, memberId) => {
         if (ownerId == null || memberId == null) return false;
@@ -129,7 +128,9 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    'X-CSRF-TOKEN': document
+                        .querySelector('meta[name="csrf-token"]')
+                        ?.getAttribute('content'),
                     'X-Requested-With': 'XMLHttpRequest',
                 },
                 credentials: 'same-origin',
@@ -145,15 +146,18 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
 
             if (data.type === 'direct_add') {
                 setSuccess(`${data.user.name} has been added to the project!`);
-                setMembers(prev => [...prev, {
-                    id: data.user.id,
-                    name: data.user.name,
-                    email: data.user.email,
-                    pivot: { role, joined_at: new Date().toISOString() }
-                }]);
+                setMembers((prev) => [
+                    ...prev,
+                    {
+                        id: data.user.id,
+                        name: data.user.name,
+                        email: data.user.email,
+                        pivot: { role, joined_at: new Date().toISOString() },
+                    },
+                ]);
             } else {
                 setSuccess(`Invitation sent to ${email}!`);
-                setInvitations(prev => [...prev, data.invitation]);
+                setInvitations((prev) => [...prev, data.invitation]);
             }
             setEmail('');
             setRole('member');
@@ -174,7 +178,9 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    'X-CSRF-TOKEN': document
+                        .querySelector('meta[name="csrf-token"]')
+                        ?.getAttribute('content'),
                     'X-Requested-With': 'XMLHttpRequest',
                 },
                 credentials: 'same-origin',
@@ -187,7 +193,9 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
             }
 
             await response.json();
-            setMembers(prev => prev.filter(member => String(extractMemberId(member)) !== String(userId)));
+            setMembers((prev) =>
+                prev.filter((member) => String(extractMemberId(member)) !== String(userId))
+            );
             setSuccess('Member removed successfully');
         } catch (err) {
             setError('Failed to remove member: ' + err.message);
@@ -206,7 +214,9 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    'X-CSRF-TOKEN': document
+                        .querySelector('meta[name="csrf-token"]')
+                        ?.getAttribute('content'),
                     'X-Requested-With': 'XMLHttpRequest',
                 },
                 credentials: 'same-origin',
@@ -219,7 +229,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
             }
 
             await response.json();
-            setInvitations(prev => prev.filter(inv => String(inv.id) !== String(invitationId)));
+            setInvitations((prev) => prev.filter((inv) => String(inv.id) !== String(invitationId)));
             setSuccess('Invitation cancelled successfully');
         } catch (err) {
             setError('Failed to cancel invitation: ' + err.message);
@@ -247,7 +257,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                 canManageMembers: true,
                 canDeleteProject: true,
                 role: 'owner',
-                isOwner: true
+                isOwner: true,
             };
         }
 
@@ -260,40 +270,62 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
             canManageMembers: false,
             canDeleteProject: false,
             role: roleFromPivot,
-            isOwner: false
+            isOwner: false,
         };
     };
 
     const AuthorizationChips = ({ member, isOwnerFlag }) => {
         const auth = getAuthorizationSummary(member, isOwnerFlag);
         const permissions = [
-            { key: 'viewProject', label: 'View Project', icon: <Visibility />, enabled: auth.canViewProject },
+            {
+                key: 'viewProject',
+                label: 'View Project',
+                icon: <Visibility />,
+                enabled: auth.canViewProject,
+            },
             { key: 'viewTasks', label: 'View Tasks', icon: <Task />, enabled: auth.canViewTasks },
             { key: 'editTasks', label: 'Edit Tasks', icon: <Edit />, enabled: auth.canEditTasks },
-            { key: 'editProject', label: 'Edit Project', icon: <Settings />, enabled: auth.canEditProject },
-            { key: 'manageMembers', label: 'Manage Members', icon: <Group />, enabled: auth.canManageMembers },
+            {
+                key: 'editProject',
+                label: 'Edit Project',
+                icon: <Settings />,
+                enabled: auth.canEditProject,
+            },
+            {
+                key: 'manageMembers',
+                label: 'Manage Members',
+                icon: <Group />,
+                enabled: auth.canManageMembers,
+            },
         ];
 
         return (
             <Box sx={{ mt: 1 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mb: 0.5, display: 'block' }}>
+                <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontWeight: 600, mb: 0.5, display: 'block' }}
+                >
                     <Security sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
                     Permissions {auth.isOwner ? '(Full Access - Owner)' : '(Member Access)'}:
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {permissions.map((perm) => (
-                        <Tooltip key={perm.key} title={perm.enabled ? `Can ${perm.label}` : `Cannot ${perm.label}`}>
+                        <Tooltip
+                            key={perm.key}
+                            title={perm.enabled ? `Can ${perm.label}` : `Cannot ${perm.label}`}
+                        >
                             <Chip
                                 icon={perm.icon}
                                 label={perm.label}
                                 size="small"
-                                variant={perm.enabled ? "filled" : "outlined"}
-                                color={perm.enabled ? "success" : "default"}
-                                sx={{ 
+                                variant={perm.enabled ? 'filled' : 'outlined'}
+                                color={perm.enabled ? 'success' : 'default'}
+                                sx={{
                                     fontSize: '0.7rem',
                                     height: 24,
                                     opacity: perm.enabled ? 1 : 0.6,
-                                    '& .MuiChip-icon': { fontSize: 14 }
+                                    '& .MuiChip-icon': { fontSize: 14 },
                                 }}
                             />
                         </Tooltip>
@@ -315,24 +347,35 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
 
         return (
             <Box sx={{ mt: 1 }}>
-                <Typography variant="caption" color="warning.main" sx={{ fontWeight: 600, mb: 0.5, display: 'block' }}>
+                <Typography
+                    variant="caption"
+                    color="warning.main"
+                    sx={{ fontWeight: 600, mb: 0.5, display: 'block' }}
+                >
                     <Security sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
                     Will have permissions:
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {permissions.map((perm) => (
-                        <Tooltip key={perm.key} title={perm.enabled ? `Will be able to ${perm.label}` : `Won't be able to ${perm.label}`}>
+                        <Tooltip
+                            key={perm.key}
+                            title={
+                                perm.enabled
+                                    ? `Will be able to ${perm.label}`
+                                    : `Won't be able to ${perm.label}`
+                            }
+                        >
                             <Chip
                                 icon={perm.icon}
                                 label={perm.label}
                                 size="small"
                                 variant="outlined"
-                                color={perm.enabled ? "warning" : "default"}
-                                sx={{ 
+                                color={perm.enabled ? 'warning' : 'default'}
+                                sx={{
                                     fontSize: '0.7rem',
                                     height: 24,
                                     opacity: perm.enabled ? 1 : 0.5,
-                                    '& .MuiChip-icon': { fontSize: 14 }
+                                    '& .MuiChip-icon': { fontSize: 14 },
                                 }}
                             />
                         </Tooltip>
@@ -354,14 +397,14 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                     Manage Project Members
                 </Box>
             </DialogTitle>
-            
+
             <DialogContent>
                 {error && (
                     <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
                         {error}
                     </Alert>
                 )}
-                
+
                 {success && (
                     <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
                         {success}
@@ -420,18 +463,39 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                         {members.map((member) => {
                             const memberId = extractMemberId(member);
                             const isOwnerFlag =
-                                (normalizedOwnerId != null && memberId != null && isOwnerByIds(normalizedOwnerId, memberId))
-                                || (member?.pivot?.role === 'owner'); // safety net
+                                (normalizedOwnerId != null &&
+                                    memberId != null &&
+                                    isOwnerByIds(normalizedOwnerId, memberId)) ||
+                                member?.pivot?.role === 'owner'; // safety net
 
                             return (
-                                <ListItem key={String(memberId ?? Math.random())} sx={{ flexDirection: 'column', alignItems: 'stretch', py: 2 }}>
-                                    <Box sx={{ display: 'flex', width: '100%', alignItems: 'flex-start' }}>
+                                <ListItem
+                                    key={String(memberId ?? Math.random())}
+                                    sx={{ flexDirection: 'column', alignItems: 'stretch', py: 2 }}
+                                >
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            width: '100%',
+                                            alignItems: 'flex-start',
+                                        }}
+                                    >
                                         <Avatar sx={{ mr: 2, bgcolor: 'success.main', mt: 0.5 }}>
-                                            {member.name?.charAt(0) || member.email?.charAt(0) || 'U'}
+                                            {member.name?.charAt(0) ||
+                                                member.email?.charAt(0) ||
+                                                'U'}
                                         </Avatar>
                                         <Box sx={{ flex: 1 }}>
-                                            <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
-                                                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                            <Box
+                                                display="flex"
+                                                alignItems="center"
+                                                gap={1}
+                                                sx={{ mb: 1 }}
+                                            >
+                                                <Typography
+                                                    variant="subtitle1"
+                                                    sx={{ fontWeight: 600 }}
+                                                >
                                                     {member.name || member.email}
                                                 </Typography>
                                                 <Chip
@@ -440,29 +504,44 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                                     color={getRoleColor(member?.pivot?.role)}
                                                 />
                                                 {isOwnerFlag && (
-                                                    <Chip label="owner" size="small" color="warning" />
+                                                    <Chip
+                                                        label="owner"
+                                                        size="small"
+                                                        color="warning"
+                                                    />
                                                 )}
-                                                <Chip 
-                                                    label="Active" 
-                                                    size="small" 
-                                                    color="success" 
+                                                <Chip
+                                                    label="Active"
+                                                    size="small"
+                                                    color="success"
                                                     variant="outlined"
                                                 />
                                             </Box>
-                                            
-                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ mb: 1 }}
+                                            >
                                                 {member.email}
                                             </Typography>
-                                            
+
                                             {member?.pivot?.joined_at && (
-                                                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                    sx={{ mb: 1, display: 'block' }}
+                                                >
                                                     Joined {formatDate(member.pivot.joined_at)}
                                                 </Typography>
                                             )}
-                                            
-                                            <AuthorizationChips member={member} isOwnerFlag={isOwnerFlag} />
+
+                                            <AuthorizationChips
+                                                member={member}
+                                                isOwnerFlag={isOwnerFlag}
+                                            />
                                         </Box>
-                                        
+
                                         <Box sx={{ ml: 2 }}>
                                             {!isOwnerFlag && (
                                                 <IconButton
@@ -491,14 +570,31 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                         </Typography>
                         <List>
                             {invitations.map((invitation) => (
-                                <ListItem key={invitation.id} sx={{ flexDirection: 'column', alignItems: 'stretch', py: 2 }}>
-                                    <Box sx={{ display: 'flex', width: '100%', alignItems: 'flex-start' }}>
+                                <ListItem
+                                    key={invitation.id}
+                                    sx={{ flexDirection: 'column', alignItems: 'stretch', py: 2 }}
+                                >
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            width: '100%',
+                                            alignItems: 'flex-start',
+                                        }}
+                                    >
                                         <Avatar sx={{ mr: 2, bgcolor: 'warning.main', mt: 0.5 }}>
                                             <Email />
                                         </Avatar>
                                         <Box sx={{ flex: 1 }}>
-                                            <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
-                                                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                            <Box
+                                                display="flex"
+                                                alignItems="center"
+                                                gap={1}
+                                                sx={{ mb: 1 }}
+                                            >
+                                                <Typography
+                                                    variant="subtitle1"
+                                                    sx={{ fontWeight: 600 }}
+                                                >
                                                     {invitation.email}
                                                 </Typography>
                                                 <Chip
@@ -506,13 +602,13 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                                     label="Pending Invitation"
                                                     size="small"
                                                     color="warning"
-                                                    sx={{ 
+                                                    sx={{
                                                         animation: 'pulse 2s infinite',
                                                         '@keyframes pulse': {
                                                             '0%': { opacity: 1 },
                                                             '50%': { opacity: 0.7 },
                                                             '100%': { opacity: 1 },
-                                                        }
+                                                        },
                                                     }}
                                                 />
                                                 {invitation.role && (
@@ -524,18 +620,25 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                                     />
                                                 )}
                                             </Box>
-                                            
-                                            <Typography variant="caption" color="warning.main" sx={{ fontWeight: 500, mb: 1, display: 'block' }}>
-                                                📧 Invitation sent {formatDate(invitation.created_at)} • 
-                                                ⏰ Expires {formatDate(invitation.expires_at)}
+
+                                            <Typography
+                                                variant="caption"
+                                                color="warning.main"
+                                                sx={{ fontWeight: 500, mb: 1, display: 'block' }}
+                                            >
+                                                📧 Invitation sent{' '}
+                                                {formatDate(invitation.created_at)} • ⏰ Expires{' '}
+                                                {formatDate(invitation.expires_at)}
                                             </Typography>
-                                            
+
                                             <InvitationPermissionPreview invitation={invitation} />
                                         </Box>
-                                        
+
                                         <Box sx={{ ml: 2 }}>
                                             <IconButton
-                                                onClick={() => handleCancelInvitation(invitation.id)}
+                                                onClick={() =>
+                                                    handleCancelInvitation(invitation.id)
+                                                }
                                                 color="error"
                                                 disabled={loading}
                                                 title="Cancel invitation"
@@ -551,7 +654,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                     </>
                 )}
             </DialogContent>
-            
+
             <DialogActions>
                 <Button onClick={onClose}>Close</Button>
             </DialogActions>

@@ -2,30 +2,40 @@
 
 return [
     'plans' => [
-        'pro_monthly' => [
-            'name' => 'Pro Monthly',
-            'price_id' => env('STRIPE_PRICE_PRO_MONTHLY', 'price_xxxxx'),
+        'basic' => [
+            'name' => 'Basic',
+            'price_id' => env('STRIPE_PRICE_BASIC', 'price_1RyWDcKX2zcFuvyCdckMUjxq'),
+            'trial_days' => 7,
             'features' => [
-                'Unlimited projects',
-                'AI task generator',
+                'Up to 25 AI task generations',
+                'Unlimited assistant and reports',
+                'Email support',
+                '7-day free trial',
+            ],
+        ],
+        'pro' => [
+            'name' => 'Pro',
+            'price_id' => env('STRIPE_PRICE_PRO', 'price_1RyWFAKX2zcFuvyCHRlPH7gC'),
+            'trial_days' => 14,
+            'features' => [
+                'Up to 50 AI task generations',
+                'Unlimited reports and AI assistant',
                 'Priority support',
+                '14-day free trial',
             ],
         ],
-        'pro_semiannual' => [
-            'name' => 'Pro 6 Months',
-            'price_id' => env('STRIPE_PRICE_PRO_SEMIANNUAL', 'price_sixmonths_xxxxx'),
+        'business' => [
+            'name' => 'Business',
+            'price_id' => env('STRIPE_PRICE_BUSINESS', 'price_1RyWGrKX2zcFuvyCFch5Aw5b'),
+            'trial_days' => 14,
             'features' => [
-                'Everything in Pro Monthly',
-                'Save compared to monthly billing',
-            ],
-        ],
-        'pro_yearly' => [
-            'name' => 'Pro Yearly',
-            'price_id' => env('STRIPE_PRICE_PRO_YEARLY', 'price_yyyyy'),
-            'features' => [
-                'Everything in Pro Monthly (2 months free)',
+                'Up to 200 AI task generations',
+                'Unlimited reports and AI assistant',
+                'Team collaboration',
+                'Priority support',
+                '14-day free trial',
             ],
         ],
     ],
-    'default_plan_key' => 'pro_monthly',
+    'default_plan_key' => 'pro',
 ];

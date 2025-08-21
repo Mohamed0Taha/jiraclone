@@ -23,12 +23,12 @@ class ProjectMemberController extends Controller
 
         // Get all members with their pivot data
         $members = $project->members()->withPivot('role', 'joined_at')->get();
-        
+
         // Add the project owner if they're not already in the members list
         $owner = $project->user;
         $ownerInMembers = $members->contains('id', $owner->id);
-        
-        if (!$ownerInMembers) {
+
+        if (! $ownerInMembers) {
             // Create a member object for the owner
             $ownerData = $owner->replicate();
             $ownerData->pivot = (object) [
@@ -72,7 +72,7 @@ class ProjectMemberController extends Controller
 
         if ($existingInvitation) {
             return response()->json([
-                'error' => 'An invitation has already been sent to this email address.'
+                'error' => 'An invitation has already been sent to this email address.',
             ], 422);
         }
 
@@ -80,7 +80,7 @@ class ProjectMemberController extends Controller
         $existingUser = User::where('email', $email)->first();
         if ($existingUser && $project->members()->where('user_id', $existingUser->id)->exists()) {
             return response()->json([
-                'error' => 'This user is already a member of the project.'
+                'error' => 'This user is already a member of the project.',
             ], 422);
         }
 
@@ -100,12 +100,12 @@ class ProjectMemberController extends Controller
                 Log::warning('Failed to send project added notification', [
                     'email' => $existingUser->email,
                     'project_id' => $project->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
 
             return response()->json([
-                'message' => $existingUser->name . ' has been added to the project successfully! They will see this project in their dashboard.',
+                'message' => $existingUser->name.' has been added to the project successfully! They will see this project in their dashboard.',
                 'type' => 'direct_add',
                 'user' => $existingUser,
             ]);
@@ -128,7 +128,7 @@ class ProjectMemberController extends Controller
             Log::error('Failed to send invitation email', [
                 'email' => $email,
                 'project_id' => $project->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
             // Don't fail the invitation creation, just log the error
         }
@@ -153,7 +153,7 @@ class ProjectMemberController extends Controller
         // Prevent removing the project owner
         if ($project->user_id == $userId) {
             return response()->json([
-                'error' => 'Cannot remove the project owner.'
+                'error' => 'Cannot remove the project owner.',
             ], 422);
         }
 
@@ -191,13 +191,14 @@ class ProjectMemberController extends Controller
         }
 
         $user = Auth::user();
-        
-        if (!$user) {
+
+        if (! $user) {
             // Store invitation token in session and redirect to registration
             session(['invitation_token' => $token, 'invitation_email' => $invitation->email]);
+
             return redirect()->route('register')->with([
-                'message' => 'Please create an account to join the project: ' . $invitation->project->name,
-                'prefill_email' => $invitation->email
+                'message' => 'Please create an account to join the project: '.$invitation->project->name,
+                'prefill_email' => $invitation->email,
             ]);
         }
 
@@ -228,6 +229,6 @@ class ProjectMemberController extends Controller
         ]);
 
         return redirect()->route('projects.show', $invitation->project)
-            ->with('success', 'Welcome to the project! You have successfully joined ' . $invitation->project->name);
+            ->with('success', 'Welcome to the project! You have successfully joined '.$invitation->project->name);
     }
 }

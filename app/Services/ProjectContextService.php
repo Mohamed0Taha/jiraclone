@@ -6,32 +6,43 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Throwable;
 
 class ProjectContextService
 {
-    private const SERVER_STATUSES = ['todo','inprogress','review','done'];
-    private const METH_KANBAN     = 'kanban';
-    private const METH_SCRUM      = 'scrum';
-    private const METH_AGILE      = 'agile';
-    private const METH_WATERFALL  = 'waterfall';
-    private const METH_LEAN       = 'lean';
+    private const SERVER_STATUSES = ['todo', 'inprogress', 'review', 'done'];
+
+    private const METH_KANBAN = 'kanban';
+
+    private const METH_SCRUM = 'scrum';
+
+    private const METH_AGILE = 'agile';
+
+    private const METH_WATERFALL = 'waterfall';
+
+    private const METH_LEAN = 'lean';
 
     public function getProjectOwner(Project $project): ?User
     {
-        try { return $project->user ?? User::find($project->user_id); } catch (Throwable $e) { return User::find($project->user_id); }
+        try {
+            return $project->user ?? User::find($project->user_id);
+        } catch (Throwable $e) {
+            return User::find($project->user_id);
+        }
     }
 
     public function getProjectMembers(Project $project)
     {
         try {
             if (method_exists($project, 'members')) {
-                return $project->members()->get(['users.id','users.name','users.email']);
+                return $project->members()->get(['users.id', 'users.name', 'users.email']);
             }
-        } catch (Throwable $e) {}
+        } catch (Throwable $e) {
+        }
+
         return collect();
     }
 
@@ -39,26 +50,30 @@ class ProjectContextService
     {
         try {
             $id = Auth::id();
-            if ($id) return (int)$id;
-        } catch (Throwable $e) {}
+            if ($id) {
+                return (int) $id;
+            }
+        } catch (Throwable $e) {
+        }
+
         return $project->user_id ?? null;
     }
 
     public function buildSnapshot(Project $project): array
     {
         $project->loadMissing(['tasks']);
-        $byStatus = ['todo'=>0,'inprogress'=>0,'review'=>0,'done'=>0];
-        $byPriority = ['low'=>0,'medium'=>0,'high'=>0,'urgent'=>0];
+        $byStatus = ['todo' => 0, 'inprogress' => 0, 'review' => 0, 'done' => 0];
+        $byPriority = ['low' => 0, 'medium' => 0, 'high' => 0, 'urgent' => 0];
         $totalEstimatedHours = 0;
         $completedEstimatedHours = 0;
-        
+
         foreach ($project->tasks as $t) {
             $s = in_array($t->status, self::SERVER_STATUSES, true) ? $t->status : 'todo';
             $byStatus[$s] = ($byStatus[$s] ?? 0) + 1;
-            
+
             $p = in_array($t->priority, Task::PRIORITIES, true) ? $t->priority : 'medium';
             $byPriority[$p] = ($byPriority[$p] ?? 0) + 1;
-            
+
             // Track estimated hours if available
             if (isset($t->estimated_hours)) {
                 $totalEstimatedHours += $t->estimated_hours;
@@ -83,17 +98,15 @@ class ProjectContextService
             ],
         ];
     }
-    
+
     /**
      * Get complete sanitized context for LLM including all project and task data
-     * 
-     * @param Project $project
-     * @param array $options Options for context generation
-     *                      - include_tasks: bool (default: true) - Include full task details
-     *                      - include_comments: bool (default: false) - Include task comments
-     *                      - task_limit: int|null (default: null) - Limit number of tasks
-     *                      - task_filters: array (default: []) - Filters for tasks
-     * @return array
+     *
+     * @param  array  $options  Options for context generation
+     *                          - include_tasks: bool (default: true) - Include full task details
+     *                          - include_comments: bool (default: false) - Include task comments
+     *                          - task_limit: int|null (default: null) - Limit number of tasks
+     *                          - task_filters: array (default: []) - Filters for tasks
      */
     public function getSanitizedContextForLLM(Project $project, array $options = []): array
     {
@@ -119,16 +132,16 @@ class ProjectContextService
         $project->loadMissing($relationships);
 
         $snapshot = $this->buildSnapshot($project);
-        $owner    = $this->getProjectOwner($project);
-        $members  = $this->getProjectMembers($project);
-        $method   = $this->getCurrentMethodology($project);
-        $labels   = $this->serverToMethodPhase($method);
+        $owner = $this->getProjectOwner($project);
+        $members = $this->getProjectMembers($project);
+        $method = $this->getCurrentMethodology($project);
+        $labels = $this->serverToMethodPhase($method);
 
         // Build base context
         $context = [
             'project' => [
                 'id' => $project->id,
-                'name' => (string)($project->name ?? 'Untitled'),
+                'name' => (string) ($project->name ?? 'Untitled'),
                 'key' => $project->key,
                 'description' => $project->description,
                 'methodology' => $method,
@@ -143,10 +156,10 @@ class ProjectContextService
                 'owner' => $owner ? [
                     'id' => $owner->id,
                     'name' => $owner->name,
-                    'email' => $owner->email
+                    'email' => $owner->email,
                 ] : null,
                 'members_count' => $members->count(),
-                'members' => $members->map(fn($u) => [
+                'members' => $members->map(fn ($u) => [
                     'id' => $u->id,
                     'name' => $u->name,
                     'email' => $u->email,
@@ -180,7 +193,7 @@ class ProjectContextService
     private function getTasksContext(Project $project, array $options): array
     {
         $query = $this->buildTaskQuery($project, $options['task_filters']);
-        
+
         if ($options['task_limit']) {
             $query->limit($options['task_limit']);
         }
@@ -217,7 +230,7 @@ class ProjectContextService
 
             // Add comments if requested
             if ($options['include_comments'] && $task->comments) {
-                $taskData['comments'] = $task->comments->map(fn($c) => [
+                $taskData['comments'] = $task->comments->map(fn ($c) => [
                     'id' => $c->id,
                     'content' => $c->content,
                     'user' => $c->user ? [
@@ -249,7 +262,7 @@ class ProjectContextService
 
         $completedTasks = $project->tasks->where('status', 'done')->count();
         $percentage = round(($completedTasks / $totalTasks) * 100, 2);
-        
+
         // Determine project health
         $overdueTasks = $this->countOverdue($project);
         $health = 'good';
@@ -283,9 +296,10 @@ class ProjectContextService
      */
     private function isTaskOverdue(Task $task): bool
     {
-        if (!$task->end_date || in_array($task->status, ['done'])) {
+        if (! $task->end_date || in_array($task->status, ['done'])) {
             return false;
         }
+
         return $task->end_date->isPast();
     }
 
@@ -294,9 +308,10 @@ class ProjectContextService
      */
     private function getDaysUntilDue(Task $task): ?int
     {
-        if (!$task->end_date || $task->status === 'done') {
+        if (! $task->end_date || $task->status === 'done') {
             return null;
         }
+
         return Carbon::now()->diffInDays($task->end_date, false);
     }
 
@@ -305,7 +320,7 @@ class ProjectContextService
      */
     private function sanitizeMeta($meta): array
     {
-        if (!is_array($meta)) {
+        if (! is_array($meta)) {
             return [];
         }
 
@@ -336,7 +351,7 @@ class ProjectContextService
         $summary .= "{$context['project']['statistics']['overdue']} overdue\n";
         $summary .= "Team: {$context['project']['members_count']} members\n";
 
-        if (!empty($context['project']['description'])) {
+        if (! empty($context['project']['description'])) {
             $summary .= "\nDescription: {$context['project']['description']}\n";
         }
 
@@ -347,28 +362,41 @@ class ProjectContextService
     {
         $q = Task::where('project_id', $project->id);
 
-        if (!empty($filters['ids']) && is_array($filters['ids'])) $q->whereIn('id', array_map('intval', $filters['ids']));
-        if (!empty($filters['status'])) $q->where('status', $filters['status']);
-        if (!empty($filters['priority'])) $q->where('priority', $filters['priority']);
-        if (!empty($filters['overdue'])) $q->whereNotNull('end_date')->whereIn('status', ['todo','inprogress','review'])->whereDate('end_date','<',Carbon::now());
-        if (!empty($filters['unassigned'])) $q->whereNull('assignee_id');
-        if (!empty($filters['assigned_to_hint'])) {
+        if (! empty($filters['ids']) && is_array($filters['ids'])) {
+            $q->whereIn('id', array_map('intval', $filters['ids']));
+        }
+        if (! empty($filters['status'])) {
+            $q->where('status', $filters['status']);
+        }
+        if (! empty($filters['priority'])) {
+            $q->where('priority', $filters['priority']);
+        }
+        if (! empty($filters['overdue'])) {
+            $q->whereNotNull('end_date')->whereIn('status', ['todo', 'inprogress', 'review'])->whereDate('end_date', '<', Carbon::now());
+        }
+        if (! empty($filters['unassigned'])) {
+            $q->whereNull('assignee_id');
+        }
+        if (! empty($filters['assigned_to_hint'])) {
             $assigneeId = $this->resolveAssigneeId($project, $filters['assigned_to_hint']);
             $q->where('assignee_id', $assigneeId ?? -1);
         }
 
         $orderBy = $filters['order_by'] ?? 'id';
-    $order = in_array(strtolower($filters['order'] ?? 'asc'), ['asc', 'desc']) ? ($filters['order'] ?? 'asc') : 'asc';
+        $order = in_array(strtolower($filters['order'] ?? 'asc'), ['asc', 'desc']) ? ($filters['order'] ?? 'asc') : 'asc';
         $q->orderBy($orderBy, $order);
 
-        if (!empty($filters['limit'])) $q->limit(max(1, (int)$filters['limit']));
-        
+        if (! empty($filters['limit'])) {
+            $q->limit(max(1, (int) $filters['limit']));
+        }
+
         return $q;
     }
 
     public function countAffected(Project $project, array $filters): int
     {
         $query = $this->buildTaskQuery($project, $filters);
+
         return $query->count();
     }
 
@@ -380,96 +408,113 @@ class ProjectContextService
             ->whereDate('end_date', '<', Carbon::now())
             ->count();
     }
-    
+
     public function resolveAssigneeId(Project $project, string $hint): ?int
     {
         $hint = trim(preg_replace("/'s$/u", '', ltrim($hint, '@')));
-        if ($hint === '') return null;
+        if ($hint === '') {
+            return null;
+        }
 
-        if (in_array(mb_strtolower($hint), ['me','myself','__me__'], true)) return $this->getCurrentUserId($project);
-        if (in_array(mb_strtolower($hint), ['owner','project owner','__owner__'], true)) return $this->getProjectOwner($project)?->id;
+        if (in_array(mb_strtolower($hint), ['me', 'myself', '__me__'], true)) {
+            return $this->getCurrentUserId($project);
+        }
+        if (in_array(mb_strtolower($hint), ['owner', 'project owner', '__owner__'], true)) {
+            return $this->getProjectOwner($project)?->id;
+        }
         if (ctype_digit($hint)) {
-            $user = User::find((int)$hint);
+            $user = User::find((int) $hint);
+
             return ($user && $this->userIsProjectMember($project, $user)) ? $user->id : null;
         }
         if (filter_var($hint, FILTER_VALIDATE_EMAIL)) {
             $user = User::where('email', $hint)->first();
+
             return ($user && $this->userIsProjectMember($project, $user)) ? $user->id : null;
         }
 
         $candidates = $this->getProjectMembers($project)->push($this->getProjectOwner($project))->filter()->unique('id');
-        $match = $candidates->first(fn($u) => mb_strtolower($u->name) === mb_strtolower($hint));
-        if ($match) return (int)$match->id;
+        $match = $candidates->first(fn ($u) => mb_strtolower($u->name) === mb_strtolower($hint));
+        if ($match) {
+            return (int) $match->id;
+        }
 
-        $match = $candidates->first(fn($u) => Str::contains(mb_strtolower($u->name), mb_strtolower($hint)));
-        if ($match) return (int)$match->id;
+        $match = $candidates->first(fn ($u) => Str::contains(mb_strtolower($u->name), mb_strtolower($hint)));
+        if ($match) {
+            return (int) $match->id;
+        }
 
         return null;
     }
 
     public function userIsProjectMember(Project $project, User $user): bool
     {
-        if ((int)$project->user_id === (int)$user->id) return true;
+        if ((int) $project->user_id === (int) $user->id) {
+            return true;
+        }
         try {
             if (method_exists($project, 'members')) {
                 return $project->members()->where('users.id', $user->id)->exists();
             }
-        } catch (Throwable $e) {}
+        } catch (Throwable $e) {
+        }
+
         return false;
     }
 
     public function getCurrentMethodology(Project $project): string
     {
         $meta = $project->meta ?? null;
-        $m = is_array($meta) ? strtolower((string)($meta['methodology'] ?? '')) : '';
+        $m = is_array($meta) ? strtolower((string) ($meta['methodology'] ?? '')) : '';
         if (in_array($m, [self::METH_KANBAN, self::METH_SCRUM, self::METH_AGILE, self::METH_WATERFALL, self::METH_LEAN])) {
             return $m;
         }
+
         return self::METH_KANBAN;
     }
-    
+
     public function serverToMethodPhase(string $method): array
     {
         switch ($method) {
-            case self::METH_SCRUM: case self::METH_AGILE: return ['todo'=>'Backlog','inprogress'=>'In Progress','review'=>'Review','done'=>'Done'];
-            case self::METH_WATERFALL: return ['todo'=>'Requirements','inprogress'=>'Design','review'=>'Verification','done'=>'Maintenance'];
-            case self::METH_LEAN: return ['todo'=>'Backlog','inprogress'=>'In Progress','review'=>'Testing','done'=>'Done'];
-            default: return ['todo'=>'To Do','inprogress'=>'In Progress','review'=>'Review','done'=>'Done'];
+            case self::METH_SCRUM: case self::METH_AGILE: return ['todo' => 'Backlog', 'inprogress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'];
+            case self::METH_WATERFALL: return ['todo' => 'Requirements', 'inprogress' => 'Design', 'review' => 'Verification', 'done' => 'Maintenance'];
+            case self::METH_LEAN: return ['todo' => 'Backlog', 'inprogress' => 'In Progress', 'review' => 'Testing', 'done' => 'Done'];
+            default: return ['todo' => 'To Do', 'inprogress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'];
         }
     }
-    
+
     public function methodPhaseToServer(string $method): array
     {
         switch ($method) {
             case self::METH_WATERFALL:
                 return [
-                    'requirements'=>'todo','specification'=>'todo','analysis'=>'todo',
-                    'design'=>'inprogress','implementation'=>'inprogress','construction'=>'inprogress',
-                    'verification'=>'review','validation'=>'review','testing phase'=>'review',
-                    'maintenance'=>'done','done'=>'done','complete'=>'done'
+                    'requirements' => 'todo', 'specification' => 'todo', 'analysis' => 'todo',
+                    'design' => 'inprogress', 'implementation' => 'inprogress', 'construction' => 'inprogress',
+                    'verification' => 'review', 'validation' => 'review', 'testing phase' => 'review',
+                    'maintenance' => 'done', 'done' => 'done', 'complete' => 'done',
                 ];
             case self::METH_LEAN:
                 return [
-                    'backlog'=>'todo','kanban backlog'=>'todo',
-                    'todo'=>'inprogress','value stream'=>'inprogress',
-                    'testing'=>'review','qa'=>'review',
-                    'done'=>'done','complete'=>'done'
+                    'backlog' => 'todo', 'kanban backlog' => 'todo',
+                    'todo' => 'inprogress', 'value stream' => 'inprogress',
+                    'testing' => 'review', 'qa' => 'review',
+                    'done' => 'done', 'complete' => 'done',
                 ];
             case self::METH_SCRUM:
             case self::METH_AGILE:
                 return [
-                    'product backlog'=>'todo','sprint backlog'=>'todo','backlog'=>'todo','todo'=>'todo',
-                    'inprogress'=>'inprogress','in progress'=>'inprogress','doing'=>'inprogress','wip'=>'inprogress',
-                    'review'=>'review','code review'=>'review','qa'=>'review','testing'=>'review',
-                    'done'=>'done','complete'=>'done','finished'=>'done'
+                    'product backlog' => 'todo', 'sprint backlog' => 'todo', 'backlog' => 'todo', 'todo' => 'todo',
+                    'inprogress' => 'inprogress', 'in progress' => 'inprogress', 'doing' => 'inprogress', 'wip' => 'inprogress',
+                    'review' => 'review', 'code review' => 'review', 'qa' => 'review', 'testing' => 'review',
+                    'done' => 'done', 'complete' => 'done', 'finished' => 'done',
                 ];
             case self::METH_KANBAN:
             default:
                 return [
-                    'todo'=>'todo','to do'=>'todo','backlog'=>'todo',
-                    'inprogress'=>'inprogress','in progress'=>'inprogress','doing'=>'inprogress','wip'=>'inprogress',
-                    'review'=>'review','code review'=>'review','qa'=>'review','testing'=>'review',
-                    'done'=>'done','complete'=>'done','finished'=>'done'
+                    'todo' => 'todo', 'to do' => 'todo', 'backlog' => 'todo',
+                    'inprogress' => 'inprogress', 'in progress' => 'inprogress', 'doing' => 'inprogress', 'wip' => 'inprogress',
+                    'review' => 'review', 'code review' => 'review', 'qa' => 'review', 'testing' => 'review',
+                    'done' => 'done', 'complete' => 'done', 'finished' => 'done',
                 ];
         }
     }

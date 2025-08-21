@@ -1,4 +1,5 @@
 <?php
+
 // File: app/Services/ProjectAssistantTaskOps.php
 
 namespace App\Services;
@@ -6,10 +7,10 @@ namespace App\Services;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use App\Services\ProjectAssistantConstants as PA;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Throwable;
-use App\Services\ProjectAssistantConstants as PA;
 
 /**
  * Task identification, search, and presentation operations.
@@ -19,11 +20,16 @@ trait ProjectAssistantTaskOps
     private function isTaskIdentificationQuery(string $message): bool
     {
         foreach (PA::ENHANCED_ACTION_PATTERNS['find_task'] as $pattern) {
-            if (preg_match($pattern, $message)) return true;
+            if (preg_match($pattern, $message)) {
+                return true;
+            }
         }
         foreach (PA::TASK_ID_PATTERNS as $pattern) {
-            if (preg_match($pattern, $message)) return true;
+            if (preg_match($pattern, $message)) {
+                return true;
+            }
         }
+
         return false;
     }
 
@@ -48,9 +54,11 @@ trait ProjectAssistantTaskOps
         $m = strtolower($message);
 
         if (preg_match(PA::TASK_ID_PATTERNS['by_id'], $message, $matches)) {
-            $taskId = (int)$matches[1];
+            $taskId = (int) $matches[1];
             $task = Task::where('project_id', $project->id)->where('id', $taskId)->first();
-            if ($task) return [$task];
+            if ($task) {
+                return [$task];
+            }
         }
 
         if (preg_match(PA::TASK_ID_PATTERNS['by_assignee'], $message, $matches)) {
@@ -62,7 +70,9 @@ trait ProjectAssistantTaskOps
                     ->orderBy('created_at', 'desc')
                     ->limit(10)
                     ->get();
-                if ($tasks->isNotEmpty()) return $tasks->toArray();
+                if ($tasks->isNotEmpty()) {
+                    return $tasks->toArray();
+                }
             }
         }
 
@@ -75,14 +85,18 @@ trait ProjectAssistantTaskOps
                     ->orderBy('created_at', 'desc')
                     ->limit(10)
                     ->get();
-                if ($tasks->isNotEmpty()) return $tasks->toArray();
+                if ($tasks->isNotEmpty()) {
+                    return $tasks->toArray();
+                }
             }
         }
 
         if (preg_match(PA::TASK_ID_PATTERNS['by_milestone'], $message, $matches)) {
             $milestoneHint = trim($matches[1]);
             $tasks = $this->findTasksByMilestone($project, $milestoneHint);
-            if (!empty($tasks)) return $tasks;
+            if (! empty($tasks)) {
+                return $tasks;
+            }
         }
 
         if (preg_match(PA::TASK_ID_PATTERNS['by_status_combo'], $message, $matches)) {
@@ -99,15 +113,21 @@ trait ProjectAssistantTaskOps
                     ->orderBy('created_at', 'desc')
                     ->limit(10)
                     ->get();
-                if ($tasks->isNotEmpty()) return $tasks->toArray();
+                if ($tasks->isNotEmpty()) {
+                    return $tasks->toArray();
+                }
             }
         }
 
         $tasks = $this->findTasksByDateRange($project, $message);
-        if (!empty($tasks)) return $tasks;
+        if (! empty($tasks)) {
+            return $tasks;
+        }
 
         $tasks = $this->findTasksByKeywords($project, $message);
-        if (!empty($tasks)) return $tasks;
+        if (! empty($tasks)) {
+            return $tasks;
+        }
 
         return [];
     }
@@ -126,7 +146,9 @@ trait ProjectAssistantTaskOps
                         ->toArray();
                 }
             }
-        } catch (Throwable $e) {}
+        } catch (Throwable $e) {
+        }
+
         return [];
     }
 
@@ -172,22 +194,24 @@ trait ProjectAssistantTaskOps
             $keywords = array_merge($keywords, $matches[1]);
         }
 
-        $commonWords = ['task','tasks','find','show','get','with','from','that','have','contains'];
+        $commonWords = ['task', 'tasks', 'find', 'show', 'get', 'with', 'from', 'that', 'have', 'contains'];
         $words = preg_split('/\s+/', strtolower($message));
         foreach ($words as $word) {
-            if (strlen($word) > 3 && !in_array($word, $commonWords, true) && !preg_match('/^\d+$/', $word)) {
+            if (strlen($word) > 3 && ! in_array($word, $commonWords, true) && ! preg_match('/^\d+$/', $word)) {
                 $keywords[] = $word;
             }
         }
 
-        $keywords = array_values(array_unique(array_filter(array_map('trim', $keywords), fn($w) => $w !== '')));
-        if (empty($keywords)) return [];
+        $keywords = array_values(array_unique(array_filter(array_map('trim', $keywords), fn ($w) => $w !== '')));
+        if (empty($keywords)) {
+            return [];
+        }
 
         $query = Task::where('project_id', $project->id);
         $query->where(function ($q) use ($keywords) {
             foreach ($keywords as $keyword) {
                 $q->orWhere('title', 'LIKE', "%{$keyword}%")
-                  ->orWhere('description', 'LIKE', "%{$keyword}%");
+                    ->orWhere('description', 'LIKE', "%{$keyword}%");
             }
         });
 
@@ -210,25 +234,25 @@ trait ProjectAssistantTaskOps
 
     private function getDetailedTaskInfo(Project $project, $task): array
     {
-        $task = (object)$task;
+        $task = (object) $task;
         $method = $this->currentMethodology($project);
 
         $assignee = 'Unassigned';
-        if (!empty($task->assignee_id)) {
+        if (! empty($task->assignee_id)) {
             $user = User::find($task->assignee_id);
             $assignee = $user ? $user->name : "User #{$task->assignee_id}";
         }
 
         $creator = 'Unknown';
-        if (!empty($task->creator_id)) {
+        if (! empty($task->creator_id)) {
             $user = User::find($task->creator_id);
             $creator = $user ? $user->name : "User #{$task->creator_id}";
         }
 
-        $phase   = $this->prettyPhase($method, (string)($task->status ?? 'todo'));
-        $due     = !empty($task->end_date) ? Carbon::parse($task->end_date)->format('M d, Y') : 'No due date';
-        $created = !empty($task->created_at) ? Carbon::parse($task->created_at)->format('M d, Y') : 'Unknown';
-        $priority = isset($task->priority) ? ucfirst((string)$task->priority) : 'Medium';
+        $phase = $this->prettyPhase($method, (string) ($task->status ?? 'todo'));
+        $due = ! empty($task->end_date) ? Carbon::parse($task->end_date)->format('M d, Y') : 'No due date';
+        $created = ! empty($task->created_at) ? Carbon::parse($task->created_at)->format('M d, Y') : 'Unknown';
+        $priority = isset($task->priority) ? ucfirst((string) $task->priority) : 'Medium';
 
         $message = "📋 **Task #{$task->id}: {$task->title}**\n\n";
         $message .= "• **Status:** {$phase}\n";
@@ -238,17 +262,18 @@ trait ProjectAssistantTaskOps
         $message .= "• **Created:** {$created}\n";
         $message .= "• **Due:** {$due}\n";
 
-        if (!empty($task->description)) {
-            $message .= "• **Description:** " . Str::limit((string)$task->description, 200) . "\n";
+        if (! empty($task->description)) {
+            $message .= '• **Description:** '.Str::limit((string) $task->description, 200)."\n";
         }
 
-        if (!empty($task->end_date)) {
+        if (! empty($task->end_date)) {
             try {
                 if (Carbon::parse($task->end_date)->isPast() && ($task->status ?? '') !== 'done') {
                     $daysOverdue = Carbon::parse($task->end_date)->diffInDays(Carbon::now());
                     $message .= "\n⚠️ **{$daysOverdue} days overdue**";
                 }
-            } catch (Throwable $e) {}
+            } catch (Throwable $e) {
+            }
         }
 
         return $this->createResponse('information', $message, false);
@@ -261,21 +286,21 @@ trait ProjectAssistantTaskOps
 
         $message = "🔍 Found {$count} task(s):\n\n";
         foreach ($displayed as $item) {
-            $task = (object)$item;
+            $task = (object) $item;
             $assignee = 'Unassigned';
-            if (!empty($task->assignee_id)) {
+            if (! empty($task->assignee_id)) {
                 $user = User::find($task->assignee_id);
                 $assignee = $user ? $user->name : "User #{$task->assignee_id}";
             }
-            $phase = $this->prettyPhase($this->currentMethodology($project), (string)($task->status ?? 'todo'));
-            $due   = !empty($task->end_date) ? Carbon::parse($task->end_date)->format('M d') : 'No due';
+            $phase = $this->prettyPhase($this->currentMethodology($project), (string) ($task->status ?? 'todo'));
+            $due = ! empty($task->end_date) ? Carbon::parse($task->end_date)->format('M d') : 'No due';
 
             $message .= "• **#{$task->id}**: {$task->title}\n";
             $message .= "  Status: {$phase} | Assignee: {$assignee} | Due: {$due}\n\n";
         }
 
         if ($count > 10) {
-            $message .= "... and " . ($count - 10) . " more tasks\n";
+            $message .= '... and '.($count - 10)." more tasks\n";
         }
 
         $message .= "\n💡 *Use \"show task #ID\" for detailed information*";

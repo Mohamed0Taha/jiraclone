@@ -2,14 +2,14 @@
 
 namespace App\Services;
 
+use App\Mail\AutomationNotification;
 use App\Models\Automation;
-use App\Models\Task;
 use App\Models\Project;
+use App\Models\Task;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Http;
-use Carbon\Carbon;
-use App\Mail\AutomationNotification;
 
 class AutomationEngine
 {
@@ -19,7 +19,7 @@ class AutomationEngine
     public function processProjectAutomations(Project $project)
     {
         $automations = $project->automations()->where('is_active', true)->get();
-        
+
         foreach ($automations as $automation) {
             try {
                 $this->executeAutomation($automation);
@@ -38,8 +38,9 @@ class AutomationEngine
         Log::info("Executing automation: {$automation->name} (ID: {$automation->id})");
 
         // Check if trigger conditions are met
-        if (!$this->checkTriggerConditions($automation)) {
+        if (! $this->checkTriggerConditions($automation)) {
             Log::info("Trigger conditions not met for automation: {$automation->name}");
+
             return false;
         }
 
@@ -48,8 +49,8 @@ class AutomationEngine
         // Execute all actions
         $success = true;
         foreach ($automation->actions as $action) {
-            Log::info("Executing action for automation {$automation->id}: " . json_encode($action));
-            if (!$this->executeAction($action, $automation)) {
+            Log::info("Executing action for automation {$automation->id}: ".json_encode($action));
+            if (! $this->executeAction($action, $automation)) {
                 $success = false;
                 Log::error("Action failed for automation {$automation->id}");
             }
@@ -72,29 +73,30 @@ class AutomationEngine
         switch ($trigger) {
             case 'Schedule':
                 return $this->checkScheduleTrigger($config, $automation);
-            
+
             case 'Task Created':
             case 'task_created':
                 return $this->checkTaskCreatedTrigger($config, $automation);
-            
+
             case 'Task Updated':
             case 'task_updated':
                 return $this->checkTaskUpdatedTrigger($config, $automation);
-            
+
             case 'Task Due Date':
             case 'task_due_date':
                 return $this->checkTaskDueDateTrigger($config, $automation);
-            
+
             case 'Task Priority':
             case 'task_priority':
                 return $this->checkTaskPriorityTrigger($config, $automation);
-            
+
             case 'Project Status':
             case 'project_status':
                 return $this->checkProjectStatusTrigger($config, $automation);
-            
+
             default:
                 Log::warning("Unknown trigger type: {$trigger}");
+
                 return false;
         }
     }
@@ -113,17 +115,19 @@ class AutomationEngine
 
         switch ($frequency) {
             case 'daily':
-                return !$lastRun || $lastRun->lt($scheduledTime) && $now->gte($scheduledTime);
-            
+                return ! $lastRun || $lastRun->lt($scheduledTime) && $now->gte($scheduledTime);
+
             case 'weekly':
                 $dayOfWeek = $config['day_of_week'] ?? 1; // Monday
                 $weeklyTime = Carbon::now()->startOfWeek()->addDays($dayOfWeek - 1)->setTimeFromTimeString($time);
-                return !$lastRun || $lastRun->lt($weeklyTime) && $now->gte($weeklyTime);
-            
+
+                return ! $lastRun || $lastRun->lt($weeklyTime) && $now->gte($weeklyTime);
+
             case 'hourly':
                 $hourlyTime = Carbon::now()->startOfHour();
-                return !$lastRun || $lastRun->lt($hourlyTime);
-            
+
+                return ! $lastRun || $lastRun->lt($hourlyTime);
+
             default:
                 return false;
         }
@@ -146,7 +150,7 @@ class AutomationEngine
         }
 
         // If specific columns are configured, check if task is in those columns
-        if (!empty($columns)) {
+        if (! empty($columns)) {
             return $recentTasks->whereIn('status', $columns)->isNotEmpty();
         }
 
@@ -192,19 +196,20 @@ class AutomationEngine
     private function checkTaskUpdatedTrigger(array $config, Automation $automation): bool
     {
         $timeWindow = $config['time_window'] ?? 5; // minutes
-        
+
         // Get recently updated tasks
         $recentlyUpdated = Task::where('project_id', $automation->project_id)
             ->where('updated_at', '>=', Carbon::now()->subMinutes($timeWindow))
-            ->where('updated_at', '>', function($query) {
+            ->where('updated_at', '>', function ($query) {
                 $query->select('created_at')
-                      ->from('tasks as t2')
-                      ->whereColumn('t2.id', 'tasks.id');
+                    ->from('tasks as t2')
+                    ->whereColumn('t2.id', 'tasks.id');
             })
             ->get();
 
         if ($recentlyUpdated->isEmpty()) {
             Log::info("No recently updated tasks found for automation {$automation->id}");
+
             return false;
         }
 
@@ -218,27 +223,31 @@ class AutomationEngine
             $statusField = strtolower($field) === 'status' ? 'status' : $field;
             // Make status comparison case-insensitive
             $targetStatus = strtolower($toStatus);
-            $matchingTasks = $recentlyUpdated->filter(function($task) use ($statusField, $targetStatus) {
+            $matchingTasks = $recentlyUpdated->filter(function ($task) use ($statusField, $targetStatus) {
                 $taskStatus = $task->{$statusField} ?? '';
+
                 return strtolower($taskStatus) === $targetStatus;
             });
-            
+
             if ($matchingTasks->isEmpty()) {
                 Log::info("No tasks with status '{$toStatus}' found for automation {$automation->id}");
+
                 return false;
             }
-            
-            Log::info("Found " . $matchingTasks->count() . " tasks with status '{$toStatus}' for automation {$automation->id}");
+
+            Log::info('Found '.$matchingTasks->count()." tasks with status '{$toStatus}' for automation {$automation->id}");
+
             return true;
         }
 
         // Fallback to old format
         $statusChanges = $config['status_changes'] ?? [];
-        if (!empty($statusChanges)) {
+        if (! empty($statusChanges)) {
             return $recentlyUpdated->whereIn('status', $statusChanges)->isNotEmpty();
         }
 
-        Log::info("Task updated trigger fired for automation {$automation->id} - " . $recentlyUpdated->count() . " tasks updated");
+        Log::info("Task updated trigger fired for automation {$automation->id} - ".$recentlyUpdated->count().' tasks updated');
+
         return true;
     }
 
@@ -254,7 +263,7 @@ class AutomationEngine
             case 'completion_percentage':
                 $threshold = $config['threshold'] ?? 100;
                 $totalTasks = Task::where('project_id', $automation->project_id)->count();
-                
+
                 if ($totalTasks === 0) {
                     return false;
                 }
@@ -264,12 +273,14 @@ class AutomationEngine
                     ->count();
 
                 $completionPercentage = ($completedTasks / $totalTasks) * 100;
+
                 return $completionPercentage >= $threshold;
 
             case 'all_tasks_completed':
                 $incompleteTasks = Task::where('project_id', $automation->project_id)
                     ->whereNotIn('status', ['done', 'completed'])
                     ->count();
+
                 return $incompleteTasks === 0;
 
             case 'overdue_tasks':
@@ -278,6 +289,7 @@ class AutomationEngine
                     ->where('due_date', '<', Carbon::now())
                     ->whereNotIn('status', ['done', 'completed'])
                     ->count();
+
                 return $overdueTasks > 0;
 
             default:
@@ -296,21 +308,22 @@ class AutomationEngine
             case 'Email':
             case 'send_email': // Support both formats
                 return $this->sendEmailAction($action, $automation);
-            
+
             case 'Slack':
                 return $this->sendSlackAction($action, $automation);
-            
+
             case 'Discord':
                 return $this->sendDiscordAction($action, $automation);
-            
+
             case 'Calendar':
                 return $this->createCalendarEventAction($action, $automation);
-            
+
             case 'Webhook':
                 return $this->sendWebhookAction($action, $automation);
-            
+
             default:
                 Log::warning("Unknown action type: {$type}");
+
                 return false;
         }
     }
@@ -323,7 +336,7 @@ class AutomationEngine
         try {
             // Handle both old and new config formats
             $config = $action['config'] ?? $action;
-            
+
             $recipient = $config['to'] ?? $config['recipient'] ?? $automation->project->user->email;
             $subject = $config['subject'] ?? "Automation: {$automation->name}";
             $message = $config['body'] ?? $config['message'] ?? "Automation '{$automation->name}' has been triggered.";
@@ -336,10 +349,12 @@ class AutomationEngine
             Mail::to($recipient)->send(new AutomationNotification($subject, $message));
 
             Log::info("Email sent successfully for automation {$automation->id} to {$recipient}");
+
             return true;
         } catch (\Exception $e) {
             Log::error("Failed to send email for automation {$automation->id}: {$e->getMessage()}");
-            Log::error("Stack trace: " . $e->getTraceAsString());
+            Log::error('Stack trace: '.$e->getTraceAsString());
+
             return false;
         }
     }
@@ -351,9 +366,10 @@ class AutomationEngine
     {
         try {
             $webhookUrl = $action['webhook_url'] ?? config('services.slack.webhook_url');
-            
-            if (!$webhookUrl) {
+
+            if (! $webhookUrl) {
                 Log::warning("Slack webhook URL not configured for automation {$automation->id}");
+
                 return false;
             }
 
@@ -363,20 +379,23 @@ class AutomationEngine
             $payload = [
                 'text' => $message,
                 'username' => 'Automation Bot',
-                'icon_emoji' => ':robot_face:'
+                'icon_emoji' => ':robot_face:',
             ];
 
             $response = Http::post($webhookUrl, $payload);
 
             if ($response->successful()) {
                 Log::info("Slack notification sent for automation {$automation->id}");
+
                 return true;
             } else {
-                Log::error("Failed to send Slack notification for automation {$automation->id}: " . $response->body());
+                Log::error("Failed to send Slack notification for automation {$automation->id}: ".$response->body());
+
                 return false;
             }
         } catch (\Exception $e) {
             Log::error("Slack notification failed for automation {$automation->id}: {$e->getMessage()}");
+
             return false;
         }
     }
@@ -388,9 +407,10 @@ class AutomationEngine
     {
         try {
             $webhookUrl = $action['webhook_url'] ?? config('services.discord.webhook_url');
-            
-            if (!$webhookUrl) {
+
+            if (! $webhookUrl) {
                 Log::warning("Discord webhook URL not configured for automation {$automation->id}");
+
                 return false;
             }
 
@@ -399,20 +419,23 @@ class AutomationEngine
 
             $payload = [
                 'content' => $message,
-                'username' => 'Automation Bot'
+                'username' => 'Automation Bot',
             ];
 
             $response = Http::post($webhookUrl, $payload);
 
             if ($response->successful()) {
                 Log::info("Discord notification sent for automation {$automation->id}");
+
                 return true;
             } else {
-                Log::error("Failed to send Discord notification for automation {$automation->id}: " . $response->body());
+                Log::error("Failed to send Discord notification for automation {$automation->id}: ".$response->body());
+
                 return false;
             }
         } catch (\Exception $e) {
             Log::error("Discord notification failed for automation {$automation->id}: {$e->getMessage()}");
+
             return false;
         }
     }
@@ -425,6 +448,7 @@ class AutomationEngine
         // This would integrate with Google Calendar, Outlook, etc.
         // For now, we'll just log it
         Log::info("Calendar event created for automation {$automation->id}");
+
         return true;
     }
 
@@ -443,20 +467,23 @@ class AutomationEngine
                 'id' => $automation->id,
                 'name' => $automation->name,
                 'project' => $automation->project->name,
-                'triggered_at' => Carbon::now()->toISOString()
+                'triggered_at' => Carbon::now()->toISOString(),
             ];
 
             $response = Http::send($method, $url, ['json' => $payload]);
 
             if ($response->successful()) {
                 Log::info("Webhook sent for automation {$automation->id} to {$url}");
+
                 return true;
             } else {
-                Log::error("Webhook failed for automation {$automation->id}: " . $response->body());
+                Log::error("Webhook failed for automation {$automation->id}: ".$response->body());
+
                 return false;
             }
         } catch (\Exception $e) {
             Log::error("Webhook failed for automation {$automation->id}: {$e->getMessage()}");
+
             return false;
         }
     }
@@ -501,14 +528,14 @@ class AutomationEngine
     {
         $results = [
             'trigger_check' => $this->checkTriggerConditions($automation),
-            'actions' => []
+            'actions' => [],
         ];
 
         foreach ($automation->actions as $action) {
             $results['actions'][] = [
                 'type' => $action['type'] ?? $action['name'],
                 'config' => $action,
-                'would_execute' => true
+                'would_execute' => true,
             ];
         }
 

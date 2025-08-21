@@ -1,24 +1,21 @@
-import { 
-    Box, 
-    TextField, 
-    Button, 
-    Typography, 
+import {
+    Box,
+    TextField,
+    Button,
+    Typography,
     Alert,
     useTheme,
     Card,
     CardContent,
-    InputAdornment
+    InputAdornment,
 } from '@mui/material';
-import { 
-    Email as EmailIcon,
-    LockReset as LockResetIcon
-} from '@mui/icons-material';
+import { Email as EmailIcon, LockReset as LockResetIcon } from '@mui/icons-material';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 
 export default function ForgotPassword({ status }) {
     const theme = useTheme();
-    
+
     const { data, setData, post, processing, errors } = useForm({
         email: '',
     });
@@ -33,52 +30,53 @@ export default function ForgotPassword({ status }) {
         <GuestLayout>
             <Head title="Forgot Password" />
 
-            <Card sx={{ 
-                maxWidth: 480, 
-                mx: 'auto', 
-                p: 2,
-                boxShadow: theme.shadows[8],
-                borderRadius: theme.shape.borderRadius 
-            }}>
+            <Card
+                sx={{
+                    maxWidth: 480,
+                    mx: 'auto',
+                    p: 2,
+                    boxShadow: theme.shadows[8],
+                    borderRadius: theme.shape.borderRadius,
+                }}
+            >
                 <CardContent sx={{ p: 4 }}>
                     <Box sx={{ textAlign: 'center', mb: 3 }}>
-                        <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            mb: 2
-                        }}>
-                            <LockResetIcon sx={{ 
-                                fontSize: 32, 
-                                color: theme.palette.primary.main,
-                                mr: 1
-                            }} />
-                            <Typography 
-                                variant="h4" 
-                                component="h1" 
-                                sx={{ 
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 2,
+                            }}
+                        >
+                            <LockResetIcon
+                                sx={{
+                                    fontSize: 32,
+                                    color: theme.palette.primary.main,
+                                    mr: 1,
+                                }}
+                            />
+                            <Typography
+                                variant="h4"
+                                component="h1"
+                                sx={{
                                     fontWeight: 700,
                                     color: theme.palette.primary.main,
-                                    fontFamily: '"Inter", "Segoe UI", sans-serif'
+                                    fontFamily: '"Inter", "Segoe UI", sans-serif',
                                 }}
                             >
                                 Reset Password
                             </Typography>
                         </Box>
-                        <Typography 
-                            variant="body1" 
-                            color="textSecondary"
-                            sx={{ mb: 2 }}
-                        >
-                            Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.
+                        <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
+                            Forgot your password? No problem. Just let us know your email address
+                            and we will email you a password reset link that will allow you to
+                            choose a new one.
                         </Typography>
                     </Box>
 
                     {status && (
-                        <Alert 
-                            severity="success" 
-                            sx={{ mb: 3 }}
-                        >
+                        <Alert severity="success" sx={{ mb: 3 }}>
                             {status}
                         </Alert>
                     )}

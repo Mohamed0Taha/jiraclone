@@ -24,7 +24,7 @@ class ProjectPolicy
         if ($user->id === $project->user_id) {
             return true;
         }
-        
+
         // Allow if user is a member of the project
         return $project->members()->where('user_id', $user->id)->exists();
     }

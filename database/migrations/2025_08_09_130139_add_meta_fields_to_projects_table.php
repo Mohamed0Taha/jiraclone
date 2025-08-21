@@ -1,4 +1,5 @@
 <?php
+
 // database/migrations/2025_08_09_000001_add_key_and_meta_fields_to_projects_table.php
 
 use Illuminate\Database\Migrations\Migration;

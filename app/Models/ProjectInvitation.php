@@ -42,7 +42,7 @@ class ProjectInvitation extends Model
 
     public function isPending()
     {
-        return $this->status === 'pending' && !$this->isExpired();
+        return $this->status === 'pending' && ! $this->isExpired();
     }
 
     protected static function boot()

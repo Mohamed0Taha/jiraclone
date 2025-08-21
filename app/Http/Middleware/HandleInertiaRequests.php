@@ -33,10 +33,20 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'app' => [
                 'name' => config('app.name'),
-                'url'  => rtrim(config('app.url'), '/'),
+                'url' => rtrim(config('app.url'), '/'),
             ],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? array_merge(
+                    $request->user()->only(['id', 'name', 'email', 'email_verified_at']),
+                    [
+                        'has_active_subscription' => $request->user()->hasActiveSubscription(),
+                        'current_plan' => $request->user()->getCurrentPlan(),
+                        'on_trial' => $request->user()->onTrial('default'),
+                        'ai_task_limit' => $request->user()->getAiTaskLimit(),
+                        'ai_tasks_used' => $request->user()->ai_tasks_used ?? 0,
+                        'ai_tasks_remaining' => $request->user()->getRemainingAiTasks(),
+                    ]
+                ) : null,
             ],
         ];
     }

@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::table('tasks', function (Blueprint $table) {
             $table->string('status')
-                  ->default('todo')      // todo | inprogress | done
-                  ->after('assignee_id');
+                ->default('todo')      // todo | inprogress | done
+                ->after('assignee_id');
         });
     }
 

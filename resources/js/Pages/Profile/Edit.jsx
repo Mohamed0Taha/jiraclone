@@ -21,7 +21,7 @@ import UpdateProfileInformationForm from './Partials/UpdateProfileInformationFor
 
 export default function Edit({ mustVerifyEmail, status, auth }) {
     const theme = useTheme();
-    
+
     return (
         <AuthenticatedLayout user={auth.user}>
             <Head title="Profile" />
@@ -38,15 +38,17 @@ export default function Edit({ mustVerifyEmail, status, auth }) {
 
                 <Stack spacing={4}>
                     <Card sx={{ borderRadius: theme.shape.borderRadius, overflow: 'hidden' }}>
-                        <Box 
-                            sx={{ 
+                        <Box
+                            sx={{
                                 background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.primary.light, 0.05)})`,
                                 p: 3,
-                                borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+                                borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
                             }}
                         >
                             <Stack direction="row" spacing={2} alignItems="center">
-                                <PersonIcon sx={{ color: theme.palette.primary.main, fontSize: 28 }} />
+                                <PersonIcon
+                                    sx={{ color: theme.palette.primary.main, fontSize: 28 }}
+                                />
                                 <Box>
                                     <Typography variant="h6" fontWeight={600}>
                                         Profile Information
@@ -66,21 +68,24 @@ export default function Edit({ mustVerifyEmail, status, auth }) {
                     </Card>
 
                     <Card sx={{ borderRadius: theme.shape.borderRadius, overflow: 'hidden' }}>
-                        <Box 
-                            sx={{ 
+                        <Box
+                            sx={{
                                 background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.1)}, ${alpha(theme.palette.warning.light, 0.05)})`,
                                 p: 3,
-                                borderBottom: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`
+                                borderBottom: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`,
                             }}
                         >
                             <Stack direction="row" spacing={2} alignItems="center">
-                                <LockIcon sx={{ color: theme.palette.warning.main, fontSize: 28 }} />
+                                <LockIcon
+                                    sx={{ color: theme.palette.warning.main, fontSize: 28 }}
+                                />
                                 <Box>
                                     <Typography variant="h6" fontWeight={600}>
                                         Update Password
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        Ensure your account is using a long, random password to stay secure
+                                        Ensure your account is using a long, random password to stay
+                                        secure
                                     </Typography>
                                 </Box>
                             </Stack>
@@ -91,15 +96,17 @@ export default function Edit({ mustVerifyEmail, status, auth }) {
                     </Card>
 
                     <Card sx={{ borderRadius: theme.shape.borderRadius, overflow: 'hidden' }}>
-                        <Box 
-                            sx={{ 
+                        <Box
+                            sx={{
                                 background: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.1)}, ${alpha(theme.palette.error.light, 0.05)})`,
                                 p: 3,
-                                borderBottom: `1px solid ${alpha(theme.palette.error.main, 0.1)}`
+                                borderBottom: `1px solid ${alpha(theme.palette.error.main, 0.1)}`,
                             }}
                         >
                             <Stack direction="row" spacing={2} alignItems="center">
-                                <DeleteIcon sx={{ color: theme.palette.error.main, fontSize: 28 }} />
+                                <DeleteIcon
+                                    sx={{ color: theme.palette.error.main, fontSize: 28 }}
+                                />
                                 <Box>
                                     <Typography variant="h6" fontWeight={600}>
                                         Delete Account

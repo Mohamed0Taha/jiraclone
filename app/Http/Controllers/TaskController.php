@@ -254,6 +254,15 @@ class TaskController extends Controller
             'prompt' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $user = $request->user();
+
+        // Check if user can generate AI tasks
+        if (!$user->canGenerateAiTasks($val['count'])) {
+            return back()
+                ->withErrors(['ai' => 'You have reached your AI task generation limit for this month. Upgrade your plan for more tasks.'])
+                ->withInput();
+        }
+
         $apiKey = config('openai.api_key');
         if (empty($apiKey)) {
             if ($request->expectsJson() || $request->header('X-Inertia')) {
@@ -269,6 +278,9 @@ class TaskController extends Controller
                 ->withErrors(['ai' => 'AI error: ' . $e->getMessage()])
                 ->withInput();
         }
+
+        // Track usage
+        $user->incrementAiTaskUsage($val['count']);
 
         foreach ($tasks as $t) {
             if (!($t['title'] ?? null)) continue;
@@ -298,6 +310,12 @@ class TaskController extends Controller
             'prompt' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $user = $request->user();
+    $shouldShowOverlay = $user->shouldShowOverlay('ai_assistant'); // Overlay for free tier
+    $limitExceeded = ! $user->canGenerateAiTasks($val['count']);
+    $canGenerateFreely = ! $shouldShowOverlay && ! $limitExceeded;
+        
+        // Generate tasks regardless, but mark them differently for free users
         $apiKey = config('openai.api_key');
         if (empty($apiKey)) {
             $payload = [
@@ -308,7 +326,7 @@ class TaskController extends Controller
             return back()->withErrors($payload['errors'])->withInput();
         }
 
-        try {
+    try {
             Log::info('TaskGeneratorService: About to generate tasks', [
                 'project_id' => $project->id,
                 'count' => $val['count'],
@@ -349,6 +367,11 @@ class TaskController extends Controller
             'project'       => $project,
             'generated'     => $tasks,
             'originalInput' => $val,
+            'showOverlay'   => ($shouldShowOverlay || $limitExceeded),
+            'limitExceeded' => $limitExceeded,
+            'canAccept'     => $canGenerateFreely && ! $limitExceeded,
+            'usage'         => $user->getUsageSummary()['ai_tasks'] ?? null,
+            'upgradeUrl'    => route('billing.show'),
         ]);
     }
 
@@ -457,6 +480,16 @@ class TaskController extends Controller
 
         $generated = $val['generated'] ?? [];
         $accepted = 0;
+        $user = $request->user();
+
+        // Check if user can accept these tasks
+        if (!$user->canGenerateAiTasks(count($generated))) {
+            return back()
+                ->withErrors(['ai' => 'You have reached your AI task generation limit for this month. Upgrade your plan for more tasks.']);
+        }
+
+        // Track usage
+        $user->incrementAiTaskUsage(count($generated));
 
         foreach ($generated as $t) {
             if (!($t['title'] ?? null)) continue;

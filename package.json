@@ -7,7 +7,9 @@
         "build": "vite build",
         "heroku-postbuild": "npm run build",
         "postinstall": "npm run build",
-        "format": "prettier --write \"resources/**/*.{js,jsx,ts,tsx,json,css,scss}\" && npx pint"
+        "format": "./scripts/cleanup-and-format.sh",
+        "format-quick": "prettier --write \"resources/**/*.{js,jsx,ts,tsx,json,css,scss}\" && ./vendor/bin/pint --quiet",
+        "cleanup": "./scripts/cleanup-and-format.sh"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.3",
@@ -36,5 +38,8 @@
         "react-window": "^1.8.11",
         "ziggy-js": "^2.5.3"
     },
-    "engines": { "node": "22.x", "npm": "10.x" }
+    "engines": {
+        "node": "22.x",
+        "npm": "10.x"
+    }
 }

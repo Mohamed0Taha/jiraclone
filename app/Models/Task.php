@@ -12,6 +12,7 @@ class Task extends Model
     use HasFactory;
 
     public const STATUSES = ['todo', 'inprogress', 'review', 'done'];
+
     public const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
     protected $fillable = [
@@ -28,9 +29,9 @@ class Task extends Model
     ];
 
     protected $casts = [
-        'start_date'     => 'date',
+        'start_date' => 'date',
         'end_date' => 'date',
-        'milestone'      => 'boolean',
+        'milestone' => 'boolean',
     ];
 
     protected static function booted()
@@ -44,8 +45,23 @@ class Task extends Model
         });
     }
 
-    public function project()   { return $this->belongsTo(Project::class); }
-    public function creator()   { return $this->belongsTo(User::class, 'creator_id'); }
-    public function assignee()  { return $this->belongsTo(User::class, 'assignee_id'); }
-    public function comments()  { return $this->hasMany(Comment::class); }
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    public function assignee()
+    {
+        return $this->belongsTo(User::class, 'assignee_id');
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
 }

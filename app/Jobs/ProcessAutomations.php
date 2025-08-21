@@ -17,7 +17,7 @@ class ProcessAutomations implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(Project $project = null)
+    public function __construct(?Project $project = null)
     {
         $this->project = $project;
     }
@@ -27,7 +27,7 @@ class ProcessAutomations implements ShouldQueue
      */
     public function handle(): void
     {
-        $automationEngine = new AutomationEngine();
+        $automationEngine = new AutomationEngine;
 
         if ($this->project) {
             // Process automations for a specific project
@@ -35,8 +35,8 @@ class ProcessAutomations implements ShouldQueue
             $automationEngine->processProjectAutomations($this->project);
         } else {
             // Process automations for all projects
-            Log::info("Processing automations for all projects");
-            $projects = Project::whereHas('automations', function($query) {
+            Log::info('Processing automations for all projects');
+            $projects = Project::whereHas('automations', function ($query) {
                 $query->where('is_active', true);
             })->get();
 

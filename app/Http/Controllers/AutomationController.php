@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Project;
-use App\Models\Automation;
-use App\Services\AutomationEngine;
 use App\Jobs\ProcessAutomations;
-use Inertia\Inertia;
+use App\Models\Automation;
+use App\Models\Project;
+use App\Services\AutomationEngine;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class AutomationController extends Controller
 {
@@ -45,7 +45,7 @@ class AutomationController extends Controller
                     'updated_at' => $automation->updated_at,
                 ];
             });
-        
+
         return Inertia::render('Automations/Index', [
             'project' => $project,
             'automations' => $automations,
@@ -68,12 +68,12 @@ class AutomationController extends Controller
         $this->validateTriggerConfig($validated['trigger'], $validated['trigger_config']);
 
         // Provide a safe default action array if missing / empty so creation does not fail
-        if (!isset($validated['actions']) || empty($validated['actions'])) {
+        if (! isset($validated['actions']) || empty($validated['actions'])) {
             $validated['actions'] = [[
                 'id' => 'placeholder',
                 'type' => 'noop',
                 'name' => 'Placeholder Action',
-                'note' => 'Auto-added placeholder. Edit this workflow to configure real actions.'
+                'note' => 'Auto-added placeholder. Edit this workflow to configure real actions.',
             ]];
         } else {
             $this->validateActions($validated['actions']);
@@ -106,12 +106,12 @@ class AutomationController extends Controller
 
         // Validate trigger config and actions (allow empty -> will keep existing or set placeholder)
         $this->validateTriggerConfig($validated['trigger'], $validated['trigger_config']);
-        if (!isset($validated['actions']) || empty($validated['actions'])) {
+        if (! isset($validated['actions']) || empty($validated['actions'])) {
             $validated['actions'] = $automation->actions ?: [[
                 'id' => 'placeholder',
                 'type' => 'noop',
                 'name' => 'Placeholder Action',
-                'note' => 'Auto-added placeholder. Edit this workflow to configure real actions.'
+                'note' => 'Auto-added placeholder. Edit this workflow to configure real actions.',
             ]];
         } else {
             $this->validateActions($validated['actions']);
@@ -139,25 +139,26 @@ class AutomationController extends Controller
                 ->route('automations.index', $project)
                 ->with('success', 'Automation deleted successfully');
         }
+
         // Fallback for non-Inertia calls
         return response()->json([
             'success' => true,
-            'message' => 'Automation deleted successfully'
+            'message' => 'Automation deleted successfully',
         ]);
     }
 
     public function toggle(Request $request, Project $project, Automation $automation)
     {
         $automation->update([
-            'is_active' => !$automation->is_active
+            'is_active' => ! $automation->is_active,
         ]);
 
-        Log::info("Automation toggled: {$automation->name} - " . ($automation->is_active ? 'activated' : 'deactivated'));
+        Log::info("Automation toggled: {$automation->name} - ".($automation->is_active ? 'activated' : 'deactivated'));
 
         return response()->json([
             'success' => true,
             'message' => 'Automation status updated successfully',
-            'automation' => $automation
+            'automation' => $automation,
         ]);
     }
 
@@ -169,14 +170,14 @@ class AutomationController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Automation test completed',
-                'results' => $results
+                'results' => $results,
             ]);
         } catch (\Exception $e) {
             Log::error("Automation test failed: {$e->getMessage()}");
 
             return response()->json([
                 'success' => false,
-                'message' => 'Automation test failed: ' . $e->getMessage()
+                'message' => 'Automation test failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -188,14 +189,14 @@ class AutomationController extends Controller
 
             return response()->json([
                 'success' => $success,
-                'message' => $success ? 'Automation executed successfully' : 'Automation execution failed'
+                'message' => $success ? 'Automation executed successfully' : 'Automation execution failed',
             ]);
         } catch (\Exception $e) {
             Log::error("Manual automation execution failed: {$e->getMessage()}");
 
             return response()->json([
                 'success' => false,
-                'message' => 'Automation execution failed: ' . $e->getMessage()
+                'message' => 'Automation execution failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -207,14 +208,14 @@ class AutomationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Automation processing queued for project'
+            'message' => 'Automation processing queued for project',
         ]);
     }
 
     public function templates()
     {
         return response()->json([
-            'templates' => $this->getWorkflowTemplates()
+            'templates' => $this->getWorkflowTemplates(),
         ]);
     }
 
@@ -222,7 +223,7 @@ class AutomationController extends Controller
     {
         switch ($trigger) {
             case 'Schedule':
-                if (!isset($config['frequency'])) {
+                if (! isset($config['frequency'])) {
                     throw new \InvalidArgumentException('Schedule trigger requires frequency');
                 }
                 break;
@@ -230,12 +231,12 @@ class AutomationController extends Controller
                 // columns is optional
                 break;
             case 'Task Due Date':
-                if (!isset($config['hours_before'])) {
+                if (! isset($config['hours_before'])) {
                     $config['hours_before'] = 24; // default
                 }
                 break;
             case 'Task Priority':
-                if (!isset($config['priority'])) {
+                if (! isset($config['priority'])) {
                     throw new \InvalidArgumentException('Task Priority trigger requires priority level');
                 }
                 break;
@@ -245,7 +246,7 @@ class AutomationController extends Controller
     private function validateActions(array $actions): void
     {
         foreach ($actions as $action) {
-            if (!isset($action['type']) && !isset($action['name'])) {
+            if (! isset($action['type']) && ! isset($action['name'])) {
                 throw new \InvalidArgumentException('Action must have a type or name');
             }
 
@@ -253,18 +254,18 @@ class AutomationController extends Controller
 
             switch ($actionType) {
                 case 'Email':
-                    if (!isset($action['subject']) || !isset($action['message'])) {
+                    if (! isset($action['subject']) || ! isset($action['message'])) {
                         throw new \InvalidArgumentException('Email action requires subject and message');
                     }
                     break;
                 case 'Slack':
                 case 'Discord':
-                    if (!isset($action['message'])) {
-                        throw new \InvalidArgumentException($actionType . ' action requires message');
+                    if (! isset($action['message'])) {
+                        throw new \InvalidArgumentException($actionType.' action requires message');
                     }
                     break;
                 case 'Webhook':
-                    if (!isset($action['url'])) {
+                    if (! isset($action['url'])) {
                         throw new \InvalidArgumentException('Webhook action requires URL');
                     }
                     break;
@@ -283,7 +284,7 @@ class AutomationController extends Controller
                 'icon' => 'Schedule',
                 'trigger' => 'Task Due Date',
                 'trigger_config' => [
-                    'hours_before' => 24
+                    'hours_before' => 24,
                 ],
                 'actions' => [
                     [
@@ -291,9 +292,9 @@ class AutomationController extends Controller
                         'name' => 'Email',
                         'subject' => 'Task Due Reminder: {task_title}',
                         'message' => 'Hi! Just a reminder that your task "{task_title}" is due tomorrow. Don\'t forget to complete it on time!',
-                        'recipient' => '{task_assignee_email}'
-                    ]
-                ]
+                        'recipient' => '{task_assignee_email}',
+                    ],
+                ],
             ],
             [
                 'id' => 'new-task-notifications',
@@ -304,16 +305,16 @@ class AutomationController extends Controller
                 'trigger' => 'Task Created',
                 'trigger_config' => [
                     'columns' => [],
-                    'time_window' => 5
+                    'time_window' => 5,
                 ],
                 'actions' => [
                     [
                         'type' => 'Slack',
                         'name' => 'Slack',
                         'message' => '🆕 New task created in {project_name}: "{task_title}"',
-                        'webhook_url' => ''
-                    ]
-                ]
+                        'webhook_url' => '',
+                    ],
+                ],
             ],
             [
                 'id' => 'high-priority-escalation',
@@ -324,7 +325,7 @@ class AutomationController extends Controller
                 'trigger' => 'Task Priority',
                 'trigger_config' => [
                     'priority' => 'high',
-                    'hours_unassigned' => 2
+                    'hours_unassigned' => 2,
                 ],
                 'actions' => [
                     [
@@ -332,15 +333,15 @@ class AutomationController extends Controller
                         'name' => 'Email',
                         'subject' => '🚨 High Priority Task Needs Attention',
                         'message' => 'A high priority task "{task_title}" has been unassigned for 2 hours. Please assign it immediately.',
-                        'recipient' => '{project_manager_email}'
+                        'recipient' => '{project_manager_email}',
                     ],
                     [
                         'type' => 'Slack',
                         'name' => 'Slack',
                         'message' => '🚨 High priority task needs attention: "{task_title}" in {project_name}',
-                        'webhook_url' => ''
-                    ]
-                ]
+                        'webhook_url' => '',
+                    ],
+                ],
             ],
             [
                 'id' => 'daily-progress-report',
@@ -351,7 +352,7 @@ class AutomationController extends Controller
                 'trigger' => 'Schedule',
                 'trigger_config' => [
                     'frequency' => 'daily',
-                    'time' => '18:00'
+                    'time' => '18:00',
                 ],
                 'actions' => [
                     [
@@ -359,9 +360,9 @@ class AutomationController extends Controller
                         'name' => 'Email',
                         'subject' => 'Daily Progress Report - {project_name}',
                         'message' => 'Here\'s your daily progress report for {project_name}:\n\nCompleted today: {tasks_completed_today}\nTotal progress: {project_completion_percentage}%\n\nKeep up the great work!',
-                        'recipient' => '{stakeholder_email}'
-                    ]
-                ]
+                        'recipient' => '{stakeholder_email}',
+                    ],
+                ],
             ],
             [
                 'id' => 'weekly-team-sync',
@@ -373,7 +374,7 @@ class AutomationController extends Controller
                 'trigger_config' => [
                     'frequency' => 'weekly',
                     'day_of_week' => 1,
-                    'time' => '09:00'
+                    'time' => '09:00',
                 ],
                 'actions' => [
                     [
@@ -381,16 +382,16 @@ class AutomationController extends Controller
                         'name' => 'Calendar',
                         'title' => 'Weekly Team Sync - {project_name}',
                         'description' => 'Weekly sync meeting for project {project_name}',
-                        'duration' => 60
+                        'duration' => 60,
                     ],
                     [
                         'type' => 'Slack',
                         'name' => 'Slack',
                         'message' => '📅 Don\'t forget about today\'s team sync meeting for {project_name} at 9 AM!',
-                        'webhook_url' => ''
-                    ]
-                ]
-            ]
+                        'webhook_url' => '',
+                    ],
+                ],
+            ],
         ];
     }
 }

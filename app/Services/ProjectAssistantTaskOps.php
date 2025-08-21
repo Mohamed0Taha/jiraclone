@@ -4,12 +4,9 @@ namespace App\Services;
 
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\User;
-use Carbon\Carbon;
-use Illuminate\Support\Str;
-use Throwable;
-
 use App\Services\ProjectAssistantConstants as PA;
+use Carbon\Carbon;
+use Throwable;
 
 /**
  * Task identification & search operations extracted for clarity.
@@ -97,7 +94,7 @@ trait ProjectAssistantTaskOps
         if (preg_match(PA::TASK_ID_PATTERNS['by_milestone'], $message, $matches)) {
             $milestoneHint = trim($matches[1]);
             $tasks = $this->findTasksByMilestone($project, $milestoneHint);
-            if (!empty($tasks)) {
+            if (! empty($tasks)) {
                 return $tasks;
             }
         }
@@ -125,13 +122,13 @@ trait ProjectAssistantTaskOps
 
         // 6) By date ranges
         $tasks = $this->findTasksByDateRange($project, $message);
-        if (!empty($tasks)) {
+        if (! empty($tasks)) {
             return $tasks;
         }
 
         // 7) By title/description keywords
         $tasks = $this->findTasksByKeywords($project, $message);
-        if (!empty($tasks)) {
+        if (! empty($tasks)) {
             return $tasks;
         }
 
@@ -146,7 +143,7 @@ trait ProjectAssistantTaskOps
         try {
             if (method_exists(Task::class, 'milestone') && method_exists($project, 'milestones')) {
                 $milestone = $project->milestones()
-                    ->where('name', 'LIKE', '%' . $milestoneHint . '%')
+                    ->where('name', 'LIKE', '%'.$milestoneHint.'%')
                     ->first();
 
                 if ($milestone) {
@@ -222,7 +219,7 @@ trait ProjectAssistantTaskOps
         $commonWords = ['task', 'tasks', 'find', 'show', 'get', 'with', 'from', 'that', 'have', 'contains'];
         $words = preg_split('/\s+/', strtolower($message));
         foreach ($words as $word) {
-            if (strlen($word) > 3 && !in_array($word, $commonWords, true) && !preg_match('/^\d+$/', $word)) {
+            if (strlen($word) > 3 && ! in_array($word, $commonWords, true) && ! preg_match('/^\d+$/', $word)) {
                 $keywords[] = $word;
             }
         }
@@ -236,8 +233,8 @@ trait ProjectAssistantTaskOps
 
         $query->where(function ($q) use ($keywords) {
             foreach ($keywords as $keyword) {
-                $q->orWhere('title', 'LIKE', '%' . $keyword . '%')
-                  ->orWhere('description', 'LIKE', '%' . $keyword . '%');
+                $q->orWhere('title', 'LIKE', '%'.$keyword.'%')
+                    ->orWhere('description', 'LIKE', '%'.$keyword.'%');
             }
         });
 

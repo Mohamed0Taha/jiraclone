@@ -18,7 +18,7 @@ return new class extends Migration
             $table->enum('role', ['member', 'admin'])->default('member');
             $table->timestamp('joined_at')->nullable();
             $table->timestamps();
-            
+
             // Prevent duplicate memberships
             $table->unique(['project_id', 'user_id']);
         });

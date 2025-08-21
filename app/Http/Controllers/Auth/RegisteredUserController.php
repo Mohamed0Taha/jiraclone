@@ -25,7 +25,7 @@ class RegisteredUserController extends Controller
     {
         // Check if there's an invitation token in the URL or session
         $invitationEmail = session('invitation_email', request('email'));
-        
+
         return Inertia::render('Auth/Register', [
             'invitationEmail' => $invitationEmail,
         ]);
@@ -73,19 +73,19 @@ class RegisteredUserController extends Controller
         // Check for invitation token in session
         $token = session('invitation_token');
         $invitationEmail = session('invitation_email');
-        
+
         if ($token && $invitationEmail && $user->email === $invitationEmail) {
             $invitation = ProjectInvitation::where('token', $token)
                 ->where('status', 'pending')
                 ->where('email', $user->email)
                 ->first();
-            
-            if ($invitation && !$invitation->isExpired()) {
+
+            if ($invitation && ! $invitation->isExpired()) {
                 try {
                     // Use database transaction to ensure consistency
                     $result = DB::transaction(function () use ($invitation, $user) {
                         // Check if user is not already a member
-                        if (!$invitation->project->members()->where('user_id', $user->id)->exists()) {
+                        if (! $invitation->project->members()->where('user_id', $user->id)->exists()) {
                             // Add user to project
                             $invitation->project->members()->attach($user->id, [
                                 'role' => 'member',
@@ -100,6 +100,7 @@ class RegisteredUserController extends Controller
 
                             return true;
                         }
+
                         return false;
                     });
 
@@ -116,7 +117,7 @@ class RegisteredUserController extends Controller
 
                         // Redirect to dashboard with success message
                         return redirect(route('dashboard', absolute: false))
-                            ->with('success', 'Welcome! You have been automatically added to the project: ' . $invitation->project->name);
+                            ->with('success', 'Welcome! You have been automatically added to the project: '.$invitation->project->name);
                     }
                 } catch (\Exception $e) {
                     Log::error('Failed to add user to project after registration', [
@@ -126,7 +127,7 @@ class RegisteredUserController extends Controller
                         'error' => $e->getMessage(),
                     ]);
                 }
-                
+
                 // Clear session data even if there was an error
                 session()->forget(['invitation_token', 'invitation_email']);
             }

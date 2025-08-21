@@ -2,8 +2,8 @@
 
 namespace App\Notifications;
 
-use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
 
 class CustomVerifyEmail extends Notification
@@ -27,7 +27,7 @@ class CustomVerifyEmail extends Notification
             false
         );
 
-        $full = rtrim(config('app.url'), '/') . $relative;
+        $full = rtrim(config('app.url'), '/').$relative;
 
         return (new MailMessage)
             ->from('noreply@taskpilot.us', 'TaskPilot')

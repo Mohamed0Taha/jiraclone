@@ -7,8 +7,8 @@ use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
 
 class GoogleController extends Controller
 {
@@ -24,14 +24,14 @@ class GoogleController extends Controller
 
         $user = User::where('email', $g->getEmail())->first();
 
-        if (!$user) {
+        if (! $user) {
             $user = User::create([
-                'name'                 => $g->getName() ?: $g->getNickname() ?: 'Google User',
-                'email'                => $g->getEmail(),
-                'password'             => bcrypt(Str::random(40)),
-                'google_id'            => $g->getId(),
-                'google_avatar'        => $g->getAvatar(),
-                'google_token'         => $g->token ?? null,
+                'name' => $g->getName() ?: $g->getNickname() ?: 'Google User',
+                'email' => $g->getEmail(),
+                'password' => bcrypt(Str::random(40)),
+                'google_id' => $g->getId(),
+                'google_avatar' => $g->getAvatar(),
+                'google_token' => $g->token ?? null,
                 'google_refresh_token' => $g->refreshToken ?? null,
             ]);
 
@@ -40,9 +40,9 @@ class GoogleController extends Controller
         } else {
             // Keep profile fresh
             $user->forceFill([
-                'google_id'            => $g->getId(),
-                'google_avatar'        => $g->getAvatar(),
-                'google_token'         => $g->token ?? $user->google_token,
+                'google_id' => $g->getId(),
+                'google_avatar' => $g->getAvatar(),
+                'google_token' => $g->token ?? $user->google_token,
                 'google_refresh_token' => $g->refreshToken ?? $user->google_refresh_token,
             ])->save();
 
@@ -52,7 +52,7 @@ class GoogleController extends Controller
         Auth::login($user, remember: true);
 
         // If not verified, show the “verify email” notice (no re-send here)
-        if (!$user->hasVerifiedEmail()) {
+        if (! $user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
         }
 

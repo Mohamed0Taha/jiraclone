@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::table('tasks', function (Blueprint $table) {
             $table->enum('priority', ['low', 'medium', 'high', 'urgent'])
-                  ->default('medium')
-                  ->after('milestone');
+                ->default('medium')
+                ->after('milestone');
         });
     }
 

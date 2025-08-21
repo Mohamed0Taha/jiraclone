@@ -4,59 +4,61 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Services\ProjectAssistantService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\JsonResponse;
 use Throwable;
 
 class ProjectAssistantController extends Controller
 {
-    public function __construct(private ProjectAssistantService $service)
-    {
-    }
+    public function __construct(private ProjectAssistantService $service) {}
 
     /** POST /projects/{project}/assistant/chat */
     public function chat(Request $request, Project $project): JsonResponse
     {
         $this->authorizeView($project);
 
-        $message = (string)$request->input('message', '');
+        $user = $request->user();
+        $message = (string) $request->input('message', '');
         // Optionally, you could use a real session/user id here
         $sessionId = null;
 
-        try {
-            $resp = $this->service->processMessage($project, $message, $sessionId);
-            return response()->json($resp);
-        } catch (Throwable $e) {
-            Log::error('Assistant chat error', ['error' => $e->getMessage()]);
-            return response()->json([
-                'type' => 'error',
-                'message' => "Error: ".$e->getMessage(),
-            ], 400);
-        }
-    }
-
-    /** POST /projects/{project}/assistant/execute */
-    public function execute(Request $request, Project $project): JsonResponse
-    {
-        if (!$this->canModify($project)) {
+        if (! $this->canModify($project)) {
             return response()->json([
                 'type' => 'error',
                 'message' => 'You do not have permission to modify this project.',
             ], 403);
         }
 
-        $payload = (array)$request->input('command_data', []);
+        // Check if user should see overlay (free tier)
+        $shouldShowOverlay = $user->shouldShowOverlay('ai_chat');
+        
+        if ($shouldShowOverlay) {
+            // For free users, return a generic response with overlay flag
+            return response()->json([
+                'type' => 'message',
+                'content' => 'I\'d be happy to help you with your project! I can provide insights, suggestions, and assistance with your tasks.',
+                'show_overlay' => true,
+                'overlay_feature' => 'ai_chat',
+                'upgrade_url' => route('billing.show'),
+                'usage' => $user->getUsageSummary()['ai_chat'] ?? null,
+            ]);
+        }
 
         try {
-            $resp = $this->service->executeCommand($project, $payload);
+            $resp = $this->service->processMessage($project, $message, $sessionId);
+
+            // Increment usage on successful response
+            $user->incrementAiChatUsage();
+
             return response()->json($resp);
         } catch (Throwable $e) {
-            Log::error('Assistant execute error', ['error' => $e->getMessage()]);
+            Log::error('Assistant chat error', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'type' => 'error',
-                'message' => "Execution failed: ".$e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ], 400);
         }
     }
@@ -66,22 +68,25 @@ class ProjectAssistantController extends Controller
     {
         $this->authorizeView($project);
 
-    // $labels = $this->service->labelsFor($project); // Removed: method does not exist
-    $labels = []; // TODO: Implement label fetching if needed
-        $todo = $labels['todo']; $inprog = $labels['inprogress']; $rev = $labels['review']; $done = $labels['done'];
+        // $labels = $this->service->labelsFor($project); // Removed: method does not exist
+        $labels = []; // TODO: Implement label fetching if needed
+        $todo = $labels['todo'];
+        $inprog = $labels['inprogress'];
+        $rev = $labels['review'];
+        $done = $labels['done'];
 
         return response()->json([
             'suggestions' => [
                 "How many tasks are {$done}?",
-                "List overdue tasks",
-                "Who is the project owner?",
-                "What methodology are we using?",
-                "Show tasks assigned to me",
+                'List overdue tasks',
+                'Who is the project owner?',
+                'What methodology are we using?',
+                'Show tasks assigned to me',
                 "Move tasks in {$rev} to {$done}",
-                "Delete urgent tasks",
-                "Update due date for medium priority to next Friday",
-                "Assign unassigned tasks to Alex",
-                "Create task Implement login",
+                'Delete urgent tasks',
+                'Update due date for medium priority to next Friday',
+                'Assign unassigned tasks to Alex',
+                'Create task Implement login',
                 "Set all {$inprog} tasks to {$rev}",
             ],
         ]);
@@ -91,7 +96,8 @@ class ProjectAssistantController extends Controller
     public function test(Request $request, Project $project): JsonResponse
     {
         $this->authorizeView($project);
-        return response()->json(['ok' => true, 'project' => $project->only(['id','name'])]);
+
+        return response()->json(['ok' => true, 'project' => $project->only(['id', 'name'])]);
     }
 
     /*
@@ -105,11 +111,14 @@ class ProjectAssistantController extends Controller
         $user = Auth::user();
         abort_unless($user, 401);
 
-        if ($user->id === (int)$project->user_id) return;
+        if ($user->id === (int) $project->user_id) {
+            return;
+        }
 
         if (method_exists($project, 'members')) {
             $isMember = $project->members()->where('users.id', $user->id)->exists();
             abort_unless($isMember, 403);
+
             return;
         }
 
@@ -119,8 +128,12 @@ class ProjectAssistantController extends Controller
     private function canModify(Project $project): bool
     {
         $user = Auth::user();
-        if (!$user) return false;
-        if ($user->id === (int)$project->user_id) return true;
+        if (! $user) {
+            return false;
+        }
+        if ($user->id === (int) $project->user_id) {
+            return true;
+        }
 
         if (method_exists($project, 'members')) {
             return $project->members()->where('users.id', $user->id)->exists();
