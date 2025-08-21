@@ -15,7 +15,7 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasApiTokens, HasFactory, Notifiable, Billable;
 
     protected $fillable = [
-        'name', 'email', 'password',
+        'name', 'email', 'password', 'is_admin',
         'google_id', 'google_avatar', 'google_token', 'google_refresh_token',
         'trial_used', 'trial_plan', 'ai_tasks_used', 'usage_reset_date',
     ];
@@ -29,6 +29,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password'          => 'hashed',
             'trial_ends_at'     => 'datetime',
             'trial_used'        => 'boolean',
+            'is_admin'          => 'boolean',
             'usage_reset_date'  => 'date',
         ];
     }
