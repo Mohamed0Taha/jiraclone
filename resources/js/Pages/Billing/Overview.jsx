@@ -123,7 +123,7 @@ function PlanCard({
                     {isCurrent && onTrial && (
                         <Chip
                             size="small"
-                            color="info"
+                            color="success"
                             icon={<CheckCircleRoundedIcon />}
                             label="On Trial"
                             sx={{ fontWeight: 700, height: 24 }}
@@ -329,7 +329,7 @@ export default function BillingOverview({
                                 reporting.
                             </Typography>
 
-                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                            <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
                                 <Chip
                                     icon={<AutoAwesomeIcon />}
                                     label={
@@ -339,17 +339,16 @@ export default function BillingOverview({
                                               ? 'Active Subscriber'
                                               : 'Free Tier'
                                     }
-                                    color={onTrial ? 'info' : subscribed ? 'success' : 'default'}
+                                    color={onTrial || subscribed ? 'success' : 'default'}
                                     variant={subscribed || onTrial ? 'filled' : 'outlined'}
-                                    sx={{ fontWeight: 700 }}
+                                    sx={{ fontWeight: 700, height: 32 }}
                                 />
                                 {onTrial && trialEndsAt && (
                                     <Chip
                                         icon={<CancelScheduleSendRoundedIcon />}
-                                        color="info"
+                                        color="success"
                                         label={`Trial ends ${trialEndsAt.toLocaleDateString()}`}
-                                        size="small"
-                                        sx={{ fontWeight: 700 }}
+                                        sx={{ fontWeight: 700, height: 32 }}
                                     />
                                 )}
                                 {onGrace && endsAt && (
