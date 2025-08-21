@@ -41,6 +41,8 @@ export default function ContactUs({ auth, flash }) {
         message: '',
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showForm, setShowForm] = useState(true);
+    const [submitResult, setSubmitResult] = useState(null); // 'success' or 'error'
 
     const handleChange = (field) => (event) => {
         setFormData(prev => ({
@@ -52,7 +54,7 @@ export default function ContactUs({ auth, flash }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!formData.topic || !formData.message.trim()) {
+        if (!formData.topic || !formData.message.trim() || formData.message.trim().length < 10) {
             return;
         }
 
@@ -60,8 +62,14 @@ export default function ContactUs({ auth, flash }) {
 
         try {
             router.post(route('contact.send'), formData, {
-                onSuccess: () => {
+                onSuccess: (page) => {
                     setFormData({ topic: '', message: '' });
+                    setShowForm(false);
+                    setSubmitResult('success');
+                },
+                onError: (errors) => {
+                    setShowForm(false);
+                    setSubmitResult('error');
                 },
                 onFinish: () => {
                     setIsSubmitting(false);
@@ -69,10 +77,23 @@ export default function ContactUs({ auth, flash }) {
             });
         } catch (error) {
             setIsSubmitting(false);
+            setShowForm(false);
+            setSubmitResult('error');
         }
     };
 
-    const isFormValid = formData.topic && formData.message.trim();
+    const handleSendAnother = () => {
+        setShowForm(true);
+        setSubmitResult(null);
+        setFormData({ topic: '', message: '' });
+    };
+
+    const handleTryAgain = () => {
+        setShowForm(true);
+        setSubmitResult(null);
+    };
+
+    const isFormValid = formData.topic && formData.message.trim() && formData.message.trim().length >= 10;
 
     return (
         <>
@@ -177,90 +198,180 @@ export default function ContactUs({ auth, flash }) {
                                 background: 'rgba(255,255,255,0.8)',
                             }}
                         >
-                            <form onSubmit={handleSubmit}>
-                                <Stack spacing={3}>
-                                    {/* User Info Display */}
-                                    <Box
-                                        sx={{
-                                            p: 2,
-                                            borderRadius: 2,
-                                            background: alpha(theme.palette.primary.main, 0.04),
-                                            border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
-                                        }}
-                                    >
-                                        <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-                                            <EmailIcon fontSize="small" color="primary" />
-                                            <Typography variant="subtitle2" fontWeight={700}>
-                                                Your Details
-                                            </Typography>
-                                        </Stack>
-                                        <Typography variant="body2" color="text.secondary">
-                                            <strong>Name:</strong> {auth.user.name}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            <strong>Email:</strong> {auth.user.email}
-                                        </Typography>
-                                    </Box>
-
-                                    {/* Topic Selection */}
-                                    <FormControl fullWidth>
-                                        <InputLabel>Topic *</InputLabel>
-                                        <Select
-                                            value={formData.topic}
-                                            label="Topic *"
-                                            onChange={handleChange('topic')}
-                                            required
+                            {showForm ? (
+                                <form onSubmit={handleSubmit}>
+                                    <Stack spacing={3}>
+                                        {/* User Info Display */}
+                                        <Box
+                                            sx={{
+                                                p: 2,
+                                                borderRadius: 2,
+                                                background: alpha(theme.palette.primary.main, 0.04),
+                                                border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+                                            }}
                                         >
-                                            {contactTopics.map((topic) => (
-                                                <MenuItem key={topic.value} value={topic.value}>
-                                                    {topic.label}
-                                                </MenuItem>
-                                            ))}
-                                        </Select>
-                                    </FormControl>
+                                            <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                                                <EmailIcon fontSize="small" color="primary" />
+                                                <Typography variant="subtitle2" fontWeight={700}>
+                                                    Your Details
+                                                </Typography>
+                                            </Stack>
+                                            <Typography variant="body2" color="text.secondary">
+                                                <strong>Name:</strong> {auth.user.name}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                <strong>Email:</strong> {auth.user.email}
+                                            </Typography>
+                                        </Box>
 
-                                    {/* Message */}
-                                    <TextField
-                                        label="Message *"
-                                        multiline
-                                        rows={6}
-                                        value={formData.message}
-                                        onChange={handleChange('message')}
-                                        placeholder="Please describe your issue or question in detail..."
-                                        required
-                                        fullWidth
-                                    />
+                                        {/* Topic Selection */}
+                                        <FormControl fullWidth>
+                                            <InputLabel>Topic *</InputLabel>
+                                            <Select
+                                                value={formData.topic}
+                                                label="Topic *"
+                                                onChange={handleChange('topic')}
+                                                required
+                                            >
+                                                {contactTopics.map((topic) => (
+                                                    <MenuItem key={topic.value} value={topic.value}>
+                                                        {topic.label}
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
 
-                                    {/* Submit Button */}
-                                    <Button
-                                        type="submit"
-                                        variant="contained"
-                                        size="large"
-                                        disabled={!isFormValid || isSubmitting}
-                                        startIcon={<SendIcon />}
-                                        sx={{
-                                            textTransform: 'none',
-                                            fontWeight: 700,
-                                            py: 1.5,
-                                            background: 'linear-gradient(135deg, #6366F1, #4F46E5)',
-                                            boxShadow: '0 8px 20px -8px rgba(79,70,229,.55)',
-                                            '&:hover': {
-                                                background: 'linear-gradient(135deg, #595CEB, #4841D6)',
-                                            },
-                                            '&:disabled': {
-                                                background: alpha(theme.palette.action.disabled, 0.12),
-                                                color: theme.palette.action.disabled,
-                                            },
-                                        }}
-                                    >
-                                        {isSubmitting ? 'Sending...' : 'Send Message'}
-                                    </Button>
+                                        {/* Message */}
+                                        <TextField
+                                            label="Message *"
+                                            multiline
+                                            rows={6}
+                                            value={formData.message}
+                                            onChange={handleChange('message')}
+                                            placeholder="Please describe your issue or question in detail... (minimum 10 characters)"
+                                            required
+                                            fullWidth
+                                            helperText={
+                                                formData.message.trim().length > 0 && formData.message.trim().length < 10
+                                                    ? `${10 - formData.message.trim().length} more characters needed`
+                                                    : formData.message.trim().length >= 10
+                                                    ? `${formData.message.trim().length} characters`
+                                                    : 'Minimum 10 characters required'
+                                            }
+                                            error={formData.message.trim().length > 0 && formData.message.trim().length < 10}
+                                        />
 
-                                    <Typography variant="caption" color="text.secondary" textAlign="center">
-                                        We typically respond within 24 hours during business days.
-                                    </Typography>
+                                        {/* Submit Button */}
+                                        <Button
+                                            type="submit"
+                                            variant="contained"
+                                            size="large"
+                                            disabled={!isFormValid || isSubmitting}
+                                            startIcon={<SendIcon />}
+                                            sx={{
+                                                textTransform: 'none',
+                                                fontWeight: 700,
+                                                py: 1.5,
+                                                background: 'linear-gradient(135deg, #6366F1, #4F46E5)',
+                                                boxShadow: '0 8px 20px -8px rgba(79,70,229,.55)',
+                                                '&:hover': {
+                                                    background: 'linear-gradient(135deg, #595CEB, #4841D6)',
+                                                },
+                                                '&:disabled': {
+                                                    background: alpha(theme.palette.action.disabled, 0.12),
+                                                    color: theme.palette.action.disabled,
+                                                },
+                                            }}
+                                        >
+                                            {isSubmitting ? 'Sending...' : 'Send Message'}
+                                        </Button>
+
+                                        <Typography variant="caption" color="text.secondary" textAlign="center">
+                                            We typically respond within 24 hours during business days.
+                                        </Typography>
+                                    </Stack>
+                                </form>
+                            ) : (
+                                <Stack spacing={3} textAlign="center" py={4}>
+                                    {submitResult === 'success' ? (
+                                        <>
+                                            <Box>
+                                                <Box
+                                                    sx={{
+                                                        width: 80,
+                                                        height: 80,
+                                                        borderRadius: '50%',
+                                                        background: 'linear-gradient(135deg, #10B981, #059669)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        mx: 'auto',
+                                                        mb: 2,
+                                                        boxShadow: '0 10px 25px rgba(16, 185, 129, 0.3)',
+                                                    }}
+                                                >
+                                                    <SendIcon sx={{ color: 'white', fontSize: 36 }} />
+                                                </Box>
+                                                <Typography variant="h5" fontWeight={700} color="success.main" gutterBottom>
+                                                    Message Sent Successfully!
+                                                </Typography>
+                                                <Typography variant="body1" color="text.secondary" mb={3}>
+                                                    Thank you for reaching out! We've received your message and will get back to you within 24 hours during business days.
+                                                </Typography>
+                                            </Box>
+                                            <Button
+                                                variant="contained"
+                                                onClick={handleSendAnother}
+                                                sx={{
+                                                    textTransform: 'none',
+                                                    fontWeight: 700,
+                                                    background: 'linear-gradient(135deg, #6366F1, #4F46E5)',
+                                                }}
+                                            >
+                                                Send Another Message
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Box>
+                                                <Box
+                                                    sx={{
+                                                        width: 80,
+                                                        height: 80,
+                                                        borderRadius: '50%',
+                                                        background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        mx: 'auto',
+                                                        mb: 2,
+                                                        boxShadow: '0 10px 25px rgba(239, 68, 68, 0.3)',
+                                                    }}
+                                                >
+                                                    <Typography sx={{ color: 'white', fontSize: 36 }}>⚠️</Typography>
+                                                </Box>
+                                                <Typography variant="h5" fontWeight={700} color="error.main" gutterBottom>
+                                                    Message Failed to Send
+                                                </Typography>
+                                                <Typography variant="body1" color="text.secondary" mb={3}>
+                                                    We're sorry, but there was an issue sending your message. Please try again or contact us directly at <strong>taha.elfatih@gmail.com</strong>.
+                                                </Typography>
+                                            </Box>
+                                            <Button
+                                                variant="contained"
+                                                onClick={handleTryAgain}
+                                                sx={{
+                                                    textTransform: 'none',
+                                                    fontWeight: 700,
+                                                    background: 'linear-gradient(135deg, #6366F1, #4F46E5)',
+                                                }}
+                                            >
+                                                Try Again
+                                            </Button>
+                                        </>
+                                    )}
                                 </Stack>
-                            </form>
+                            )}
                         </Card>
                     </Paper>
                 </Box>
