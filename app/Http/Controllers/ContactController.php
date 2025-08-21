@@ -39,6 +39,21 @@ class ContactController extends Controller
 
         $topicLabel = $topicLabels[$topic] ?? 'Unknown';
 
+        // Log the attempt
+        Log::info('Contact form submission attempt', [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'topic' => $topic,
+            'topic_label' => $topicLabel,
+            'message_length' => strlen($message),
+            'mail_config' => [
+                'mailer' => config('mail.default'),
+                'host' => config('mail.mailers.smtp.host'),
+                'port' => config('mail.mailers.smtp.port'),
+                'from' => config('mail.from.address'),
+            ]
+        ]);
+
         try {
             Mail::send('emails.contact-ticket', [
                 'user' => $user,
@@ -51,6 +66,11 @@ class ContactController extends Controller
                      ->subject("TaskPilot Support: {$topicLabel}")
                      ->replyTo($user->email, $user->name);
             });
+
+            Log::info('Contact form email sent successfully', [
+                'user_id' => $user->id,
+                'topic' => $topicLabel
+            ]);
 
             return back()->with('success', 'Your message has been sent successfully! We\'ll get back to you soon.');
 
