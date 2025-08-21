@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import Dropdown from '@/Components/Dropdown';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
+import CookieConsent from '@/Components/CookieConsent';
 import { Link, usePage } from '@inertiajs/react';
 
 export default function AuthenticatedLayout({ header, children }) {
@@ -145,6 +146,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <Dropdown.Link href={route('billing.show')}>
                                             Subscriptions
                                         </Dropdown.Link>
+                                        <Dropdown.Link href={route('contact.show')}>
+                                            Contact Us
+                                        </Dropdown.Link>
                                         <Dropdown.Link
                                             href={route('logout')}
                                             method="post"
@@ -256,6 +260,12 @@ export default function AuthenticatedLayout({ header, children }) {
                                     Subscriptions
                                 </ResponsiveNavLink>
                                 <ResponsiveNavLink
+                                    href={route('contact.show')}
+                                    onClick={closeMobile}
+                                >
+                                    Contact Us
+                                </ResponsiveNavLink>
+                                <ResponsiveNavLink
                                     method="post"
                                     href={route('logout')}
                                     as="button"
@@ -276,6 +286,8 @@ export default function AuthenticatedLayout({ header, children }) {
             )}
 
             <main>{children}</main>
+            
+            <CookieConsent />
         </div>
     );
 }

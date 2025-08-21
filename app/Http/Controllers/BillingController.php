@@ -90,32 +90,13 @@ class BillingController extends Controller
             ]);
         }
 
-        try {
-            $checkout = $subscriptionBuilder->checkout([
-                'success_url' => route('billing.show').'?checkout=success',
-                'cancel_url' => route('billing.show').'?checkout=cancel',
-            ]);
+        $checkout = $subscriptionBuilder->checkout([
+            'success_url' => route('billing.show').'?checkout=success',
+            'cancel_url' => route('billing.show').'?checkout=cancel',
+        ]);
 
-            // Redirect to Stripe-hosted checkout
-            return Inertia::location($checkout->url);
-        } catch (\Stripe\Exception\InvalidRequestException $e) {
-            // If customer doesn't exist, clear the stripe_id and try again
-            if (str_contains($e->getMessage(), 'No such customer')) {
-                \Log::info('Clearing invalid Stripe customer ID for user: ' . $user->id);
-                $user->update(['stripe_id' => null]);
-                
-                // Retry the checkout with cleared customer ID
-                $checkout = $subscriptionBuilder->checkout([
-                    'success_url' => route('billing.show').'?checkout=success',
-                    'cancel_url' => route('billing.show').'?checkout=cancel',
-                ]);
-                
-                return Inertia::location($checkout->url);
-            }
-            
-            // Re-throw other Stripe exceptions
-            throw $e;
-        }
+        // Redirect to Stripe-hosted checkout
+        return Inertia::location($checkout->url);
     }
 
     public function portal(Request $request)

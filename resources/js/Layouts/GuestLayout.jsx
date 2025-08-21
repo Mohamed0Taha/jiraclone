@@ -1,4 +1,5 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import CookieConsent from '@/Components/CookieConsent';
 import { Link } from '@inertiajs/react';
 import { Box, Container, Paper, Avatar, Typography } from '@mui/material';
 
@@ -59,6 +60,8 @@ export default function GuestLayout({ children }) {
                     {children}
                 </Paper>
             </Container>
+            
+            <CookieConsent />
         </Box>
     );
 }
