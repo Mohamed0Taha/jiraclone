@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use App\Mail\ContactFormMail;
 
 class TestMailController extends Controller
 {
@@ -19,20 +20,11 @@ class TestMailController extends Controller
                         ->subject('Mail Configuration Test - Raw');
             });
 
-            // Test 2: Contact form template test
+            // Test 2: Contact form template test using Mailable class
             $testUser = Auth::user() ?? (object) ['name' => 'Test User', 'email' => 'test@example.com', 'id' => 999];
             
-            Mail::send('emails.contact-ticket', [
-                'user' => $testUser,
-                'topicLabel' => 'Test Topic',
-                'message' => 'This is a test message to verify the contact form email template works correctly.',
-                'submittedAt' => now()->format('F j, Y \a\t g:i A'),
-            ], function ($mail) use ($testUser) {
-                $mail->from(config('mail.from.address'), config('mail.from.name'))
-                     ->to('taha.elfatih@gmail.com')
-                     ->subject("TaskPilot Support Test: Template Test")
-                     ->replyTo($testUser->email, $testUser->name);
-            });
+            $mail = new ContactFormMail($testUser, 'Test Topic', 'This is a test message to verify the contact form email template works correctly using the Mailable class approach.', now()->format('F j, Y \a\t g:i A'));
+            Mail::to('taha.elfatih@gmail.com')->send($mail);
 
             return response()->json([
                 'status' => 'success',

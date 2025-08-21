@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use App\Mail\ContactFormMail;
 
 class ContactController extends Controller
 {
@@ -55,17 +56,8 @@ class ContactController extends Controller
         ]);
 
         try {
-            Mail::send('emails.contact-ticket', [
-                'user' => $user,
-                'topicLabel' => $topicLabel,
-                'message' => $message,
-                'submittedAt' => now()->format('F j, Y \a\t g:i A'),
-            ], function ($mail) use ($user, $topicLabel) {
-                $mail->from(config('mail.from.address'), config('mail.from.name'))
-                     ->to('taha.elfatih@gmail.com')
-                     ->subject("TaskPilot Support: {$topicLabel}")
-                     ->replyTo($user->email, $user->name);
-            });
+            $mail = new ContactFormMail($user, $topicLabel, $message, now()->format('F j, Y \a\t g:i A'));
+            Mail::to('taha.elfatih@gmail.com')->send($mail);
 
             Log::info('Contact form email sent successfully', [
                 'user_id' => $user->id,
