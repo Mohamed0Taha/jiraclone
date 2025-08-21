@@ -54,10 +54,10 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-                AdminOnly::class,
             ])
             ->authMiddleware([
                 Authenticate::class,
+                AdminOnly::class,
             ])
             ->authGuard('web');
     }
