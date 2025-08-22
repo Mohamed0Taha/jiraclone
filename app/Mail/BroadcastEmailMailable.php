@@ -12,7 +12,9 @@ class BroadcastEmailMailable extends Mailable
     use Queueable, SerializesModels;
 
     public string $subjectLine;
+
     public string $bodyMessage;
+
     public User $recipient;
 
     public function __construct(string $subjectLine, string $bodyMessage, User $recipient)

@@ -320,7 +320,7 @@ class AdminController extends Controller
                 'users' => collect(),
                 'refundLogs' => collect(),
                 'refunds' => collect(),
-            ])->with('error', 'Failed to initialize Stripe: ' . $e->getMessage());
+            ])->with('error', 'Failed to initialize Stripe: '.$e->getMessage());
         }
         // Get all refund logs with related data
         $refunds = RefundLog::with(['user', 'processedBy'])
@@ -842,10 +842,10 @@ class AdminController extends Controller
     public function sendBroadcastEmail(Request $request)
     {
         $request->validate([
-            'segments' => ['required','array','min:1'],
+            'segments' => ['required', 'array', 'min:1'],
             'segments.*' => ['in:free,basic,pro,business'],
-            'subject' => ['required','string','max:150'],
-            'message' => ['required','string','max:5000'],
+            'subject' => ['required', 'string', 'max:150'],
+            'message' => ['required', 'string', 'max:5000'],
         ]);
 
         $segments = $request->segments;
@@ -854,37 +854,39 @@ class AdminController extends Controller
         $usersQuery = User::query();
 
         // Segment mapping: free = no active subscription, plan detection based on stripe_price contains token
-        $usersQuery->where(function($q) use ($segments) {
-            if(in_array('free',$segments)) {
-                $q->orWhereDoesntHave('subscriptions', function($s){ $s->where('stripe_status','active'); });
+        $usersQuery->where(function ($q) use ($segments) {
+            if (in_array('free', $segments)) {
+                $q->orWhereDoesntHave('subscriptions', function ($s) {
+                    $s->where('stripe_status', 'active');
+                });
             }
-            $planMap = [ 'basic' => 'basic', 'pro' => 'pro', 'business' => 'business' ];
-            foreach($planMap as $seg=>$needle) {
-                if(in_array($seg,$segments)) {
-                    $q->orWhereHas('subscriptions', function($s) use ($needle){
-                        $s->where('stripe_status','active')->where('stripe_price','like','%'.$needle.'%');
+            $planMap = ['basic' => 'basic', 'pro' => 'pro', 'business' => 'business'];
+            foreach ($planMap as $seg => $needle) {
+                if (in_array($seg, $segments)) {
+                    $q->orWhereHas('subscriptions', function ($s) use ($needle) {
+                        $s->where('stripe_status', 'active')->where('stripe_price', 'like', '%'.$needle.'%');
                     });
                 }
             }
         });
 
-        $users = $usersQuery->get(['id','name','email']);
+        $users = $usersQuery->get(['id', 'name', 'email']);
         $count = $users->count();
 
-        if($count === 0) {
-            return back()->with('error','No users match the selected segments.');
+        if ($count === 0) {
+            return back()->with('error', 'No users match the selected segments.');
         }
 
         $fromAddress = 'people@taskpilot.us';
 
-        foreach($users as $user) {
+        foreach ($users as $user) {
             try {
                 \Mail::to($user->email)->send(new \App\Mail\BroadcastEmailMailable(
                     $request->subject,
                     $request->message,
                     $user
                 ));
-            } catch(\Exception $e) {
+            } catch (\Exception $e) {
                 // Continue sending to others – optionally log
             }
         }

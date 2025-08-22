@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (confirm(`Process quick refund of $${Number(amount).toFixed(2)} for ${userName}?`)) {
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = '{{ route('admin.refunds.quick') }}';
+                form.action = '{{ route("admin.refunds.quick") }}';
                 form.innerHTML = `@csrf<input type="hidden" name="user_id" value="${userId}"><input type="hidden" name="payment_intent_id" value="${paymentId}"><input type="hidden" name="amount" value="${Number(amount).toFixed(2)}"><input type="hidden" name="reason" value="Quick refund processed by admin">`;
                 document.body.appendChild(form); form.submit();
             }
