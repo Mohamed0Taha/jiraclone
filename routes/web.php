@@ -277,6 +277,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::post('/users/{user}/make-admin', [AdminController::class, 'makeAdmin'])->name('make-admin');
+    
+    // New analytics routes
+    Route::get('/email-logs', [AdminController::class, 'emailLogs'])->name('email-logs');
+    Route::get('/openai-requests', [AdminController::class, 'openaiRequests'])->name('openai-requests');
+    Route::get('/billing', [AdminController::class, 'billing'])->name('billing');
 });
 
 /*

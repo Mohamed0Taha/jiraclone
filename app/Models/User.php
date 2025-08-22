@@ -65,6 +65,16 @@ class User extends Authenticatable implements MustVerifyEmail
                     ->where('status', 'pending');
     }
 
+    public function openaiRequests()
+    {
+        return $this->hasMany(OpenAiRequest::class);
+    }
+
+    public function emailLogs()
+    {
+        return $this->hasMany(EmailLog::class);
+    }
+
     public function onPro(): bool
     {
         return $this->subscribed('default') || $this->onTrial('default');
