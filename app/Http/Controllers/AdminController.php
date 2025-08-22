@@ -71,9 +71,142 @@ class AdminController extends Controller
 
         $users = $query->withCount(['projects', 'tasks'])
             ->with('subscriptions')
+            ->latest()
             ->paginate(20);
 
         return view('admin.users', compact('users'));
+    }
+
+    public function createUser()
+    {
+        return view('admin.create-user');
+    }
+
+    public function storeUser(Request $request)
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8'],
+            'is_admin' => ['boolean'],
+            'subscription_plan' => ['nullable', 'in:none,basic,pro'],
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+            'email_verified_at' => now(), // Auto-verify admin-created users
+            'is_admin' => $request->boolean('is_admin', false),
+        ]);
+
+        // Handle subscription if requested
+        if ($request->subscription_plan && $request->subscription_plan !== 'none') {
+            $this->createManualSubscription($user, $request->subscription_plan);
+        }
+
+        return redirect()->route('admin.users')->with('success', 'User created successfully!');
+    }
+
+    public function editUser(User $user)
+    {
+        return view('admin.edit-user', compact('user'));
+    }
+
+    public function updateUser(Request $request, User $user)
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'is_admin' => ['boolean'],
+            'subscription_plan' => ['nullable', 'in:none,basic,pro,cancel'],
+        ]);
+
+        $user->update([
+            'name' => $request->name,
+            'email' => $request->email,
+            'is_admin' => $request->boolean('is_admin', false),
+        ]);
+
+        // Handle subscription changes
+        if ($request->has('subscription_plan')) {
+            $this->updateUserSubscription($user, $request->subscription_plan);
+        }
+
+        return redirect()->route('admin.users')->with('success', 'User updated successfully!');
+    }
+
+    public function deleteUser(User $user)
+    {
+        if ($user->is_admin && User::where('is_admin', true)->count() <= 1) {
+            return redirect()->route('admin.users')->with('error', 'Cannot delete the last admin user!');
+        }
+
+        // Cancel any active subscriptions
+        if ($user->subscribed('default')) {
+            $user->subscription('default')->cancelNow();
+        }
+
+        $user->delete();
+
+        return redirect()->route('admin.users')->with('success', 'User deleted successfully!');
+    }
+
+    private function createManualSubscription(User $user, string $plan)
+    {
+        // Create a manual subscription without Stripe
+        $stripePriceId = $plan === 'basic' ? 'price_manual_basic' : 'price_manual_pro';
+        
+        // Create fake Stripe customer ID for manual subscriptions
+        $user->update(['stripe_id' => 'cus_manual_' . $user->id]);
+
+        // Create subscription record manually
+        $subscription = $user->subscriptions()->create([
+            'name' => 'default',
+            'stripe_id' => 'sub_manual_' . $user->id . '_' . time(),
+            'stripe_status' => 'active',
+            'stripe_price' => $stripePriceId,
+            'quantity' => 1,
+            'trial_ends_at' => null,
+            'ends_at' => null,
+        ]);
+
+        return $subscription;
+    }
+
+    private function updateUserSubscription(User $user, string $action)
+    {
+        $currentSub = $user->subscription('default');
+
+        switch ($action) {
+            case 'cancel':
+                if ($currentSub) {
+                    $currentSub->update(['stripe_status' => 'canceled', 'ends_at' => now()]);
+                }
+                break;
+            
+            case 'basic':
+            case 'pro':
+                if ($currentSub) {
+                    // Update existing subscription
+                    $stripePriceId = $action === 'basic' ? 'price_manual_basic' : 'price_manual_pro';
+                    $currentSub->update([
+                        'stripe_price' => $stripePriceId,
+                        'stripe_status' => 'active',
+                        'ends_at' => null,
+                    ]);
+                } else {
+                    // Create new subscription
+                    $this->createManualSubscription($user, $action);
+                }
+                break;
+            
+            case 'none':
+                if ($currentSub) {
+                    $currentSub->delete();
+                }
+                break;
+        }
     }
 
     public function emailLogs(Request $request)
@@ -147,10 +280,12 @@ class AdminController extends Controller
     {
         try {
             return [
-                'total_active' => Subscription::query()->active()->count(),
-                'total_cancelled' => Subscription::query()->cancelled()->count(),
-                'total_on_trial' => Subscription::query()->onTrial()->count(),
-                'by_plan' => Subscription::query()->active()
+                'total_active' => Subscription::where('stripe_status', 'active')->count(),
+                'total_cancelled' => Subscription::whereIn('stripe_status', ['canceled', 'cancelled'])->count(),
+                'total_on_trial' => Subscription::where('stripe_status', 'trialing')->count(),
+                'total_incomplete' => Subscription::where('stripe_status', 'incomplete')->count(),
+                'total_past_due' => Subscription::where('stripe_status', 'past_due')->count(),
+                'by_plan' => Subscription::where('stripe_status', 'active')
                     ->select('stripe_price', DB::raw('count(*) as count'))
                     ->groupBy('stripe_price')
                     ->get()
@@ -165,6 +300,8 @@ class AdminController extends Controller
                 'total_active' => 0,
                 'total_cancelled' => 0,
                 'total_on_trial' => 0,
+                'total_incomplete' => 0,
+                'total_past_due' => 0,
                 'by_plan' => collect(),
             ];
         }

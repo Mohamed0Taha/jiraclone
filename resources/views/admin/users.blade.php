@@ -26,8 +26,26 @@
             @endif
 
             <div class="bg-white rounded-lg shadow overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h2 class="text-xl font-semibold">All Users ({{ $users->total() }})</h2>
+                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-semibold">All Users ({{ $users->total() }})</h2>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <!-- Search Form -->
+                        <form method="GET" action="{{ route('admin.users') }}" class="flex items-center">
+                            <input type="text" name="search" value="{{ request('search') }}" 
+                                   placeholder="Search users..." 
+                                   class="border border-gray-300 rounded-l px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-r hover:bg-blue-600">
+                                Search
+                            </button>
+                        </form>
+                        <!-- Create User Button -->
+                        <a href="{{ route('admin.users.create') }}" 
+                           class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                            + Create User
+                        </a>
+                    </div>
                 </div>
                 
                 <div class="overflow-x-auto">
@@ -58,18 +76,59 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ $user->stripe_id ? 'Subscribed' : 'Free' }}
+                                    @if($user->subscriptions->isNotEmpty())
+                                        @php
+                                            $activeSub = $user->subscriptions->where('stripe_status', 'active')->first();
+                                        @endphp
+                                        @if($activeSub)
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                                {{ str_contains($activeSub->stripe_price, 'basic') ? 'Basic' : 'Pro' }}
+                                            </span>
+                                        @else
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                Inactive
+                                            </span>
+                                        @endif
+                                    @else
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                            Free
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {{ $user->created_at->format('M j, Y') }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    @if(!$user->is_admin)
-                                        <form method="POST" action="{{ route('admin.make-admin', $user) }}" class="inline">
-                                            @csrf
-                                            <button type="submit" class="text-indigo-600 hover:text-indigo-900 mr-3">Make Admin</button>
-                                        </form>
-                                    @endif
+                                    <div class="flex items-center space-x-2">
+                                        <!-- Edit User -->
+                                        <a href="{{ route('admin.users.edit', $user) }}" 
+                                           class="text-indigo-600 hover:text-indigo-900">
+                                            Edit
+                                        </a>
+                                        
+                                        @if(!$user->is_admin)
+                                            <!-- Make Admin -->
+                                            <form method="POST" action="{{ route('admin.make-admin', $user) }}" class="inline">
+                                                @csrf
+                                                <button type="submit" class="text-green-600 hover:text-green-900">
+                                                    Make Admin
+                                                </button>
+                                            </form>
+                                            
+                                            <!-- Delete User -->
+                                            <form method="POST" action="{{ route('admin.users.delete', $user) }}" 
+                                                  class="inline" 
+                                                  onsubmit="return confirm('Are you sure you want to delete this user?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-900">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="text-gray-400">Admin</span>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                             @endforeach

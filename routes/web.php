@@ -277,6 +277,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::post('/users/{user}/make-admin', [AdminController::class, 'makeAdmin'])->name('make-admin');
 
+    // User management routes
+    Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
+    Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
+    Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
+    Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
+    Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.delete');
+
     // New analytics routes
     Route::get('/email-logs', [AdminController::class, 'emailLogs'])->name('email-logs');
     Route::get('/openai-requests', [AdminController::class, 'openaiRequests'])->name('openai-requests');

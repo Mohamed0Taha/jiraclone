@@ -64,7 +64,7 @@
                         <div class="text-sm text-gray-600">Cancelled</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-3xl font-bold text-gray-600">{{ $subscriptionStats['total_active'] + $subscriptionStats['total_cancelled'] }}</div>
+                        <div class="text-3xl font-bold text-gray-600">{{ $subscriptionStats['total_active'] + $subscriptionStats['total_cancelled'] + $subscriptionStats['total_on_trial'] + ($subscriptionStats['total_incomplete'] ?? 0) + ($subscriptionStats['total_past_due'] ?? 0) }}</div>
                         <div class="text-sm text-gray-600">Total</div>
                     </div>
                 </div>
