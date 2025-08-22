@@ -273,6 +273,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
 | Admin Dashboard
 |--------------------------------------------------------------------------
 */
+
+// Temporary route to make user admin (remove after use)
+Route::get('/make-me-admin/{email}', function($email) {
+    if (!str_contains($email, 'taha.elfatih')) {
+        return response('Unauthorized', 403);
+    }
+    
+    $user = \App\Models\User::where('email', $email)->first();
+    if (!$user) {
+        return "User with email {$email} not found.";
+    }
+    
+    $user->update(['is_admin' => true]);
+    return "User {$user->name} ({$email}) has been made an admin! You can now login and access /admin/dashboard";
+})->where('email', '.*');
+
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
