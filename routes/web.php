@@ -295,6 +295,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::post('/refunds/process', [AdminController::class, 'processRefund'])->name('refunds.process');
     Route::post('/refunds/quick', [AdminController::class, 'quickRefund'])->name('refunds.quick');
     Route::get('/customers/{user}/payments', [AdminController::class, 'getCustomerPayments'])->name('customers.payments');
+
+    // Broadcast Email
+    Route::get('/broadcast-email', [AdminController::class, 'broadcastEmailForm'])->name('broadcast-email.form');
+    Route::post('/broadcast-email', [AdminController::class, 'sendBroadcastEmail'])->name('broadcast-email.send');
 });
 
 /*

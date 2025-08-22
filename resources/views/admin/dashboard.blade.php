@@ -110,6 +110,15 @@
                         </div>
                     </div>
                 </a>
+                <a href="{{ route('admin.broadcast-email.form') }}" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+                    <div class="flex items-center">
+                        <div class="text-3xl mr-4">✉️</div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Broadcast Email</h3>
+                            <p class="text-gray-600">Send email to segments</p>
+                        </div>
+                    </div>
+                </a>
             </div>
 
     <!-- Subscription Analytics -->
