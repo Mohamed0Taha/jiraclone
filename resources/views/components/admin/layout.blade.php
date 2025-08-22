@@ -44,6 +44,10 @@
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.billing') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
                                 💳 Billing
                             </a>
+                            <a href="{{ route('admin.plans') }}" 
+                               class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.plans') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
+                                🏷️ Plans
+                            </a>
                             <a href="{{ route('admin.email-logs') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.email-logs') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
                                 📧 Email Logs
@@ -93,6 +97,7 @@
                         <a href="{{ route('admin.users') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.users*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">👥 Users</a>
                         <a href="{{ route('admin.refunds') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.refunds*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">💰 Refunds</a>
                         <a href="{{ route('admin.billing') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.billing') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">💳 Billing</a>
+                        <a href="{{ route('admin.plans') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.plans') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">🏷️ Plans</a>
                         <a href="{{ route('admin.email-logs') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.email-logs') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">📧 Email Logs</a>
                         <a href="{{ route('admin.openai-requests') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.openai-requests') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">🤖 AI Logs</a>
                     </div>

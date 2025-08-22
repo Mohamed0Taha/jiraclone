@@ -289,6 +289,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/email-logs', [AdminController::class, 'emailLogs'])->name('email-logs');
     Route::get('/openai-requests', [AdminController::class, 'openaiRequests'])->name('openai-requests');
     Route::get('/billing', [AdminController::class, 'billing'])->name('billing');
+    Route::get('/plans', [AdminController::class, 'plans'])->name('plans');
+    Route::post('/plans/sync-stripe', [AdminController::class, 'syncPlansFromStripe'])->name('plans.sync');
+    Route::post('/plans/update-price', [AdminController::class, 'updateStripePrice'])->name('plans.price.update');
 
     // Refund management routes
     Route::get('/refunds', [AdminController::class, 'refunds'])->name('refunds');

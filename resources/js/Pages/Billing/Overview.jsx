@@ -76,12 +76,53 @@ function PlanCard({
                 }}
             />
 
-            {/* Header row: name + chips (no overlay) */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-                <Stack direction="row" alignItems="center" spacing={1}>
+            {/* Header row: name + price + chips */}
+            <Stack
+                direction="row"
+                alignItems="flex-start"
+                justifyContent="space-between"
+                spacing={2}
+            >
+                <Stack direction="column" spacing={0} sx={{ flex: 1 }}>
                     <Typography variant="h6" fontWeight={800}>
                         {plan.name}
                     </Typography>
+                    {plan.price !== undefined && plan.price > 0 ? (
+                        <Typography
+                            variant="h5"
+                            fontWeight={700}
+                            sx={{
+                                color: theme.palette.primary.main,
+                                lineHeight: 1.2,
+                            }}
+                        >
+                            ${plan.price}
+                            <Typography
+                                component="span"
+                                variant="body2"
+                                sx={{
+                                    color: alpha(theme.palette.text.primary, 0.6),
+                                    ml: 0.5,
+                                    fontWeight: 500,
+                                }}
+                            >
+                                /{plan.interval}
+                            </Typography>
+                        </Typography>
+                    ) : (
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: alpha(theme.palette.text.primary, 0.6),
+                                fontStyle: 'italic',
+                            }}
+                        >
+                            Price loading...
+                        </Typography>
+                    )}
+                </Stack>
+
+                <Stack direction="column" spacing={1} alignItems="flex-end">
                     {isBusiness && (
                         <Chip
                             size="small"
@@ -110,6 +151,7 @@ function PlanCard({
                     )}
                 </Stack>
 
+                {/* Current plan status chips */}
                 <Stack direction="row" spacing={1}>
                     {isCurrent && subscribed && !onTrial && (
                         <Chip

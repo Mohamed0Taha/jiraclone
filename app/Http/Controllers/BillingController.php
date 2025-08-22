@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Stripe\StripeClient;
 
 class BillingController extends Controller
 {
@@ -16,14 +17,24 @@ class BillingController extends Controller
         $isOnTrial = $currentSubscription && $currentSubscription->onTrial();
         $trialEndsAt = $currentSubscription?->trial_ends_at;
 
+        // Fetch live prices from Stripe
+        $plansWithPrices = collect($plans)->map(function ($plan) {
+            $priceData = $this->getStripePriceData($plan['price_id']);
+
+            return [
+                'name' => $plan['name'],
+                'price_id' => $plan['price_id'],
+                'features' => $plan['features'],
+                'trial_days' => $plan['trial_days'] ?? 0,
+                'price' => $priceData['price'] ?? 0,
+                'currency' => $priceData['currency'] ?? 'usd',
+                'interval' => $priceData['interval'] ?? 'month',
+            ];
+        })->values();
+
         return Inertia::render('Billing/Overview', [
             'user' => $user,
-            'plans' => collect($plans)->map(fn ($p) => [
-                'name' => $p['name'],
-                'price_id' => $p['price_id'],
-                'features' => $p['features'],
-                'trial_days' => $p['trial_days'] ?? 0,
-            ])->values(),
+            'plans' => $plansWithPrices,
             'current' => [
                 'subscribed' => $user->subscribed('default'),
                 'on_trial' => $isOnTrial,
@@ -38,6 +49,32 @@ class BillingController extends Controller
             ],
             'stripe_key' => config('cashier.key'),
         ]);
+    }
+
+    /**
+     * Fetch price data from Stripe API
+     */
+    private function getStripePriceData($priceId)
+    {
+        try {
+            if (! config('cashier.secret')) {
+                return ['price' => 0, 'currency' => 'usd', 'interval' => 'month'];
+            }
+
+            $stripe = new StripeClient(config('cashier.secret'));
+            $price = $stripe->prices->retrieve($priceId);
+
+            return [
+                'price' => $price->unit_amount / 100, // Convert from cents
+                'currency' => strtoupper($price->currency),
+                'interval' => $price->recurring->interval ?? 'month',
+            ];
+        } catch (\Exception $e) {
+            // Fallback to 0 if Stripe API fails
+            \Illuminate\Support\Facades\Log::error('Failed to fetch Stripe price for '.$priceId.': '.$e->getMessage());
+
+            return ['price' => 0, 'currency' => 'usd', 'interval' => 'month'];
+        }
     }
 
     public function createCheckout(Request $request)

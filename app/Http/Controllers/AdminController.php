@@ -9,8 +9,10 @@ use App\Models\RefundLog;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
@@ -21,21 +23,13 @@ class AdminController extends Controller
     public function dashboard()
     {
         try {
-            // Basic stats
             $totalUsers = User::count();
             $totalProjects = Project::count();
             $totalTasks = Task::count();
 
-            // Subscription analytics
             $subscriptionStats = $this->getSubscriptionStats();
-
-            // Recent email logs (if table exists)
             $recentEmails = $this->getRecentEmails();
-
-            // OpenAI usage stats (if table exists)
             $openaiStats = $this->getOpenAiStats();
-
-            // Revenue analytics
             $revenueStats = $this->getRevenueStats();
 
             return view('admin.dashboard', compact(
@@ -48,7 +42,6 @@ class AdminController extends Controller
                 'revenueStats'
             ));
         } catch (\Exception $e) {
-            // If any analytics fail, return with basic stats only
             return view('admin.dashboard', [
                 'totalUsers' => User::count(),
                 'totalProjects' => Project::count(),
@@ -295,6 +288,7 @@ class AdminController extends Controller
     public function refunds()
     {
         $errorMessages = [];
+
         // Stripe setup (optional on remote)
         if (empty(config('cashier.secret'))) {
             $errorMessages[] = 'Stripe key not configured; showing local data only.';
@@ -306,7 +300,7 @@ class AdminController extends Controller
             }
         }
 
-        // Refund stats and logs guarded by schema
+        // Refund logs & stats
         if (! Schema::hasTable('refund_logs')) {
             $refunds = collect();
             $stats = [
@@ -337,15 +331,17 @@ class AdminController extends Controller
             }
         }
 
-        // Users + Stripe data
+        // Users + Stripe data (for context when issuing refunds)
         try {
-            $users = User::with(['subscriptions' => function ($q) { $q->latest(); }])
+            $users = User::with(['subscriptions' => function ($q) {
+                $q->latest();
+            }])
                 ->whereNotNull('stripe_id')
                 ->orderBy('name')
                 ->get()
                 ->map(function ($user) {
                     $subscription = $user->subscriptions()->first();
-                    $stripeData = [ 'customer' => null, 'payments' => [], 'invoices' => [] ];
+                    $stripeData = ['customer' => null, 'payments' => [], 'invoices' => []];
                     if ($user->stripe_id && config('cashier.secret')) {
                         try {
                             $stripeData['customer'] = $user->asStripeCustomer();
@@ -376,14 +372,14 @@ class AdminController extends Controller
                                             ];
                                         }
                                     }
-                                } catch (\Exception $e) {
-                                    // ignore invoice error per user
+                                } catch (\Exception $e) { /* ignore per-user invoice errors */
                                 }
                             }
                         } catch (\Exception $e) {
                             $stripeData['error'] = $e->getMessage();
                         }
                     }
+
                     return [
                         'user' => $user,
                         'subscription' => $subscription,
@@ -396,13 +392,12 @@ class AdminController extends Controller
             $errorMessages[] = 'Error loading users: '.$e->getMessage();
         }
 
-        $view = view('admin.refunds', compact('stats', 'users'))->with([
-            'refundLogs' => $refunds,
-            'refunds' => $refunds,
-        ]);
+        $view = view('admin.refunds', compact('stats', 'users'))
+            ->with(['refundLogs' => $refunds, 'refunds' => $refunds]);
         if (! empty($errorMessages)) {
             $view->with('error', implode(' | ', $errorMessages));
         }
+
         return $view;
     }
 
@@ -668,6 +663,224 @@ class AdminController extends Controller
         return view('admin.billing', compact('subscriptions', 'revenueStats', 'subscriptionStats'));
     }
 
+    /* =============================
+     * Plan Management
+     * ============================= */
+    public function plans()
+    {
+        $stripeError = null;
+        $stripePlans = collect();
+        $configPlans = config('plans.plans', []);
+        $priceIds = collect($configPlans)->pluck('price_id')->filter()->unique()->values();
+
+        // If a sync just happened, prefer session-cached fresh data
+        if (session()->has('stripePlans')) {
+            $stripePlans = collect(session('stripePlans'));
+        } else {
+            if (! config('cashier.secret')) {
+                $stripeError = 'Stripe secret not configured';
+            } else {
+                try {
+                    \Stripe\Stripe::setApiKey(config('cashier.secret'));
+                    foreach ($configPlans as $slug => $planConfig) {
+                        $priceId = $planConfig['price_id'] ?? null;
+                        if (! $priceId) {
+                            continue;
+                        }
+                        try {
+                            $price = \Stripe\Price::retrieve(['id' => $priceId, 'expand' => ['product']]);
+                            $productName = $price->product->name ?? $price->nickname ?? 'Unknown';
+                            $stripePlans->push([
+                                'name' => $productName,
+                                'price_id' => $price->id,
+                                'plan_key' => $slug,
+                                'amount' => ($price->unit_amount ?? 0) / 100,
+                                'currency' => strtoupper($price->currency ?? 'USD'),
+                                'interval' => $price->recurring->interval ?? 'month',
+                            ]);
+                        } catch (\Exception $e) {
+                            $stripePlans->push([
+                                'name' => 'Error fetching '.$priceId,
+                                'price_id' => $priceId,
+                                'plan_key' => $slug,
+                                'amount' => 0,
+                                'currency' => 'N/A',
+                                'interval' => '-',
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $stripeError = $e->getMessage();
+                }
+            }
+        }
+
+        return view('admin.plans', [
+            'stripePlans' => $stripePlans,
+            'stripeError' => $stripeError,
+        ]);
+    }
+
+    public function syncPlansFromStripe(Request $request)
+    {
+        if (! config('cashier.secret')) {
+            return redirect()->route('admin.plans')->with('error', 'Stripe secret key not configured.');
+        }
+        $configPlans = config('plans.plans', []);
+        $priceIds = collect($configPlans)->pluck('price_id')->filter()->unique()->values();
+        $fresh = [];
+        try {
+            \Stripe\Stripe::setApiKey(config('cashier.secret'));
+            foreach ($configPlans as $slug => $planConfig) {
+                $priceId = $planConfig['price_id'] ?? null;
+                if (! $priceId) {
+                    continue;
+                }
+                try {
+                    $price = \Stripe\Price::retrieve(['id' => $priceId, 'expand' => ['product']]);
+                    $fresh[] = [
+                        'name' => $price->product->name ?? $price->nickname ?? 'Unknown',
+                        'price_id' => $price->id,
+                        'plan_key' => $slug,
+                        'amount' => ($price->unit_amount ?? 0) / 100,
+                        'currency' => strtoupper($price->currency ?? 'USD'),
+                        'interval' => $price->recurring->interval ?? 'month',
+                    ];
+                } catch (\Exception $e) {
+                    $fresh[] = [
+                        'name' => 'Error fetching '.$priceId,
+                        'price_id' => $priceId,
+                        'plan_key' => $slug,
+                        'amount' => 0,
+                        'currency' => 'N/A',
+                        'interval' => '-',
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+            session(['stripePlans' => $fresh]);
+
+            return redirect()->route('admin.plans')->with('success', 'Stripe data refreshed. Showing live Stripe values only.');
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.plans')->with('error', 'Stripe sync failed: '.$e->getMessage());
+        }
+    }
+
+    public function updateStripePrice(Request $request)
+    {
+        $data = $request->validate([
+            'price_id' => ['required', 'string'],
+            'amount' => ['required', 'numeric', 'min:0.5'], // minimal half unit
+        ]);
+        if (! config('cashier.secret')) {
+            return redirect()->route('admin.plans')->with('error', 'Stripe secret not configured.');
+        }
+
+        // Debug: Log what we received
+        \Illuminate\Support\Facades\Log::info('updateStripePrice received:', $data);
+
+        // If plan_key is missing, try to find it by price_id
+        if (empty($data['plan_key']) || $data['plan_key'] === 'debug-missing') {
+            $configPlans = config('plans.plans', []);
+            \Illuminate\Support\Facades\Log::info('Config plans:', $configPlans);
+
+            foreach ($configPlans as $slug => $planConfig) {
+                $configPriceId = $planConfig['price_id'] ?? null;
+                \Illuminate\Support\Facades\Log::info("Comparing {$data['price_id']} with {$configPriceId} for plan {$slug}");
+                if ($configPriceId === $data['price_id']) {
+                    $data['plan_key'] = $slug;
+                    \Illuminate\Support\Facades\Log::info("Found matching plan: {$slug}");
+                    break;
+                }
+            }
+        }
+
+        if (empty($data['plan_key'])) {
+            $configPlans = config('plans.plans', []);
+            $debugInfo = 'Config plans: '.json_encode($configPlans).' | Looking for price_id: '.$data['price_id'];
+
+            return redirect()->route('admin.plans')->with('error', 'Could not determine plan key for price ID: '.$data['price_id'].' | DEBUG: '.$debugInfo);
+        }
+        try {
+            \Stripe\Stripe::setApiKey(config('cashier.secret'));
+            $old = \Stripe\Price::retrieve(['id' => $data['price_id'], 'expand' => ['product']]);
+            $productId = is_object($old->product) ? $old->product->id : $old->product; // expanded or not
+            $newAmount = (int) round($data['amount'] * 100);
+            $newPrice = \Stripe\Price::create([
+                'unit_amount' => $newAmount,
+                'currency' => $old->currency,
+                'recurring' => ['interval' => $old->recurring->interval],
+                'product' => $productId,
+                'metadata' => ['replaces_price' => $old->id],
+            ]);
+
+            // Update session stripePlans to reflect new price (flag that env needs updating)
+            $plans = collect(session('stripePlans', []));
+            $plans = $plans->map(function ($row) use ($newPrice, $old, $data) {
+                if (($row['price_id'] ?? null) === $old->id) {
+                    return [
+                        'name' => $row['name'],
+                        'price_id' => $newPrice->id,
+                        'plan_key' => $data['plan_key'],
+                        'amount' => ($newPrice->unit_amount ?? 0) / 100,
+                        'currency' => strtoupper($newPrice->currency ?? 'USD'),
+                        'interval' => $newPrice->recurring->interval ?? 'month',
+                        'previous_price_id' => $old->id,
+                        'env_update_required' => true,
+                    ];
+                }
+
+                return $row;
+            });
+            session(['stripePlans' => $plans->all()]);
+            // Use the provided plan_key to determine env variable
+            $envKey = 'STRIPE_PRICE_'.strtoupper($data['plan_key']);
+
+            $envUpdateMsg = 'New Stripe price created: '.$newPrice->id.'. ';
+            if ($envKey) {
+                $updatedEnv = false;
+                $envPath = base_path('.env');
+                if (app()->environment(['local', 'development']) && File::exists($envPath) && is_writable($envPath)) {
+                    try {
+                        $content = File::get($envPath);
+                        $pattern = '/^'.preg_quote($envKey, '/').'=.*/m';
+                        $replacement = $envKey.'='.$newPrice->id;
+                        if (preg_match($pattern, $content)) {
+                            $content = preg_replace($pattern, $replacement, $content, 1);
+                        } else {
+                            $content .= PHP_EOL.$replacement.PHP_EOL;
+                        }
+                        File::put($envPath, $content);
+                        // Clear config cache so next request picks up new value
+                        try {
+                            Artisan::call('config:clear');
+                        } catch (\Throwable $e) {
+                        }
+                        $updatedEnv = true;
+                        $envUpdateMsg .= 'Updated '.$envKey.' in .env automatically.';
+                    } catch (\Throwable $e) {
+                        $envUpdateMsg .= 'Failed to auto-update .env ('.$e->getMessage().').';
+                    }
+                } else {
+                    // Production / Heroku guidance
+                    $heroku = getenv('DYNO') || getenv('HEROKU_APP_NAME');
+                    if ($heroku) {
+                        $envUpdateMsg .= 'Run: heroku config:set '.$envKey.'='.$newPrice->id.' -a <your-app>';
+                    } else {
+                        $envUpdateMsg .= 'Update your environment variable: '.$envKey.'='.$newPrice->id;
+                    }
+                }
+            } else {
+                $envUpdateMsg .= 'Update your .env to reference this new price ID.';
+            }
+
+            return redirect()->route('admin.plans')->with('success', $envUpdateMsg);
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.plans')->with('error', 'Price update failed: '.$e->getMessage());
+        }
+    }
+
     public function makeAdmin(Request $request, User $user)
     {
         $user->update(['is_admin' => true]);
@@ -775,7 +988,10 @@ class AdminController extends Controller
             $monthlyRevenue = 0;
 
             foreach ($subscriptions as $subscription) {
-                $monthlyRevenue += $this->getPlanPrice($subscription->stripe_price);
+                $priceId = $subscription->stripe_price;
+                if ($priceId) {
+                    $monthlyRevenue += $this->getPlanPrice($priceId);
+                }
             }
 
             return [
@@ -794,24 +1010,42 @@ class AdminController extends Controller
 
     private function getPlanName($stripePriceId)
     {
-        $plans = [
-            'price_1RycMQKX2zcFuvyCqXjA6pCA' => 'Basic',
-            'price_1RycMrKX2zcFuvyCUEJZVhbr' => 'Pro',
-            'price_1RycNJKX2zcFuvyC1XJMddx3' => 'Business',
-        ];
+        if (! $stripePriceId) {
+            return 'Unknown';
+        }
+        try {
+            // Check configured env price IDs mapping
+            $configPlans = config('plans.plans', []);
+            foreach ($configPlans as $slug => $cfg) {
+                if (! empty($cfg['price_id']) && $cfg['price_id'] === $stripePriceId) {
+                    return $cfg['name'];
+                }
+            }
+        } catch (\Throwable $e) {
+            // ignore and fallback
+        }
 
-        return $plans[$stripePriceId] ?? 'Unknown';
+        return 'Unknown';
     }
 
     private function getPlanPrice($stripePriceId)
     {
-        $prices = [
-            'price_1RycMQKX2zcFuvyCqXjA6pCA' => 29.99, // Basic
-            'price_1RycMrKX2zcFuvyCUEJZVhbr' => 59.99, // Pro
-            'price_1RycNJKX2zcFuvyC1XJMddx3' => 99.99,  // Business
-        ];
+        if (! $stripePriceId) {
+            return 0;
+        }
+        try {
+            // Get price directly from Stripe
+            if (config('cashier.secret')) {
+                \Stripe\Stripe::setApiKey(config('cashier.secret'));
+                $price = \Stripe\Price::retrieve($stripePriceId);
 
-        return $prices[$stripePriceId] ?? 0;
+                return ($price->unit_amount ?? 0) / 100; // Convert from cents
+            }
+        } catch (\Throwable $e) {
+            // ignore and fallback
+        }
+
+        return 0;
     }
 
     /* =============================
@@ -862,15 +1096,16 @@ class AdminController extends Controller
         $segmentUsers = $segments ? $usersQuery->get(['id', 'name', 'email']) : collect();
 
         // Build collection of direct recipient user models (ensure they exist or create lightweight temp objects)
-        $directUserModels = User::whereIn('email', $directEmails)->get(['id','name','email']);
+        $directUserModels = User::whereIn('email', $directEmails)->get(['id', 'name', 'email']);
         // For any direct emails not in database, create transient user-like objects
         $existingEmails = $directUserModels->pluck('email')->all();
-        $missing = $directEmails->reject(fn($e) => in_array($e, $existingEmails));
-        $missingModels = $missing->map(function($email){
-            $u = new User();
+        $missing = $directEmails->reject(fn ($e) => in_array($e, $existingEmails));
+        $missingModels = $missing->map(function ($email) {
+            $u = new User;
             $u->id = 0; // sentinel
             $u->name = $email; // fallback to email as name
             $u->email = $email;
+
             return $u;
         });
 
