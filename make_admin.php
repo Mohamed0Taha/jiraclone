@@ -8,7 +8,7 @@ $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 use App\Models\User;
 
 // Find user by email and make them admin
-$email = 'theaceitsme@yahoo.com';
+$email = 'taha.elfatih@gmail.com';
 $user = User::where('email', $email)->first();
 
 if ($user) {
