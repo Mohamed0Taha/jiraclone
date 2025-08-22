@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Cashier\Subscription;
 
 class AdminController extends Controller
@@ -842,13 +843,19 @@ class AdminController extends Controller
     public function sendBroadcastEmail(Request $request)
     {
         $request->validate([
-            'segments' => ['required', 'array', 'min:1'],
+            'segments' => ['nullable', 'array'],
             'segments.*' => ['in:free,basic,pro,business'],
+            'direct_emails' => ['nullable', 'array'],
+            'direct_emails.*' => ['email'],
             'subject' => ['required', 'string', 'max:150'],
             'message' => ['required', 'string', 'max:5000'],
         ]);
 
-        $segments = $request->segments;
+        $segments = $request->segments ?? [];
+        $directEmails = collect($request->direct_emails ?? [])->filter();
+        if (empty($segments) && $directEmails->isEmpty()) {
+            return back()->withInput()->with('error', 'Select at least one segment or add at least one direct recipient email.');
+        }
 
         // Build user query based on segments
         $usersQuery = User::query();
@@ -870,28 +877,44 @@ class AdminController extends Controller
             }
         });
 
-        $users = $usersQuery->get(['id', 'name', 'email']);
-        $count = $users->count();
+        $segmentUsers = $segments ? $usersQuery->get(['id', 'name', 'email']) : collect();
 
-        if ($count === 0) {
-            return back()->with('error', 'No users match the selected segments.');
+        // Build collection of direct recipient user models (ensure they exist or create lightweight temp objects)
+        $directUserModels = User::whereIn('email', $directEmails)->get(['id','name','email']);
+        // For any direct emails not in database, create transient user-like objects
+        $existingEmails = $directUserModels->pluck('email')->all();
+        $missing = $directEmails->reject(fn($e) => in_array($e, $existingEmails));
+        $missingModels = $missing->map(function($email){
+            $u = new User();
+            $u->id = 0; // sentinel
+            $u->name = $email; // fallback to email as name
+            $u->email = $email;
+            return $u;
+        });
+
+        $allRecipients = $segmentUsers->concat($directUserModels)->concat($missingModels)
+            ->unique('email')
+            ->values();
+
+        if ($allRecipients->isEmpty()) {
+            return back()->withInput()->with('error', 'No recipients resolved from segments or direct emails.');
         }
 
-        $fromAddress = 'people@taskpilot.us';
-
-        foreach ($users as $user) {
+        $sent = 0;
+        foreach ($allRecipients as $user) {
             try {
-                \Mail::to($user->email)->send(new \App\Mail\BroadcastEmailMailable(
+                Mail::to($user->email)->send(new \App\Mail\BroadcastEmailMailable(
                     $request->subject,
                     $request->message,
                     $user
                 ));
+                $sent++;
             } catch (\Exception $e) {
-                // Continue sending to others – optionally log
+                // Optionally log: Log::warning('Broadcast email failed: '.$e->getMessage());
             }
         }
 
         return redirect()->route('admin.broadcast-email.form')
-            ->with('success', "Broadcast sent to {$count} users.");
+            ->with('success', "Broadcast sent to {$sent} recipient(s).");
     }
 }

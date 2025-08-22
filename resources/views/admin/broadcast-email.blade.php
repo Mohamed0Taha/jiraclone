@@ -20,7 +20,7 @@
         <form method="POST" action="{{ route('admin.broadcast-email.send') }}" class="space-y-8">
             @csrf
 
-            <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm space-y-4">
+            <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm space-y-5">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h2 class="text-sm font-semibold text-gray-800">Audience Segments</h2>
@@ -42,9 +42,19 @@
                     @endforeach
                 </div>
 
-                <!-- Selected Chips Display -->
+                <!-- Direct Recipient Input -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-medium text-gray-700">Direct Recipient (optional)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="email" id="directEmailInput" class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="user@example.com (press Enter to add)" />
+                        <button type="button" id="addDirectEmailBtn" class="px-3 py-2 text-xs font-semibold rounded-md bg-gray-700 text-white hover:bg-gray-800">Add</button>
+                    </div>
+                    <p class="text-[11px] text-gray-500">Add one or more specific user emails in addition to (or instead of) segments.</p>
+                </div>
+
+                <!-- Selected Chips Display (segments + direct emails) -->
                 <div id="selectedContainer" class="min-h-[2.25rem] flex flex-wrap gap-2"></div>
-                <p class="mt-2 text-[11px] leading-snug text-gray-500">Click a segment to add it below. Remove with the × button. Free Tier = users without an active subscription.</p>
+                <p class="mt-2 text-[11px] leading-snug text-gray-500">Click a segment to add or type an email then press Enter. Remove with the × button. Free Tier = users without an active subscription.</p>
                 <!-- Tailwind safelist helper (hidden) -->
                 <div class="hidden">
                     <span class="bg-pink-600 bg-blue-600 bg-green-600 bg-orange-600 text-pink-700 text-blue-700 text-green-700 text-orange-700"></span>
@@ -91,7 +101,10 @@
             const messageInput = document.getElementById('messageInput');
             const subjectCount = document.getElementById('subjectCount');
             const messageCount = document.getElementById('messageCount');
-            let selected = {}; // value -> {label,color}
+            const directEmailInput = document.getElementById('directEmailInput');
+            const addDirectEmailBtn = document.getElementById('addDirectEmailBtn');
+            let selectedSegments = {}; // seg value -> {label,color}
+            let directEmails = new Set(); // unique emails
 
             // Character counters
             function updateCounts(){
@@ -109,34 +122,70 @@
                     const value = chip.dataset.value;
                     const color = chip.dataset.color;
                     const label = chip.querySelector('.select-label').textContent.trim();
-                    if(selected[value]) { return; }
-                    selected[value] = {label, color};
+                    if(selectedSegments[value]) { return; }
+                    selectedSegments[value] = {label, color};
                     renderSelected();
                 });
             });
 
+            function addDirectEmail(){
+                const email = directEmailInput.value.trim();
+                if(!email) return;
+                const pattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+                if(!pattern.test(email)) { directEmailInput.classList.add('ring','ring-red-400'); return; }
+                directEmailInput.classList.remove('ring','ring-red-400');
+                if(directEmails.has(email)) { directEmailInput.value=''; return; }
+                directEmails.add(email);
+                directEmailInput.value='';
+                renderSelected();
+            }
+            addDirectEmailBtn.addEventListener('click', addDirectEmail);
+            directEmailInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addDirectEmail(); }});
+
             function renderSelected(){
                 selectedContainer.innerHTML = '';
-                document.querySelectorAll('input[name="segments[]"]').forEach(el => el.remove());
+                // Remove previous hidden inputs
+                document.querySelectorAll('input[name="segments[]"], input[name="direct_emails[]"]').forEach(el => el.remove());
                 const form = document.querySelector('form');
-                const entries = Object.entries(selected);
-                entries.forEach(([value, meta]) => {
+
+                // Segments
+                Object.entries(selectedSegments).forEach(([value, meta]) => {
                     const hidden = document.createElement('input');
                     hidden.type='hidden'; hidden.name='segments[]'; hidden.value=value; form.appendChild(hidden);
                     const pill = document.createElement('div');
                     pill.className = `flex items-center pl-4 pr-1 h-8 rounded-full text-xs font-medium text-white shadow-sm relative bg-${meta.color}-600`;
                     pill.innerHTML = `
                         <span>${meta.label}</span>
-                        <button type="button" aria-label="Remove ${meta.label}" data-value="${value}" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-white/90 text-${meta.color}-700 hover:bg-white text-sm font-bold leading-none transition">×</button>
+                        <button type="button" aria-label="Remove ${meta.label}" data-type="segment" data-value="${value}" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-white/90 text-${meta.color}-700 hover:bg-white text-sm font-bold leading-none transition">×</button>
                     `;
                     selectedContainer.appendChild(pill);
-                    pill.querySelector('button').addEventListener('click', (e)=>{
-                        const val = e.currentTarget.dataset.value;
-                        delete selected[val];
+                });
+
+                // Direct Emails
+                Array.from(directEmails).forEach(email => {
+                    const hidden = document.createElement('input');
+                    hidden.type='hidden'; hidden.name='direct_emails[]'; hidden.value=email; form.appendChild(hidden);
+                    const pill = document.createElement('div');
+                    pill.className = 'flex items-center pl-4 pr-1 h-8 rounded-full text-xs font-medium text-white shadow-sm relative bg-slate-600';
+                    pill.innerHTML = `
+                        <span>${email}</span>
+                        <button type="button" aria-label="Remove ${email}" data-type="email" data-value="${email}" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-white/90 text-slate-700 hover:bg-white text-sm font-bold leading-none transition">×</button>
+                    `;
+                    selectedContainer.appendChild(pill);
+                });
+
+                // Attach remove handlers
+                selectedContainer.querySelectorAll('button[data-type]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const type = btn.dataset.type;
+                        const value = btn.dataset.value;
+                        if(type==='segment') { delete selectedSegments[value]; }
+                        else if(type==='email'){ directEmails.delete(value); }
                         renderSelected();
                     });
                 });
-                sendBtn.disabled = entries.length === 0;
+
+                sendBtn.disabled = Object.keys(selectedSegments).length === 0 && directEmails.size === 0;
             }
         </script>
     </x-slot>
