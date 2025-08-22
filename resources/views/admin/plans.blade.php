@@ -1,9 +1,9 @@
 <x-admin.layout title="TaskPilot Admin - Plans" page-title="Stripe Pricing (Live)">
     @if(session('success'))
-        <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6">{{ session('success') }}</div>
+        <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6">{!! session('success') !!}</div>
     @endif
     @if(session('error'))
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">{{ session('error') }}</div>
+        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">{!! session('error') !!}</div>
     @endif
     @if(!empty($stripeError))
         <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">Stripe error: {{ $stripeError }}</div>
