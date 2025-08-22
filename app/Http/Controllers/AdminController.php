@@ -823,46 +823,11 @@ class AdminController extends Controller
             $envKey = 'STRIPE_PRICE_'.strtoupper($data['plan_key']);
 
             $envUpdateMsg = 'New Stripe price created: '.$newPrice->id.'. ';
+            
             if ($envKey) {
-                $updatedEnv = false; $envPath = base_path('.env');
-                if (app()->environment(['local','development']) && File::exists($envPath) && is_writable($envPath)) {
-                    try {
-                        $content = File::get($envPath);
-                        $pattern = '/^'.preg_quote($envKey,'/').'=.*/m';
-                        $replacement = $envKey.'='.$newPrice->id;
-                        if (preg_match($pattern, $content)) {
-                            $content = preg_replace($pattern, $replacement, $content, 1);
-                        } else {
-                            $content .= PHP_EOL.$replacement.PHP_EOL;
-                        }
-                        File::put($envPath, $content);
-                        // Clear config cache so next request picks up new value
-                        try { Artisan::call('config:clear'); } catch (\Throwable $e) {}
-                        $updatedEnv = true;
-                        $envUpdateMsg .= 'Updated '.$envKey.' in .env automatically.';
-                    } catch (\Throwable $e) {
-                        $envUpdateMsg .= 'Failed to auto-update .env ('.$e->getMessage().').';
-                    }
-                } else {
-                    // Production / Heroku - automatically update config vars via API
-                    $heroku = getenv('DYNO') || getenv('HEROKU_APP_NAME');
-                    if ($heroku) {
-                        try {
-                            $updated = $this->updateHerokuConfigVar($envKey, $newPrice->id);
-                            if ($updated) {
-                                $envUpdateMsg .= "✅ Automatically updated {$envKey} in Heroku config vars.";
-                            } else {
-                                $envUpdateMsg .= "⚠️ Auto-update failed. Run manually: heroku config:set {$envKey}={$newPrice->id} -a laravel-react-automation-app";
-                            }
-                        } catch (\Throwable $e) {
-                            $envUpdateMsg .= "⚠️ Auto-update failed: " . $e->getMessage() . ". Run manually: heroku config:set {$envKey}={$newPrice->id} -a laravel-react-automation-app";
-                        }
-                    } else {
-                        $envUpdateMsg .= 'Update your environment variable: '.$envKey.'='.$newPrice->id;
-                    }
-                }
+                $envUpdateMsg .= $this->updateEnvironmentVariable($envKey, $newPrice->id);
             } else {
-                $envUpdateMsg .= 'Update your .env to reference this new price ID.';
+                $envUpdateMsg .= 'Update your environment configuration to reference this new price ID.';
             }
 
             return redirect()->route('admin.plans')->with('success',$envUpdateMsg);
@@ -1115,6 +1080,125 @@ class AdminController extends Controller
 
         return redirect()->route('admin.broadcast-email.form')
             ->with('success', "Broadcast sent to {$sent} recipient(s).");
+    }
+
+    /**
+     * Update environment variable based on current environment
+     */
+    private function updateEnvironmentVariable($key, $value)
+    {
+        $environment = $this->detectEnvironment();
+        
+        switch ($environment) {
+            case 'local':
+                return $this->updateLocalEnvFile($key, $value);
+                
+            case 'heroku':
+                return $this->updateHerokuConfigVars($key, $value);
+                
+            case 'production':
+                return $this->handleProductionEnvironment($key, $value);
+                
+            default:
+                return "Please update your environment variable manually: {$key}={$value}";
+        }
+    }
+    
+    /**
+     * Detect the current environment type
+     */
+    private function detectEnvironment()
+    {
+        // Check if running on Heroku
+        if (getenv('DYNO') || getenv('HEROKU_APP_NAME')) {
+            return 'heroku';
+        }
+        
+        // Check if local development environment
+        if (app()->environment(['local', 'development'])) {
+            return 'local';
+        }
+        
+        // Check other production indicators
+        if (app()->environment('production')) {
+            return 'production';
+        }
+        
+        return 'unknown';
+    }
+    
+    /**
+     * Update local .env file
+     */
+    private function updateLocalEnvFile($key, $value)
+    {
+        try {
+            $envPath = base_path('.env');
+            
+            if (!File::exists($envPath) || !is_writable($envPath)) {
+                return "❌ .env file not found or not writable. Please update {$key}={$value} manually.";
+            }
+            
+            $content = File::get($envPath);
+            $pattern = '/^'.preg_quote($key,'/').'=.*/m';
+            $replacement = $key.'='.$value;
+            
+            if (preg_match($pattern, $content)) {
+                $content = preg_replace($pattern, $replacement, $content, 1);
+            } else {
+                $content .= PHP_EOL.$replacement.PHP_EOL;
+            }
+            
+            File::put($envPath, $content);
+            
+            // Clear config cache so next request picks up new value
+            try { 
+                Artisan::call('config:clear'); 
+            } catch (\Throwable $e) {
+                // Ignore cache clear errors
+            }
+            
+            return "✅ Updated {$key} in .env file automatically.";
+            
+        } catch (\Throwable $e) {
+            return "❌ Failed to auto-update .env: {$e->getMessage()}. Please update {$key}={$value} manually.";
+        }
+    }
+    
+    /**
+     * Update Heroku config variables
+     */
+    private function updateHerokuConfigVars($key, $value)
+    {
+        try {
+            $updated = $this->updateHerokuConfigVar($key, $value);
+            
+            if ($updated) {
+                return "✅ Automatically updated {$key} in Heroku config vars.";
+            } else {
+                $appName = env('HEROKU_APP_NAME', 'your-app-name');
+                return "⚠️ Auto-update failed. Run manually: heroku config:set {$key}={$value} -a {$appName}";
+            }
+            
+        } catch (\Throwable $e) {
+            $appName = env('HEROKU_APP_NAME', 'your-app-name');
+            return "⚠️ Auto-update failed: {$e->getMessage()}. Run manually: heroku config:set {$key}={$value} -a {$appName}";
+        }
+    }
+    
+    /**
+     * Handle production environment (non-Heroku)
+     */
+    private function handleProductionEnvironment($key, $value)
+    {
+        // For production environments, provide instructions based on common deployment methods
+        $instructions = "Please update your environment variable: {$key}={$value}\n\n";
+        $instructions .= "Common methods:\n";
+        $instructions .= "• Docker: Update your environment file or docker-compose.yml\n";
+        $instructions .= "• Server: Update your web server environment variables\n";
+        $instructions .= "• CI/CD: Update your deployment pipeline configuration";
+        
+        return $instructions;
     }
 
     /**
