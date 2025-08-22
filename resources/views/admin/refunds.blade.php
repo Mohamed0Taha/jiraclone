@@ -2,6 +2,11 @@
     title="TaskPilot Admin - Refund Management" 
     page-title="Refund Management">
 
+    <x-slot name="extraHead">
+        <!-- Bootstrap CSS (only loaded for this page) -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    </x-slot>
+
     @php
         // Normalize refund collection variable name to avoid undefined variable errors
         $refunds = $refundLogs ?? (isset($refunds) ? $refunds : null);
@@ -394,6 +399,8 @@
     </div>
 </div>
 
+<x-slot name="scripts">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 <script>
 // Event listeners for buttons using data attributes
 document.addEventListener('DOMContentLoaded', function() {
@@ -566,4 +573,5 @@ function refundPayment(paymentIntentId, amount) {
     }, 300);
 }
 </script>
+</x-slot>
 </x-admin.layout>

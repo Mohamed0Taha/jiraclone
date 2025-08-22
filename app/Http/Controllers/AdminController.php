@@ -292,6 +292,36 @@ class AdminController extends Controller
 
     public function refunds()
     {
+        // Ensure Stripe API key is set for direct \Stripe\* static calls (Cashier doesn't always set globally)
+        if (empty(config('cashier.secret'))) {
+            // Abort gracefully with message instead of fatal error on remote
+            return view('admin.refunds', [
+                'stats' => [
+                    'total_refunds' => 0,
+                    'total_amount' => 0,
+                    'month_refunds' => 0,
+                    'month_amount' => 0,
+                ],
+                'users' => collect(),
+                'refundLogs' => collect(),
+                'refunds' => collect(),
+            ])->with('error', 'Stripe secret key (CASHIER_SECRET / STRIPE_SECRET) is not configured on this environment.');
+        }
+        try {
+            \Stripe\Stripe::setApiKey(config('cashier.secret'));
+        } catch (\Exception $e) {
+            return view('admin.refunds', [
+                'stats' => [
+                    'total_refunds' => 0,
+                    'total_amount' => 0,
+                    'month_refunds' => 0,
+                    'month_amount' => 0,
+                ],
+                'users' => collect(),
+                'refundLogs' => collect(),
+                'refunds' => collect(),
+            ])->with('error', 'Failed to initialize Stripe: ' . $e->getMessage());
+        }
         // Get all refund logs with related data
         $refunds = RefundLog::with(['user', 'processedBy'])
             ->latest('processed_at')
