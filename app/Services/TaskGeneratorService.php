@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\OpenAiRequest;
 use App\Models\Project;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use OpenAI\Laravel\Facades\OpenAI;
@@ -78,7 +80,28 @@ class TaskGeneratorService
                 'response_length' => strlen($response['choices'][0]['message']['content'] ?? ''),
             ]);
 
+            // Log OpenAI request for admin dashboard
+            $this->logOpenAiRequest(
+                type: 'task_generation',
+                tokensUsed: $response['usage']['total_tokens'] ?? 0,
+                model: config('openai.model', 'gpt-4o'),
+                prompt: $this->buildSimplePrompt($project, $userPrompt, $num),
+                response: $response['choices'][0]['message']['content'] ?? '',
+                successful: true
+            );
+
         } catch (\Throwable $e) {
+            // Log failed OpenAI request for admin dashboard
+            $this->logOpenAiRequest(
+                type: 'task_generation',
+                tokensUsed: 0,
+                model: config('openai.model', 'gpt-4o'),
+                prompt: $this->buildSimplePrompt($project, $userPrompt, $num),
+                response: null,
+                successful: false,
+                error: $e->getMessage()
+            );
+
             Log::error('OpenAI call failed', [
                 'project_id' => $project->id,
                 'error' => $e->getMessage(),
@@ -786,5 +809,54 @@ PROMPT;
         }
 
         return array_values($result);
+    }
+
+    /**
+     * Log OpenAI request for admin tracking
+     */
+    private function logOpenAiRequest(
+        string $type,
+        int $tokensUsed = 0,
+        string $model = 'gpt-4o',
+        ?string $prompt = null,
+        ?string $response = null,
+        bool $successful = true,
+        ?string $error = null
+    ): void {
+        $userId = Auth::id();
+        if (!$userId) {
+            return;
+        }
+
+        // Calculate cost
+        $costPerThousandTokens = match ($model) {
+            'gpt-4o' => 0.005,
+            'gpt-4o-mini' => 0.00015,
+            'gpt-4-turbo' => 0.01,
+            'gpt-3.5-turbo' => 0.002,
+            default => 0.002,
+        };
+        
+        $cost = ($tokensUsed / 1000) * $costPerThousandTokens;
+
+        try {
+            OpenAiRequest::logRequest(
+                userId: $userId,
+                type: $type,
+                tokens: $tokensUsed,
+                cost: $cost,
+                model: $model,
+                prompt: $prompt ? substr($prompt, 0, 500) : null,
+                response: $response ? substr($response, 0, 1000) : null,
+                successful: $successful,
+                error: $error
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to log OpenAI request', [
+                'error' => $e->getMessage(),
+                'user_id' => $userId,
+                'type' => $type,
+            ]);
+        }
     }
 }
