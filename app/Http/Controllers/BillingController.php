@@ -18,11 +18,12 @@ class BillingController extends Controller
         $trialEndsAt = $currentSubscription?->trial_ends_at;
 
         // Fetch live prices from Stripe
-        $plansWithPrices = collect($plans)->map(function ($plan) {
+        $plansWithPrices = collect($plans)->map(function ($plan, $key) {
             $priceData = $this->getStripePriceData($plan['price_id']);
 
             return [
                 'name' => $plan['name'],
+                'key' => $key, // Add the plan key for better identification
                 'price_id' => $plan['price_id'],
                 'features' => $plan['features'],
                 'trial_days' => $plan['trial_days'] ?? 0,
@@ -42,6 +43,7 @@ class BillingController extends Controller
                 'ends_at' => optional($currentSubscription?->ends_at)->toIso8601String(),
                 'trial_ends_at' => optional($trialEndsAt)->toIso8601String(),
                 'plan_price_id' => $currentSubscription?->stripe_price,
+                'plan_name' => $user->getCurrentPlan(), // Add the actual plan name using the robust method
             ],
             'trial_eligibility' => [
                 'has_used_trial' => $user->trial_used ?? false,
@@ -86,8 +88,24 @@ class BillingController extends Controller
         $priceId = $request->input('price_id');
         $user = $request->user();
 
+        // Check if user already has an active subscription
         if ($user->subscribed('default')) {
-            return back()->with('info', 'You already have an active subscription.');
+            // Handle plan change/upgrade for existing subscribers
+            $subscription = $user->subscription('default');
+
+            // If they're trying to subscribe to the same plan, redirect to billing portal instead
+            if ($subscription->stripe_price === $priceId) {
+                return redirect()->route('billing.portal');
+            }
+
+            // Change the subscription plan
+            try {
+                $subscription->swap($priceId);
+
+                return back()->with('success', 'Your plan has been updated successfully!');
+            } catch (\Exception $e) {
+                return back()->with('error', 'Failed to update plan: '.$e->getMessage());
+            }
         }
 
         // Find the plan configuration to get trial days

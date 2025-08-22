@@ -455,12 +455,33 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     private function getPlanFromPriceId(string $priceId): string
     {
+        // First check current configured price IDs (from env vars)
         $plans = config('subscriptions.plans');
-
         foreach ($plans as $key => $plan) {
             if ($plan['price_id'] === $priceId) {
                 return $key;
             }
+        }
+
+        // If not found in current config, try to get from Stripe price metadata
+        try {
+            \Stripe\Stripe::setApiKey(config('cashier.secret'));
+            $price = \Stripe\Price::retrieve(['id' => $priceId, 'expand' => ['product']]);
+
+            // Check if the price has plan metadata
+            if (isset($price->metadata['plan_key'])) {
+                return $price->metadata['plan_key'];
+            }
+
+            // Try to match by product name (fallback)
+            $productName = strtolower($price->product->name ?? '');
+            foreach ($plans as $key => $plan) {
+                if (str_contains($productName, strtolower($key))) {
+                    return $key;
+                }
+            }
+        } catch (\Exception $e) {
+            // If Stripe call fails, continue to fallback
         }
 
         return 'basic'; // fallback

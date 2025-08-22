@@ -32,9 +32,6 @@
                     <tr @class(['bg-red-50'=>isset($p['error'])])>
                         <td class="px-4 py-3 font-medium text-gray-800">
                             {{ $p['name'] }}
-                            @if(isset($p['previous_price_id']))
-                                <div class="text-xs text-amber-600">Replaced {{ $p['previous_price_id'] }} – update .env to persist.</div>
-                            @endif
                             @if(isset($p['error']))<div class="text-xs text-red-600">{{ $p['error'] }}</div>@endif
                         </td>
                         <td class="px-4 py-3 text-xs font-mono text-gray-700">{{ $p['price_id'] }}</td>

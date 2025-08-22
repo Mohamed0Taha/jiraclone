@@ -54,19 +54,14 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    @if($user->subscriptions->isNotEmpty())
-                                        @php
-                                            $activeSub = $user->subscriptions->where('stripe_status', 'active')->first();
-                                        @endphp
-                                        @if($activeSub)
-                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                                {{ str_contains($activeSub->stripe_price, 'basic') ? 'Basic' : 'Pro' }}
-                                            </span>
-                                        @else
-                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                                                Inactive
-                                            </span>
-                                        @endif
+                                    @php
+                                        $currentPlan = $user->getCurrentPlan();
+                                        $hasSubscription = $user->hasActiveSubscription();
+                                    @endphp
+                                    @if($hasSubscription)
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ $currentPlan === 'basic' ? 'bg-blue-100 text-blue-800' : ($currentPlan === 'pro' ? 'bg-purple-100 text-purple-800' : 'bg-yellow-100 text-yellow-800') }}">
+                                            {{ ucfirst($currentPlan) }}{{ $user->onTrial() ? ' (Trial)' : '' }}
+                                        </span>
                                     @else
                                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
                                             Free
@@ -83,6 +78,40 @@
                                            class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm font-semibold hover:bg-blue-200 border border-blue-300">
                                             ✏️ Edit
                                         </a>
+                                        
+                                        <!-- Upgrade User (dropdown) -->
+                                        @php
+                                            $currentPlan = $user->getCurrentPlan();
+                                            $availableUpgrades = [];
+                                            if ($currentPlan === 'free') $availableUpgrades = ['basic', 'pro', 'business'];
+                                            elseif ($currentPlan === 'basic') $availableUpgrades = ['pro', 'business'];
+                                            elseif ($currentPlan === 'pro') $availableUpgrades = ['business'];
+                                        @endphp
+                                        
+                                        @if(!empty($availableUpgrades))
+                                        <div class="relative inline-block text-left">
+                                            <button type="button" class="inline-flex justify-center w-full rounded-md border border-purple-300 shadow-sm px-3 py-1 bg-purple-100 text-sm font-medium text-purple-700 hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500" onclick="toggleUpgradeDropdown('{{ $user->id }}')">
+                                                📈 Upgrade
+                                                <svg class="-mr-1 ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                </svg>
+                                            </button>
+                                            
+                                            <div class="origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 hidden" id="upgrade-dropdown-{{ $user->id }}">
+                                                <div class="py-1" role="menu">
+                                                    @foreach($availableUpgrades as $plan)
+                                                        <form method="POST" action="{{ route('admin.users.upgrade', $user) }}" class="inline w-full">
+                                                            @csrf
+                                                            <input type="hidden" name="plan" value="{{ $plan }}">
+                                                            <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" onclick="return confirm('Upgrade {{ $user->name }} to {{ ucfirst($plan) }} plan?')">
+                                                                {{ ucfirst($plan) }}
+                                                            </button>
+                                                        </form>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @endif
                                         
                                         <!-- Admin Toggle (always present; demote disabled if sole admin) -->
                                         @if(!$user->is_admin)
@@ -257,6 +286,31 @@
             document.getElementById('deleteModal').addEventListener('click', function(event) {
                 if (event.target === this) {
                     closeDeleteModal();
+                }
+            });
+
+            // Upgrade dropdown functionality
+            function toggleUpgradeDropdown(userId) {
+                const dropdown = document.getElementById('upgrade-dropdown-' + userId);
+                const isVisible = !dropdown.classList.contains('hidden');
+                
+                // Close all dropdowns first
+                document.querySelectorAll('[id^="upgrade-dropdown-"]').forEach(d => {
+                    d.classList.add('hidden');
+                });
+                
+                // Toggle current dropdown
+                if (!isVisible) {
+                    dropdown.classList.remove('hidden');
+                }
+            }
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('[id^="upgrade-dropdown-"]') && !event.target.closest('button[onclick*="toggleUpgradeDropdown"]')) {
+                    document.querySelectorAll('[id^="upgrade-dropdown-"]').forEach(d => {
+                        d.classList.add('hidden');
+                    });
                 }
             });
         </script>

@@ -217,20 +217,52 @@ class AdminController extends Controller
         }
     }
 
+    public function upgradeUser(Request $request, User $user)
+    {
+        $request->validate([
+            'plan' => ['required', 'in:basic,pro,business'],
+        ]);
+
+        $targetPlan = $request->plan;
+        $currentPlan = $user->getCurrentPlan();
+
+        try {
+            // Update the user's subscription to the new plan
+            $this->updateUserSubscription($user, $targetPlan);
+
+            $message = "User {$user->name} upgraded from {$currentPlan} to {$targetPlan} plan successfully!";
+
+            return redirect()->route('admin.users')->with('success', $message);
+
+        } catch (\Exception $e) {
+            Log::error("Error upgrading user {$user->id} to {$targetPlan}: ".$e->getMessage());
+
+            return redirect()->route('admin.users')->with('error', 'Error upgrading user: '.$e->getMessage());
+        }
+    }
+
     private function createManualSubscription(User $user, string $plan)
     {
-        // Create a manual subscription without Stripe
-        $stripePriceId = match ($plan) {
-            'basic' => 'price_manual_basic',
-            'pro' => 'price_manual_pro',
-            'business' => 'price_manual_business',
-            default => 'price_manual_basic'
-        };
+        // Get the real Stripe price ID from config first
+        $plans = config('subscriptions.plans');
+        $stripePriceId = $plans[$plan]['price_id'] ?? null;
 
-        // Create fake Stripe customer ID for manual subscriptions
-        $user->update(['stripe_id' => 'cus_manual_'.$user->id]);
+        // Fallback to manual price ID if config price ID not available
+        if (! $stripePriceId) {
+            $stripePriceId = match ($plan) {
+                'basic' => 'price_manual_basic',
+                'pro' => 'price_manual_pro',
+                'business' => 'price_manual_business',
+                default => 'price_manual_basic'
+            };
+        }
 
-        // Create subscription record manually
+        // Create fake Stripe customer ID for manual subscriptions if user doesn't have one
+        if (! $user->stripe_id) {
+            $user->update(['stripe_id' => 'cus_manual_'.$user->id]);
+        }
+
+        // Create subscription record
         $subscription = $user->subscriptions()->create([
             'name' => 'default',
             'stripe_id' => 'sub_manual_'.$user->id.'_'.time(),
@@ -258,14 +290,22 @@ class AdminController extends Controller
             case 'basic':
             case 'pro':
             case 'business':
-                if ($currentSub) {
-                    // Update existing subscription
+                // Get the real Stripe price ID from config
+                $plans = config('subscriptions.plans');
+                $stripePriceId = $plans[$action]['price_id'] ?? null;
+
+                // Fallback to manual price ID if config price ID not available
+                if (! $stripePriceId) {
                     $stripePriceId = match ($action) {
                         'basic' => 'price_manual_basic',
                         'pro' => 'price_manual_pro',
                         'business' => 'price_manual_business',
                         default => 'price_manual_basic'
                     };
+                }
+
+                if ($currentSub) {
+                    // Update existing subscription
                     $currentSub->update([
                         'stripe_price' => $stripePriceId,
                         'stripe_status' => 'active',
@@ -812,10 +852,13 @@ class AdminController extends Controller
                 'currency' => $old->currency,
                 'recurring' => ['interval' => $old->recurring->interval],
                 'product' => $productId,
-                'metadata' => ['replaces_price' => $old->id],
+                'metadata' => [
+                    'replaces_price' => $old->id,
+                    'plan_key' => $data['plan_key'], // Add plan key for better plan identification
+                ],
             ]);
 
-            // Update session stripePlans to reflect new price (flag that env needs updating)
+            // Update session stripePlans to reflect new price
             $plans = collect(session('stripePlans', []));
             $plans = $plans->map(function ($row) use ($newPrice, $old, $data) {
                 if (($row['price_id'] ?? null) === $old->id) {
@@ -826,8 +869,6 @@ class AdminController extends Controller
                         'amount' => ($newPrice->unit_amount ?? 0) / 100,
                         'currency' => strtoupper($newPrice->currency ?? 'USD'),
                         'interval' => $newPrice->recurring->interval ?? 'month',
-                        'previous_price_id' => $old->id,
-                        'env_update_required' => true,
                     ];
                 }
 

@@ -259,6 +259,28 @@ function PlanCard({
                         </Button>
                     </Stack>
                 )}
+
+                {/* Allow upgrading to different tiers when user has active subscription */}
+                {(subscribed || onTrial) && !isCurrent && (
+                    <Button
+                        fullWidth
+                        variant="outlined"
+                        onClick={() => onSubscribe(plan.price_id)}
+                        startIcon={<TrendingUpRoundedIcon />}
+                        sx={{
+                            textTransform: 'none',
+                            fontWeight: 700,
+                            borderColor: theme.palette.primary.main,
+                            color: theme.palette.primary.main,
+                            '&:hover': {
+                                borderColor: theme.palette.primary.dark,
+                                backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                            },
+                        }}
+                    >
+                        Upgrade to {plan.name}
+                    </Button>
+                )}
             </Box>
         </Paper>
     );
@@ -429,7 +451,7 @@ export default function BillingOverview({
                                 plans.map((plan) => {
                                     const isCurrent =
                                         (subscribed || onTrial) &&
-                                        plan.price_id === current?.plan_price_id;
+                                        plan.key === current?.plan_name;
 
                                     return (
                                         <Grid item xs={12} md={4} key={plan.price_id}>
