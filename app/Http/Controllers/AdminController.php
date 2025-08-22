@@ -118,10 +118,14 @@ class AdminController extends Controller
 
     private function getRecentEmails()
     {        
-        return EmailLog::with('user')
-            ->latest()
-            ->take(10)
-            ->get();
+        try {
+            return EmailLog::with('user')
+                ->latest()
+                ->take(10)
+                ->get();
+        } catch (\Exception $e) {
+            return collect();
+        }
     }
 
     private function getSubscriptionStats()
@@ -152,27 +156,40 @@ class AdminController extends Controller
 
     private function getOpenAiStats()
     {
-        $today = now()->startOfDay();
-        $thisMonth = now()->startOfMonth();
-        
-        return [
-            'total_requests' => OpenAiRequest::count(),
-            'requests_today' => OpenAiRequest::where('created_at', '>=', $today)->count(),
-            'requests_this_month' => OpenAiRequest::where('created_at', '>=', $thisMonth)->count(),
-            'total_tokens' => OpenAiRequest::sum('tokens_used'),
-            'total_cost' => OpenAiRequest::sum('cost'),
-            'average_tokens_per_request' => OpenAiRequest::avg('tokens_used') ?: 0,
-            'top_users' => OpenAiRequest::select('user_id', DB::raw('count(*) as request_count'), DB::raw('sum(tokens_used) as total_tokens'))
-                ->with('user:id,name,email')
-                ->groupBy('user_id')
-                ->orderByDesc('request_count')
-                ->take(5)
-                ->get(),
-            'by_type' => OpenAiRequest::select('request_type', DB::raw('count(*) as count'))
-                ->groupBy('request_type')
-                ->orderByDesc('count')
-                ->get()
-        ];
+        try {
+            $today = now()->startOfDay();
+            $thisMonth = now()->startOfMonth();
+            
+            return [
+                'total_requests' => OpenAiRequest::count(),
+                'requests_today' => OpenAiRequest::where('created_at', '>=', $today)->count(),
+                'requests_this_month' => OpenAiRequest::where('created_at', '>=', $thisMonth)->count(),
+                'total_tokens' => OpenAiRequest::sum('tokens_used'),
+                'total_cost' => OpenAiRequest::sum('cost'),
+                'average_tokens_per_request' => OpenAiRequest::avg('tokens_used') ?: 0,
+                'top_users' => OpenAiRequest::select('user_id', DB::raw('count(*) as request_count'), DB::raw('sum(tokens_used) as total_tokens'))
+                    ->with('user:id,name,email')
+                    ->groupBy('user_id')
+                    ->orderByDesc('request_count')
+                    ->take(5)
+                    ->get(),
+                'by_type' => OpenAiRequest::select('request_type', DB::raw('count(*) as count'))
+                    ->groupBy('request_type')
+                    ->orderByDesc('count')
+                    ->get()
+            ];
+        } catch (\Exception $e) {
+            return [
+                'total_requests' => 0,
+                'requests_today' => 0,
+                'requests_this_month' => 0,
+                'total_tokens' => 0,
+                'total_cost' => 0,
+                'average_tokens_per_request' => 0,
+                'top_users' => collect(),
+                'by_type' => collect()
+            ];
+        }
     }
 
     private function getRevenueStats()
