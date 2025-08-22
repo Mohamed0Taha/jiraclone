@@ -276,6 +276,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::post('/users/{user}/make-admin', [AdminController::class, 'makeAdmin'])->name('make-admin');
+    Route::post('/users/{user}/demote-admin', [AdminController::class, 'demoteAdmin'])->name('demote-admin');
 
     // User management routes
     Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
@@ -284,10 +285,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.delete');
 
-    // New analytics routes
+    // Analytics routes
     Route::get('/email-logs', [AdminController::class, 'emailLogs'])->name('email-logs');
     Route::get('/openai-requests', [AdminController::class, 'openaiRequests'])->name('openai-requests');
     Route::get('/billing', [AdminController::class, 'billing'])->name('billing');
+    
+    // Refund management routes
+    Route::get('/refunds', [AdminController::class, 'refunds'])->name('refunds');
+    Route::post('/refunds/process', [AdminController::class, 'processRefund'])->name('refunds.process');
+    Route::post('/refunds/quick', [AdminController::class, 'quickRefund'])->name('refunds.quick');
+    Route::get('/customers/{user}/payments', [AdminController::class, 'getCustomerPayments'])->name('customers.payments');
 });
 
 /*

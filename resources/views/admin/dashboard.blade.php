@@ -1,37 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskPilot Admin Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="bg-gray-100">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <div class="bg-white shadow">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
-                    <div class="flex items-center">
-                        <h1 class="text-2xl font-bold text-gray-900">🚀 TaskPilot Admin Dashboard</h1>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <span class="text-gray-600">Welcome, {{ auth()->user()->name }}</span>
-                        <a href="/dashboard" class="text-blue-600 hover:text-blue-800">← Back to Main App</a>
-                        <form method="POST" action="{{ route('logout') }}" class="inline">
-                            @csrf
-                            <button type="submit" class="text-red-600 hover:text-red-800">Logout</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+<x-admin.layout title="TaskPilot Admin - Dashboard" page-title="Dashboard Overview">
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            
-            <!-- Quick Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                 <!-- Users -->
                 <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-lg shadow text-white">
                     <div class="flex items-center justify-between">
@@ -88,8 +58,8 @@
                 </div>
             </div>
 
-            <!-- Navigation Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Navigation Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 <a href="/admin/users" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
                     <div class="flex items-center">
                         <div class="text-3xl mr-4">👥</div>
@@ -99,6 +69,17 @@
                         </div>
                     </div>
                 </a>
+
+                <a href="/admin/refunds" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+                    <div class="flex items-center">
+                        <div class="text-3xl mr-4">💰</div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Refunds</h3>
+                            <p class="text-gray-600">Process customer refunds</p>
+                        </div>
+                    </div>
+                </a>
+
 
                 <a href="/admin/billing" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
                     <div class="flex items-center">
@@ -131,8 +112,8 @@
                 </a>
             </div>
 
-            <!-- Subscription Analytics -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <!-- Subscription Analytics -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 <!-- Subscription Stats -->
                 <div class="bg-white p-6 rounded-lg shadow">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">💳 Subscription Overview</h3>
@@ -166,9 +147,9 @@
                 </div>
             </div>
 
-            <!-- OpenAI Usage Stats -->
-            @if($openaiStats['total_requests'] > 0)
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+    <!-- OpenAI Usage Stats -->
+    @if($openaiStats['total_requests'] > 0)
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
                 <!-- AI Usage Overview -->
                 <div class="bg-white p-6 rounded-lg shadow">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">🤖 AI Usage</h3>
@@ -217,11 +198,11 @@
                     </div>
                 </div>
             </div>
-            @endif
+    @endif
 
-            <!-- Recent Email Logs -->
-            @if($recentEmails->count() > 0)
-            <div class="bg-white rounded-lg shadow mb-8">
+    <!-- Recent Email Logs -->
+    @if($recentEmails->count() > 0)
+    <div class="bg-white rounded-lg shadow mb-8">
                 <div class="px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">📧 Recent Emails</h3>
                 </div>
@@ -265,10 +246,10 @@
                     <a href="/admin/email-logs" class="text-blue-600 hover:text-blue-800 text-sm font-medium">View all emails →</a>
                 </div>
             </div>
-            @endif
+    @endif
 
-            <!-- System Status -->
-            <div class="bg-white p-6 rounded-lg shadow">
+    <!-- System Status -->
+    <div class="bg-white p-6 rounded-lg shadow">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">⚡ System Status</h3>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="text-center">
@@ -295,5 +276,5 @@
             </div>
         </div>
     </div>
-</body>
-</html>
+
+</x-admin.layout>

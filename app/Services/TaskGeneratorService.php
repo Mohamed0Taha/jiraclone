@@ -824,7 +824,7 @@ PROMPT;
         ?string $error = null
     ): void {
         $userId = Auth::id();
-        if (!$userId) {
+        if (! $userId) {
             return;
         }
 
@@ -836,7 +836,7 @@ PROMPT;
             'gpt-3.5-turbo' => 0.002,
             default => 0.002,
         };
-        
+
         $cost = ($tokensUsed / 1000) * $costPerThousandTokens;
 
         try {

@@ -9,16 +9,17 @@ use Illuminate\Console\Command;
 class CreateSampleEmailLogs extends Command
 {
     protected $signature = 'email:create-samples';
+
     protected $description = 'Create sample email logs for testing the dashboard';
 
     public function handle()
     {
         $this->info('Creating sample email logs...');
-        
+
         // Get some users for realistic data
         $users = User::limit(3)->get();
         $userIds = $users->pluck('id')->toArray();
-        
+
         // Create various types of email logs
         $sampleEmails = [
             [
@@ -32,7 +33,7 @@ class CreateSampleEmailLogs extends Command
                 'created_at' => now()->subHours(2),
             ],
             [
-                'to_email' => 'user2@example.com', 
+                'to_email' => 'user2@example.com',
                 'to_name' => 'Jane Smith',
                 'subject' => 'Please verify your email address',
                 'type' => 'verification',
@@ -83,16 +84,16 @@ class CreateSampleEmailLogs extends Command
                 'created_at' => now()->subMinutes(5),
             ],
         ];
-        
+
         foreach ($sampleEmails as $emailData) {
             EmailLog::create($emailData);
             $this->line("✓ Created email log: {$emailData['subject']}");
         }
-        
-        $this->info("\n🎉 Successfully created " . count($sampleEmails) . " sample email logs!");
-        $this->info("You can now view them in the admin dashboard at /admin/dashboard");
-        $this->info("Or view detailed logs at /admin/email-logs");
-        
+
+        $this->info("\n🎉 Successfully created ".count($sampleEmails).' sample email logs!');
+        $this->info('You can now view them in the admin dashboard at /admin/dashboard');
+        $this->info('Or view detailed logs at /admin/email-logs');
+
         return 0;
     }
 }

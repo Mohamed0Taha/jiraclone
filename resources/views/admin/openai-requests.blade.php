@@ -1,30 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenAI Requests - TaskPilot Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <div class="bg-white shadow">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
-                    <div class="flex items-center">
-                        <h1 class="text-xl font-semibold text-gray-900">🤖 OpenAI Requests & Usage</h1>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <a href="/admin/dashboard" class="text-blue-600 hover:text-blue-800">← Back to Dashboard</a>
-                        <a href="/dashboard" class="text-gray-600 hover:text-gray-800">Main App</a>
-                    </div>
-                </div>
-            </div>
-        </div>
+<x-admin.layout title="TaskPilot Admin - AI Requests" page-title="OpenAI Requests & Usage">
 
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <!-- Filters -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <form method="GET" class="bg-white p-4 rounded-lg shadow mb-6">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
@@ -58,8 +35,8 @@
                 </div>
             </form>
 
-            <!-- OpenAI Requests Table -->
-            <div class="bg-white shadow rounded-lg overflow-hidden">
+    <!-- OpenAI Requests Table -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -117,13 +94,12 @@
                         @endforelse
                     </tbody>
                 </table>
-            </div>
+        </div>
 
-            <!-- Pagination -->
-            <div class="mt-6">
+        <!-- Pagination -->
+        <div class="mt-6">
                 {{ $requests->withQueryString()->links() }}
             </div>
-        </div>
     </div>
-</body>
-</html>
+
+</x-admin.layout>

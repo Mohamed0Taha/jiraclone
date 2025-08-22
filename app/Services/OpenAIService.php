@@ -42,7 +42,7 @@ class OpenAIService
 
             if (! $res->ok()) {
                 Log::error('OpenAI JSON request failed', ['status' => $res->status(), 'body' => $res->body()]);
-                
+
                 // Log failed request
                 if ($userId) {
                     OpenAiRequest::logRequest(
@@ -57,18 +57,18 @@ class OpenAIService
                         error: 'HTTP '.$res->status().': '.$res->body()
                     );
                 }
-                
+
                 throw new Exception('OpenAI chat request failed');
             }
 
             $payload = $res->json();
             $content = $payload['choices'][0]['message']['content'] ?? '{}';
             $data = json_decode($content, true);
-            
+
             // Calculate tokens and cost
             $tokensUsed = $payload['usage']['total_tokens'] ?? 0;
             $cost = $this->calculateCost($model, $tokensUsed);
-            
+
             // Log successful request
             if ($userId) {
                 OpenAiRequest::logRequest(
@@ -84,7 +84,7 @@ class OpenAIService
             }
 
             return is_array($data) ? $data : [];
-            
+
         } catch (Exception $e) {
             // Log failed request
             if ($userId) {
@@ -127,7 +127,7 @@ class OpenAIService
 
             if (! $res->ok()) {
                 Log::error('OpenAI Text request failed', ['status' => $res->status(), 'body' => $res->body()]);
-                
+
                 // Log failed request
                 if ($userId) {
                     OpenAiRequest::logRequest(
@@ -142,17 +142,17 @@ class OpenAIService
                         error: 'HTTP '.$res->status().': '.$res->body()
                     );
                 }
-                
+
                 throw new Exception('OpenAI chat request failed');
             }
 
             $payload = $res->json();
             $text = $payload['choices'][0]['message']['content'] ?? '';
-            
+
             // Calculate tokens and cost
             $tokensUsed = $payload['usage']['total_tokens'] ?? 0;
             $cost = $this->calculateCost($model, $tokensUsed);
-            
+
             // Log successful request
             if ($userId) {
                 OpenAiRequest::logRequest(
@@ -168,7 +168,7 @@ class OpenAIService
             }
 
             return (string) $text;
-            
+
         } catch (Exception $e) {
             // Log failed request
             if ($userId) {
@@ -193,9 +193,10 @@ class OpenAIService
         $prompt = '';
         foreach ($messages as $message) {
             if (is_array($message) && isset($message['content'])) {
-                $prompt .= $message['role'] . ': ' . $message['content'] . "\n";
+                $prompt .= $message['role'].': '.$message['content']."\n";
             }
         }
+
         return substr($prompt, 0, 500); // Limit prompt length for storage
     }
 
@@ -204,12 +205,12 @@ class OpenAIService
         // Rough cost calculation based on current OpenAI pricing (as of 2025)
         $costPerThousandTokens = match ($model) {
             'gpt-4o' => 0.005, // $5 per 1M tokens
-            'gpt-4o-mini' => 0.00015, // $0.15 per 1M tokens  
+            'gpt-4o-mini' => 0.00015, // $0.15 per 1M tokens
             'gpt-4-turbo' => 0.01, // $10 per 1M tokens
             'gpt-3.5-turbo' => 0.002, // $2 per 1M tokens
             default => 0.002, // Default to gpt-3.5-turbo pricing
         };
-        
+
         return ($tokens / 1000) * $costPerThousandTokens;
     }
 }

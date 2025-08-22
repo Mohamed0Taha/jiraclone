@@ -1,33 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskPilot Admin - Create User</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100">
-    <div class="min-h-screen">
-        <nav class="bg-blue-600 text-white p-4">
-            <div class="container mx-auto flex justify-between items-center">
-                <h1 class="text-xl font-bold">Create New User</h1>
-                <div class="flex items-center space-x-4">
-                    <a href="{{ route('admin.users') }}" class="bg-blue-500 px-3 py-1 rounded hover:bg-blue-400">← Back to Users</a>
-                    <a href="{{ route('admin.dashboard') }}" class="bg-gray-500 px-3 py-1 rounded hover:bg-gray-400">Dashboard</a>
-                </div>
-            </div>
-        </nav>
+<x-admin.layout 
+    title="TaskPilot Admin - Create User" 
+    page-title="Create New User">
 
-        <div class="container mx-auto py-8">
-            @if($errors->any())
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                    <ul>
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
+    <x-slot name="navActions">
+        <a href="{{ route('admin.users') }}" 
+           class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 text-sm font-medium">
+            ← Back to Users
+        </a>
+    </x-slot>
 
             <div class="max-w-2xl mx-auto bg-white rounded-lg shadow p-6">
                 <form method="POST" action="{{ route('admin.users.store') }}">
@@ -93,7 +73,4 @@
                     </div>
                 </form>
             </div>
-        </div>
-    </div>
-</body>
-</html>
+</x-admin.layout>

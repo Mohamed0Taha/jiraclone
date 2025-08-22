@@ -87,6 +87,7 @@ class LogEmailSent
                     'subject' => $subject,
                     'type' => $type,
                 ]);
+
                 return;
             }
 

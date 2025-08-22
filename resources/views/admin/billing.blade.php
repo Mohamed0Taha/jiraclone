@@ -1,30 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Billing & Revenue - TaskPilot Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <div class="bg-white shadow">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
-                    <div class="flex items-center">
-                        <h1 class="text-xl font-semibold text-gray-900">💳 Billing & Revenue</h1>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <a href="/admin/dashboard" class="text-blue-600 hover:text-blue-800">← Back to Dashboard</a>
-                        <a href="/dashboard" class="text-gray-600 hover:text-gray-800">Main App</a>
-                    </div>
-                </div>
-            </div>
-        </div>
+<x-admin.layout title="TaskPilot Admin - Billing" page-title="Billing & Revenue">
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
             <!-- Revenue Stats -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-lg shadow text-white">
@@ -89,8 +66,8 @@
                 </div>
             </div>
 
-            <!-- Active Subscriptions Table -->
-            <div class="bg-white shadow rounded-lg overflow-hidden">
+    <!-- Active Subscriptions Table -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">🔄 Active Subscriptions</h3>
                 </div>
@@ -108,6 +85,7 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @forelse($subscriptions as $subscription)
+                                @if($subscription->user)
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
@@ -149,6 +127,7 @@
                                         @endif
                                     </td>
                                 </tr>
+                                @endif
                             @empty
                                 <tr>
                                     <td colspan="6" class="px-6 py-12 text-center text-gray-500">
@@ -159,8 +138,7 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
         </div>
     </div>
-</body>
-</html>
+
+</x-admin.layout>

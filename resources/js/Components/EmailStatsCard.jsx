@@ -46,11 +46,11 @@ const EmailStatsCard = () => {
                 },
                 credentials: 'same-origin',
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const data = await response.json();
             if (data.success) {
                 setStats(data.stats);
@@ -67,7 +67,14 @@ const EmailStatsCard = () => {
 
     if (loading) {
         return (
-            <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Card
+                sx={{
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+            >
                 <CircularProgress />
             </Card>
         );
@@ -89,13 +96,13 @@ const EmailStatsCard = () => {
 
     const getTypeColor = (type) => {
         const colors = {
-            'Welcome': theme.palette.success.main,
-            'Verification': theme.palette.primary.main,
-            'Contact': theme.palette.info.main,
-            'Invitation': theme.palette.secondary.main,
-            'Automation': theme.palette.warning.main,
-            'Password_reset': theme.palette.error.main,
-            'Failed': theme.palette.error.main,
+            Welcome: theme.palette.success.main,
+            Verification: theme.palette.primary.main,
+            Contact: theme.palette.info.main,
+            Invitation: theme.palette.secondary.main,
+            Automation: theme.palette.warning.main,
+            Password_reset: theme.palette.error.main,
+            Failed: theme.palette.error.main,
         };
         return colors[type] || theme.palette.grey[500];
     };
@@ -104,7 +111,7 @@ const EmailStatsCard = () => {
         const date = new Date(dateString);
         const now = new Date();
         const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-        
+
         if (diffInMinutes < 60) {
             return `${diffInMinutes}m ago`;
         } else if (diffInMinutes < 1440) {
@@ -115,8 +122,8 @@ const EmailStatsCard = () => {
     };
 
     return (
-        <Card 
-            sx={{ 
+        <Card
+            sx={{
                 height: '100%',
                 background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
                 border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
@@ -232,8 +239,8 @@ const EmailStatsCard = () => {
                                             sx={{
                                                 width: 24,
                                                 height: 24,
-                                                bgcolor: email.sent_successfully 
-                                                    ? theme.palette.success.main 
+                                                bgcolor: email.sent_successfully
+                                                    ? theme.palette.success.main
                                                     : theme.palette.error.main,
                                             }}
                                         >
@@ -251,11 +258,21 @@ const EmailStatsCard = () => {
                                             </Typography>
                                         }
                                         secondary={
-                                            <Box display="flex" justifyContent="space-between" alignItems="center">
-                                                <Typography variant="caption" color="text.secondary">
+                                            <Box
+                                                display="flex"
+                                                justifyContent="space-between"
+                                                alignItems="center"
+                                            >
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                >
                                                     {email.to_email.split('@')[0]}...
                                                 </Typography>
-                                                <Typography variant="caption" color="text.secondary">
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                >
                                                     {formatTimeAgo(email.created_at)}
                                                 </Typography>
                                             </Box>
