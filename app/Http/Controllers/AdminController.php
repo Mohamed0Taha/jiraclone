@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Cashier\Subscription;
 
 class AdminController extends Controller
@@ -293,135 +294,116 @@ class AdminController extends Controller
 
     public function refunds()
     {
-        // Ensure Stripe API key is set for direct \Stripe\* static calls (Cashier doesn't always set globally)
+        $errorMessages = [];
+        // Stripe setup (optional on remote)
         if (empty(config('cashier.secret'))) {
-            // Abort gracefully with message instead of fatal error on remote
-            return view('admin.refunds', [
-                'stats' => [
+            $errorMessages[] = 'Stripe key not configured; showing local data only.';
+        } else {
+            try {
+                \Stripe\Stripe::setApiKey(config('cashier.secret'));
+            } catch (\Exception $e) {
+                $errorMessages[] = 'Failed to init Stripe: '.$e->getMessage();
+            }
+        }
+
+        // Refund stats and logs guarded by schema
+        if (! Schema::hasTable('refund_logs')) {
+            $refunds = collect();
+            $stats = [
+                'total_refunds' => 0,
+                'total_amount' => 0,
+                'month_refunds' => 0,
+                'month_amount' => 0,
+            ];
+            $errorMessages[] = 'refund_logs table missing (run migrations).';
+        } else {
+            try {
+                $refunds = RefundLog::with(['user', 'processedBy'])->latest('processed_at')->paginate(20);
+                $stats = [
+                    'total_refunds' => RefundLog::count(),
+                    'total_amount' => RefundLog::sum('amount'),
+                    'month_refunds' => RefundLog::whereYear('processed_at', date('Y'))->whereMonth('processed_at', date('m'))->count(),
+                    'month_amount' => RefundLog::whereYear('processed_at', date('Y'))->whereMonth('processed_at', date('m'))->sum('amount'),
+                ];
+            } catch (\Exception $e) {
+                $refunds = collect();
+                $stats = [
                     'total_refunds' => 0,
                     'total_amount' => 0,
                     'month_refunds' => 0,
                     'month_amount' => 0,
-                ],
-                'users' => collect(),
-                'refundLogs' => collect(),
-                'refunds' => collect(),
-            ])->with('error', 'Stripe secret key (CASHIER_SECRET / STRIPE_SECRET) is not configured on this environment.');
+                ];
+                $errorMessages[] = 'Error loading refunds: '.$e->getMessage();
+            }
         }
+
+        // Users + Stripe data
         try {
-            \Stripe\Stripe::setApiKey(config('cashier.secret'));
-        } catch (\Exception $e) {
-            return view('admin.refunds', [
-                'stats' => [
-                    'total_refunds' => 0,
-                    'total_amount' => 0,
-                    'month_refunds' => 0,
-                    'month_amount' => 0,
-                ],
-                'users' => collect(),
-                'refundLogs' => collect(),
-                'refunds' => collect(),
-            ])->with('error', 'Failed to initialize Stripe: '.$e->getMessage());
-        }
-        // Get all refund logs with related data
-        $refunds = RefundLog::with(['user', 'processedBy'])
-            ->latest('processed_at')
-            ->paginate(20);
-
-        // Get refund statistics
-        $stats = [
-            'total_refunds' => RefundLog::count(),
-            'total_amount' => RefundLog::sum('amount'),
-            'month_refunds' => RefundLog::whereYear('processed_at', date('Y'))
-                ->whereMonth('processed_at', date('m'))
-                ->count(),
-            'month_amount' => RefundLog::whereYear('processed_at', date('Y'))
-                ->whereMonth('processed_at', date('m'))
-                ->sum('amount'),
-        ];
-
-        // Get all users (customers) with their subscription info and Stripe payment data
-        $users = User::with(['subscriptions' => function ($query) {
-            $query->latest();
-        }])
-            ->whereNotNull('stripe_id') // Only users with Stripe customer IDs
-            ->orderBy('name')
-            ->get()
-            ->map(function ($user) {
-                // Get the user's active subscription
-                $subscription = $user->subscriptions()->first();
-
-                // Get Stripe customer and payment info
-                $stripeData = [
-                    'customer' => null,
-                    'payments' => [],
-                    'invoices' => [],
-                ];
-
-                if ($user->stripe_id) {
-                    try {
-                        // Get Stripe customer
-                        $stripeData['customer'] = $user->asStripeCustomer();
-
-                        // Get payment intents for this customer
-                        $paymentIntents = \Stripe\PaymentIntent::all([
-                            'customer' => $user->stripe_id,
-                            'limit' => 10, // Get last 10 payments
-                        ]);
-
-                        foreach ($paymentIntents->data as $intent) {
-                            if ($intent->status === 'succeeded') {
-                                $stripeData['payments'][] = [
-                                    'id' => $intent->id,
-                                    'amount' => $intent->amount / 100, // Convert from cents
-                                    'currency' => strtoupper($intent->currency),
-                                    'created' => date('M d, Y', $intent->created),
-                                    'description' => $intent->description ?? 'Payment',
-                                    'charges' => $intent->charges->data ?? [],
-                                ];
-                            }
-                        }
-
-                        // Get invoices if user has subscription
-                        if ($subscription) {
-                            try {
-                                $invoices = $user->invoices();
-                                foreach ($invoices as $invoice) {
-                                    if ($invoice->paid && $invoice->payment_intent) {
-                                        $stripeData['invoices'][] = [
-                                            'id' => $invoice->id,
-                                            'payment_intent' => $invoice->payment_intent,
-                                            'amount' => $invoice->total / 100,
-                                            'date' => date('M d, Y', $invoice->created),
-                                            'description' => 'Subscription Invoice',
-                                        ];
-                                    }
+            $users = User::with(['subscriptions' => function ($q) { $q->latest(); }])
+                ->whereNotNull('stripe_id')
+                ->orderBy('name')
+                ->get()
+                ->map(function ($user) {
+                    $subscription = $user->subscriptions()->first();
+                    $stripeData = [ 'customer' => null, 'payments' => [], 'invoices' => [] ];
+                    if ($user->stripe_id && config('cashier.secret')) {
+                        try {
+                            $stripeData['customer'] = $user->asStripeCustomer();
+                            $paymentIntents = \Stripe\PaymentIntent::all(['customer' => $user->stripe_id, 'limit' => 10]);
+                            foreach ($paymentIntents->data as $intent) {
+                                if ($intent->status === 'succeeded') {
+                                    $stripeData['payments'][] = [
+                                        'id' => $intent->id,
+                                        'amount' => $intent->amount / 100,
+                                        'currency' => strtoupper($intent->currency),
+                                        'created' => date('M d, Y', $intent->created),
+                                        'description' => $intent->description ?? 'Payment',
+                                        'charges' => $intent->charges->data ?? [],
+                                    ];
                                 }
-                            } catch (\Exception $e) {
-                                // Handle invoice fetch errors
                             }
+                            if ($subscription) {
+                                try {
+                                    $invoices = $user->invoices();
+                                    foreach ($invoices as $invoice) {
+                                        if ($invoice->paid && $invoice->payment_intent) {
+                                            $stripeData['invoices'][] = [
+                                                'id' => $invoice->id,
+                                                'payment_intent' => $invoice->payment_intent,
+                                                'amount' => $invoice->total / 100,
+                                                'date' => date('M d, Y', $invoice->created),
+                                                'description' => 'Subscription Invoice',
+                                            ];
+                                        }
+                                    }
+                                } catch (\Exception $e) {
+                                    // ignore invoice error per user
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            $stripeData['error'] = $e->getMessage();
                         }
-
-                    } catch (\Exception $e) {
-                        // Handle Stripe API errors gracefully
-                        $stripeData['error'] = $e->getMessage();
                     }
-                }
+                    return [
+                        'user' => $user,
+                        'subscription' => $subscription,
+                        'stripe_data' => $stripeData,
+                        'has_payment_methods' => method_exists($user, 'hasPaymentMethod') ? $user->hasPaymentMethod() : false,
+                    ];
+                });
+        } catch (\Exception $e) {
+            $users = collect();
+            $errorMessages[] = 'Error loading users: '.$e->getMessage();
+        }
 
-                return [
-                    'user' => $user,
-                    'subscription' => $subscription,
-                    'stripe_data' => $stripeData,
-                    'has_payment_methods' => $user->hasPaymentMethod(),
-                ];
-            });
-
-        // Provide both 'refundLogs' (legacy) and 'refunds' (expected by Blade) to avoid undefined variable
-        return view('admin.refunds', compact('stats', 'users'))
-            ->with([
-                'refundLogs' => $refunds,
-                'refunds' => $refunds,
-            ]);
+        $view = view('admin.refunds', compact('stats', 'users'))->with([
+            'refundLogs' => $refunds,
+            'refunds' => $refunds,
+        ]);
+        if (! empty($errorMessages)) {
+            $view->with('error', implode(' | ', $errorMessages));
+        }
+        return $view;
     }
 
     public function processRefund(Request $request)
