@@ -1109,9 +1109,16 @@ class AdminController extends Controller
      */
     private function detectEnvironment()
     {
-        // Check if running on Heroku
-        if (getenv('DYNO') || getenv('HEROKU_APP_NAME')) {
-            return 'heroku';
+        // Check if running on Heroku - multiple indicators for reliable detection
+        $herokuAppName = getenv('HEROKU_APP_NAME');
+        $herokuDyno = getenv('DYNO');
+        $herokuSlug = getenv('HEROKU_SLUG_COMMIT');
+        
+        if ($herokuDyno || $herokuAppName || $herokuSlug) {
+            // Verify it's our specific app for better detection
+            if ($herokuAppName === 'laravel-react-automation-app' || $herokuDyno || $herokuSlug) {
+                return 'heroku';
+            }
         }
         
         // Check if local development environment
@@ -1176,12 +1183,12 @@ class AdminController extends Controller
             if ($updated) {
                 return "✅ Automatically updated {$key} in Heroku config vars.";
             } else {
-                $appName = env('HEROKU_APP_NAME', 'your-app-name');
+                $appName = env('HEROKU_APP_NAME', 'laravel-react-automation-app');
                 return "⚠️ Auto-update failed. Run manually: heroku config:set {$key}={$value} -a {$appName}";
             }
             
         } catch (\Throwable $e) {
-            $appName = env('HEROKU_APP_NAME', 'your-app-name');
+            $appName = env('HEROKU_APP_NAME', 'laravel-react-automation-app');
             return "⚠️ Auto-update failed: {$e->getMessage()}. Run manually: heroku config:set {$key}={$value} -a {$appName}";
         }
     }
