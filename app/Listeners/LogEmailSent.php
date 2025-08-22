@@ -74,6 +74,22 @@ class LogEmailSent
                 Log::warning('Could not extract email content', ['error' => $e->getMessage()]);
             }
 
+            // Check for duplicate emails within the last 5 minutes to prevent multiple logging
+            $recentEmail = EmailLog::where('to_email', $toEmail)
+                ->where('subject', $subject)
+                ->where('type', $type)
+                ->where('created_at', '>=', now()->subMinutes(5))
+                ->first();
+
+            if ($recentEmail) {
+                Log::info('Duplicate email detected, skipping log', [
+                    'to' => $toEmail,
+                    'subject' => $subject,
+                    'type' => $type,
+                ]);
+                return;
+            }
+
             // Log the email
             EmailLog::logEmail(
                 toEmail: $toEmail,
