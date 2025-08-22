@@ -298,6 +298,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/contact', [ContactController::class, 'show'])->name('contact.show');
     Route::post('/contact', [ContactController::class, 'send'])->name('contact.send');
 
+    /* Email Statistics API */
+    Route::get('/api/email-stats', [\App\Http\Controllers\EmailStatsController::class, 'getStats'])->name('api.email-stats');
+    Route::get('/api/email-logs', [\App\Http\Controllers\EmailStatsController::class, 'getRecentLogs'])->name('api.email-logs');
+
     /* Projects */
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');

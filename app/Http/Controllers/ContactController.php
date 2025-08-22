@@ -62,6 +62,17 @@ class ContactController extends Controller
             Notification::route('mail', $adminEmail)
                 ->notify(new ContactFormNotification($user, $topicLabel, $message, now()->format('F j, Y \a\t g:i A')));
 
+            // Manually log the email
+            \App\Models\EmailLog::logEmail(
+                toEmail: $adminEmail,
+                subject: "TaskPilot Support: {$topicLabel}",
+                type: 'contact',
+                toName: 'TaskPilot Support',
+                content: substr($message, 0, 500),
+                userId: $user->id,
+                success: true
+            );
+
             Log::info('Contact form email sent successfully via Notification', [
                 'user_id' => $user->id,
                 'topic' => $topicLabel,

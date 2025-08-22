@@ -31,7 +31,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             
             <!-- Quick Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                 <!-- Users -->
                 <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-lg shadow text-white">
                     <div class="flex items-center justify-between">
@@ -62,6 +62,17 @@
                             <p class="text-3xl font-bold">{{ number_format($totalTasks) }}</p>
                         </div>
                         <div class="text-4xl opacity-80">✅</div>
+                    </div>
+                </div>
+
+                <!-- Emails Sent -->
+                <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 p-6 rounded-lg shadow text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-indigo-100">Emails Sent</p>
+                            <p class="text-3xl font-bold">{{ $recentEmails->count() }}</p>
+                        </div>
+                        <div class="text-4xl opacity-80">📧</div>
                     </div>
                 </div>
 

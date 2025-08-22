@@ -72,6 +72,17 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(TaskCreated::class, TriggerAutomations::class);
         Event::listen(TaskUpdated::class, TriggerAutomations::class);
 
+        // Email logging events
+        Event::listen(
+            \Illuminate\Mail\Events\MessageSent::class,
+            \App\Listeners\LogEmailSent::class
+        );
+
+        Event::listen(
+            \Illuminate\Queue\Events\JobFailed::class,
+            \App\Listeners\LogEmailFailed::class
+        );
+
         Inertia::share('isPro', function (): bool {
             $user = Auth::user();
 
