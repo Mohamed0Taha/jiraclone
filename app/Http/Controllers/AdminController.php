@@ -15,24 +15,25 @@ class AdminController extends Controller
 {
     public function dashboard()
     {
-        // Basic stats
-        $totalUsers = User::count();
-        $totalProjects = Project::count();
-        $totalTasks = Task::count();
-        
-        // Subscription analytics
-        $subscriptionStats = $this->getSubscriptionStats();
-        
-        // Recent email logs (if table exists)
-        $recentEmails = $this->getRecentEmails();
+        try {
+            // Basic stats
+            $totalUsers = User::count();
+            $totalProjects = Project::count();
+            $totalTasks = Task::count();
             
-        // OpenAI usage stats (if table exists)
-        $openaiStats = $this->getOpenAiStats();
-        
-        // Revenue analytics
-        $revenueStats = $this->getRevenueStats();
+            // Subscription analytics
+            $subscriptionStats = $this->getSubscriptionStats();
+            
+            // Recent email logs (if table exists)
+            $recentEmails = $this->getRecentEmails();
+                
+            // OpenAI usage stats (if table exists)
+            $openaiStats = $this->getOpenAiStats();
+            
+            // Revenue analytics
+            $revenueStats = $this->getRevenueStats();
 
-        return view('admin.dashboard', compact(
+            return view('admin.dashboard', compact(
             'totalUsers',
             'totalProjects', 
             'totalTasks',
@@ -41,6 +42,19 @@ class AdminController extends Controller
             'openaiStats',
             'revenueStats'
         ));
+        } catch (\Exception $e) {
+            // If any analytics fail, return with basic stats only
+            return view('admin.dashboard', [
+                'totalUsers' => User::count(),
+                'totalProjects' => Project::count(),
+                'totalTasks' => Task::count(),
+                'subscriptionStats' => ['total_active' => 0, 'total_cancelled' => 0, 'total_on_trial' => 0, 'by_plan' => collect()],
+                'recentEmails' => collect(),
+                'openaiStats' => ['total_requests' => 0, 'requests_today' => 0, 'requests_this_month' => 0, 'total_tokens' => 0, 'total_cost' => 0, 'average_tokens_per_request' => 0, 'top_users' => collect(), 'by_type' => collect()],
+                'revenueStats' => ['monthly_revenue' => 0, 'annual_revenue' => 0],
+                'error' => 'Some analytics data could not be loaded: ' . $e->getMessage()
+            ]);
+        }
     }
 
     public function users(Request $request)
@@ -132,10 +146,10 @@ class AdminController extends Controller
     {
         try {
             return [
-                'total_active' => Subscription::active()->count(),
-                'total_cancelled' => Subscription::cancelled()->count(),
-                'total_on_trial' => Subscription::onTrial()->count(),
-                'by_plan' => Subscription::active()
+                'total_active' => Subscription::query()->active()->count(),
+                'total_cancelled' => Subscription::query()->cancelled()->count(),
+                'total_on_trial' => Subscription::query()->onTrial()->count(),
+                'by_plan' => Subscription::query()->active()
                     ->select('stripe_price', DB::raw('count(*) as count'))
                     ->groupBy('stripe_price')
                     ->get()
@@ -195,7 +209,7 @@ class AdminController extends Controller
     private function getRevenueStats()
     {
         try {
-            $subscriptions = Subscription::active()->get();
+            $subscriptions = Subscription::query()->active()->get();
             $monthlyRevenue = 0;
             
             foreach ($subscriptions as $subscription) {
