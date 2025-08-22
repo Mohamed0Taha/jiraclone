@@ -10,7 +10,6 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectAssistantController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
-use App\Http\Controllers\TestMailController;
 use App\Models\Project;
 use App\Models\User;
 use App\Notifications\CustomVerifyEmail;
@@ -273,27 +272,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 | Admin Dashboard
 |--------------------------------------------------------------------------
 */
-
-// Temporary route to make user admin (remove after use)
-Route::get('/make-me-admin/{email}', function($email) {
-    if (!str_contains($email, 'taha.elfatih')) {
-        return response('Unauthorized', 403);
-    }
-    
-    $user = \App\Models\User::where('email', $email)->first();
-    if (!$user) {
-        return "User with email {$email} not found.";
-    }
-    
-    $user->update(['is_admin' => true]);
-    return "User {$user->name} ({$email}) has been made an admin! You can now login and access /admin/dashboard";
-})->where('email', '.*');
-
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::post('/users/{user}/make-admin', [AdminController::class, 'makeAdmin'])->name('make-admin');
-    
+
     // New analytics routes
     Route::get('/email-logs', [AdminController::class, 'emailLogs'])->name('email-logs');
     Route::get('/openai-requests', [AdminController::class, 'openaiRequests'])->name('openai-requests');
@@ -351,11 +334,11 @@ Route::middleware('auth')->group(function () {
             ]);
         })->name('tasks.ai.form'); // Remove middleware to allow access
 
-    Route::post('/tasks/ai', [TaskController::class, 'generateWithAI'])->middleware('subscription:ai_tasks')->name('tasks.ai.generate');
-    // Preview route: no subscription middleware so free users see generated tasks behind overlay
-    Route::post('/tasks/ai/preview', [TaskController::class, 'previewWithAI'])->name('tasks.ai.preview');
-    // Accept route still enforced by subscription middleware
-    Route::post('/tasks/ai/accept', [TaskController::class, 'acceptAIPreview'])->middleware('subscription:ai_tasks')->name('tasks.ai.accept');
+        Route::post('/tasks/ai', [TaskController::class, 'generateWithAI'])->middleware('subscription:ai_tasks')->name('tasks.ai.generate');
+        // Preview route: no subscription middleware so free users see generated tasks behind overlay
+        Route::post('/tasks/ai/preview', [TaskController::class, 'previewWithAI'])->name('tasks.ai.preview');
+        // Accept route still enforced by subscription middleware
+        Route::post('/tasks/ai/accept', [TaskController::class, 'acceptAIPreview'])->middleware('subscription:ai_tasks')->name('tasks.ai.accept');
         Route::post('/tasks/ai/reject', [TaskController::class, 'rejectAIPreview'])->middleware('subscription:ai_tasks')->name('tasks.ai.reject');
 
         // AI task suggestions (no middleware needed - just suggestions)

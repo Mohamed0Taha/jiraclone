@@ -16,11 +16,11 @@ class AdminOnly
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->route('login');
         }
 
-        if (!Auth::user()->is_admin) {
+        if (! Auth::user()->is_admin) {
             abort(403, 'Access denied. Admin privileges required.');
         }
 

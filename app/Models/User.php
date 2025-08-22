@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
+use App\Notifications\CustomVerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Cashier\Billable;
 use Laravel\Sanctum\HasApiTokens;
-use App\Notifications\CustomVerifyEmail;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasApiTokens, HasFactory, Notifiable, Billable;
+    use Billable, HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
         'name', 'email', 'password', 'is_admin',
@@ -26,11 +26,11 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'trial_ends_at'     => 'datetime',
-            'trial_used'        => 'boolean',
-            'is_admin'          => 'boolean',
-            'usage_reset_date'  => 'date',
+            'password' => 'hashed',
+            'trial_ends_at' => 'datetime',
+            'trial_used' => 'boolean',
+            'is_admin' => 'boolean',
+            'usage_reset_date' => 'date',
         ];
     }
 
@@ -50,8 +50,8 @@ class User extends Authenticatable implements MustVerifyEmail
     public function memberProjects()
     {
         return $this->belongsToMany(Project::class, 'project_members')
-                    ->withPivot('role', 'joined_at')
-                    ->withTimestamps();
+            ->withPivot('role', 'joined_at')
+            ->withTimestamps();
     }
 
     public function invitations()
@@ -62,7 +62,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function pendingInvitations()
     {
         return $this->hasMany(ProjectInvitation::class, 'email', 'email')
-                    ->where('status', 'pending');
+            ->where('status', 'pending');
     }
 
     public function openaiRequests()
@@ -83,6 +83,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function onTrial(string $subscription = 'default'): bool
     {
         $subscription = $this->subscription($subscription);
+
         return $subscription && $subscription->onTrial();
     }
 
@@ -97,7 +98,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getCurrentPlan(): string
     {
         $subscription = $this->subscription('default');
-        
+
         if ($subscription) {
             return $this->getPlanFromPriceId($subscription->stripe_price);
         } elseif ($this->onTrial('default')) {
@@ -113,7 +114,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function canAccessFeature(string $feature): bool
     {
         $plan = $this->getCurrentPlan();
-        
+
         switch ($feature) {
             case 'ai_tasks':
                 return true; // Everyone can access AI tasks (but with limits)
@@ -138,7 +139,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function shouldShowOverlay(string $feature): bool
     {
         // Show overlay for free users on premium features
-        if (!$this->hasActiveSubscription()) {
+        if (! $this->hasActiveSubscription()) {
             switch ($feature) {
                 case 'ai_assistant':
                 case 'ai_chat':
@@ -195,7 +196,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getAutomationLimit(): int
     {
         $plan = $this->getCurrentPlan();
-        
+
         $limits = [
             'free' => 0,
             'basic' => 2,
@@ -212,7 +213,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getMemberLimit(): int
     {
         $plan = $this->getCurrentPlan();
-        
+
         $limits = [
             'free' => 1,
             'basic' => 2,
@@ -239,7 +240,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getAiTaskLimit(): int
     {
         $plan = $this->getCurrentPlan();
-        
+
         $limits = [
             'free' => 5,
             'basic' => 25,
@@ -256,7 +257,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getAiChatLimit(): int
     {
         $plan = $this->getCurrentPlan();
-        
+
         $limits = [
             'free' => 5,
             'basic' => 30,
@@ -273,7 +274,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getReportsLimit(): int
     {
         $plan = $this->getCurrentPlan();
-        
+
         $limits = [
             'free' => 0,
             'basic' => 5,
@@ -290,10 +291,10 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getRemainingAiTasks(): int
     {
         $this->resetUsageIfNeeded();
-        
+
         $limit = $this->getAiTaskLimit();
         $used = $this->ai_tasks_used ?? 0;
-        
+
         return max(0, $limit - $used);
     }
 
@@ -303,12 +304,13 @@ class User extends Authenticatable implements MustVerifyEmail
     public function incrementAiTaskUsage(int $count = 1): bool
     {
         $this->resetUsageIfNeeded();
-        
+
         if ($this->getRemainingAiTasks() >= $count) {
             $this->increment('ai_tasks_used', $count);
+
             return true;
         }
-        
+
         return false;
     }
 
@@ -359,10 +361,10 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getRemainingAiChat(): int
     {
         $this->resetUsageIfNeeded();
-        
+
         $limit = $this->getAiChatLimit();
         $used = $this->ai_chat_used ?? 0;
-        
+
         return max(0, $limit - $used);
     }
 
@@ -372,10 +374,10 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getRemainingReports(): int
     {
         $this->resetUsageIfNeeded();
-        
+
         $limit = $this->getReportsLimit();
         $used = $this->reports_generated ?? 0;
-        
+
         return max(0, $limit - $used);
     }
 
@@ -385,12 +387,13 @@ class User extends Authenticatable implements MustVerifyEmail
     public function incrementAiChatUsage(int $count = 1): bool
     {
         $this->resetUsageIfNeeded();
-        
+
         if ($this->getRemainingAiChat() >= $count) {
             $this->increment('ai_chat_used', $count);
+
             return true;
         }
-        
+
         return false;
     }
 
@@ -400,12 +403,13 @@ class User extends Authenticatable implements MustVerifyEmail
     public function incrementReportsUsage(int $count = 1): bool
     {
         $this->resetUsageIfNeeded();
-        
+
         if ($this->getRemainingReports() >= $count) {
             $this->increment('reports_generated', $count);
+
             return true;
         }
-        
+
         return false;
     }
 
@@ -416,16 +420,17 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $resetDate = $this->usage_reset_date;
         $now = now()->startOfDay();
-        
+
         // If no reset date set, set it to beginning of current month
-        if (!$resetDate) {
+        if (! $resetDate) {
             $this->update([
                 'usage_reset_date' => $now->firstOfMonth(),
                 'ai_tasks_used' => 0,
             ]);
+
             return;
         }
-        
+
         // If we've passed into a new month, reset usage
         if ($now->firstOfMonth()->isAfter($resetDate)) {
             $this->update([
@@ -441,7 +446,7 @@ class User extends Authenticatable implements MustVerifyEmail
     private function getPlanFromPriceId(string $priceId): string
     {
         $plans = config('subscriptions.plans');
-        
+
         foreach ($plans as $key => $plan) {
             if ($plan['price_id'] === $priceId) {
                 return $key;

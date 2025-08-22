@@ -7,14 +7,14 @@ use App\Events\TaskUpdated;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Http\RedirectResponse;
-use Inertia\Inertia;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Log;
-use App\Services\TaskGeneratorService;
 use App\Services\SuggestionChipService;
+use App\Services\TaskGeneratorService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+use Inertia\Inertia;
 
 class TaskController extends Controller
 {
@@ -32,14 +32,16 @@ class TaskController extends Controller
 
     protected function statusesRule(bool $nullable = true): string
     {
-        $rule = 'in:' . implode(',', $this->statuses());
-        return $nullable ? 'nullable|' . $rule : $rule;
+        $rule = 'in:'.implode(',', $this->statuses());
+
+        return $nullable ? 'nullable|'.$rule : $rule;
     }
 
     protected function prioritiesRule(bool $nullable = true): string
     {
-        $rule = 'in:' . implode(',', $this->priorities());
-        return $nullable ? 'nullable|' . $rule : $rule;
+        $rule = 'in:'.implode(',', $this->priorities());
+
+        return $nullable ? 'nullable|'.$rule : $rule;
     }
 
     /* ------------------------------------------------ Board ----------- */
@@ -56,16 +58,16 @@ class TaskController extends Controller
         $map = function ($collection) {
             return $collection->values()->map(function (Task $t) {
                 return [
-                    'id'             => $t->id,
-                    'title'          => $t->title,
-                    'description'    => $t->description,
-                    'start_date'     => $t->start_date ? $t->start_date->format('Y-m-d') : null,
-                    'end_date'       => $t->end_date ? $t->end_date->format('Y-m-d') : null,
-                    'status'         => $t->status,
-                    'priority'       => $t->priority ?? 'medium',
-                    'milestone'      => $t->milestone ?? false,
-                    'creator'        => $t->creator ? ['id' => $t->creator->id, 'name' => $t->creator->name] : null,
-                    'assignee'       => $t->assignee ? ['id' => $t->assignee->id, 'name' => $t->assignee->name] : null,
+                    'id' => $t->id,
+                    'title' => $t->title,
+                    'description' => $t->description,
+                    'start_date' => $t->start_date ? $t->start_date->format('Y-m-d') : null,
+                    'end_date' => $t->end_date ? $t->end_date->format('Y-m-d') : null,
+                    'status' => $t->status,
+                    'priority' => $t->priority ?? 'medium',
+                    'milestone' => $t->milestone ?? false,
+                    'creator' => $t->creator ? ['id' => $t->creator->id, 'name' => $t->creator->name] : null,
+                    'assignee' => $t->assignee ? ['id' => $t->assignee->id, 'name' => $t->assignee->name] : null,
                     'comments_count' => $t->comments->count(),
                 ];
             });
@@ -97,16 +99,16 @@ class TaskController extends Controller
         $map = function ($collection) {
             return $collection->values()->map(function (Task $t) {
                 return [
-                    'id'             => $t->id,
-                    'title'          => $t->title,
-                    'description'    => $t->description,
-                    'start_date'     => $t->start_date ? $t->start_date->format('Y-m-d') : null,
-                    'end_date'       => $t->end_date ? $t->end_date->format('Y-m-d') : null,
-                    'status'         => $t->status,
-                    'priority'       => $t->priority ?? 'medium',
-                    'milestone'      => $t->milestone ?? false,
-                    'creator'        => $t->creator ? ['id' => $t->creator->id, 'name' => $t->creator->name] : null,
-                    'assignee'       => $t->assignee ? ['id' => $t->assignee->id, 'name' => $t->assignee->name] : null,
+                    'id' => $t->id,
+                    'title' => $t->title,
+                    'description' => $t->description,
+                    'start_date' => $t->start_date ? $t->start_date->format('Y-m-d') : null,
+                    'end_date' => $t->end_date ? $t->end_date->format('Y-m-d') : null,
+                    'status' => $t->status,
+                    'priority' => $t->priority ?? 'medium',
+                    'milestone' => $t->milestone ?? false,
+                    'creator' => $t->creator ? ['id' => $t->creator->id, 'name' => $t->creator->name] : null,
+                    'assignee' => $t->assignee ? ['id' => $t->assignee->id, 'name' => $t->assignee->name] : null,
                     'comments_count' => $t->comments->count(),
                 ];
             });
@@ -119,9 +121,11 @@ class TaskController extends Controller
 
         $users = User::select('id', 'name')->get();
 
-        Log::info("🚀 TASKCONTROLLER TIMELINE SENDING DATA", [
-            'tasks_count' => collect($tasks)->sum(function ($group) { return $group->count(); }),
-            'sample_task' => collect($tasks)->flatten()->first()
+        Log::info('🚀 TASKCONTROLLER TIMELINE SENDING DATA', [
+            'tasks_count' => collect($tasks)->sum(function ($group) {
+                return $group->count();
+            }),
+            'sample_task' => collect($tasks)->flatten()->first(),
         ]);
 
         // IMPORTANT: must match resources/js/Pages/Timeline/Timeline.jsx
@@ -134,26 +138,26 @@ class TaskController extends Controller
         $this->authorize('view', $project);
 
         $val = $request->validate([
-            'title'          => 'required|string|max:255',
-            'description'    => 'nullable|string',
-            'start_date'     => 'nullable|date',
-            'end_date'       => 'nullable|date|after_or_equal:start_date',
-            'assignee_id'    => 'nullable|exists:users,id',
-            'status'         => $this->statusesRule(),
-            'priority'       => $this->prioritiesRule(),
-            'milestone'      => 'nullable|boolean',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'assignee_id' => 'nullable|exists:users,id',
+            'status' => $this->statusesRule(),
+            'priority' => $this->prioritiesRule(),
+            'milestone' => 'nullable|boolean',
         ]);
 
         $task = $project->tasks()->create([
-            'title'          => $val['title'],
-            'description'    => $val['description']    ?? '',
-            'start_date'     => $val['start_date']     ?? null,
-            'end_date'       => $val['end_date']       ?? null,
-            'creator_id'     => $request->user()->id,
-            'assignee_id'    => $val['assignee_id']    ?? $request->user()->id,
-            'status'         => $val['status']         ?? 'todo',
-            'priority'       => $val['priority']       ?? 'medium',
-            'milestone'      => $val['milestone']      ?? false,
+            'title' => $val['title'],
+            'description' => $val['description'] ?? '',
+            'start_date' => $val['start_date'] ?? null,
+            'end_date' => $val['end_date'] ?? null,
+            'creator_id' => $request->user()->id,
+            'assignee_id' => $val['assignee_id'] ?? $request->user()->id,
+            'status' => $val['status'] ?? 'todo',
+            'priority' => $val['priority'] ?? 'medium',
+            'milestone' => $val['milestone'] ?? false,
         ]);
 
         TaskCreated::dispatch($task);
@@ -167,14 +171,14 @@ class TaskController extends Controller
         $this->authorize('update', $task);
 
         $validated = $request->validate([
-            'title'          => 'sometimes|required|string|max:255',
-            'description'    => 'sometimes|nullable|string',
-            'start_date'     => 'sometimes|nullable|date',
-            'end_date'       => 'sometimes|nullable|date|after_or_equal:start_date',
-            'assignee_id'    => 'sometimes|nullable|exists:users,id',
-            'status'         => 'sometimes|' . $this->statusesRule(false),
-            'priority'       => 'sometimes|' . $this->prioritiesRule(false),
-            'milestone'      => 'sometimes|nullable|boolean',
+            'title' => 'sometimes|required|string|max:255',
+            'description' => 'sometimes|nullable|string',
+            'start_date' => 'sometimes|nullable|date',
+            'end_date' => 'sometimes|nullable|date|after_or_equal:start_date',
+            'assignee_id' => 'sometimes|nullable|exists:users,id',
+            'status' => 'sometimes|'.$this->statusesRule(false),
+            'priority' => 'sometimes|'.$this->prioritiesRule(false),
+            'milestone' => 'sometimes|nullable|boolean',
         ]);
 
         $task->update($validated);
@@ -190,6 +194,7 @@ class TaskController extends Controller
     {
         $this->authorize('delete', $task);
         $task->delete();
+
         return back()->with('success', 'Task deleted.');
     }
 
@@ -203,33 +208,33 @@ class TaskController extends Controller
             'assignee:id,name',
             'comments' => function ($query) {
                 $query->with(['user:id,name', 'replies.user:id,name'])
-                      ->whereNull('parent_id')
-                      ->orderBy('created_at');
-            }
+                    ->whereNull('parent_id')
+                    ->orderBy('created_at');
+            },
         ]);
 
         $taskData = [
-            'id'             => $task->id,
-            'title'          => $task->title,
-            'description'    => $task->description,
-            'start_date'     => $task->start_date ? $task->start_date->format('Y-m-d') : null,
-            'end_date'       => $task->end_date ? $task->end_date->format('Y-m-d') : null,
-            'status'         => $task->status,
-            'priority'       => $task->priority ?? 'medium',
-            'milestone'      => $task->milestone ?? false,
-            'creator'        => $task->creator ? ['id' => $task->creator->id, 'name' => $task->creator->name] : null,
-            'assignee'       => $task->assignee ? ['id' => $task->assignee->id, 'name' => $task->assignee->name] : null,
-            'comments'       => $task->comments->map(function ($comment) {
+            'id' => $task->id,
+            'title' => $task->title,
+            'description' => $task->description,
+            'start_date' => $task->start_date ? $task->start_date->format('Y-m-d') : null,
+            'end_date' => $task->end_date ? $task->end_date->format('Y-m-d') : null,
+            'status' => $task->status,
+            'priority' => $task->priority ?? 'medium',
+            'milestone' => $task->milestone ?? false,
+            'creator' => $task->creator ? ['id' => $task->creator->id, 'name' => $task->creator->name] : null,
+            'assignee' => $task->assignee ? ['id' => $task->assignee->id, 'name' => $task->assignee->name] : null,
+            'comments' => $task->comments->map(function ($comment) {
                 return [
-                    'id'         => $comment->id,
-                    'content'    => $comment->content,
-                    'user'       => ['id' => $comment->user->id, 'name' => $comment->user->name],
+                    'id' => $comment->id,
+                    'content' => $comment->content,
+                    'user' => ['id' => $comment->user->id, 'name' => $comment->user->name],
                     'created_at' => $comment->created_at->format('Y-m-d H:i:s'),
-                    'replies'    => $comment->replies->map(function ($reply) {
+                    'replies' => $comment->replies->map(function ($reply) {
                         return [
-                            'id'         => $reply->id,
-                            'content'    => $reply->content,
-                            'user'       => ['id' => $reply->user->id, 'name' => $reply->user->name],
+                            'id' => $reply->id,
+                            'content' => $reply->content,
+                            'user' => ['id' => $reply->user->id, 'name' => $reply->user->name],
                             'created_at' => $reply->created_at->format('Y-m-d H:i:s'),
                         ];
                     }),
@@ -250,14 +255,14 @@ class TaskController extends Controller
         $this->authorize('view', $project);
 
         $val = $request->validate([
-            'count'  => ['required', 'integer', 'min:1', 'max:50'],
+            'count' => ['required', 'integer', 'min:1', 'max:50'],
             'prompt' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $user = $request->user();
 
         // Check if user can generate AI tasks
-        if (!$user->canGenerateAiTasks($val['count'])) {
+        if (! $user->canGenerateAiTasks($val['count'])) {
             return back()
                 ->withErrors(['ai' => 'You have reached your AI task generation limit for this month. Upgrade your plan for more tasks.'])
                 ->withInput();
@@ -268,6 +273,7 @@ class TaskController extends Controller
             if ($request->expectsJson() || $request->header('X-Inertia')) {
                 return redirect()->back()->withErrors(['ai' => 'Missing OPENAI_API_KEY on server.'])->withInput();
             }
+
             return redirect()->back()->withErrors(['ai' => 'Missing OPENAI_API_KEY on server.'])->withInput();
         }
 
@@ -275,7 +281,7 @@ class TaskController extends Controller
             $tasks = $generator->generateTasks($project, $val['count'], $val['prompt'] ?? '');
         } catch (\Throwable $e) {
             return back()
-                ->withErrors(['ai' => 'AI error: ' . $e->getMessage()])
+                ->withErrors(['ai' => 'AI error: '.$e->getMessage()])
                 ->withInput();
         }
 
@@ -283,22 +289,24 @@ class TaskController extends Controller
         $user->incrementAiTaskUsage($val['count']);
 
         foreach ($tasks as $t) {
-            if (!($t['title'] ?? null)) continue;
+            if (! ($t['title'] ?? null)) {
+                continue;
+            }
 
             $project->tasks()->create([
-                'title'          => $t['title'],
-                'description'    => $t['description']    ?? '',
-                'start_date'     => $t['start_date']     ?? null,
-                'end_date'       => $t['end_date']       ?? null,
-                'status'         => 'todo',
-                'creator_id'     => $request->user()->id,
-                'milestone'      => $t['milestone']      ?? false,
+                'title' => $t['title'],
+                'description' => $t['description'] ?? '',
+                'start_date' => $t['start_date'] ?? null,
+                'end_date' => $t['end_date'] ?? null,
+                'status' => 'todo',
+                'creator_id' => $request->user()->id,
+                'milestone' => $t['milestone'] ?? false,
             ]);
         }
 
         return redirect()
             ->route('tasks.index', $project)
-            ->with('success', $val['count'] . ' AI-generated tasks added.');
+            ->with('success', $val['count'].' AI-generated tasks added.');
     }
 
     public function previewWithAI(Request $request, Project $project, TaskGeneratorService $generator)
@@ -306,72 +314,74 @@ class TaskController extends Controller
         $this->authorize('view', $project);
 
         $val = $request->validate([
-            'count'  => ['required', 'integer', 'min:1', 'max:10'],
+            'count' => ['required', 'integer', 'min:1', 'max:10'],
             'prompt' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $user = $request->user();
-    $shouldShowOverlay = $user->shouldShowOverlay('ai_assistant'); // Overlay for free tier
-    $limitExceeded = ! $user->canGenerateAiTasks($val['count']);
-    $canGenerateFreely = ! $shouldShowOverlay && ! $limitExceeded;
-        
+        $shouldShowOverlay = $user->shouldShowOverlay('ai_assistant'); // Overlay for free tier
+        $limitExceeded = ! $user->canGenerateAiTasks($val['count']);
+        $canGenerateFreely = ! $shouldShowOverlay && ! $limitExceeded;
+
         // Generate tasks regardless, but mark them differently for free users
         $apiKey = config('openai.api_key');
         if (empty($apiKey)) {
             $payload = [
                 'message' => 'AI is not configured on this server. Set OPENAI_API_KEY.',
-                'errors'  => ['api' => ['Missing OPENAI_API_KEY on server']],
+                'errors' => ['api' => ['Missing OPENAI_API_KEY on server']],
             ];
+
             // For Inertia requests, always redirect back with errors, never return JSON
             return back()->withErrors($payload['errors'])->withInput();
         }
 
-    try {
+        try {
             Log::info('TaskGeneratorService: About to generate tasks', [
                 'project_id' => $project->id,
                 'count' => $val['count'],
-                'prompt' => $val['prompt'] ?? 'none'
+                'prompt' => $val['prompt'] ?? 'none',
             ]);
-            
+
             $tasks = $generator->generateTasks($project, $val['count'], $val['prompt'] ?? '');
-            
+
             Log::info('TaskGeneratorService: Tasks generated successfully', [
                 'project_id' => $project->id,
                 'task_count' => count($tasks),
-                'first_task' => $tasks[0]['title'] ?? 'none'
+                'first_task' => $tasks[0]['title'] ?? 'none',
             ]);
-            
+
         } catch (\Throwable $e) {
             Log::error('TaskGeneratorService: Generation failed', [
                 'project_id' => $project->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             $payload = [
-                'message' => 'AI error: ' . $e->getMessage(),
-                'errors'  => ['ai' => ['AI error: ' . $e->getMessage()]],
+                'message' => 'AI error: '.$e->getMessage(),
+                'errors' => ['ai' => ['AI error: '.$e->getMessage()]],
             ];
+
             // For Inertia requests, always redirect back with errors, never return JSON
             return back()->withErrors($payload['errors'])->withInput();
         }
 
         Log::info('TaskGeneratorService: About to render preview', [
             'project_id' => $project->id,
-            'task_count' => count($tasks)
+            'task_count' => count($tasks),
         ]);
 
         // Instead of using session, pass data directly via Inertia render
         // This fixes session persistence issues on Heroku
         return Inertia::render('Tasks/AITasksPreview', [
-            'project'       => $project,
-            'generated'     => $tasks,
+            'project' => $project,
+            'generated' => $tasks,
             'originalInput' => $val,
-            'showOverlay'   => ($shouldShowOverlay || $limitExceeded),
+            'showOverlay' => ($shouldShowOverlay || $limitExceeded),
             'limitExceeded' => $limitExceeded,
-            'canAccept'     => $canGenerateFreely && ! $limitExceeded,
-            'usage'         => $user->getUsageSummary()['ai_tasks'] ?? null,
-            'upgradeUrl'    => route('billing.show'),
+            'canAccept' => $canGenerateFreely && ! $limitExceeded,
+            'usage' => $user->getUsageSummary()['ai_tasks'] ?? null,
+            'upgradeUrl' => route('billing.show'),
         ]);
     }
 
@@ -404,23 +414,23 @@ class TaskController extends Controller
         $this->authorize('view', $project);
 
         $tasks = $request->validate([
-            'tasks'                  => 'required|array',
-            'tasks.*.title'          => 'required|string|max:255',
-            'tasks.*.description'    => 'nullable|string',
-            'tasks.*.start_date'     => 'nullable|date',
-            'tasks.*.end_date'       => 'nullable|date|after_or_equal:tasks.*.start_date',
-            'tasks.*.milestone'      => 'nullable|boolean',
+            'tasks' => 'required|array',
+            'tasks.*.title' => 'required|string|max:255',
+            'tasks.*.description' => 'nullable|string',
+            'tasks.*.start_date' => 'nullable|date',
+            'tasks.*.end_date' => 'nullable|date|after_or_equal:tasks.*.start_date',
+            'tasks.*.milestone' => 'nullable|boolean',
         ])['tasks'];
 
         foreach ($tasks as $t) {
             $project->tasks()->create([
-                'title'          => $t['title'],
-                'description'    => $t['description']    ?? '',
-                'start_date'     => $t['start_date']     ?? null,
-                'end_date'       => $t['end_date']       ?? null,
-                'status'         => 'todo',
-                'creator_id'     => $request->user()->id,
-                'milestone'      => $t['milestone']      ?? false,
+                'title' => $t['title'],
+                'description' => $t['description'] ?? '',
+                'start_date' => $t['start_date'] ?? null,
+                'end_date' => $t['end_date'] ?? null,
+                'status' => 'todo',
+                'creator_id' => $request->user()->id,
+                'milestone' => $t['milestone'] ?? false,
             ]);
         }
 
@@ -429,7 +439,7 @@ class TaskController extends Controller
 
         return redirect()
             ->route('tasks.index', $project)
-            ->with('success', count($tasks) . ' AI-generated tasks added.');
+            ->with('success', count($tasks).' AI-generated tasks added.');
     }
 
     public function suggestionsAI(Request $request, Project $project, SuggestionChipService $chips)
@@ -445,7 +455,7 @@ class TaskController extends Controller
             Log::error('SuggestionChipService failed', [
                 'project_id' => $project->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             $suggestions = [
@@ -453,12 +463,12 @@ class TaskController extends Controller
                 'Create task checklist',
                 'Schedule team meeting',
                 'Review requirements',
-                'Update documentation'
+                'Update documentation',
             ];
         }
 
         return response()->json([
-            'project_id'  => $project->id,
+            'project_id' => $project->id,
             'suggestions' => $suggestions,
         ]);
     }
@@ -483,7 +493,7 @@ class TaskController extends Controller
         $user = $request->user();
 
         // Check if user can accept these tasks
-        if (!$user->canGenerateAiTasks(count($generated))) {
+        if (! $user->canGenerateAiTasks(count($generated))) {
             return back()
                 ->withErrors(['ai' => 'You have reached your AI task generation limit for this month. Upgrade your plan for more tasks.']);
         }
@@ -492,16 +502,18 @@ class TaskController extends Controller
         $user->incrementAiTaskUsage(count($generated));
 
         foreach ($generated as $t) {
-            if (!($t['title'] ?? null)) continue;
+            if (! ($t['title'] ?? null)) {
+                continue;
+            }
 
             $project->tasks()->create([
-                'title'          => $t['title'],
-                'description'    => $t['description']    ?? '',
-                'start_date'     => $t['start_date']     ?? null,
-                'end_date'       => $t['end_date']       ?? null,
-                'status'         => 'todo',
-                'creator_id'     => $request->user()->id,
-                'milestone'      => $t['milestone']      ?? false,
+                'title' => $t['title'],
+                'description' => $t['description'] ?? '',
+                'start_date' => $t['start_date'] ?? null,
+                'end_date' => $t['end_date'] ?? null,
+                'status' => 'todo',
+                'creator_id' => $request->user()->id,
+                'milestone' => $t['milestone'] ?? false,
             ]);
             $accepted++;
         }

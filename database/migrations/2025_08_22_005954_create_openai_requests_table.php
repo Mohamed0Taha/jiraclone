@@ -23,7 +23,7 @@ return new class extends Migration
             $table->boolean('successful')->default(true);
             $table->text('error_message')->nullable();
             $table->timestamps();
-            
+
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->index(['user_id', 'created_at']);
             $table->index(['request_type', 'created_at']);

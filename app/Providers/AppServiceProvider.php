@@ -5,14 +5,14 @@ namespace App\Providers;
 use App\Events\TaskCreated;
 use App\Events\TaskUpdated;
 use App\Listeners\TriggerAutomations;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Vite;
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Auth\Notifications\VerifyEmail; // ⬅️ add
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Vite; // ⬅️ add
+use Illuminate\Support\ServiceProvider;
+use Inertia\Inertia;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -57,14 +57,14 @@ class AppServiceProvider extends ServiceProvider
                 'verification.verify',
                 now()->addMinutes(config('auth.verification.expire', 60)),
                 [
-                    'id'   => $notifiable->getKey(),
+                    'id' => $notifiable->getKey(),
                     'hash' => sha1($notifiable->getEmailForVerification()),
                 ],
                 false // ← critical: sign as RELATIVE
             );
-            
+
             // Return full URL by combining with app URL
-            return rtrim(config('app.url'), '/') . $relativeUrl;
+            return rtrim(config('app.url'), '/').$relativeUrl;
         });
 
         Vite::prefetch(concurrency: 3);
@@ -74,11 +74,13 @@ class AppServiceProvider extends ServiceProvider
 
         Inertia::share('isPro', function (): bool {
             $user = Auth::user();
+
             return $user && method_exists($user, 'hasActiveSubscription') && $user->hasActiveSubscription();
         });
 
         Inertia::share('isOnTrial', function (): bool {
             $user = Auth::user();
+
             return $user && method_exists($user, 'onTrial') && $user->onTrial('default');
         });
 
@@ -86,7 +88,7 @@ class AppServiceProvider extends ServiceProvider
         Inertia::share('userPlan', function () {
             /** @var \App\Models\User $user */
             $user = Auth::user();
-            if (!$user) {
+            if (! $user) {
                 return null;
             }
 

@@ -60,7 +60,7 @@ export default function GuestLayout({ children }) {
                     {children}
                 </Paper>
             </Container>
-            
+
             <CookieConsent />
         </Box>
     );

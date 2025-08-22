@@ -173,7 +173,7 @@ function RobotTypingIndicator() {
 export default function AssistantChat({ project, open, onClose }) {
     const { shouldShowOverlay, userPlan } = useSubscription();
     // Inline upgrade card model for free/limited users
-    
+
     const [message, setMessage] = useState('');
     const [conversation, setConversation] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -199,17 +199,22 @@ export default function AssistantChat({ project, open, onClose }) {
     }, [conversation]);
 
     // Helper to append upgrade card
-    const pushUpgradeCard = (bodyText = 'To continue and view AI insights, you\'ll need to subscribe.') => {
+    const pushUpgradeCard = (
+        bodyText = "To continue and view AI insights, you'll need to subscribe."
+    ) => {
         const billing = userPlan?.billing_url || '/billing';
         setUpgradeUrl(billing);
-        setConversation(prev => [...prev, {
-            role: 'assistant',
-            type: 'upgrade',
-            title: 'Subscribe to continue',
-            body: bodyText,
-            upgradeUrl: billing,
-            timestamp: new Date()
-        }]);
+        setConversation((prev) => [
+            ...prev,
+            {
+                role: 'assistant',
+                type: 'upgrade',
+                title: 'Subscribe to continue',
+                body: bodyText,
+                upgradeUrl: billing,
+                timestamp: new Date(),
+            },
+        ]);
         setChatLocked(true);
     };
 
@@ -244,7 +249,7 @@ export default function AssistantChat({ project, open, onClose }) {
         setError(null);
         setShowSuggestions(false);
         const userObj = { role: 'user', content: userMessage.trim(), timestamp: new Date() };
-        setConversation(prev => [...prev, userObj]);
+        setConversation((prev) => [...prev, userObj]);
 
         // If overlay applies, immediately append upgrade card and stop.
         if (userPlan?.overlays?.ai_chat) {
@@ -277,13 +282,19 @@ export default function AssistantChat({ project, open, onClose }) {
             const data = await response.json();
 
             if (data.show_overlay) {
-                pushUpgradeCard(data.message || 'To see this AI answer and keep chatting, subscribe to a paid plan.');
+                pushUpgradeCard(
+                    data.message ||
+                        'To see this AI answer and keep chatting, subscribe to a paid plan.'
+                );
             } else if (data.success || data.type === 'message') {
-                setConversation(prev => [...prev, {
-                    role: 'assistant',
-                    content: data.response || data.content,
-                    timestamp: new Date(data.timestamp || Date.now())
-                }]);
+                setConversation((prev) => [
+                    ...prev,
+                    {
+                        role: 'assistant',
+                        content: data.response || data.content,
+                        timestamp: new Date(data.timestamp || Date.now()),
+                    },
+                ]);
             } else {
                 setError(data.message || 'Failed to get response from assistant');
             }
@@ -356,7 +367,7 @@ export default function AssistantChat({ project, open, onClose }) {
     }
 
     return (
-    <Paper
+        <Paper
             elevation={8}
             sx={{
                 position: 'fixed',
@@ -369,10 +380,10 @@ export default function AssistantChat({ project, open, onClose }) {
                 flexDirection: 'column',
                 borderRadius: 2,
                 overflow: 'hidden',
-        position: 'fixed',
+                position: 'fixed',
             }}
         >
-        {/* Global overlay appears AFTER first assistant response if locked */}
+            {/* Global overlay appears AFTER first assistant response if locked */}
             {/* Header */}
             <Box
                 sx={{
@@ -565,17 +576,33 @@ export default function AssistantChat({ project, open, onClose }) {
                                                         gap: 1,
                                                     }}
                                                 >
-                                                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                                                    <Typography
+                                                        variant="subtitle2"
+                                                        sx={{ fontWeight: 800 }}
+                                                    >
                                                         {msg.title}
                                                     </Typography>
-                                                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{ color: 'text.secondary' }}
+                                                    >
                                                         {msg.body}
                                                     </Typography>
                                                     <Button
                                                         variant="contained"
                                                         size="small"
-                                                        onClick={() => router.visit(msg.upgradeUrl || upgradeUrl || '/billing')}
-                                                        sx={{ textTransform: 'none', fontWeight: 700, alignSelf: 'flex-start' }}
+                                                        onClick={() =>
+                                                            router.visit(
+                                                                msg.upgradeUrl ||
+                                                                    upgradeUrl ||
+                                                                    '/billing'
+                                                            )
+                                                        }
+                                                        sx={{
+                                                            textTransform: 'none',
+                                                            fontWeight: 700,
+                                                            alignSelf: 'flex-start',
+                                                        }}
                                                     >
                                                         See plans
                                                     </Button>

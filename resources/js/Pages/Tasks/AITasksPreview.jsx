@@ -19,7 +19,15 @@ import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TaskAltRoundedIcon from '@mui/icons-material/TaskAltRounded';
 
-export default function AITasksPreview({ auth, project, generated = [], originalInput = {}, showOverlay = false, upgradeUrl = '/billing', limitExceeded = false }) {
+export default function AITasksPreview({
+    auth,
+    project,
+    generated = [],
+    originalInput = {},
+    showOverlay = false,
+    upgradeUrl = '/billing',
+    limitExceeded = false,
+}) {
     const theme = useTheme();
 
     const redo = () =>
@@ -351,7 +359,8 @@ export default function AITasksPreview({ auth, project, generated = [], original
                                     position: 'absolute',
                                     inset: 0,
                                     // Soft baby‑blue → pink translucent gradient + blur so users see layout but not read text clearly
-                                    background: 'linear-gradient(135deg, rgba(173,216,255,0.30), rgba(255,183,213,0.30))',
+                                    background:
+                                        'linear-gradient(135deg, rgba(173,216,255,0.30), rgba(255,183,213,0.30))',
                                     backdropFilter: 'blur(2px) saturate(1.03)',
                                     WebkitBackdropFilter: 'blur(2px) saturate(1.03)',
                                     display: 'flex',
@@ -376,7 +385,9 @@ export default function AITasksPreview({ auth, project, generated = [], original
                                         textShadow: '0 2px 6px rgba(0,0,0,0.15)',
                                     }}
                                 >
-                                    {limitExceeded ? 'Monthly AI Task Limit Reached' : 'Upgrade to Unlock Task Details'}
+                                    {limitExceeded
+                                        ? 'Monthly AI Task Limit Reached'
+                                        : 'Upgrade to Unlock Task Details'}
                                 </Typography>
                                 <Typography
                                     variant="body2"
@@ -401,7 +412,8 @@ export default function AITasksPreview({ auth, project, generated = [], original
                                             textTransform: 'none',
                                             fontWeight: 700,
                                             px: 3,
-                                            background: 'linear-gradient(135deg,#60a5fa,#6366F1 55%,#a855f7)',
+                                            background:
+                                                'linear-gradient(135deg,#60a5fa,#6366F1 55%,#a855f7)',
                                             boxShadow: '0 10px 24px -6px rgba(99,102,241,0.45)',
                                         }}
                                     >
@@ -409,7 +421,9 @@ export default function AITasksPreview({ auth, project, generated = [], original
                                     </Button>
                                     <Button
                                         variant="text"
-                                        onClick={() => router.visit(route('tasks.ai.form', project.id))}
+                                        onClick={() =>
+                                            router.visit(route('tasks.ai.form', project.id))
+                                        }
                                         sx={{
                                             textTransform: 'none',
                                             fontWeight: 600,

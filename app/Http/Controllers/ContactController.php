@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Notifications\ContactFormNotification;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
-use App\Mail\ContactFormMail;
-use App\Notifications\ContactFormNotification;
 
 class ContactController extends Controller
 {
@@ -54,34 +52,34 @@ class ContactController extends Controller
                 'host' => config('mail.mailers.smtp.host'),
                 'port' => config('mail.mailers.smtp.port'),
                 'from' => config('mail.from.address'),
-            ]
+            ],
         ]);
 
         try {
             // Use Notification approach (same as signup emails)
             $adminEmail = 'taha.elfatih@gmail.com';
-            
+
             Notification::route('mail', $adminEmail)
                 ->notify(new ContactFormNotification($user, $topicLabel, $message, now()->format('F j, Y \a\t g:i A')));
 
             Log::info('Contact form email sent successfully via Notification', [
                 'user_id' => $user->id,
                 'topic' => $topicLabel,
-                'to' => $adminEmail
+                'to' => $adminEmail,
             ]);
 
             return back()->with('success', 'Your message has been sent successfully! We\'ll get back to you soon.');
 
         } catch (\Exception $e) {
             // Log the specific error for debugging
-            Log::error('Contact form notification failed: ' . $e->getMessage(), [
+            Log::error('Contact form notification failed: '.$e->getMessage(), [
                 'user_id' => $user->id,
                 'user_email' => $user->email,
                 'topic' => $topic,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return back()->with('error', 'Failed to send message. Please try again or contact us directly at taha.elfatih@gmail.com.');
         }
     }

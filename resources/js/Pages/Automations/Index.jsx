@@ -379,7 +379,7 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
     const theme = useTheme();
     const { shouldShowOverlay, userPlan } = useSubscription();
     const showOverlay = shouldShowOverlay('automation');
-    
+
     const [view, setView] = useState('list');
     const [selectedWorkflow, setSelectedWorkflow] = useState(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -532,12 +532,7 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
         <AuthenticatedLayout user={auth.user}>
             <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1200, mx: 'auto', position: 'relative' }}>
                 {/* Overlay for free users */}
-                {showOverlay && (
-                    <FeatureOverlay 
-                        feature="automation" 
-                        onUpgrade={handleUpgrade} 
-                    />
-                )}
+                {showOverlay && <FeatureOverlay feature="automation" onUpgrade={handleUpgrade} />}
                 <Paper
                     elevation={0}
                     sx={{

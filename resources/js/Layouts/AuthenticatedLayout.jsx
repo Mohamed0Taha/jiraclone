@@ -286,7 +286,7 @@ export default function AuthenticatedLayout({ header, children }) {
             )}
 
             <main>{children}</main>
-            
+
             <CookieConsent />
         </div>
     );

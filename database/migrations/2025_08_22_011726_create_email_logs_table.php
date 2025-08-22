@@ -22,7 +22,7 @@ return new class extends Migration
             $table->boolean('sent_successfully')->default(true);
             $table->text('error_message')->nullable();
             $table->timestamps();
-            
+
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
             $table->index(['type', 'created_at']);
             $table->index(['user_id', 'created_at']);

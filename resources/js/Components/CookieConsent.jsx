@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-    Box,
-    Button,
-    Card,
-    Stack,
-    Typography,
-    Slide,
-    IconButton,
-    Link,
-} from '@mui/material';
+import { Box, Button, Card, Stack, Typography, Slide, IconButton, Link } from '@mui/material';
 import { Close as CloseIcon, Cookie as CookieIcon } from '@mui/icons-material';
 
 export default function CookieConsent() {
@@ -56,7 +47,8 @@ export default function CookieConsent() {
                     maxWidth: 600,
                     mx: 'auto',
                     borderRadius: 3,
-                    background: 'linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))',
+                    background:
+                        'linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))',
                     backdropFilter: 'blur(16px)',
                     border: '1px solid rgba(255,255,255,0.3)',
                     boxShadow: '0 20px 40px -12px rgba(0,0,0,0.25)',
@@ -64,20 +56,25 @@ export default function CookieConsent() {
             >
                 <Stack direction="row" spacing={2} alignItems="flex-start">
                     <CookieIcon sx={{ color: 'primary.main', mt: 0.5, flexShrink: 0 }} />
-                    
+
                     <Box flex={1}>
                         <Typography variant="subtitle1" fontWeight={700} gutterBottom>
                             We use cookies
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            We use cookies to enhance your experience, analyze site traffic, and provide 
-                            personalized content. By clicking "Accept", you consent to our use of cookies. 
-                            You can manage your preferences in your browser settings.{' '}
-                            <Link href="/privacy" color="primary" sx={{ textDecoration: 'none', fontWeight: 600 }}>
+                            We use cookies to enhance your experience, analyze site traffic, and
+                            provide personalized content. By clicking "Accept", you consent to our
+                            use of cookies. You can manage your preferences in your browser
+                            settings.{' '}
+                            <Link
+                                href="/privacy"
+                                color="primary"
+                                sx={{ textDecoration: 'none', fontWeight: 600 }}
+                            >
                                 Learn more
                             </Link>
                         </Typography>
-                        
+
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 2 }}>
                             <Button
                                 variant="contained"
@@ -110,7 +107,7 @@ export default function CookieConsent() {
                         onClick={handleClose}
                         sx={{
                             color: 'text.secondary',
-                            '&:hover': { background: 'rgba(0,0,0,0.04)' }
+                            '&:hover': { background: 'rgba(0,0,0,0.04)' },
                         }}
                     >
                         <CloseIcon fontSize="small" />

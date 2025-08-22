@@ -8,8 +8,11 @@ use Illuminate\Notifications\Notification;
 class ContactFormNotification extends Notification
 {
     public $user;
+
     public $topicLabel;
+
     public $message;
+
     public $submittedAt;
 
     public function __construct($user, $topicLabel, $message, $submittedAt)
@@ -37,7 +40,7 @@ class ContactFormNotification extends Notification
             ->line("**Topic:** {$this->topicLabel}")
             ->line("**Submitted:** {$this->submittedAt}")
             ->line('') // Empty line
-            ->line("**Message:**")
+            ->line('**Message:**')
             ->line($this->message)
             ->line('') // Empty line
             ->line('This message was sent through the TaskPilot contact form.')

@@ -11,21 +11,21 @@ class CheckSubscription
     /**
      * Handle an incoming request for features with tier restrictions.
      */
-    public function handle(Request $request, Closure $next, string $feature = null): Response
+    public function handle(Request $request, Closure $next, ?string $feature = null): Response
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return $this->handleUnauthorized($request, 'authentication_required');
         }
 
         // If no specific feature is specified, just continue
-        if (!$feature) {
+        if (! $feature) {
             return $next($request);
         }
 
         // Check feature access based on user's tier
-        if (!$user->canAccessFeature($feature)) {
+        if (! $user->canAccessFeature($feature)) {
             return $this->handleFeatureRestriction($request, $feature, $user);
         }
 
@@ -35,7 +35,7 @@ class CheckSubscription
         }
 
         // Check usage limits for features that have them
-        if ($this->hasUsageLimit($feature) && !$user->canUseFeature($feature)) {
+        if ($this->hasUsageLimit($feature) && ! $user->canUseFeature($feature)) {
             return $this->handleUsageLimitExceeded($request, $feature, $user);
         }
 
@@ -95,7 +95,7 @@ class CheckSubscription
             return redirect()->back()->with([
                 'limit_exceeded' => true,
                 'feature' => $feature,
-                'message' => $message . ' Upgrade for more access.',
+                'message' => $message.' Upgrade for more access.',
                 'upgrade_url' => route('billing.show'),
                 'usage' => $user->getUsageSummary()[$feature] ?? null,
                 'show_overlay' => true,
@@ -104,7 +104,7 @@ class CheckSubscription
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => $message . ' Upgrade for more access.',
+                'message' => $message.' Upgrade for more access.',
                 'limit_exceeded' => true,
                 'feature' => $feature,
                 'usage' => $user->getUsageSummary()[$feature] ?? null,
@@ -112,7 +112,7 @@ class CheckSubscription
             ], 402);
         }
 
-        return redirect()->route('billing.show')->with('error', $message . ' Upgrade for more access.');
+        return redirect()->route('billing.show')->with('error', $message.' Upgrade for more access.');
     }
 
     /**

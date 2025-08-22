@@ -33,7 +33,7 @@ class ProjectAssistantController extends Controller
 
         // Check if user should see overlay (free tier)
         $shouldShowOverlay = $user->shouldShowOverlay('ai_chat');
-        
+
         if ($shouldShowOverlay) {
             // For free users, return a generic response with overlay flag
             return response()->json([

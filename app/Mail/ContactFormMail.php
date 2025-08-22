@@ -10,8 +10,11 @@ class ContactFormMail extends Mailable
     use SerializesModels;
 
     public $user;
+
     public $topicLabel;
+
     public $message;
+
     public $submittedAt;
 
     public function __construct($user, $topicLabel, $message, $submittedAt)

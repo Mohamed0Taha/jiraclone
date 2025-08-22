@@ -599,38 +599,66 @@ export default function AssistantChat({ project, open, onClose }) {
                         // Inline upgrade card
                         if (m.upgrade) {
                             return (
-                                <Stack key={idx} direction="row" spacing={1.5} sx={{ my: 2, justifyContent: 'center' }}>
+                                <Stack
+                                    key={idx}
+                                    direction="row"
+                                    spacing={1.5}
+                                    sx={{ my: 2, justifyContent: 'center' }}
+                                >
                                     <Box
                                         sx={{
                                             maxWidth: 520,
                                             width: '100%',
                                             p: 3,
                                             borderRadius: 4,
-                                            background: 'linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.06))',
+                                            background:
+                                                'linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.06))',
                                             border: '1px solid rgba(255,255,255,0.35)',
                                             backdropFilter: 'blur(8px)',
                                             textAlign: 'center',
                                             boxShadow: '0 10px 28px -4px rgba(0,0,0,0.35)',
                                         }}
                                     >
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#ecfeff', mb: 1 }}>
+                                        <Typography
+                                            variant="subtitle1"
+                                            sx={{ fontWeight: 900, color: '#ecfeff', mb: 1 }}
+                                        >
                                             Unlock AI Assistant Pro
                                         </Typography>
-                                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)', mb: 2, lineHeight: 1.6 }}>
-                                            Get unlimited smart commands, project insights, summaries and bulk actions. Upgrade now to enable execution and richer responses.
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                color: 'rgba(255,255,255,0.9)',
+                                                mb: 2,
+                                                lineHeight: 1.6,
+                                            }}
+                                        >
+                                            Get unlimited smart commands, project insights,
+                                            summaries and bulk actions. Upgrade now to enable
+                                            execution and richer responses.
                                         </Typography>
-                                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="center">
+                                        <Stack
+                                            direction={{ xs: 'column', sm: 'row' }}
+                                            spacing={1.5}
+                                            justifyContent="center"
+                                        >
                                             <Button
                                                 variant="contained"
-                                                onClick={() => router.visit(m?.response?.upgrade_url || '/billing')}
+                                                onClick={() =>
+                                                    router.visit(
+                                                        m?.response?.upgrade_url || '/billing'
+                                                    )
+                                                }
                                                 sx={{
                                                     textTransform: 'none',
                                                     fontWeight: 800,
                                                     px: 3,
-                                                    background: 'linear-gradient(135deg,#6366F1,#4F46E5 55%,#4338CA)',
+                                                    background:
+                                                        'linear-gradient(135deg,#6366F1,#4F46E5 55%,#4338CA)',
                                                     boxShadow: '0 8px 22px rgba(79,70,229,.5)',
                                                     '&:hover': {
-                                                        background: 'linear-gradient(135deg,#595CEB,#4841D6 55%,#3B32B8)',
+                                                        background:
+                                                            'linear-gradient(135deg,#595CEB,#4841D6 55%,#3B32B8)',
                                                     },
                                                 }}
                                             >
@@ -638,8 +666,16 @@ export default function AssistantChat({ project, open, onClose }) {
                                             </Button>
                                             <Button
                                                 variant="text"
-                                                onClick={() => setMessages((prev) => prev.filter((_, i) => i !== idx))}
-                                                sx={{ textTransform: 'none', fontWeight: 700, color: '#ecfeff' }}
+                                                onClick={() =>
+                                                    setMessages((prev) =>
+                                                        prev.filter((_, i) => i !== idx)
+                                                    )
+                                                }
+                                                sx={{
+                                                    textTransform: 'none',
+                                                    fontWeight: 700,
+                                                    color: '#ecfeff',
+                                                }}
                                             >
                                                 Dismiss
                                             </Button>
