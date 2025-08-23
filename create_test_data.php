@@ -16,22 +16,22 @@ $testData = [
     ['name' => 'Eva Martinez', 'email' => 'eva@example.com', 'reason' => 'too_expensive'],
 ];
 
-foreach($testData as $data) {
+foreach ($testData as $data) {
     $existingUser = User::where('email', $data['email'])->first();
-    if (!$existingUser) {
+    if (! $existingUser) {
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => bcrypt('password'),
             'email_verified_at' => now(),
             'cancellation_reason' => $data['reason'],
-            'cancelled_at' => now()->subDays(rand(1, 45))
+            'cancelled_at' => now()->subDays(rand(1, 45)),
         ]);
         echo "Created user: {$user->name} with reason: {$user->getCancellationReasonLabel()}\n";
     } else {
         $existingUser->update([
             'cancellation_reason' => $data['reason'],
-            'cancelled_at' => now()->subDays(rand(1, 45))
+            'cancelled_at' => now()->subDays(rand(1, 45)),
         ]);
         echo "Updated existing user: {$existingUser->name} with reason: {$existingUser->getCancellationReasonLabel()}\n";
     }

@@ -200,6 +200,274 @@ class OpenAIService
         return substr($prompt, 0, 500); // Limit prompt length for storage
     }
 
+    /**
+     * Upload a file to OpenAI Files API
+     *
+     * @param  string  $fileContent  The file content as binary string
+     * @param  string  $fileName  The original filename
+     * @param  string  $purpose  The purpose for the file upload (e.g., 'assistants', 'fine-tune')
+     * @return array The upload response from OpenAI
+     *
+     * @throws Exception If upload fails
+     */
+    public function uploadFile(string $fileContent, string $fileName, string $purpose = 'assistants'): array
+    {
+        $apiKey = (string) env('OPENAI_API_KEY', '');
+        if ($apiKey === '') {
+            throw new Exception('OpenAI API key missing');
+        }
+
+        $userId = Auth::id();
+        $startTime = microtime(true);
+
+        try {
+            // Create a temporary file for the upload
+            $tempFile = tempnam(sys_get_temp_dir(), 'openai_upload_');
+            file_put_contents($tempFile, $fileContent);
+
+            $res = Http::withHeaders([
+                'Authorization' => 'Bearer '.$apiKey,
+            ])->attach('file', $fileContent, $fileName)
+                ->post('https://api.openai.com/v1/files', [
+                    'purpose' => $purpose,
+                ]);
+
+            // Clean up temp file
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+
+            if (! $res->ok()) {
+                Log::error('OpenAI file upload failed', [
+                    'status' => $res->status(),
+                    'body' => $res->body(),
+                    'filename' => $fileName,
+                ]);
+                throw new Exception('OpenAI file upload failed: '.$res->body());
+            }
+
+            $responseData = $res->json();
+
+            // Log successful request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'file_upload',
+                    tokens: 0, // File uploads don't consume tokens
+                    cost: 0.0,
+                    model: 'file-api',
+                    prompt: "File upload: {$fileName}",
+                    response: json_encode($responseData),
+                    successful: true
+                );
+            }
+
+            Log::info('OpenAI file uploaded successfully', [
+                'file_id' => $responseData['id'] ?? 'unknown',
+                'filename' => $fileName,
+                'user_id' => $userId,
+            ]);
+
+            return $responseData;
+
+        } catch (Exception $e) {
+            // Log failed request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'file_upload',
+                    tokens: 0,
+                    cost: 0.0,
+                    model: 'file-api',
+                    prompt: "File upload failed: {$fileName}",
+                    response: $e->getMessage(),
+                    successful: false,
+                    error: $e->getMessage()
+                );
+            }
+
+            Log::error('OpenAI file upload error', [
+                'filename' => $fileName,
+                'error' => $e->getMessage(),
+                'user_id' => $userId,
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Delete a file from OpenAI Files API
+     *
+     * @param  string  $fileId  The file ID to delete
+     * @return array The deletion response from OpenAI
+     *
+     * @throws Exception If deletion fails
+     */
+    public function deleteFile(string $fileId): array
+    {
+        $apiKey = (string) env('OPENAI_API_KEY', '');
+        if ($apiKey === '') {
+            throw new Exception('OpenAI API key missing');
+        }
+
+        try {
+            $res = Http::withHeaders([
+                'Authorization' => 'Bearer '.$apiKey,
+            ])->delete("https://api.openai.com/v1/files/{$fileId}");
+
+            if (! $res->ok()) {
+                Log::warning('OpenAI file deletion failed', [
+                    'status' => $res->status(),
+                    'body' => $res->body(),
+                    'file_id' => $fileId,
+                ]);
+                throw new Exception('OpenAI file deletion failed: '.$res->body());
+            }
+
+            $responseData = $res->json();
+
+            Log::info('OpenAI file deleted successfully', [
+                'file_id' => $fileId,
+                'user_id' => Auth::id(),
+            ]);
+
+            return $responseData;
+
+        } catch (Exception $e) {
+            Log::error('OpenAI file deletion error', [
+                'file_id' => $fileId,
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+            ]);
+
+            // Don't re-throw deletion errors as they're not critical
+            return ['deleted' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Enhanced chatJson method that supports vision/image inputs
+     */
+    public function chatJsonVision(array $messages, float $temperature = 0.1): array
+    {
+        $apiKey = (string) env('OPENAI_API_KEY', '');
+        $model = 'gpt-4o'; // Use vision-capable model
+        if ($apiKey === '') {
+            throw new Exception('OpenAI API key missing');
+        }
+
+        $prompt = $this->extractPromptFromMessages($messages);
+        $userId = Auth::id();
+        $startTime = microtime(true);
+
+        try {
+            $res = Http::withHeaders([
+                'Authorization' => 'Bearer '.$apiKey,
+                'Content-Type' => 'application/json',
+            ])->post('https://api.openai.com/v1/chat/completions', [
+                'model' => $model,
+                'temperature' => $temperature,
+                'response_format' => ['type' => 'json_object'],
+                'messages' => $messages,
+                'max_tokens' => 4096, // Increased for vision processing
+            ]);
+
+            if (! $res->ok()) {
+                Log::error('OpenAI Vision JSON request failed', ['status' => $res->status(), 'body' => $res->body()]);
+
+                // Log failed request
+                if ($userId) {
+                    OpenAiRequest::logRequest(
+                        userId: $userId,
+                        type: 'vision_json_completion',
+                        tokens: 0,
+                        cost: 0.0,
+                        model: $model,
+                        prompt: $prompt,
+                        response: $res->body(),
+                        successful: false,
+                        error: 'HTTP '.$res->status().': '.$res->body()
+                    );
+                }
+
+                throw new Exception('OpenAI Vision API request failed: '.$res->body());
+            }
+
+            $data = $res->json();
+            $content = $data['choices'][0]['message']['content'] ?? '';
+
+            if (empty($content)) {
+                throw new Exception('OpenAI Vision API returned empty response');
+            }
+
+            $jsonData = json_decode($content, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('OpenAI Vision returned invalid JSON', ['content' => $content]);
+                throw new Exception('OpenAI Vision API returned invalid JSON: '.json_last_error_msg());
+            }
+
+            $tokens = $data['usage']['total_tokens'] ?? 0;
+            $cost = $this->calculateCost($model, $tokens);
+
+            // Log successful request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'vision_json_completion',
+                    tokens: $tokens,
+                    cost: $cost,
+                    model: $model,
+                    prompt: $prompt,
+                    response: $content,
+                    successful: true
+                );
+            }
+
+            Log::info('OpenAI Vision JSON request successful', [
+                'tokens' => $tokens,
+                'cost' => $cost,
+                'model' => $model,
+                'user_id' => $userId,
+            ]);
+
+            return $jsonData;
+
+        } catch (Exception $e) {
+            // Log failed request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'vision_json_completion',
+                    tokens: 0,
+                    cost: 0.0,
+                    model: $model,
+                    prompt: $prompt,
+                    response: $e->getMessage(),
+                    successful: false,
+                    error: $e->getMessage()
+                );
+            }
+
+            Log::error('OpenAI Vision JSON request error', [
+                'error' => $e->getMessage(),
+                'user_id' => $userId,
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Enhanced chatJson method that supports file attachments
+     */
+    public function chatJsonWithFiles(array $messages, float $temperature = 0.1, array $options = []): array
+    {
+        // For now, we'll use the regular chatJson method
+        // File context should be included in the messages
+        return $this->chatJson($messages, $temperature);
+    }
+
     private function calculateCost(string $model, int $tokens): float
     {
         // Rough cost calculation based on current OpenAI pricing (as of 2025)

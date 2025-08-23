@@ -451,7 +451,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                             >
                                 NUMBER OF TASKS
                             </Typography>
-                            
+
                             <Typography
                                 variant="caption"
                                 sx={{

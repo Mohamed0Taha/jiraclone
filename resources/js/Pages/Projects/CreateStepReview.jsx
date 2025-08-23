@@ -36,7 +36,8 @@ const CreateStepReview = memo(({ data, documentAnalysisData, creationMethod }) =
                         ✨ AI Document Analysis Complete
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Project details were extracted from your uploaded document. You can edit any field above if needed.
+                        Project details were extracted from your uploaded document. You can edit any
+                        field above if needed.
                     </Typography>
                 </Alert>
             )}

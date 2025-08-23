@@ -362,7 +362,9 @@ const RegistrationPage = ({ message = null, prefill_email = null }) => {
                                             transition: 'all 0.3s ease',
                                         }}
                                     >
-                                        {processing ? 'Creating Account...' : 'Create Account with Email'}
+                                        {processing
+                                            ? 'Creating Account...'
+                                            : 'Create Account with Email'}
                                     </Button>
 
                                     {/* Login Link */}

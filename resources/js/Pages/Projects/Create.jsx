@@ -72,6 +72,11 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
         nameRef.current?.focus();
     }, []);
 
+    // Debug: Log form data changes
+    useEffect(() => {
+        console.log('Form data changed:', data);
+    }, [data]);
+
     // Auto-suggest key from name
     useEffect(() => {
         if (!data.name || data.meta.__keyTouched) return;
@@ -101,44 +106,205 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
 
     const back = useCallback(() => setActive((n) => Math.max(0, n - 1)), []);
 
-    const handleDocumentAnalyzed = useCallback((analysisData) => {
-        console.log('Received analysis data:', analysisData); // Debug log
-        setDocumentAnalysisData(analysisData);
-        setCreationMethod('document');
-        
-        // Populate form with AI extracted data
-        if (analysisData) {
-            console.log('Updating form data with:', analysisData); // Debug log
-            
-            // Generate key from project name
-            const projectKey = analysisData.name ? generateKeyFromName(analysisData.name) : '';
-            
-            // Update the entire form data object properly
-            setData(prevData => ({
-                ...prevData,
-                name: analysisData.name || '',
+    const handleDocumentAnalyzed = useCallback(
+        (analysisDataRaw) => {
+            console.log('=== DOCUMENT ANALYSIS DEBUG ===');
+            console.log('Raw analysis data:', analysisDataRaw);
+            console.log('Type:', typeof analysisDataRaw);
+            if (Array.isArray(analysisDataRaw)) {
+                console.warn('Analysis data is an array; taking first element.');
+            }
+
+            // Defensive: unwrap array / nested structures some models might return
+            let analysisData = Array.isArray(analysisDataRaw)
+                ? analysisDataRaw[0]
+                : analysisDataRaw;
+            if (
+                analysisData &&
+                typeof analysisData === 'object' &&
+                analysisData.data &&
+                typeof analysisData.data === 'object'
+            ) {
+                console.log('Unwrapping nested data property.');
+                analysisData = analysisData.data;
+            }
+            if (
+                analysisData &&
+                typeof analysisData === 'object' &&
+                analysisData.project &&
+                typeof analysisData.project === 'object'
+            ) {
+                console.log('Unwrapping nested project property.');
+                analysisData = { ...analysisData.project, ...analysisData }; // project fields take precedence
+            }
+
+            if (!analysisData || typeof analysisData !== 'object') {
+                console.warn('Analysis data is not an object; aborting population.');
+                setActive(1);
+                return;
+            }
+
+            // Normalization / fallback field names
+            const name = analysisData.name || analysisData.project_name || analysisData.title || '';
+            const description =
+                analysisData.description ||
+                analysisData.summary ||
+                analysisData.project_description ||
+                '';
+            const objectives =
+                analysisData.objectives ||
+                analysisData.goals ||
+                analysisData.project_objectives ||
+                '';
+            const constraints = analysisData.constraints || analysisData.limitations || '';
+            const risks = analysisData.risks || analysisData.project_risks || '';
+            const primary_stakeholder =
+                analysisData.primary_stakeholder ||
+                analysisData.stakeholder ||
+                analysisData.client ||
+                '';
+            let project_type = analysisData.project_type || analysisData.type || '';
+            let domain = analysisData.domain || analysisData.industry || '';
+            const area = analysisData.area || analysisData.focus_area || '';
+            const location = analysisData.location || analysisData.site || '';
+            const budget = analysisData.budget || analysisData.estimated_budget || '';
+            const start_date =
+                analysisData.start_date || analysisData.start || analysisData.project_start || '';
+            const end_date =
+                analysisData.end_date || analysisData.deadline || analysisData.project_end || '';
+            const team_size =
+                analysisData.team_size ||
+                analysisData.team ||
+                analysisData.estimated_team_size ||
+                data.meta.team_size;
+
+            const projectKey = name ? generateKeyFromName(name) : '';
+
+            console.log('Normalized fields:', {
+                name,
+                projectKey,
+                description,
+                project_type,
+                domain,
+                area,
+                location,
+                team_size,
+                budget,
+                primary_stakeholder,
+                objectives,
+                constraints,
+                start_date,
+                end_date,
+            });
+            console.log('Current form data before update:', data);
+
+            // --- Normalize dropdown selections ---
+            const normalizeDropdown = (incoming, options, aliasMap = {}) => {
+                if (!incoming) return '';
+                let raw = String(incoming).trim();
+                const lower = raw.toLowerCase();
+                // alias direct mapping first
+                if (aliasMap[lower]) raw = aliasMap[lower];
+                // try exact value/label match (case-insensitive)
+                for (const opt of options) {
+                    const val = (opt.value || opt).toString();
+                    const lbl = (opt.label || opt).toString();
+                    if (val.toLowerCase() === lower || lbl.toLowerCase() === lower) return val;
+                }
+                // try title-cased version
+                const title = raw.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+                for (const opt of options) {
+                    const val = (opt.value || opt).toString();
+                    const lbl = (opt.label || opt).toString();
+                    if (val === title || lbl === title) return val;
+                }
+                // fallbacks: alias to first viable generic if not present
+                return '';
+            };
+
+            const projectTypeAlias = {
+                software: 'Software',
+                marketing: 'Marketing',
+                design: 'Design',
+                research: 'Research',
+                construction: 'Construction',
+                consulting: 'Operations', // no Consulting option
+                other: 'Operations',
+            };
+            const domainAlias = {
+                healthcare: 'Healthcare',
+                finance: 'Finance',
+                financial: 'Finance',
+                education: 'Education',
+                retail: 'Retail',
+                'e-commerce': 'E-commerce',
+                ecommerce: 'E-commerce',
+                logistics: 'Logistics',
+                manufacturing: 'Manufacturing',
+                hospitality: 'Hospitality',
+                government: 'Government',
+                nonprofit: 'Nonprofit',
+                energy: 'Energy',
+                telecom: 'Telecom',
+                media: 'Media',
+                travel: 'Travel',
+                saas: 'SaaS',
+                agriculture: 'Agriculture',
+            };
+
+            const mappedProjectType = normalizeDropdown(
+                project_type,
+                projectTypes,
+                projectTypeAlias
+            );
+            const mappedDomain = normalizeDropdown(domain, domains, domainAlias);
+
+            project_type = mappedProjectType || project_type; // keep original for downstream if needed
+            domain = mappedDomain || domain;
+
+            const newData = {
+                ...data,
+                name: name || '',
                 key: projectKey,
-                description: analysisData.description || '',
-                start_date: analysisData.start_date || '',
-                end_date: analysisData.end_date || '',
+                description: description || '',
+                start_date: start_date || '',
+                end_date: end_date || '',
                 meta: {
-                    ...prevData.meta,
-                    project_type: analysisData.project_type || '',
-                    domain: analysisData.domain || '',
-                    area: analysisData.area || '',
-                    location: analysisData.location || '',
-                    team_size: analysisData.team_size || prevData.meta.team_size,
-                    budget: analysisData.budget || '',
-                    primary_stakeholder: analysisData.primary_stakeholder || '',
-                    objectives: analysisData.objectives || '',
-                    constraints: analysisData.constraints || '',
+                    ...data.meta,
+                    project_type: mappedProjectType || project_type || '',
+                    domain: mappedDomain || domain || '',
+                    area: area || '',
+                    location: location || '',
+                    team_size: team_size || data.meta.team_size,
+                    budget: budget || '',
+                    primary_stakeholder: primary_stakeholder || '',
+                    objectives: objectives || '',
+                    constraints: [constraints, risks].filter(Boolean).join('\n'),
                 },
-            }));
-        }
-        
-        // Move to next step
-        setActive(1);
-    }, [setData]);
+            };
+
+            setDocumentAnalysisData(analysisDataRaw);
+            setCreationMethod('document');
+            setData(newData); // IMPORTANT: use standard setData(object) (Inertia useForm)
+            console.log('New form data after population:', newData);
+            console.log('=== END DOCUMENT ANALYSIS DEBUG ===');
+
+            // If critical fields are still empty, stay on step 0 so user can retry / choose manual
+            if (!newData.name && !newData.description) {
+                console.warn('AI did not return name/description; staying on upload step.');
+                window.dispatchEvent(
+                    new CustomEvent('project-ai-empty', {
+                        detail: { reason: 'missing_core_fields' },
+                    })
+                );
+                return;
+            }
+
+            // Advance to basics step
+            setActive(1);
+        },
+        [setData, data, projectTypes, domains]
+    );
 
     const handleManualCreate = useCallback(() => {
         setCreationMethod('manual');
@@ -223,8 +389,8 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
             case 4:
                 return (
                     <Suspense fallback={<StepLoader />}>
-                        <CreateStepReview 
-                            data={data} 
+                        <CreateStepReview
+                            data={data}
                             documentAnalysisData={documentAnalysisData}
                             creationMethod={creationMethod}
                         />

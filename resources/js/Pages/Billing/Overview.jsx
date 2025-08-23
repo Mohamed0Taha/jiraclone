@@ -69,25 +69,28 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
     };
 
     return (
-        <Dialog 
-            open={open} 
+        <Dialog
+            open={open}
             onClose={handleClose}
             maxWidth="sm"
             fullWidth
             PaperProps={{
                 sx: {
                     borderRadius: 3,
-                    background: 'linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))',
+                    background:
+                        'linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))',
                     backdropFilter: 'blur(10px)',
-                }
+                },
             }}
         >
-            <DialogTitle sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                pb: 1
-            }}>
+            <DialogTitle
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    pb: 1,
+                }}
+            >
                 <Stack direction="row" alignItems="center" spacing={1}>
                     <WarningAmberIcon color="warning" />
                     <Typography variant="h6" fontWeight={700}>
@@ -102,11 +105,15 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
             <DialogContent sx={{ pb: 3 }}>
                 {step === 1 && (
                     <Stack spacing={3}>
-                        <Typography variant="body1" sx={{ color: alpha(theme.palette.text.primary, 0.8) }}>
-                            Are you sure you want to cancel your <strong>{planName}</strong> subscription? 
-                            You'll lose access to premium features at the end of your current billing period.
+                        <Typography
+                            variant="body1"
+                            sx={{ color: alpha(theme.palette.text.primary, 0.8) }}
+                        >
+                            Are you sure you want to cancel your <strong>{planName}</strong>{' '}
+                            subscription? You'll lose access to premium features at the end of your
+                            current billing period.
                         </Typography>
-                        
+
                         <Stack direction="row" spacing={2} justifyContent="flex-end">
                             <Button
                                 variant="outlined"
@@ -129,10 +136,13 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
 
                 {step === 2 && (
                     <Stack spacing={3}>
-                        <Typography variant="body1" sx={{ color: alpha(theme.palette.text.primary, 0.8) }}>
+                        <Typography
+                            variant="body1"
+                            sx={{ color: alpha(theme.palette.text.primary, 0.8) }}
+                        >
                             Help us improve by letting us know why you're canceling:
                         </Typography>
-                        
+
                         <FormControl component="fieldset">
                             <RadioGroup
                                 value={selectedReason}
@@ -149,7 +159,7 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
                                 ))}
                             </RadioGroup>
                         </FormControl>
-                        
+
                         <Stack direction="row" spacing={2} justifyContent="flex-end">
                             <Button
                                 variant="outlined"
@@ -422,7 +432,7 @@ export default function BillingOverview({
 }) {
     const theme = useTheme();
     const { flash } = usePage().props;
-    
+
     // Cancellation dialog state
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [cancellingPlanName, setCancellingPlanName] = useState('');
@@ -444,8 +454,8 @@ export default function BillingOverview({
     };
 
     const handleCancelConfirm = (reason) => {
-        router.post(route('billing.cancel'), { 
-            cancellation_reason: reason 
+        router.post(route('billing.cancel'), {
+            cancellation_reason: reason,
         });
     };
 
@@ -583,8 +593,7 @@ export default function BillingOverview({
                             {Array.isArray(plans) &&
                                 plans.map((plan) => {
                                     const isCurrent =
-                                        (subscribed || onTrial) &&
-                                        plan.key === current?.plan_name;
+                                        (subscribed || onTrial) && plan.key === current?.plan_name;
 
                                     return (
                                         <Grid item xs={12} md={4} key={plan.price_id}>

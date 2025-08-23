@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
     Box,
     Typography,
@@ -28,72 +28,115 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
     const [dragOver, setDragOver] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState('');
+    const [aiWarning, setAiWarning] = useState('');
 
-    const handleFileUpload = useCallback(async (file) => {
-        if (!file) return;
-
-        // Validate file type
-        const allowedTypes = [
-            'text/plain',
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/rtf',
-        ];
-
-        if (!allowedTypes.includes(file.type)) {
-            setError('Please upload a text, PDF, Word, or RTF document.');
-            return;
-        }
-
-        // Validate file size (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            setError('File size must be less than 5MB.');
-            return;
-        }
-
-        setUploading(true);
-        setError('');
-
-        const formData = new FormData();
-        formData.append('document', file);
-
-        try {
-            const response = await fetch(route('projects.analyze-document'), {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': getCsrfToken() || '',
-                    'Accept': 'application/json',
-                },
-                credentials: 'same-origin',
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                console.log('AI Analysis Result:', result.data); // Debug log
-                onDocumentAnalyzed(result.data);
-            } else {
-                setError(result.message || 'Failed to analyze document');
+    // Listen for AI empty event
+    useEffect(() => {
+        const handler = (e) => {
+            if (e.detail?.reason === 'missing_core_fields') {
+                setAiWarning(
+                    'AI could not reliably extract the project name or description. You can retry with a clearer document or proceed with manual creation.'
+                );
             }
-        } catch (err) {
-            console.error('Document upload error:', err);
-            setError('Failed to upload and analyze document. Please try again.');
-        } finally {
-            setUploading(false);
-        }
-    }, [onDocumentAnalyzed]);
+        };
+        window.addEventListener('project-ai-empty', handler);
+        return () => window.removeEventListener('project-ai-empty', handler);
+    }, []);
 
-    const handleDrop = useCallback((e) => {
-        e.preventDefault();
-        setDragOver(false);
+    const handleFileUpload = useCallback(
+        async (file) => {
+            if (!file) return;
 
-        const files = Array.from(e.dataTransfer.files);
-        if (files.length > 0) {
-            handleFileUpload(files[0]);
-        }
-    }, [handleFileUpload]);
+            // Validate file type
+            const allowedTypes = [
+                'text/plain',
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/rtf',
+                'text/markdown',
+                'text/x-markdown',
+                'text/csv',
+                'application/csv',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ];
+
+            const name = file.name.toLowerCase();
+            const extAllowed = [
+                '.txt',
+                '.pdf',
+                '.doc',
+                '.docx',
+                '.rtf',
+                '.md',
+                '.markdown',
+                '.csv',
+                '.xls',
+                '.xlsx',
+            ].some((ext) => name.endsWith(ext));
+            if (!allowedTypes.includes(file.type) && !extAllowed) {
+                setError('Allowed types: TXT, PDF, DOC, DOCX, RTF, MD, CSV, XLS, XLSX (max 5MB).');
+                return;
+            }
+
+            // Validate file size (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                setError('File size must be less than 5MB.');
+                return;
+            }
+
+            setUploading(true);
+            setError('');
+
+            const formData = new FormData();
+            formData.append('document', file);
+
+            try {
+                const response = await fetch(route('projects.analyze-document'), {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': getCsrfToken() || '',
+                        Accept: 'application/json',
+                    },
+                    credentials: 'same-origin',
+                });
+
+                const result = await response.json();
+                console.log('Full API response:', result); // Debug log
+
+                if (result.success) {
+                    console.log('AI Analysis Result:', result.data); // Debug log
+                    console.log('Available result.data keys:', Object.keys(result.data)); // Debug log
+                    console.log('Full result structure:', result); // Debug log
+                    onDocumentAnalyzed(result.data);
+                } else {
+                    console.error('API Error:', result.message); // Debug log
+                    setError(result.message || 'Failed to analyze document');
+                }
+            } catch (err) {
+                console.error('Document upload error:', err);
+                setError('Failed to upload and analyze document. Please try again.');
+            } finally {
+                setUploading(false);
+            }
+        },
+        [onDocumentAnalyzed]
+    );
+
+    const handleDrop = useCallback(
+        (e) => {
+            e.preventDefault();
+            setDragOver(false);
+
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        },
+        [handleFileUpload]
+    );
 
     const handleDragOver = useCallback((e) => {
         e.preventDefault();
@@ -105,12 +148,15 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
         setDragOver(false);
     }, []);
 
-    const handleFileInputChange = useCallback((e) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            handleFileUpload(file);
-        }
-    }, [handleFileUpload]);
+    const handleFileInputChange = useCallback(
+        (e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+                handleFileUpload(file);
+            }
+        },
+        [handleFileUpload]
+    );
 
     return (
         <Box sx={{ py: 2 }}>
@@ -136,7 +182,8 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                     mx: 'auto',
                 }}
             >
-                Choose to upload a project requirements document for AI analysis, or create your project manually step by step.
+                Choose to upload a project requirements document for AI analysis, or create your
+                project manually step by step.
             </Typography>
 
             <Stack spacing={3} sx={{ maxWidth: 800, mx: 'auto' }}>
@@ -222,7 +269,8 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 mx: 'auto',
                             }}
                         >
-                            Upload a document and let AI extract project details, timeline, objectives, and constraints automatically.
+                            Upload a document and let AI extract project details, timeline,
+                            objectives, and constraints automatically.
                         </Typography>
 
                         <Box
@@ -263,7 +311,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                         <input
                             id="document-input"
                             type="file"
-                            accept=".txt,.pdf,.doc,.docx,.rtf"
+                            accept=".txt,.pdf,.doc,.docx,.rtf,.md,.markdown,.csv,.xls,.xlsx"
                             style={{ display: 'none' }}
                             onChange={handleFileInputChange}
                             disabled={uploading}
@@ -276,6 +324,16 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 icon={<ErrorIcon />}
                             >
                                 {error}
+                            </Alert>
+                        )}
+
+                        {aiWarning && !error && (
+                            <Alert
+                                severity="warning"
+                                sx={{ mb: 2, textAlign: 'left' }}
+                                icon={<ErrorIcon />}
+                            >
+                                {aiWarning}
                             </Alert>
                         )}
 
@@ -336,14 +394,11 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 mx: 'auto',
                             }}
                         >
-                            Fill out the project details step by step using our guided form with basics, scope, and objectives.
+                            Fill out the project details step by step using our guided form with
+                            basics, scope, and objectives.
                         </Typography>
 
-                        <Button
-                            variant="outlined"
-                            color="secondary"
-                            sx={{ mt: 2 }}
-                        >
+                        <Button variant="outlined" color="secondary" sx={{ mt: 2 }}>
                             Start Manual Creation
                         </Button>
                     </CardContent>

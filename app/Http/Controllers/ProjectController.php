@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
-use App\Services\ProjectReportService;
 use App\Services\ProjectDocumentAnalysisService;
+use App\Services\ProjectReportService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -331,7 +331,7 @@ class ProjectController extends Controller
         $allowed = [
             'project_type', 'domain', 'area', 'location',
             'team_size', 'budget', 'primary_stakeholder',
-            'objectives', 'constraints',
+            'objectives', 'constraints', 'risks',
         ];
         $out = [];
         foreach ($allowed as $k) {
@@ -382,6 +382,9 @@ class ProjectController extends Controller
         }
         if (! empty($meta['constraints'])) {
             $lines[] = 'Constraints: '.$meta['constraints'];
+        }
+        if (! empty($meta['risks'])) {
+            $lines[] = 'Risks: '.$meta['risks'];
         }
 
         return $lines;

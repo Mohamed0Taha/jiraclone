@@ -41,7 +41,8 @@ Route::get('/invitation/{token}', [App\Http\Controllers\ProjectMemberController:
 | Email Debug Helper (shows a RELATIVE-signed link)
 |--------------------------------------------------------------------------
 */
-Route::get('/debug-email', function () {
+// Production cleanup: debug email route disabled
+/* Route::get('/debug-email', function () {
     $user = Auth::user();
     if (! $user) {
         return response('Please log in first', 401);
@@ -67,10 +68,10 @@ Route::get('/debug-email', function () {
         'current_url' => request()->getSchemeAndHttpHost(),
         'is_verified' => $user->email_verified_at !== null,
     ]);
-})->name('debug.email');
+})->name('debug.email'); */
 
 // Development only: Manual email verification
-Route::get('/dev-verify-user/{id}', function ($id) {
+/* Route::get('/dev-verify-user/{id}', function ($id) {
     if (! app()->environment(['local', 'testing'])) {
         abort(404);
     }
@@ -88,7 +89,7 @@ Route::get('/dev-verify-user/{id}', function ($id) {
     Auth::login($user);
 
     return redirect('/dashboard')->with('status', $message);
-})->name('dev.verify.user');
+})->name('dev.verify.user'); */
 
 /*
 |--------------------------------------------------------------------------
@@ -294,7 +295,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/plans', [AdminController::class, 'plans'])->name('plans');
     Route::post('/plans/sync-stripe', [AdminController::class, 'syncPlansFromStripe'])->name('plans.sync');
     Route::post('/plans/update-price', [AdminController::class, 'updateStripePrice'])->name('plans.price.update');
-    
+
     // Refund management routes
     Route::get('/refunds', [AdminController::class, 'refunds'])->name('refunds');
     Route::post('/refunds/process', [AdminController::class, 'processRefund'])->name('refunds.process');
