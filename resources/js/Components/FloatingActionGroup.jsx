@@ -7,6 +7,7 @@ import {
     Close as CloseIcon,
     Lock as LockIcon,
 } from '@mui/icons-material';
+import GetAppIcon from '@mui/icons-material/GetApp';
 import { useSubscription } from '../Hooks/useSubscription';
 import { router } from '@inertiajs/react';
 
@@ -15,6 +16,7 @@ export default function FloatingActionGroup({
     onOpenAssistant,
     methodStyles,
     assistantOpen,
+    projectId,
 }) {
     const [expanded, setExpanded] = useState(false);
     const { shouldShowOverlay, userPlan } = useSubscription();
@@ -33,6 +35,10 @@ export default function FloatingActionGroup({
         // Always allow opening the chat - overlay will be shown on responses instead
         setExpanded(false);
         onOpenAssistant();
+    };
+
+    const handleExportJira = () => {
+        window.location.href = route('projects.export.jira', projectId);
     };
 
     return (
@@ -93,6 +99,29 @@ export default function FloatingActionGroup({
                             }}
                         >
                             <AddIcon />
+                        </Fab>
+                    </Tooltip>
+                </Zoom>
+
+                {/* Export Jira Button */}
+                <Zoom
+                    in={expanded}
+                    timeout={200}
+                    style={{ transitionDelay: expanded ? '150ms' : '0ms' }}
+                >
+                    <Tooltip title="Export Jira CSV" placement="left">
+                        <Fab
+                            size="medium"
+                            onClick={handleExportJira}
+                            sx={{
+                                bgcolor: 'info.main',
+                                color: 'white',
+                                boxShadow: '0 8px 16px -8px rgba(0,0,0,.3)',
+                                '&:hover': { bgcolor: 'info.dark', transform: 'scale(1.05)' },
+                                transition: 'all 0.2s ease',
+                            }}
+                        >
+                            <GetAppIcon />
                         </Fab>
                     </Tooltip>
                 </Zoom>

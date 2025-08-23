@@ -958,6 +958,7 @@ export default function Board({ auth, project = {}, tasks = {}, users = [], isPr
                         onOpenAssistant={() => setAssistantOpen(true)}
                         methodStyles={methodStyles}
                         assistantOpen={assistantOpen}
+                        projectId={project.id}
                     />
 
                     {/* Create/Edit */}

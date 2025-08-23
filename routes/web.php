@@ -104,6 +104,11 @@ Route::get('/health', fn () => response()->json([
     'laravel' => app()->version(),
 ]));
 
+// Export project tasks (Jira CSV format)
+Route::get('/projects/{project}/export/jira', [ProjectController::class, 'exportJira'])
+    ->middleware('auth')
+    ->name('projects.export.jira');
+
 /*
 |--------------------------------------------------------------------------
 | Google OAuth
@@ -295,7 +300,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/plans', [AdminController::class, 'plans'])->name('plans');
     Route::post('/plans/sync-stripe', [AdminController::class, 'syncPlansFromStripe'])->name('plans.sync');
     Route::post('/plans/update-price', [AdminController::class, 'updateStripePrice'])->name('plans.price.update');
-
+    
     // Refund management routes
     Route::get('/refunds', [AdminController::class, 'refunds'])->name('refunds');
     Route::post('/refunds/process', [AdminController::class, 'processRefund'])->name('refunds.process');
