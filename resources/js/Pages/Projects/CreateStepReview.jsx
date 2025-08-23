@@ -13,7 +13,7 @@ const ReviewLine = memo(({ label, value }) => (
     </Stack>
 ));
 
-const CreateStepReview = memo(({ data }) => {
+const CreateStepReview = memo(({ data, documentAnalysisData, creationMethod }) => {
     const formatDate = (dateStr) => {
         if (!dateStr) return '';
         return new Date(dateStr).toLocaleDateString();
@@ -29,6 +29,17 @@ const CreateStepReview = memo(({ data }) => {
                     Please review your project details before creating.
                 </Typography>
             </Box>
+
+            {creationMethod === 'document' && documentAnalysisData && (
+                <Alert severity="success" sx={{ mb: 3 }}>
+                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
+                        ✨ AI Document Analysis Complete
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Project details were extracted from your uploaded document. You can edit any field above if needed.
+                    </Typography>
+                </Alert>
+            )}
 
             <Alert severity="info" sx={{ mb: 3 }}>
                 You can edit these details later in the project settings.
