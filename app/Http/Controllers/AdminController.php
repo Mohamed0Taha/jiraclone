@@ -9,13 +9,13 @@ use App\Models\RefundLog;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\File;
 use Laravel\Cashier\Subscription;
 
 class AdminController extends Controller
@@ -54,6 +54,7 @@ class AdminController extends Controller
             ]);
         }
     }
+
     public function users(Request $request)
     {
         $query = User::query();
@@ -228,12 +229,14 @@ class AdminController extends Controller
         try {
             // Update the user's subscription to the new plan
             $this->updateUserSubscription($user, $targetPlan);
-            
+
             $message = "User {$user->name} upgraded from {$currentPlan} to {$targetPlan} plan successfully!";
+
             return redirect()->route('admin.users')->with('success', $message);
-            
+
         } catch (\Exception $e) {
             Log::error("Error upgrading user {$user->id} to {$targetPlan}: ".$e->getMessage());
+
             return redirect()->route('admin.users')->with('error', 'Error upgrading user: '.$e->getMessage());
         }
     }
@@ -243,9 +246,9 @@ class AdminController extends Controller
         // Get the real Stripe price ID from config first
         $plans = config('subscriptions.plans');
         $stripePriceId = $plans[$plan]['price_id'] ?? null;
-        
+
         // Fallback to manual price ID if config price ID not available
-        if (!$stripePriceId) {
+        if (! $stripePriceId) {
             $stripePriceId = match ($plan) {
                 'basic' => 'price_manual_basic',
                 'pro' => 'price_manual_pro',
@@ -255,13 +258,13 @@ class AdminController extends Controller
         }
 
         // Create fake Stripe customer ID for manual subscriptions if user doesn't have one
-        if (!$user->stripe_id) {
+        if (! $user->stripe_id) {
             $user->update(['stripe_id' => 'cus_manual_'.$user->id]);
         }
 
         // Create subscription record
         $subscription = $user->subscriptions()->create([
-            'name' => 'default',
+            'type' => 'default',  // Use 'type' instead of 'name'
             'stripe_id' => 'sub_manual_'.$user->id.'_'.time(),
             'stripe_status' => 'active',
             'stripe_price' => $stripePriceId,
@@ -290,17 +293,17 @@ class AdminController extends Controller
                 // Get the real Stripe price ID from config
                 $plans = config('subscriptions.plans');
                 $stripePriceId = $plans[$action]['price_id'] ?? null;
-                
+
                 // Fallback to manual price ID if config price ID not available
-                if (!$stripePriceId) {
+                if (! $stripePriceId) {
                     $stripePriceId = match ($action) {
                         'basic' => 'price_manual_basic',
-                        'pro' => 'price_manual_pro', 
+                        'pro' => 'price_manual_pro',
                         'business' => 'price_manual_business',
                         default => 'price_manual_basic'
                     };
                 }
-                
+
                 if ($currentSub) {
                     // Update existing subscription
                     $currentSub->update([
@@ -330,7 +333,9 @@ class AdminController extends Controller
         if (empty(config('cashier.secret'))) {
             $errorMessages[] = 'Stripe key not configured; showing local data only.';
         } else {
-            try { \Stripe\Stripe::setApiKey(config('cashier.secret')); } catch (\Exception $e) {
+            try {
+                \Stripe\Stripe::setApiKey(config('cashier.secret'));
+            } catch (\Exception $e) {
                 $errorMessages[] = 'Failed to init Stripe: '.$e->getMessage();
             }
         }
@@ -347,7 +352,7 @@ class AdminController extends Controller
             $errorMessages[] = 'refund_logs table missing (run migrations).';
         } else {
             try {
-                $refunds = RefundLog::with(['user','processedBy'])->latest('processed_at')->paginate(20);
+                $refunds = RefundLog::with(['user', 'processedBy'])->latest('processed_at')->paginate(20);
                 $stats = [
                     'total_refunds' => RefundLog::count(),
                     'total_amount' => RefundLog::sum('amount'),
@@ -368,13 +373,15 @@ class AdminController extends Controller
 
         // Users + Stripe data (for context when issuing refunds)
         try {
-            $users = User::with(['subscriptions' => function ($q) { $q->latest(); }])
+            $users = User::with(['subscriptions' => function ($q) {
+                $q->latest();
+            }])
                 ->whereNotNull('stripe_id')
                 ->orderBy('name')
                 ->get()
                 ->map(function ($user) {
                     $subscription = $user->subscriptions()->first();
-                    $stripeData = ['customer' => null,'payments' => [],'invoices' => []];
+                    $stripeData = ['customer' => null, 'payments' => [], 'invoices' => []];
                     if ($user->stripe_id && config('cashier.secret')) {
                         try {
                             $stripeData['customer'] = $user->asStripeCustomer();
@@ -405,12 +412,14 @@ class AdminController extends Controller
                                             ];
                                         }
                                     }
-                                } catch (\Exception $e) { /* ignore per-user invoice errors */ }
+                                } catch (\Exception $e) { /* ignore per-user invoice errors */
+                                }
                             }
                         } catch (\Exception $e) {
                             $stripeData['error'] = $e->getMessage();
                         }
                     }
+
                     return [
                         'user' => $user,
                         'subscription' => $subscription,
@@ -423,11 +432,12 @@ class AdminController extends Controller
             $errorMessages[] = 'Error loading users: '.$e->getMessage();
         }
 
-        $view = view('admin.refunds', compact('stats','users'))
+        $view = view('admin.refunds', compact('stats', 'users'))
             ->with(['refundLogs' => $refunds, 'refunds' => $refunds]);
-        if (!empty($errorMessages)) {
+        if (! empty($errorMessages)) {
             $view->with('error', implode(' | ', $errorMessages));
         }
+
         return $view;
     }
 
@@ -707,14 +717,16 @@ class AdminController extends Controller
         if (session()->has('stripePlans')) {
             $stripePlans = collect(session('stripePlans'));
         } else {
-            if (!config('cashier.secret')) {
+            if (! config('cashier.secret')) {
                 $stripeError = 'Stripe secret not configured';
             } else {
                 try {
                     \Stripe\Stripe::setApiKey(config('cashier.secret'));
                     foreach ($configPlans as $slug => $planConfig) {
                         $priceId = $planConfig['price_id'] ?? null;
-                        if (!$priceId) continue;
+                        if (! $priceId) {
+                            continue;
+                        }
                         try {
                             $price = \Stripe\Price::retrieve(['id' => $priceId, 'expand' => ['product']]);
                             $productName = $price->product->name ?? $price->nickname ?? 'Unknown';
@@ -722,7 +734,7 @@ class AdminController extends Controller
                                 'name' => $productName,
                                 'price_id' => $price->id,
                                 'plan_key' => $slug,
-                                'amount' => ($price->unit_amount ?? 0)/100,
+                                'amount' => ($price->unit_amount ?? 0) / 100,
                                 'currency' => strtoupper($price->currency ?? 'USD'),
                                 'interval' => $price->recurring->interval ?? 'month',
                             ]);
@@ -752,8 +764,8 @@ class AdminController extends Controller
 
     public function syncPlansFromStripe(Request $request)
     {
-        if (!config('cashier.secret')) {
-            return redirect()->route('admin.plans')->with('error','Stripe secret key not configured.');
+        if (! config('cashier.secret')) {
+            return redirect()->route('admin.plans')->with('error', 'Stripe secret key not configured.');
         }
         $configPlans = config('plans.plans', []);
         $priceIds = collect($configPlans)->pluck('price_id')->filter()->unique()->values();
@@ -762,14 +774,16 @@ class AdminController extends Controller
             \Stripe\Stripe::setApiKey(config('cashier.secret'));
             foreach ($configPlans as $slug => $planConfig) {
                 $priceId = $planConfig['price_id'] ?? null;
-                if (!$priceId) continue;
+                if (! $priceId) {
+                    continue;
+                }
                 try {
                     $price = \Stripe\Price::retrieve(['id' => $priceId, 'expand' => ['product']]);
                     $fresh[] = [
                         'name' => $price->product->name ?? $price->nickname ?? 'Unknown',
                         'price_id' => $price->id,
                         'plan_key' => $slug,
-                        'amount' => ($price->unit_amount ?? 0)/100,
+                        'amount' => ($price->unit_amount ?? 0) / 100,
                         'currency' => strtoupper($price->currency ?? 'USD'),
                         'interval' => $price->recurring->interval ?? 'month',
                     ];
@@ -786,30 +800,31 @@ class AdminController extends Controller
                 }
             }
             session(['stripePlans' => $fresh]);
-            return redirect()->route('admin.plans')->with('success','Stripe data refreshed. Showing live Stripe values only.');
+
+            return redirect()->route('admin.plans')->with('success', 'Stripe data refreshed. Showing live Stripe values only.');
         } catch (\Throwable $e) {
-            return redirect()->route('admin.plans')->with('error','Stripe sync failed: '.$e->getMessage());
+            return redirect()->route('admin.plans')->with('error', 'Stripe sync failed: '.$e->getMessage());
         }
     }
 
     public function updateStripePrice(Request $request)
     {
         $data = $request->validate([
-            'price_id' => ['required','string'],
-            'amount' => ['required','numeric','min:0.5'], // minimal half unit
+            'price_id' => ['required', 'string'],
+            'amount' => ['required', 'numeric', 'min:0.5'], // minimal half unit
         ]);
-        if (!config('cashier.secret')) {
-            return redirect()->route('admin.plans')->with('error','Stripe secret not configured.');
+        if (! config('cashier.secret')) {
+            return redirect()->route('admin.plans')->with('error', 'Stripe secret not configured.');
         }
-        
+
         // Debug: Log what we received
         \Illuminate\Support\Facades\Log::info('updateStripePrice received:', $data);
-        
+
         // If plan_key is missing, try to find it by price_id
         if (empty($data['plan_key']) || $data['plan_key'] === 'debug-missing') {
             $configPlans = config('plans.plans', []);
             \Illuminate\Support\Facades\Log::info('Config plans:', $configPlans);
-            
+
             foreach ($configPlans as $slug => $planConfig) {
                 $configPriceId = $planConfig['price_id'] ?? null;
                 \Illuminate\Support\Facades\Log::info("Comparing {$data['price_id']} with {$configPriceId} for plan {$slug}");
@@ -820,11 +835,12 @@ class AdminController extends Controller
                 }
             }
         }
-        
+
         if (empty($data['plan_key'])) {
             $configPlans = config('plans.plans', []);
-            $debugInfo = "Config plans: " . json_encode($configPlans) . " | Looking for price_id: " . $data['price_id'];
-            return redirect()->route('admin.plans')->with('error','Could not determine plan key for price ID: ' . $data['price_id'] . ' | DEBUG: ' . $debugInfo);
+            $debugInfo = 'Config plans: '.json_encode($configPlans).' | Looking for price_id: '.$data['price_id'];
+
+            return redirect()->route('admin.plans')->with('error', 'Could not determine plan key for price ID: '.$data['price_id'].' | DEBUG: '.$debugInfo);
         }
         try {
             \Stripe\Stripe::setApiKey(config('cashier.secret'));
@@ -834,9 +850,9 @@ class AdminController extends Controller
             $newPrice = \Stripe\Price::create([
                 'unit_amount' => $newAmount,
                 'currency' => $old->currency,
-                'recurring' => [ 'interval' => $old->recurring->interval ],
+                'recurring' => ['interval' => $old->recurring->interval],
                 'product' => $productId,
-                'metadata' => [ 
+                'metadata' => [
                     'replaces_price' => $old->id,
                     'plan_key' => $data['plan_key'], // Add plan key for better plan identification
                 ],
@@ -844,42 +860,43 @@ class AdminController extends Controller
 
             // Update session stripePlans to reflect new price
             $plans = collect(session('stripePlans', []));
-            $plans = $plans->map(function($row) use ($newPrice, $old, $data) {
+            $plans = $plans->map(function ($row) use ($newPrice, $old, $data) {
                 if (($row['price_id'] ?? null) === $old->id) {
                     return [
                         'name' => $row['name'],
                         'price_id' => $newPrice->id,
                         'plan_key' => $data['plan_key'],
-                        'amount' => ($newPrice->unit_amount ?? 0)/100,
+                        'amount' => ($newPrice->unit_amount ?? 0) / 100,
                         'currency' => strtoupper($newPrice->currency ?? 'USD'),
                         'interval' => $newPrice->recurring->interval ?? 'month',
                     ];
                 }
+
                 return $row;
             });
-            
+
             // Refresh the plans list in session to show updated data immediately
             session(['stripePlans' => $plans->all()]);
-            
+
             // Use the provided plan_key to determine env variable
             $envKey = 'STRIPE_PRICE_'.strtoupper($data['plan_key']);
 
             // Build comprehensive status message
             $statusMsg = "✅ New Stripe price created: {$newPrice->id}";
             $statusMsg .= "<br>💰 Updated {$data['plan_key']} plan to \${$data['amount']}/month";
-            
+
             if ($envKey) {
                 $envResult = $this->updateEnvironmentVariable($envKey, $newPrice->id);
-                $statusMsg .= "<br>🔧 Environment Update: " . $envResult;
+                $statusMsg .= '<br>🔧 Environment Update: '.$envResult;
             } else {
-                $statusMsg .= "<br>⚠️ Please update your environment configuration to reference this new price ID.";
+                $statusMsg .= '<br>⚠️ Please update your environment configuration to reference this new price ID.';
             }
-            
-            $statusMsg .= "<br>🔄 Plans list refreshed with latest data from Stripe.";
+
+            $statusMsg .= '<br>🔄 Plans list refreshed with latest data from Stripe.';
 
             return redirect()->route('admin.plans')->with('success', $statusMsg);
         } catch (\Throwable $e) {
-            return redirect()->route('admin.plans')->with('error','Price update failed: '.$e->getMessage());
+            return redirect()->route('admin.plans')->with('error', 'Price update failed: '.$e->getMessage());
         }
     }
 
@@ -1012,34 +1029,41 @@ class AdminController extends Controller
 
     private function getPlanName($stripePriceId)
     {
-        if (! $stripePriceId) return 'Unknown';
+        if (! $stripePriceId) {
+            return 'Unknown';
+        }
         try {
             // Check configured env price IDs mapping
             $configPlans = config('plans.plans', []);
             foreach ($configPlans as $slug => $cfg) {
-                if (!empty($cfg['price_id']) && $cfg['price_id'] === $stripePriceId) {
+                if (! empty($cfg['price_id']) && $cfg['price_id'] === $stripePriceId) {
                     return $cfg['name'];
                 }
             }
         } catch (\Throwable $e) {
             // ignore and fallback
         }
+
         return 'Unknown';
     }
 
     private function getPlanPrice($stripePriceId)
     {
-        if (! $stripePriceId) return 0;
+        if (! $stripePriceId) {
+            return 0;
+        }
         try {
             // Get price directly from Stripe
             if (config('cashier.secret')) {
                 \Stripe\Stripe::setApiKey(config('cashier.secret'));
                 $price = \Stripe\Price::retrieve($stripePriceId);
+
                 return ($price->unit_amount ?? 0) / 100; // Convert from cents
             }
         } catch (\Throwable $e) {
             // ignore and fallback
         }
+
         return 0;
     }
 
@@ -1051,14 +1075,14 @@ class AdminController extends Controller
         // Get user counts per segment for better admin visibility
         $allUsers = User::all();
         $segmentCounts = [];
-        
+
         foreach (['free', 'basic', 'pro', 'business'] as $segment) {
-            $count = $allUsers->filter(function($user) use ($segment) {
+            $count = $allUsers->filter(function ($user) use ($segment) {
                 return $user->getCurrentPlan() === $segment;
             })->count();
             $segmentCounts[$segment] = $count;
         }
-        
+
         return view('admin.broadcast-email', compact('segmentCounts'));
     }
 
@@ -1081,11 +1105,11 @@ class AdminController extends Controller
 
         // Build user collection based on segments using proper plan detection
         $segmentUsers = collect();
-        
-        if (!empty($segments)) {
+
+        if (! empty($segments)) {
             // Get all users and filter by their current plan using the getCurrentPlan() method
             $allUsers = User::all(['id', 'name', 'email']);
-            
+
             foreach ($allUsers as $user) {
                 $currentPlan = $user->getCurrentPlan();
                 if (in_array($currentPlan, $segments)) {
@@ -1095,15 +1119,16 @@ class AdminController extends Controller
         }
 
         // Build collection of direct recipient user models (ensure they exist or create lightweight temp objects)
-        $directUserModels = User::whereIn('email', $directEmails)->get(['id','name','email']);
+        $directUserModels = User::whereIn('email', $directEmails)->get(['id', 'name', 'email']);
         // For any direct emails not in database, create transient user-like objects
         $existingEmails = $directUserModels->pluck('email')->all();
-        $missing = $directEmails->reject(fn($e) => in_array($e, $existingEmails));
-        $missingModels = $missing->map(function($email){
-            $u = new User();
+        $missing = $directEmails->reject(fn ($e) => in_array($e, $existingEmails));
+        $missingModels = $missing->map(function ($email) {
+            $u = new User;
             $u->id = 0; // sentinel
             $u->name = $email; // fallback to email as name
             $u->email = $email;
+
             return $u;
         });
 
@@ -1117,7 +1142,7 @@ class AdminController extends Controller
 
         $sent = 0;
         $failed = 0;
-        
+
         foreach ($allRecipients as $user) {
             try {
                 // Use the same approach as contact form for better reliability
@@ -1126,7 +1151,7 @@ class AdminController extends Controller
                     $request->message,
                     $user
                 ));
-                
+
                 // Log the email like contact form does
                 \App\Models\EmailLog::logEmail(
                     toEmail: $user->email,
@@ -1137,11 +1162,11 @@ class AdminController extends Controller
                     userId: $user->id,
                     success: true
                 );
-                
+
                 $sent++;
             } catch (\Exception $e) {
                 $failed++;
-                
+
                 // Log failed email
                 \App\Models\EmailLog::logEmail(
                     toEmail: $user->email,
@@ -1153,10 +1178,10 @@ class AdminController extends Controller
                     success: false,
                     error: $e->getMessage()
                 );
-                
+
                 Log::warning('Broadcast email failed: '.$e->getMessage(), [
                     'user_email' => $user->email,
-                    'subject' => $request->subject
+                    'subject' => $request->subject,
                 ]);
             }
         }
@@ -1176,22 +1201,22 @@ class AdminController extends Controller
     private function updateEnvironmentVariable($key, $value)
     {
         $environment = $this->detectEnvironment();
-        
+
         switch ($environment) {
             case 'local':
                 return $this->updateLocalEnvFile($key, $value);
-                
+
             case 'heroku':
                 return $this->updateHerokuConfigVars($key, $value);
-                
+
             case 'production':
                 return $this->handleProductionEnvironment($key, $value);
-                
+
             default:
                 return "Please update your environment variable manually: {$key}={$value}";
         }
     }
-    
+
     /**
      * Detect the current environment type
      */
@@ -1201,27 +1226,27 @@ class AdminController extends Controller
         $herokuAppName = getenv('HEROKU_APP_NAME');
         $herokuDyno = getenv('DYNO');
         $herokuSlug = getenv('HEROKU_SLUG_COMMIT');
-        
+
         if ($herokuDyno || $herokuAppName || $herokuSlug) {
             // Verify it's our specific app for better detection
             if ($herokuAppName === 'laravel-react-automation-app' || $herokuDyno || $herokuSlug) {
                 return 'heroku';
             }
         }
-        
+
         // Check if local development environment
         if (app()->environment(['local', 'development'])) {
             return 'local';
         }
-        
+
         // Check other production indicators
         if (app()->environment('production')) {
             return 'production';
         }
-        
+
         return 'unknown';
     }
-    
+
     /**
      * Update local .env file
      */
@@ -1229,37 +1254,37 @@ class AdminController extends Controller
     {
         try {
             $envPath = base_path('.env');
-            
-            if (!File::exists($envPath) || !is_writable($envPath)) {
+
+            if (! File::exists($envPath) || ! is_writable($envPath)) {
                 return "❌ .env file not found or not writable. Please update {$key}={$value} manually.";
             }
-            
+
             $content = File::get($envPath);
-            $pattern = '/^'.preg_quote($key,'/').'=.*/m';
+            $pattern = '/^'.preg_quote($key, '/').'=.*/m';
             $replacement = $key.'='.$value;
-            
+
             if (preg_match($pattern, $content)) {
                 $content = preg_replace($pattern, $replacement, $content, 1);
             } else {
                 $content .= PHP_EOL.$replacement.PHP_EOL;
             }
-            
+
             File::put($envPath, $content);
-            
+
             // Clear config cache so next request picks up new value
-            try { 
-                Artisan::call('config:clear'); 
+            try {
+                Artisan::call('config:clear');
             } catch (\Throwable $e) {
                 // Ignore cache clear errors
             }
-            
+
             return "✅ Updated {$key} in .env file automatically.";
-            
+
         } catch (\Throwable $e) {
             return "❌ Failed to auto-update .env: {$e->getMessage()}. Please update {$key}={$value} manually.";
         }
     }
-    
+
     /**
      * Update Heroku config variables
      */
@@ -1267,20 +1292,22 @@ class AdminController extends Controller
     {
         try {
             $updated = $this->updateHerokuConfigVar($key, $value);
-            
+
             if ($updated) {
                 return "✅ Automatically updated {$key} in Heroku config vars.";
             } else {
                 $appName = env('HEROKU_APP_NAME', 'laravel-react-automation-app');
+
                 return "⚠️ Auto-update failed. Run manually: heroku config:set {$key}={$value} -a {$appName}";
             }
-            
+
         } catch (\Throwable $e) {
             $appName = env('HEROKU_APP_NAME', 'laravel-react-automation-app');
+
             return "⚠️ Auto-update failed: {$e->getMessage()}. Run manually: heroku config:set {$key}={$value} -a {$appName}";
         }
     }
-    
+
     /**
      * Handle production environment (non-Heroku)
      */
@@ -1291,8 +1318,8 @@ class AdminController extends Controller
         $instructions .= "Common methods:\n";
         $instructions .= "• Docker: Update your environment file or docker-compose.yml\n";
         $instructions .= "• Server: Update your web server environment variables\n";
-        $instructions .= "• CI/CD: Update your deployment pipeline configuration";
-        
+        $instructions .= '• CI/CD: Update your deployment pipeline configuration';
+
         return $instructions;
     }
 
@@ -1305,17 +1332,18 @@ class AdminController extends Controller
             // Get required Heroku details
             $herokuApiToken = env('HEROKU_API_TOKEN');
             $herokuAppName = env('HEROKU_APP_NAME', 'laravel-react-automation-app');
-            
-            if (!$herokuApiToken) {
+
+            if (! $herokuApiToken) {
                 \Illuminate\Support\Facades\Log::info('HEROKU_API_TOKEN not set, cannot auto-update config vars');
+
                 return false;
             }
 
             // Make API request to Heroku Platform API
             $url = "https://api.heroku.com/apps/{$herokuAppName}/config-vars";
-            
+
             $data = json_encode([$key => $value]);
-            
+
             $ch = curl_init();
             curl_setopt_array($ch, [
                 CURLOPT_URL => $url,
@@ -1325,26 +1353,29 @@ class AdminController extends Controller
                 CURLOPT_HTTPHEADER => [
                     'Content-Type: application/json',
                     'Accept: application/vnd.heroku+json; version=3',
-                    'Authorization: Bearer ' . $herokuApiToken,
+                    'Authorization: Bearer '.$herokuApiToken,
                 ],
                 CURLOPT_SSL_VERIFYPEER => true,
                 CURLOPT_TIMEOUT => 30,
             ]);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            
+
             if ($httpCode >= 200 && $httpCode < 300) {
                 \Illuminate\Support\Facades\Log::info("Successfully updated Heroku config var: {$key}={$value}");
+
                 return true;
             } else {
                 \Illuminate\Support\Facades\Log::error("Heroku API error: HTTP {$httpCode}, Response: {$response}");
+
                 return false;
             }
-            
+
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to update Heroku config var: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Failed to update Heroku config var: '.$e->getMessage());
+
             return false;
         }
     }
