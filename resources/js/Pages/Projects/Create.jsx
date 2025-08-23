@@ -22,6 +22,7 @@ import {
 import SaveIcon from '@mui/icons-material/Save';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { validateStep, generateKeyFromName } from './CreateFormValidation';
+import DocumentUploadStep from './DocumentUploadStep';
 
 // Lazy load form steps for better performance
 const CreateStepBasics = lazy(() => import('./CreateStepBasics'));
@@ -38,8 +39,10 @@ const StepLoader = () => (
 
 export default function Create({ auth, projectTypes = [], domains = [] }) {
     const theme = useTheme();
-    const steps = ['Basics', 'Scope & Team', 'Objectives', 'Review'];
+    const steps = ['Method', 'Basics', 'Scope & Team', 'Objectives', 'Review'];
     const [active, setActive] = useState(0);
+    const [creationMethod, setCreationMethod] = useState(null); // 'manual' or 'document'
+    const [documentAnalysisData, setDocumentAnalysisData] = useState(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
@@ -87,11 +90,52 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
     const validate = useCallback((idx) => validateStep(idx, data, setLocalErrors), [data]);
 
     const next = useCallback(() => {
+        // Skip validation for method selection step
+        if (active === 0) {
+            setActive((n) => Math.min(steps.length - 1, n + 1));
+            return;
+        }
         if (!validate(active)) return;
         setActive((n) => Math.min(steps.length - 1, n + 1));
     }, [active, validate, steps.length]);
 
     const back = useCallback(() => setActive((n) => Math.max(0, n - 1)), []);
+
+    const handleDocumentAnalyzed = useCallback((analysisData) => {
+        setDocumentAnalysisData(analysisData);
+        setCreationMethod('document');
+        
+        // Populate form with AI extracted data
+        if (analysisData) {
+            setData({
+                ...data,
+                name: analysisData.name || '',
+                description: analysisData.description || '',
+                start_date: analysisData.start_date || '',
+                end_date: analysisData.end_date || '',
+                meta: {
+                    ...data.meta,
+                    project_type: analysisData.project_type || '',
+                    domain: analysisData.domain || '',
+                    area: analysisData.area || '',
+                    location: analysisData.location || '',
+                    team_size: analysisData.team_size || data.meta.team_size,
+                    budget: analysisData.budget || '',
+                    primary_stakeholder: analysisData.primary_stakeholder || '',
+                    objectives: analysisData.objectives || '',
+                    constraints: analysisData.constraints || '',
+                },
+            });
+        }
+        
+        // Move to next step
+        setActive(1);
+    }, [data, setData]);
+
+    const handleManualCreate = useCallback(() => {
+        setCreationMethod('manual');
+        setActive(1);
+    }, []);
 
     const submit = useCallback(
         (e) => {
@@ -145,26 +189,37 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
         switch (active) {
             case 0:
                 return (
-                    <Suspense fallback={<StepLoader />}>
-                        <CreateStepBasics {...commonProps} nameRef={nameRef} />
-                    </Suspense>
+                    <DocumentUploadStep
+                        onDocumentAnalyzed={handleDocumentAnalyzed}
+                        onManualCreate={handleManualCreate}
+                    />
                 );
             case 1:
                 return (
                     <Suspense fallback={<StepLoader />}>
-                        <CreateStepScope {...commonProps} />
+                        <CreateStepBasics {...commonProps} nameRef={nameRef} />
                     </Suspense>
                 );
             case 2:
                 return (
                     <Suspense fallback={<StepLoader />}>
-                        <CreateStepObjectives {...commonProps} />
+                        <CreateStepScope {...commonProps} />
                     </Suspense>
                 );
             case 3:
                 return (
                     <Suspense fallback={<StepLoader />}>
-                        <CreateStepReview data={data} />
+                        <CreateStepObjectives {...commonProps} />
+                    </Suspense>
+                );
+            case 4:
+                return (
+                    <Suspense fallback={<StepLoader />}>
+                        <CreateStepReview 
+                            data={data} 
+                            documentAnalysisData={documentAnalysisData}
+                            creationMethod={creationMethod}
+                        />
                     </Suspense>
                 );
             default:
@@ -329,40 +384,43 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
                                 <form onSubmit={submit}>
                                     <Box sx={{ mb: 4, minHeight: 400 }}>{renderStepContent()}</Box>
 
-                                    <Stack
-                                        direction="row"
-                                        spacing={2}
-                                        justifyContent="space-between"
-                                    >
-                                        <Button
-                                            disabled={active === 0}
-                                            onClick={back}
-                                            variant="outlined"
-                                            sx={{ textTransform: 'none' }}
+                                    {/* Hide navigation buttons on method selection step */}
+                                    {active > 0 && (
+                                        <Stack
+                                            direction="row"
+                                            spacing={2}
+                                            justifyContent="space-between"
                                         >
-                                            Back
-                                        </Button>
+                                            <Button
+                                                disabled={active === 1}
+                                                onClick={back}
+                                                variant="outlined"
+                                                sx={{ textTransform: 'none' }}
+                                            >
+                                                Back
+                                            </Button>
 
-                                        {active === steps.length - 1 ? (
-                                            <Button
-                                                type="submit"
-                                                variant="contained"
-                                                disabled={processing}
-                                                startIcon={<SaveIcon />}
-                                                sx={{ textTransform: 'none', fontWeight: 600 }}
-                                            >
-                                                {processing ? 'Creating...' : 'Create Project'}
-                                            </Button>
-                                        ) : (
-                                            <Button
-                                                onClick={next}
-                                                variant="contained"
-                                                sx={{ textTransform: 'none', fontWeight: 600 }}
-                                            >
-                                                Next: {steps[active + 1]}
-                                            </Button>
-                                        )}
-                                    </Stack>
+                                            {active === steps.length - 1 ? (
+                                                <Button
+                                                    type="submit"
+                                                    variant="contained"
+                                                    disabled={processing}
+                                                    startIcon={<SaveIcon />}
+                                                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                                                >
+                                                    {processing ? 'Creating...' : 'Create Project'}
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    onClick={next}
+                                                    variant="contained"
+                                                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                                                >
+                                                    Next: {steps[active + 1]}
+                                                </Button>
+                                            )}
+                                        </Stack>
+                                    )}
                                 </form>
                             </Paper>
                         </Fade>

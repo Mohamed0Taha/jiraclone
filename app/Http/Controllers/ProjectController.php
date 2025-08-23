@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\ProjectReportService;
+use App\Services\ProjectDocumentAnalysisService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -101,6 +102,33 @@ class ProjectController extends Controller
             'projectTypes' => $this->projectTypeOptions(),
             'domains' => $this->domainOptions(),
         ]);
+    }
+
+    /**
+     * Analyze uploaded project requirements document and extract project data
+     */
+    public function analyzeDocument(Request $request, ProjectDocumentAnalysisService $analysisService)
+    {
+        $request->validate([
+            'document' => 'required|file|max:5120', // 5MB max
+        ]);
+
+        try {
+            $file = $request->file('document');
+            $extractedData = $analysisService->analyzeDocument($file);
+
+            return response()->json([
+                'success' => true,
+                'data' => $extractedData,
+                'message' => 'Document analyzed successfully',
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     public function store(Request $request): RedirectResponse

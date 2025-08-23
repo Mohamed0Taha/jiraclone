@@ -294,7 +294,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/plans', [AdminController::class, 'plans'])->name('plans');
     Route::post('/plans/sync-stripe', [AdminController::class, 'syncPlansFromStripe'])->name('plans.sync');
     Route::post('/plans/update-price', [AdminController::class, 'updateStripePrice'])->name('plans.price.update');
-
+    
     // Refund management routes
     Route::get('/refunds', [AdminController::class, 'refunds'])->name('refunds');
     Route::post('/refunds/process', [AdminController::class, 'processRefund'])->name('refunds.process');
@@ -328,6 +328,7 @@ Route::middleware('auth')->group(function () {
     /* Projects */
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
+    Route::post('/projects/analyze-document', [ProjectController::class, 'analyzeDocument'])->name('projects.analyze-document');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
 
     // Single, canonical AI PDF endpoint (premium feature - reports)
