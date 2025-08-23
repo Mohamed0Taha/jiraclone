@@ -17,7 +17,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('admin.broadcast-email.send') }}" class="space-y-8">
+        <form method="POST" action="{{ route('admin.broadcast-email.send') }}" class="space-y-8" onsubmit="debugFormSubmission(event)">
             @csrf
 
             <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm space-y-5">
@@ -54,6 +54,10 @@
 
                 <!-- Selected Chips Display (segments + direct emails) -->
                 <div id="selectedContainer" class="min-h-[2.25rem] flex flex-wrap gap-2"></div>
+                
+                <!-- Hidden inputs container for form submission -->
+                <div id="hiddenInputsContainer"></div>
+                
                 <p class="mt-2 text-[11px] leading-snug text-gray-500">Click a segment to add or type an email then press Enter. Remove with the × button. Free Tier = users without an active subscription.</p>
                 <!-- Tailwind safelist helper (hidden) -->
                 <div class="hidden">
@@ -94,17 +98,18 @@
 
     <x-slot name="scripts">
         <script>
-            const chips = document.querySelectorAll('.segment-chip');
-            const selectedContainer = document.getElementById('selectedContainer');
-            const sendBtn = document.getElementById('sendBtn');
-            const subjectInput = document.getElementById('subjectInput');
-            const messageInput = document.getElementById('messageInput');
-            const subjectCount = document.getElementById('subjectCount');
-            const messageCount = document.getElementById('messageCount');
-            const directEmailInput = document.getElementById('directEmailInput');
-            const addDirectEmailBtn = document.getElementById('addDirectEmailBtn');
-            let selectedSegments = {}; // seg value -> {label,color}
-            let directEmails = new Set(); // unique emails
+            document.addEventListener('DOMContentLoaded', function() {
+                const chips = document.querySelectorAll('.segment-chip');
+                const selectedContainer = document.getElementById('selectedContainer');
+                const sendBtn = document.getElementById('sendBtn');
+                const subjectInput = document.getElementById('subjectInput');
+                const messageInput = document.getElementById('messageInput');
+                const subjectCount = document.getElementById('subjectCount');
+                const messageCount = document.getElementById('messageCount');
+                const directEmailInput = document.getElementById('directEmailInput');
+                const addDirectEmailBtn = document.getElementById('addDirectEmailBtn');
+                let selectedSegments = {}; // seg value -> {label,color}
+                let directEmails = []; // array of unique emails
 
             // Character counters
             function updateCounts(){
@@ -132,10 +137,16 @@
                 const email = directEmailInput.value.trim();
                 if(!email) return;
                 const pattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-                if(!pattern.test(email)) { directEmailInput.classList.add('ring','ring-red-400'); return; }
+                if(!pattern.test(email)) { 
+                    directEmailInput.classList.add('ring','ring-red-400'); 
+                    return; 
+                }
                 directEmailInput.classList.remove('ring','ring-red-400');
-                if(directEmails.has(email)) { directEmailInput.value=''; return; }
-                directEmails.add(email);
+                if(directEmails.includes(email)) { 
+                    directEmailInput.value=''; 
+                    return; 
+                }
+                directEmails.push(email);
                 directEmailInput.value='';
                 renderSelected();
             }
@@ -144,14 +155,15 @@
 
             function renderSelected(){
                 selectedContainer.innerHTML = '';
-                // Remove previous hidden inputs
-                document.querySelectorAll('input[name="segments[]"], input[name="direct_emails[]"]').forEach(el => el.remove());
-                const form = document.querySelector('form');
+                // Clear and recreate hidden inputs in dedicated container
+                const hiddenContainer = document.getElementById('hiddenInputsContainer');
+                hiddenContainer.innerHTML = '';
 
                 // Segments
                 Object.entries(selectedSegments).forEach(([value, meta]) => {
                     const hidden = document.createElement('input');
-                    hidden.type='hidden'; hidden.name='segments[]'; hidden.value=value; form.appendChild(hidden);
+                    hidden.type='hidden'; hidden.name='segments[]'; hidden.value=value; 
+                    hiddenContainer.appendChild(hidden);
                     const pill = document.createElement('div');
                     pill.className = `flex items-center pl-4 pr-1 h-8 rounded-full text-xs font-medium text-white shadow-sm relative bg-${meta.color}-600`;
                     pill.innerHTML = `
@@ -162,9 +174,10 @@
                 });
 
                 // Direct Emails
-                Array.from(directEmails).forEach(email => {
+                directEmails.forEach(email => {
                     const hidden = document.createElement('input');
-                    hidden.type='hidden'; hidden.name='direct_emails[]'; hidden.value=email; form.appendChild(hidden);
+                    hidden.type='hidden'; hidden.name='direct_emails[]'; hidden.value=email; 
+                    hiddenContainer.appendChild(hidden);
                     const pill = document.createElement('div');
                     pill.className = 'flex items-center pl-4 pr-1 h-8 rounded-full text-xs font-medium text-white shadow-sm relative bg-slate-600';
                     pill.innerHTML = `
@@ -180,13 +193,24 @@
                         const type = btn.dataset.type;
                         const value = btn.dataset.value;
                         if(type==='segment') { delete selectedSegments[value]; }
-                        else if(type==='email'){ directEmails.delete(value); }
+                        else if(type==='email'){ 
+                            const index = directEmails.indexOf(value);
+                            if (index > -1) {
+                                directEmails.splice(index, 1);
+                            }
+                        }
                         renderSelected();
                     });
                 });
 
-                sendBtn.disabled = Object.keys(selectedSegments).length === 0 && directEmails.size === 0;
+                sendBtn.disabled = Object.keys(selectedSegments).length === 0 && directEmails.length === 0;
             }
+
+            // Debug form submission
+            function debugFormSubmission(event) {
+                // Continue with normal form submission
+            }
+            }); // End DOMContentLoaded
         </script>
     </x-slot>
 </x-admin.layout>

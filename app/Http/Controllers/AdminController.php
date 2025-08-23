@@ -1088,6 +1088,11 @@ class AdminController extends Controller
 
     public function sendBroadcastEmail(Request $request)
     {
+        // Basic mail configuration check
+        if (! config('mail.from.address')) {
+            return back()->withInput()->with('error', 'Email system not configured. Please check mail settings.');
+        }
+
         $request->validate([
             'segments' => ['nullable', 'array'],
             'segments.*' => ['in:free,basic,pro,business'],
@@ -1099,6 +1104,7 @@ class AdminController extends Controller
 
         $segments = $request->segments ?? [];
         $directEmails = collect($request->direct_emails ?? [])->filter();
+
         if (empty($segments) && $directEmails->isEmpty()) {
             return back()->withInput()->with('error', 'Select at least one segment or add at least one direct recipient email.');
         }
@@ -1142,10 +1148,11 @@ class AdminController extends Controller
 
         $sent = 0;
         $failed = 0;
+        $errors = [];
 
         foreach ($allRecipients as $user) {
             try {
-                // Use the same approach as contact form for better reliability
+                // Send email immediately (not queued) for more reliable delivery
                 Mail::to($user->email)->send(new \App\Mail\BroadcastEmailMailable(
                     $request->subject,
                     $request->message,
@@ -1164,8 +1171,13 @@ class AdminController extends Controller
                 );
 
                 $sent++;
+                Log::info('Broadcast email sent successfully', [
+                    'recipient' => $user->email,
+                    'subject' => $request->subject,
+                ]);
             } catch (\Exception $e) {
                 $failed++;
+                $errors[] = $user->email.': '.$e->getMessage();
 
                 // Log failed email
                 \App\Models\EmailLog::logEmail(
@@ -1189,6 +1201,8 @@ class AdminController extends Controller
         $message = "Broadcast sent to {$sent} recipient(s).";
         if ($failed > 0) {
             $message .= " {$failed} email(s) failed to send.";
+            // Log detailed errors for debugging
+            Log::warning('Broadcast email detailed errors', ['errors' => $errors]);
         }
 
         return redirect()->route('admin.broadcast-email.form')

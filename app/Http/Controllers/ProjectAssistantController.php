@@ -92,6 +92,54 @@ class ProjectAssistantController extends Controller
         ]);
     }
 
+    /** POST /projects/{project}/assistant/execute */
+    public function execute(Request $request, Project $project): JsonResponse
+    {
+        $this->authorizeView($project);
+
+        $user = $request->user();
+        $commandData = $request->input('command_data', []);
+
+        if (! $this->canModify($project)) {
+            return response()->json([
+                'type' => 'error',
+                'message' => 'You do not have permission to modify this project.',
+            ], 403);
+        }
+
+        // Check if user should see overlay (free tier)
+        $shouldShowOverlay = $user->shouldShowOverlay('ai_chat');
+
+        if ($shouldShowOverlay) {
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Command execution is available for paid plans only.',
+                'show_overlay' => true,
+                'overlay_feature' => 'ai_chat',
+                'upgrade_url' => route('billing.show'),
+            ], 402);
+        }
+
+        try {
+            $resp = $this->service->executeCommand($project, $commandData);
+
+            // Increment usage on successful execution
+            $user->incrementAiChatUsage();
+
+            return response()->json($resp);
+        } catch (Throwable $e) {
+            Log::error('Assistant command execution error', [
+                'error' => $e->getMessage(),
+                'command_data' => $commandData,
+            ]);
+
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Execution failed: '.$e->getMessage(),
+            ], 400);
+        }
+    }
+
     /** GET /projects/{project}/assistant/test */
     public function test(Request $request, Project $project): JsonResponse
     {

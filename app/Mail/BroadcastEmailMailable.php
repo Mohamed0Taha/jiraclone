@@ -22,6 +22,10 @@ class BroadcastEmailMailable extends Mailable
         $this->subjectLine = $subjectLine;
         $this->bodyMessage = $bodyMessage;
         $this->recipient = $recipient;
+
+        // Send immediately, don't queue
+        $this->connection = null;
+        $this->queue = null;
     }
 
     public function build(): self
@@ -30,6 +34,7 @@ class BroadcastEmailMailable extends Mailable
             ->subject($this->subjectLine)
             ->view('emails.broadcast')
             ->with([
+                'subject' => $this->subjectLine,
                 'bodyMessage' => $this->bodyMessage,
                 'user' => $this->recipient,
             ]);

@@ -50,6 +50,7 @@ import { METHODOLOGIES, DEFAULT_METHOD, getStatusMeta, getStatusOrder } from '..
 import TaskCard from './TaskCard';
 import MembersManagerDialog from './MembersManagerDialog';
 import AIPdfReportDialog from './ProjectReportDialog';
+import ProjectDetailsDialog from './ProjectDetailsDialog';
 import AssistantChat from './AssistantChat';
 import { useSubscription } from '@/Hooks/useSubscription';
 
@@ -1290,6 +1291,11 @@ export default function Board({ auth, project = {}, tasks = {}, users = [], isPr
                         users={users}
                     />
                     <UpgradeDialog open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
+                    <ProjectDetailsDialog
+                        open={detailsOpen}
+                        onClose={() => setDetailsOpen(false)}
+                        project={project}
+                    />
                     <AssistantChat
                         project={project}
                         open={assistantOpen}
