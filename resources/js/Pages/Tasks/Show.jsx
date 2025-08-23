@@ -31,6 +31,7 @@ import {
     PriorityHigh as PriorityHighIcon,
 } from '@mui/icons-material';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ImageModal from '@/Components/ImageModal';
 
 export default function TaskShow({ auth, project, taskData, users, priorities }) {
     const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -38,6 +39,16 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
     const [replyTo, setReplyTo] = useState(null);
     const [editingComment, setEditingComment] = useState(null);
     const [editCommentText, setEditCommentText] = useState('');
+    const [coverUploading, setCoverUploading] = useState(false);
+    const [commentImage, setCommentImage] = useState(null);
+    const [imageModalOpen, setImageModalOpen] = useState(false);
+    const [modalImage, setModalImage] = useState({
+        src: '',
+        alt: '',
+        title: '',
+        canDelete: false,
+        deleteHandler: null,
+    });
 
     const [editForm, setEditForm] = useState({
         title: taskData.title,
@@ -89,15 +100,17 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
     };
 
     const handleAddComment = () => {
-        const data = {
-            content: commentText,
-            parent_id: replyTo?.id || null,
-        };
+        const formData = new FormData();
+        if (commentText) formData.append('content', commentText);
+        if (replyTo?.id) formData.append('parent_id', replyTo.id);
+        if (commentImage) formData.append('image', commentImage);
 
-        router.post(route('comments.store', [project.id, taskData.id]), data, {
+        router.post(route('comments.store', [project.id, taskData.id]), formData, {
+            forceFormData: true,
             onSuccess: () => {
                 setCommentText('');
                 setReplyTo(null);
+                setCommentImage(null);
             },
         });
     };
@@ -126,6 +139,31 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
         if (confirm('Are you sure you want to delete this comment?')) {
             router.delete(route('comments.destroy', [project.id, taskData.id, comment.id]));
         }
+    };
+
+    const handleCoverUpload = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const fd = new FormData();
+        fd.append('image', file);
+        setCoverUploading(true);
+        router.post(route('tasks.attachments.store', [project.id, taskData.id]), fd, {
+            forceFormData: true,
+            onSuccess: () => {
+                // Refresh the page to show the new image
+                router.reload({ only: ['taskData'] });
+            },
+            onFinish: () => setCoverUploading(false),
+            onError: (errors) => {
+                console.error('Image upload failed:', errors);
+                alert('Image upload failed: ' + (errors.image?.[0] || 'Unknown error'));
+            },
+        });
+    };
+
+    const openImageModal = (src, alt, title, canDelete = false, deleteHandler = null) => {
+        setModalImage({ src, alt, title, canDelete, deleteHandler });
+        setImageModalOpen(true);
     };
 
     const renderComment = (comment, isReply = false) => (
@@ -277,6 +315,62 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                         >
                             {comment.content}
                         </Typography>
+                        {comment.attachments && comment.attachments.length > 0 && (
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gap: 1,
+                                    gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))',
+                                    mb: 2,
+                                }}
+                            >
+                                {comment.attachments.map((attachment) => (
+                                    <Box
+                                        key={attachment.id}
+                                        sx={{
+                                            position: 'relative',
+                                            borderRadius: 1,
+                                            overflow: 'hidden',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            aspectRatio: '4/3',
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                '&::after': {
+                                                    content: '""',
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    bottom: 0,
+                                                    backgroundColor: 'rgba(0,0,0,0.1)',
+                                                },
+                                            },
+                                        }}
+                                        onClick={() =>
+                                            openImageModal(
+                                                attachment.url,
+                                                attachment.original_name,
+                                                `Comment by ${comment.user.name}: ${attachment.original_name}`,
+                                                false
+                                            )
+                                        }
+                                    >
+                                        <img
+                                            src={attachment.url}
+                                            alt={attachment.original_name}
+                                            style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'cover',
+                                                display: 'block',
+                                            }}
+                                            loading="lazy"
+                                        />
+                                    </Box>
+                                ))}
+                            </Box>
+                        )}
                         {!isReply && (
                             <Button
                                 size="small"
@@ -377,6 +471,123 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                         boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                     }}
                 >
+                    {/* Cover Images */}
+                    <Box sx={{ mb: 3 }}>
+                        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
+                            <Typography variant="h6" sx={{ flex: 1 }}>
+                                Task Images
+                            </Typography>
+                            <Button
+                                variant="outlined"
+                                component="label"
+                                size="small"
+                                disabled={coverUploading}
+                            >
+                                {coverUploading ? 'Uploading...' : 'Add Image'}
+                                <input
+                                    hidden
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleCoverUpload}
+                                />
+                            </Button>
+                        </Stack>
+                        {taskData.attachments && taskData.attachments.length > 0 ? (
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gap: 2,
+                                    gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))',
+                                }}
+                            >
+                                {taskData.attachments.map((a) => (
+                                    <Box
+                                        key={a.id}
+                                        sx={{
+                                            position: 'relative',
+                                            borderRadius: 1,
+                                            overflow: 'hidden',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            aspectRatio: '16/10',
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                '&::after': {
+                                                    content: '""',
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    bottom: 0,
+                                                    backgroundColor: 'rgba(0,0,0,0.1)',
+                                                },
+                                            },
+                                        }}
+                                        onClick={() =>
+                                            openImageModal(
+                                                a.url,
+                                                a.original_name,
+                                                `Task #${taskData.id}: ${a.original_name}`,
+                                                true,
+                                                () =>
+                                                    router.delete(
+                                                        route('tasks.attachments.destroy', [
+                                                            project.id,
+                                                            taskData.id,
+                                                            a.id,
+                                                        ])
+                                                    )
+                                            )
+                                        }
+                                    >
+                                        <img
+                                            src={a.url}
+                                            alt={a.original_name}
+                                            style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'cover',
+                                                display: 'block',
+                                            }}
+                                            loading="lazy"
+                                        />
+                                        <IconButton
+                                            size="small"
+                                            sx={{
+                                                position: 'absolute',
+                                                top: 4,
+                                                right: 4,
+                                                backgroundColor: 'rgba(244, 67, 54, 0.8)',
+                                                color: 'white',
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(244, 67, 54, 0.9)',
+                                                },
+                                            }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (confirm('Delete this image?')) {
+                                                    router.delete(
+                                                        route('tasks.attachments.destroy', [
+                                                            project.id,
+                                                            taskData.id,
+                                                            a.id,
+                                                        ])
+                                                    );
+                                                }
+                                            }}
+                                        >
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    </Box>
+                                ))}
+                            </Box>
+                        ) : (
+                            <Typography variant="body2" color="text.secondary">
+                                No images yet.
+                            </Typography>
+                        )}
+                    </Box>
+
                     <Stack
                         direction="row"
                         justifyContent="space-between"
@@ -645,10 +856,26 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                                 },
                             }}
                         />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                            <Button variant="outlined" component="label" size="small">
+                                {commentImage ? 'Change Image' : 'Attach Image'}
+                                <input
+                                    hidden
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => setCommentImage(e.target.files?.[0] || null)}
+                                />
+                            </Button>
+                            {commentImage && (
+                                <Typography variant="caption" color="text.secondary">
+                                    {commentImage.name}
+                                </Typography>
+                            )}
+                        </Box>
                         <Button
                             variant="contained"
                             onClick={handleAddComment}
-                            disabled={!commentText.trim()}
+                            disabled={!commentText.trim() && !commentImage}
                             sx={{
                                 borderRadius: 2,
                                 px: 3,
@@ -872,6 +1099,104 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                                 ))}
                             </Select>
                         </FormControl>
+
+                        {/* Image Upload Section */}
+                        <Box
+                            sx={{
+                                p: 2,
+                                border: '1px dashed',
+                                borderColor: 'divider',
+                                borderRadius: 2,
+                                backgroundColor: 'rgba(0,0,0,0.02)',
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                                Task Images
+                            </Typography>
+                            <Button
+                                variant="outlined"
+                                component="label"
+                                size="small"
+                                disabled={coverUploading}
+                                sx={{ mb: 2 }}
+                            >
+                                {coverUploading ? 'Uploading...' : 'Add Image'}
+                                <input
+                                    hidden
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleCoverUpload}
+                                />
+                            </Button>
+                            {taskData.attachments && taskData.attachments.length > 0 && (
+                                <Box
+                                    sx={{
+                                        display: 'grid',
+                                        gap: 1,
+                                        gridTemplateColumns: 'repeat(auto-fill,minmax(80px,1fr))',
+                                        maxHeight: 120,
+                                        overflowY: 'auto',
+                                    }}
+                                >
+                                    {taskData.attachments.slice(0, 4).map((a) => (
+                                        <Box
+                                            key={a.id}
+                                            sx={{
+                                                position: 'relative',
+                                                borderRadius: 1,
+                                                overflow: 'hidden',
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                aspectRatio: '1',
+                                                cursor: 'pointer',
+                                            }}
+                                            onClick={() =>
+                                                openImageModal(
+                                                    a.url,
+                                                    a.original_name,
+                                                    `Task #${taskData.id}: ${a.original_name}`,
+                                                    true,
+                                                    () =>
+                                                        router.delete(
+                                                            route('tasks.attachments.destroy', [
+                                                                project.id,
+                                                                taskData.id,
+                                                                a.id,
+                                                            ])
+                                                        )
+                                                )
+                                            }
+                                        >
+                                            <img
+                                                src={a.url}
+                                                alt={a.original_name}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover',
+                                                }}
+                                            />
+                                        </Box>
+                                    ))}
+                                    {taskData.attachments.length > 4 && (
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                                borderRadius: 1,
+                                                aspectRatio: '1',
+                                            }}
+                                        >
+                                            <Typography variant="caption">
+                                                +{taskData.attachments.length - 4}
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                </Box>
+                            )}
+                        </Box>
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{ p: 3, backgroundColor: 'rgba(0,0,0,0.02)' }}>
@@ -899,6 +1224,18 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Image Modal */}
+            <ImageModal
+                open={imageModalOpen}
+                onClose={() => setImageModalOpen(false)}
+                src={modalImage.src}
+                alt={modalImage.alt}
+                title={modalImage.title}
+                canDelete={modalImage.canDelete}
+                onDelete={modalImage.deleteHandler}
+                downloadUrl={modalImage.src}
+            />
         </AuthenticatedLayout>
     );
 }

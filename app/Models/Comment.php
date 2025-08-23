@@ -36,6 +36,11 @@ class Comment extends Model
         return $this->hasMany(Comment::class, 'parent_id');
     }
 
+    public function attachments()
+    {
+        return $this->hasMany(CommentAttachment::class);
+    }
+
     // Check if this is a reply to another comment
     public function isReply()
     {

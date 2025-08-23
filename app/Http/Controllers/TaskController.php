@@ -50,7 +50,7 @@ class TaskController extends Controller
         $this->authorize('view', $project);
 
         $raw = $project->tasks()
-            ->with(['creator:id,name', 'assignee:id,name', 'comments.user:id,name'])
+            ->with(['creator:id,name', 'assignee:id,name', 'comments.user:id,name', 'attachments'])
             ->orderBy('created_at')
             ->get()
             ->groupBy('status');
@@ -61,6 +61,7 @@ class TaskController extends Controller
                     'id' => $t->id,
                     'title' => $t->title,
                     'description' => $t->description,
+                    'cover_image' => optional($t->attachments->firstWhere('kind', 'image'))?->url,
                     'start_date' => $t->start_date ? $t->start_date->format('Y-m-d') : null,
                     'end_date' => $t->end_date ? $t->end_date->format('Y-m-d') : null,
                     'status' => $t->status,
@@ -69,6 +70,7 @@ class TaskController extends Controller
                     'creator' => $t->creator ? ['id' => $t->creator->id, 'name' => $t->creator->name] : null,
                     'assignee' => $t->assignee ? ['id' => $t->assignee->id, 'name' => $t->assignee->name] : null,
                     'comments_count' => $t->comments->count(),
+                    'attachments_count' => $t->attachments->count(),
                 ];
             });
         };
@@ -91,7 +93,7 @@ class TaskController extends Controller
         Log::info("🔥 TASKCONTROLLER TIMELINE METHOD CALLED FOR PROJECT {$project->id}");
 
         $raw = $project->tasks()
-            ->with(['creator:id,name', 'assignee:id,name', 'comments.user:id,name'])
+            ->with(['creator:id,name', 'assignee:id,name', 'comments.user:id,name', 'attachments'])
             ->orderBy('created_at')
             ->get()
             ->groupBy('status');
@@ -102,6 +104,7 @@ class TaskController extends Controller
                     'id' => $t->id,
                     'title' => $t->title,
                     'description' => $t->description,
+                    'cover_image' => optional($t->attachments->firstWhere('kind', 'image'))?->url,
                     'start_date' => $t->start_date ? $t->start_date->format('Y-m-d') : null,
                     'end_date' => $t->end_date ? $t->end_date->format('Y-m-d') : null,
                     'status' => $t->status,
@@ -110,6 +113,7 @@ class TaskController extends Controller
                     'creator' => $t->creator ? ['id' => $t->creator->id, 'name' => $t->creator->name] : null,
                     'assignee' => $t->assignee ? ['id' => $t->assignee->id, 'name' => $t->assignee->name] : null,
                     'comments_count' => $t->comments->count(),
+                    'attachments_count' => $t->attachments->count(),
                 ];
             });
         };
@@ -211,12 +215,22 @@ class TaskController extends Controller
                     ->whereNull('parent_id')
                     ->orderBy('created_at');
             },
+            'attachments',
+            'comments.attachments',
         ]);
 
         $taskData = [
             'id' => $task->id,
             'title' => $task->title,
             'description' => $task->description,
+            'attachments' => $task->attachments->map(function ($a) {
+                return [
+                    'id' => $a->id,
+                    'kind' => $a->kind,
+                    'url' => $a->url,
+                    'original_name' => $a->original_name,
+                ];
+            }),
             'start_date' => $task->start_date ? $task->start_date->format('Y-m-d') : null,
             'end_date' => $task->end_date ? $task->end_date->format('Y-m-d') : null,
             'status' => $task->status,
@@ -228,12 +242,28 @@ class TaskController extends Controller
                 return [
                     'id' => $comment->id,
                     'content' => $comment->content,
+                    'attachments' => $comment->attachments->map(function ($a) {
+                        return [
+                            'id' => $a->id,
+                            'kind' => $a->kind,
+                            'url' => $a->url,
+                            'original_name' => $a->original_name,
+                        ];
+                    }),
                     'user' => ['id' => $comment->user->id, 'name' => $comment->user->name],
                     'created_at' => $comment->created_at->format('Y-m-d H:i:s'),
                     'replies' => $comment->replies->map(function ($reply) {
                         return [
                             'id' => $reply->id,
                             'content' => $reply->content,
+                            'attachments' => $reply->attachments->map(function ($a) {
+                                return [
+                                    'id' => $a->id,
+                                    'kind' => $a->kind,
+                                    'url' => $a->url,
+                                    'original_name' => $a->original_name,
+                                ];
+                            }),
                             'user' => ['id' => $reply->user->id, 'name' => $reply->user->name],
                             'created_at' => $reply->created_at->format('Y-m-d H:i:s'),
                         ];

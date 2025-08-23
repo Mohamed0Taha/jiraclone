@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
-use App\Services\ProjectReportService;
 use App\Services\ProjectDocumentAnalysisService;
+use App\Services\ProjectReportService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -416,15 +416,15 @@ class ProjectController extends Controller
     {
         $this->authorize('view', $project);
 
-        $tasks = $project->tasks()->with(['assignee','creator'])->orderBy('id')->get();
+        $tasks = $project->tasks()->with(['assignee', 'creator'])->orderBy('id')->get();
 
         // Jira CSV expected minimal headers
         $headers = [
-            'Summary','Issue Type','Status','Priority','Assignee','Reporter','Description','Start Date','Due Date','Original Estimate','Remaining Estimate'
+            'Summary', 'Issue Type', 'Status', 'Priority', 'Assignee', 'Reporter', 'Description', 'Start Date', 'Due Date', 'Original Estimate', 'Remaining Estimate',
         ];
 
         $lines = [];
-        $lines[] = implode(',', array_map(fn($h)=>'"'.str_replace('"','""',$h).'"',$headers));
+        $lines[] = implode(',', array_map(fn ($h) => '"'.str_replace('"', '""', $h).'"', $headers));
 
         foreach ($tasks as $t) {
             $summary = $t->title ?? '';
@@ -439,18 +439,21 @@ class ProjectController extends Controller
             $origEst = '';
             $remainEst = '';
             $row = [
-                $summary,$issueType,$status,$priority,$assignee,$reporter,$description,$start,$due,$origEst,$remainEst
+                $summary, $issueType, $status, $priority, $assignee, $reporter, $description, $start, $due, $origEst, $remainEst,
             ];
-            $lines[] = implode(',', array_map(function($v){
-                $v = (string)$v; return '"'.str_replace('"','""',$v).'"';
+            $lines[] = implode(',', array_map(function ($v) {
+                $v = (string) $v;
+
+                return '"'.str_replace('"', '""', $v).'"';
             }, $row));
         }
 
         $csv = implode("\n", $lines)."\n";
         $fileName = 'project-'.$project->id.'-jira-export-'.now()->format('Ymd_His').'.csv';
+
         return response($csv, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.$fileName.'"'
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
         ]);
     }
 }

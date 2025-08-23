@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Card,
     CardContent,
@@ -19,6 +19,9 @@ import ArrowRightAltRoundedIcon from '@mui/icons-material/ArrowRightAltRounded';
 import FlagRoundedIcon from '@mui/icons-material/FlagRounded';
 import CommentIcon from '@mui/icons-material/Comment';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
+import ImageIcon from '@mui/icons-material/Image';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import ImageModal from '@/Components/ImageModal';
 
 /**
  * TaskCard
@@ -29,9 +32,10 @@ import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
  * - Title clamps to 2 lines on narrow widths
  * - Task ID displayed above title in blue
  */
-export default function TaskCard({ task, onEdit, onDelete, onClick, accent }) {
+export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUpload, accent }) {
     const theme = useTheme();
     const defaultAccent = theme.palette.primary.main;
+    const [imageModalOpen, setImageModalOpen] = useState(false);
 
     const stop = (e) => {
         e.preventDefault();
@@ -130,304 +134,414 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, accent }) {
     })();
 
     return (
-        <Tooltip
-            title={onClick ? 'Click to view task details and comments' : ''}
-            placement="top"
-            disableHoverListener={!onClick}
-        >
-            <Card
-                variant="outlined"
-                onClick={onClick}
-                sx={{
-                    borderLeft: `4px solid ${accent || defaultAccent}`,
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    background: (t) => alpha(t.palette.background.paper, 0.98),
-                    cursor: onClick ? 'pointer' : 'default',
-                    transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-                    '&:hover': onClick
-                        ? {
-                              transform: 'translateY(-2px)',
-                              boxShadow: theme.shadows[4],
-                          }
-                        : {},
-                }}
+        <>
+            <Tooltip
+                title={onClick ? 'Click to view task details and comments' : ''}
+                placement="top"
+                disableHoverListener={!onClick}
             >
-                <CardContent sx={{ p: 1.25 }}>
-                    {/* Header row: title + actions */}
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 1,
-                            mb: task?.description || start || end || task?.milestone ? 0.75 : 0.25,
-                        }}
-                    >
-                        {/* Task ID + Title */}
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                            {/* Task ID - added above title in blue */}
-                            {task?.id && (
-                                <Typography
-                                    variant="caption"
-                                    sx={{
-                                        display: 'block',
-                                        fontWeight: 600,
-                                        letterSpacing: 0.5,
-                                        lineHeight: 1.1,
-                                        mb: 0.25,
-                                        color: 'primary.main', // Changed to blue using theme primary color
-                                    }}
-                                    title={`Task ID: ${task.id}`}
-                                >
-                                    #{task.id}
-                                </Typography>
-                            )}
-
-                            {/* Title */}
-                            <Typography
-                                variant="subtitle2"
-                                fontWeight={700}
-                                sx={{
-                                    lineHeight: 1.25,
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                    overflow: 'hidden',
-                                    wordBreak: 'break-word',
-                                }}
-                                title={task?.title || '(Untitled)'}
-                            >
-                                {task?.title || '(Untitled)'}
-                            </Typography>
-                        </Box>
-
-                        {/* Actions (stay to the right, do not shrink) */}
+                <Card
+                    variant="outlined"
+                    onClick={onClick}
+                    sx={{
+                        borderLeft: `4px solid ${accent || defaultAccent}`,
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        background: (t) => alpha(t.palette.background.paper, 0.98),
+                        cursor: onClick ? 'pointer' : 'default',
+                        transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                        '&:hover': onClick
+                            ? {
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: theme.shadows[4],
+                              }
+                            : {},
+                    }}
+                >
+                    {task?.cover_image && (
                         <Box
-                            sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}
-                        >
-                            <Tooltip title="View Details">
-                                <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                        stop(e);
-                                        onClick?.();
-                                    }}
-                                    aria-label="View task details"
-                                >
-                                    <VisibilityIcon fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Edit">
-                                <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                        stop(e);
-                                        onEdit?.();
-                                    }}
-                                    aria-label="Edit task"
-                                >
-                                    <EditIcon fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                                <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                        stop(e);
-                                        onDelete?.();
-                                    }}
-                                    aria-label="Delete task"
-                                >
-                                    <DeleteIcon fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                        </Box>
-                    </Box>
-
-                    {/* Optional milestone badge (tiny) */}
-                    {task?.milestone && (
-                        <Stack direction="row" spacing={0.5} sx={{ mb: 0.5 }} alignItems="center">
-                            <FlagRoundedIcon
-                                fontSize="inherit"
-                                style={{ fontSize: 14 }}
-                                sx={{ color: (t) => t.palette.warning.main }}
-                            />
-                            <Typography
-                                variant="caption"
-                                sx={{ fontWeight: 600, color: (t) => t.palette.warning.main }}
-                            >
-                                Milestone
-                            </Typography>
-                        </Stack>
-                    )}
-
-                    {/* Priority and Comments row */}
-                    <Stack direction="row" spacing={1} sx={{ mb: 0.75 }} alignItems="center">
-                        {/* Priority badge */}
-                        <Chip
-                            label={getPriorityLabel(task?.priority)}
-                            size="small"
-                            icon={
-                                task?.priority === 'urgent' ? (
-                                    <PriorityHighIcon style={{ fontSize: 14 }} />
-                                ) : undefined
-                            }
                             sx={{
-                                height: 20,
-                                fontSize: '0.7rem',
-                                fontWeight: 600,
-                                backgroundColor: getPriorityColor(task?.priority),
-                                color: 'white',
-                                '& .MuiChip-icon': {
-                                    color: 'white',
+                                width: '100%',
+                                aspectRatio: '16 / 9',
+                                overflow: 'hidden',
+                                backgroundColor: 'grey.100',
+                                borderBottom: '1px solid',
+                                borderColor: 'divider',
+                                cursor: 'pointer',
+                                position: 'relative',
+                                '&:hover': {
+                                    '&::after': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        backgroundColor: 'rgba(0,0,0,0.1)',
+                                        transition: 'background-color 0.2s',
+                                    },
                                 },
                             }}
-                        />
+                            onClick={(e) => {
+                                stop(e);
+                                setImageModalOpen(true);
+                            }}
+                        >
+                            <img
+                                src={task.cover_image}
+                                alt={task.title || 'Task image'}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    display: 'block',
+                                }}
+                                loading="lazy"
+                            />
+                        </Box>
+                    )}
+                    <CardContent sx={{ p: 1.25 }}>
+                        {/* Header row: title + actions */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 1,
+                                mb:
+                                    task?.description || start || end || task?.milestone
+                                        ? 0.75
+                                        : 0.25,
+                            }}
+                        >
+                            {/* Task ID + Title */}
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                {/* Task ID - added above title in blue */}
+                                {task?.id && (
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            display: 'block',
+                                            fontWeight: 600,
+                                            letterSpacing: 0.5,
+                                            lineHeight: 1.1,
+                                            mb: 0.25,
+                                            color: 'primary.main', // Changed to blue using theme primary color
+                                        }}
+                                        title={`Task ID: ${task.id}`}
+                                    >
+                                        #{task.id}
+                                    </Typography>
+                                )}
 
-                        {/* Comments count */}
-                        {task?.comments_count > 0 && (
+                                {/* Title */}
+                                <Typography
+                                    variant="subtitle2"
+                                    fontWeight={700}
+                                    sx={{
+                                        lineHeight: 1.25,
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        wordBreak: 'break-word',
+                                    }}
+                                    title={task?.title || '(Untitled)'}
+                                >
+                                    {task?.title || '(Untitled)'}
+                                </Typography>
+                            </Box>
+
+                            {/* Actions (stay to the right, do not shrink) */}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    flexShrink: 0,
+                                }}
+                            >
+                                <Tooltip title="View Details">
+                                    <IconButton
+                                        size="small"
+                                        onClick={(e) => {
+                                            stop(e);
+                                            onClick?.();
+                                        }}
+                                        aria-label="View task details"
+                                    >
+                                        <VisibilityIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit">
+                                    <IconButton
+                                        size="small"
+                                        onClick={(e) => {
+                                            stop(e);
+                                            onEdit?.();
+                                        }}
+                                        aria-label="Edit task"
+                                    >
+                                        <EditIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                {onImageUpload && (
+                                    <Tooltip title="Add Image">
+                                        <IconButton
+                                            size="small"
+                                            component="label"
+                                            aria-label="Add image"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <AddPhotoAlternateIcon fontSize="small" />
+                                            <input
+                                                hidden
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        onImageUpload?.(file);
+                                                        e.target.value = '';
+                                                    }
+                                                }}
+                                            />
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
+                                <Tooltip title="Delete">
+                                    <IconButton
+                                        size="small"
+                                        onClick={(e) => {
+                                            stop(e);
+                                            onDelete?.();
+                                        }}
+                                        aria-label="Delete task"
+                                    >
+                                        <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            </Box>
+                        </Box>
+
+                        {/* Optional milestone badge (tiny) */}
+                        {task?.milestone && (
+                            <Stack
+                                direction="row"
+                                spacing={0.5}
+                                sx={{ mb: 0.5 }}
+                                alignItems="center"
+                            >
+                                <FlagRoundedIcon
+                                    fontSize="inherit"
+                                    style={{ fontSize: 14 }}
+                                    sx={{ color: (t) => t.palette.warning.main }}
+                                />
+                                <Typography
+                                    variant="caption"
+                                    sx={{ fontWeight: 600, color: (t) => t.palette.warning.main }}
+                                >
+                                    Milestone
+                                </Typography>
+                            </Stack>
+                        )}
+
+                        {/* Priority and Comments row */}
+                        <Stack direction="row" spacing={1} sx={{ mb: 0.75 }} alignItems="center">
+                            {/* Priority badge */}
                             <Chip
-                                label={`${task.comments_count} ${task.comments_count === 1 ? 'comment' : 'comments'}`}
+                                label={getPriorityLabel(task?.priority)}
                                 size="small"
-                                icon={<CommentIcon style={{ fontSize: 14 }} />}
+                                icon={
+                                    task?.priority === 'urgent' ? (
+                                        <PriorityHighIcon style={{ fontSize: 14 }} />
+                                    ) : undefined
+                                }
                                 sx={{
                                     height: 20,
                                     fontSize: '0.7rem',
                                     fontWeight: 600,
-                                    backgroundColor: 'primary.main',
+                                    backgroundColor: getPriorityColor(task?.priority),
                                     color: 'white',
                                     '& .MuiChip-icon': {
                                         color: 'white',
                                     },
                                 }}
                             />
+
+                            {/* Comments count */}
+                            {task?.comments_count > 0 && (
+                                <Chip
+                                    label={`${task.comments_count} ${task.comments_count === 1 ? 'comment' : 'comments'}`}
+                                    size="small"
+                                    icon={<CommentIcon style={{ fontSize: 14 }} />}
+                                    sx={{
+                                        height: 20,
+                                        fontSize: '0.7rem',
+                                        fontWeight: 600,
+                                        backgroundColor: 'primary.main',
+                                        color: 'white',
+                                        '& .MuiChip-icon': {
+                                            color: 'white',
+                                        },
+                                    }}
+                                />
+                            )}
+
+                            {task?.attachments_count > 0 && (
+                                <Chip
+                                    label={`${task.attachments_count}`}
+                                    size="small"
+                                    icon={<ImageIcon style={{ fontSize: 14 }} />}
+                                    sx={{
+                                        height: 20,
+                                        fontSize: '0.7rem',
+                                        fontWeight: 600,
+                                        backgroundColor: 'secondary.main',
+                                        color: 'white',
+                                        '& .MuiChip-icon': {
+                                            color: 'white',
+                                        },
+                                    }}
+                                />
+                            )}
+
+                            {/* Show "Add comment" hint if no comments */}
+                            {(!task?.comments_count || task.comments_count === 0) && onClick && (
+                                <Stack direction="row" spacing={0.25} alignItems="center">
+                                    <CommentIcon
+                                        style={{ fontSize: 14 }}
+                                        sx={{ color: 'text.secondary' }}
+                                    />
+                                    <Typography variant="caption" color="text.secondary">
+                                        Click to add comments
+                                    </Typography>
+                                </Stack>
+                            )}
+                        </Stack>
+
+                        {/* Description */}
+                        {task?.description && (
+                            <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{
+                                    mb: 0.75,
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                }}
+                            >
+                                {task.description}
+                            </Typography>
                         )}
 
-                        {/* Show "Add comment" hint if no comments */}
-                        {(!task?.comments_count || task.comments_count === 0) && onClick && (
-                            <Stack direction="row" spacing={0.25} alignItems="center">
-                                <CommentIcon
-                                    style={{ fontSize: 14 }}
-                                    sx={{ color: 'text.secondary' }}
+                        {/* Dates row */}
+                        {(start || end) && (
+                            <Stack
+                                direction="row"
+                                spacing={0.5}
+                                alignItems="center"
+                                sx={{ mb: progress !== null ? 0.6 : 0.2, minHeight: 20 }}
+                            >
+                                <CalendarMonthRoundedIcon
+                                    fontSize="inherit"
+                                    style={{ fontSize: 16 }}
+                                    sx={{ color: (t) => alpha(t.palette.text.primary, 0.66) }}
                                 />
                                 <Typography variant="caption" color="text.secondary">
-                                    Click to add comments
+                                    {fmt(start)}
                                 </Typography>
+                                <ArrowRightAltRoundedIcon
+                                    fontSize="inherit"
+                                    style={{ fontSize: 16 }}
+                                    sx={{ color: (t) => alpha(t.palette.text.primary, 0.5) }}
+                                />
+                                <Tooltip
+                                    title={overdue ? 'Task is overdue' : ''}
+                                    disableHoverListener={!overdue}
+                                >
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            fontWeight: 600,
+                                            color: (t) =>
+                                                overdue
+                                                    ? t.palette.error.main
+                                                    : t.palette.text.secondary,
+                                        }}
+                                    >
+                                        {fmt(end)}
+                                    </Typography>
+                                </Tooltip>
                             </Stack>
                         )}
-                    </Stack>
 
-                    {/* Description */}
-                    {task?.description && (
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{
-                                mb: 0.75,
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                            }}
-                        >
-                            {task.description}
-                        </Typography>
-                    )}
-
-                    {/* Dates row */}
-                    {(start || end) && (
-                        <Stack
-                            direction="row"
-                            spacing={0.5}
-                            alignItems="center"
-                            sx={{ mb: progress !== null ? 0.6 : 0.2, minHeight: 20 }}
-                        >
-                            <CalendarMonthRoundedIcon
-                                fontSize="inherit"
-                                style={{ fontSize: 16 }}
-                                sx={{ color: (t) => alpha(t.palette.text.primary, 0.66) }}
-                            />
-                            <Typography variant="caption" color="text.secondary">
-                                {fmt(start)}
-                            </Typography>
-                            <ArrowRightAltRoundedIcon
-                                fontSize="inherit"
-                                style={{ fontSize: 16 }}
-                                sx={{ color: (t) => alpha(t.palette.text.primary, 0.5) }}
-                            />
-                            <Tooltip
-                                title={overdue ? 'Task is overdue' : ''}
-                                disableHoverListener={!overdue}
-                            >
-                                <Typography
-                                    variant="caption"
-                                    sx={{
-                                        fontWeight: 600,
-                                        color: (t) =>
-                                            overdue
-                                                ? t.palette.error.main
-                                                : t.palette.text.secondary,
-                                    }}
-                                >
-                                    {fmt(end)}
-                                </Typography>
-                            </Tooltip>
-                        </Stack>
-                    )}
-
-                    {/* Progress rail */}
-                    {progress !== null && (
-                        <Tooltip title={scheduleTooltip} placement="top" arrow>
-                            <Box
-                                sx={{
-                                    position: 'relative',
-                                    height: 8,
-                                    borderRadius: 4,
-                                    overflow: 'hidden',
-                                    background: (t) => alpha(t.palette.text.disabled, 0.15),
-                                    mb: 0.75,
-                                }}
-                                aria-label={scheduleTooltip}
-                            >
+                        {/* Progress rail */}
+                        {progress !== null && (
+                            <Tooltip title={scheduleTooltip} placement="top" arrow>
                                 <Box
                                     sx={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        width: `${progress}%`,
-                                        height: '100%',
-                                        background: scheduleColor,
-                                        transition: 'width .25s ease, background-color .25s ease',
+                                        position: 'relative',
+                                        height: 8,
+                                        borderRadius: 4,
+                                        overflow: 'hidden',
+                                        background: (t) => alpha(t.palette.text.disabled, 0.15),
+                                        mb: 0.75,
                                     }}
-                                />
-                                {/* Thin marker for "today" position if not overdue */}
-                                {rawElapsedPct != null && rawElapsedPct <= 100 && (
+                                    aria-label={scheduleTooltip}
+                                >
                                     <Box
                                         sx={{
                                             position: 'absolute',
-                                            top: 0,
-                                            bottom: 0,
-                                            left: `${Math.min(100, Math.max(0, rawElapsedPct))}%`,
-                                            width: 2,
-                                            transform: 'translateX(-1px)',
-                                            background: (t) => alpha(t.palette.common.black, 0.25),
+                                            inset: 0,
+                                            width: `${progress}%`,
+                                            height: '100%',
+                                            background: scheduleColor,
+                                            transition:
+                                                'width .25s ease, background-color .25s ease',
                                         }}
                                     />
-                                )}
-                            </Box>
-                        </Tooltip>
-                    )}
+                                    {/* Thin marker for "today" position if not overdue */}
+                                    {rawElapsedPct != null && rawElapsedPct <= 100 && (
+                                        <Box
+                                            sx={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                bottom: 0,
+                                                left: `${Math.min(100, Math.max(0, rawElapsedPct))}%`,
+                                                width: 2,
+                                                transform: 'translateX(-1px)',
+                                                background: (t) =>
+                                                    alpha(t.palette.common.black, 0.25),
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            </Tooltip>
+                        )}
 
-                    {/* Meta */}
-                    {task?.creator?.name && (
-                        <Typography variant="caption" color="text.secondary" display="block">
-                            Created by {task.creator.name}
-                        </Typography>
-                    )}
-                    {task?.assignee?.name && (
-                        <Typography variant="caption" color="text.secondary" display="block">
-                            Assigned to {task.assignee.name}
-                        </Typography>
-                    )}
-                </CardContent>
-            </Card>
-        </Tooltip>
+                        {/* Meta */}
+                        {task?.creator?.name && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                                Created by {task.creator.name}
+                            </Typography>
+                        )}
+                        {task?.assignee?.name && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                                Assigned to {task.assignee.name}
+                            </Typography>
+                        )}
+                    </CardContent>
+                </Card>
+            </Tooltip>
+            {/* Image Modal */}
+            <ImageModal
+                open={imageModalOpen}
+                onClose={() => setImageModalOpen(false)}
+                src={task?.cover_image}
+                alt={task?.title || 'Task image'}
+                title={`Task #${task?.id}: ${task?.title}`}
+                downloadUrl={task?.cover_image}
+            />
+        </>
     );
 }

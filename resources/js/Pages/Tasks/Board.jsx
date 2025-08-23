@@ -261,6 +261,7 @@ export default function Board({ auth, project = {}, tasks = {}, users = [], isPr
     const [editingId, setEditingId] = useState(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingDeleteId, setPendingDeleteId] = useState(null);
+    const [formImageUploading, setFormImageUploading] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [priorityFilter, setPriorityFilter] = useState('');
@@ -456,6 +457,49 @@ export default function Board({ auth, project = {}, tasks = {}, users = [], isPr
         });
         setConfirmOpen(false);
         setPendingDeleteId(null);
+    };
+
+    const handleImageUpload = (task, file) => {
+        console.log('Uploading image for task:', task.id, 'file:', file);
+        const formData = new FormData();
+        formData.append('image', file);
+        router.post(route('tasks.attachments.store', [project.id, task.id]), formData, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: (response) => {
+                console.log('Image upload successful:', response);
+                refreshTasks(response);
+            },
+            onError: (errors) => {
+                console.error('Image upload failed:', errors);
+                // You could show a toast notification here
+                alert('Image upload failed: ' + (errors.image?.[0] || 'Unknown error'));
+            },
+        });
+    };
+
+    const handleFormImageUpload = (e) => {
+        const file = e.target.files?.[0];
+        if (!file || !editingId) return;
+
+        const formData = new FormData();
+        formData.append('image', file);
+        setFormImageUploading(true);
+
+        router.post(route('tasks.attachments.store', [project.id, editingId]), formData, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: (response) => {
+                console.log('Form image upload successful');
+                refreshTasks(response);
+                setFormImageUploading(false);
+            },
+            onError: (errors) => {
+                console.error('Form image upload failed:', errors);
+                alert('Image upload failed: ' + (errors.image?.[0] || 'Unknown error'));
+                setFormImageUploading(false);
+            },
+        });
     };
 
     const onDragEnd = ({ destination, source, draggableId }) => {
@@ -933,6 +977,9 @@ export default function Board({ auth, project = {}, tasks = {}, users = [], isPr
                                                 task={task}
                                                 onEdit={() => showEdit(task)}
                                                 onDelete={() => askDelete(task.id)}
+                                                onImageUpload={(file) =>
+                                                    handleImageUpload(task, file)
+                                                }
                                                 onClick={() => {
                                                     router.visit(
                                                         `/projects/${project.id}/tasks/${task.id}`
@@ -1164,6 +1211,70 @@ export default function Board({ auth, project = {}, tasks = {}, users = [], isPr
                                         <MenuItem value={'true'}>Milestone</MenuItem>
                                     </TextField>
                                 </Stack>
+
+                                {/* Image Upload Section - Only show in edit mode */}
+                                {editMode && (
+                                    <Box
+                                        sx={{
+                                            p: 2,
+                                            border: '1px dashed',
+                                            borderColor: 'divider',
+                                            borderRadius: 2,
+                                            backgroundColor: 'rgba(0,0,0,0.02)',
+                                        }}
+                                    >
+                                        <Typography
+                                            variant="subtitle2"
+                                            sx={{ mb: 1, fontWeight: 600, fontSize: '0.875rem' }}
+                                        >
+                                            Task Images
+                                        </Typography>
+                                        <Button
+                                            variant="outlined"
+                                            component="label"
+                                            size="small"
+                                            disabled={formImageUploading}
+                                            sx={{ mb: 1 }}
+                                        >
+                                            {formImageUploading ? 'Uploading...' : 'Add Image'}
+                                            <input
+                                                hidden
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleFormImageUpload}
+                                            />
+                                        </Button>
+                                        {taskState &&
+                                            editingId &&
+                                            (() => {
+                                                // Find the current task to show its images
+                                                let currentTask = null;
+                                                Object.values(taskState).forEach((column) => {
+                                                    const found = column.find(
+                                                        (task) => task.id === editingId
+                                                    );
+                                                    if (found) currentTask = found;
+                                                });
+
+                                                if (currentTask?.attachments_count > 0) {
+                                                    return (
+                                                        <Typography
+                                                            variant="caption"
+                                                            color="text.secondary"
+                                                            sx={{ display: 'block' }}
+                                                        >
+                                                            {currentTask.attachments_count} image
+                                                            {currentTask.attachments_count !== 1
+                                                                ? 's'
+                                                                : ''}{' '}
+                                                            attached
+                                                        </Typography>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
+                                    </Box>
+                                )}
 
                                 <TextField
                                     select

@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comment;
+use App\Models\CommentAttachment;
 use App\Models\Project;
 use App\Models\Task;
+use App\Services\ImageKitService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,13 +18,14 @@ class CommentController extends Controller
     /**
      * Store a new comment for a task
      */
-    public function store(Request $request, Project $project, Task $task): RedirectResponse
+    public function store(Request $request, Project $project, Task $task, ImageKitService $imageKit): RedirectResponse
     {
         // Authorize task access through project policy
         $this->authorize('view', $project);
 
         $request->validate([
-            'content' => 'required|string|max:2000',
+            'content' => 'required_without:image|nullable|string|max:2000',
+            'image' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp|max:5120',
             'parent_id' => 'nullable|exists:comments,id',
         ]);
 
@@ -34,11 +37,34 @@ class CommentController extends Controller
             }
         }
 
-        $task->comments()->create([
+        $comment = $task->comments()->create([
             'user_id' => $request->user()->id,
             'parent_id' => $request->parent_id,
-            'content' => $request->content,
+            'content' => $request->content ?? '',
         ]);
+
+        if ($request->hasFile('image')) {
+            try {
+                $upload = $imageKit->upload($request->file('image'), 'task-comments');
+                CommentAttachment::create([
+                    'comment_id' => $comment->id,
+                    'user_id' => $request->user()->id,
+                    'kind' => 'image',
+                    'original_name' => $request->file('image')->getClientOriginalName(),
+                    'mime_type' => $request->file('image')->getMimeType(),
+                    'size' => $request->file('image')->getSize(),
+                    'imagekit_file_id' => $upload['file_id'] ?? null,
+                    'url' => $upload['url'] ?? null,
+                    'meta' => [
+                        'width' => $upload['width'] ?? null,
+                        'height' => $upload['height'] ?? null,
+                        'thumbnail_url' => $upload['thumbnail_url'] ?? null,
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                return back()->withErrors(['image' => 'Image upload failed: '.$e->getMessage()]);
+            }
+        }
 
         return back()->with('success', 'Comment added successfully.');
     }

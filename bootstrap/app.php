@@ -10,6 +10,9 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withProviders([
+        \App\Providers\ImageKitServiceProvider::class,
+    ])
     ->withMiddleware(function (Middleware $middleware): void {
         // Trust Heroku proxy headers EXCEPT X_FORWARDED_HOST to avoid signed URL mismatches.
         $middleware->trustProxies(
