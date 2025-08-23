@@ -28,10 +28,10 @@
                     </div>
                 </div>
                 @php $segments = [
-                    'free' => ['label' => 'Free Tier', 'color' => 'pink'],
-                    'basic' => ['label' => 'Basic', 'color' => 'blue'],
-                    'pro' => ['label' => 'Pro', 'color' => 'green'],
-                    'business' => ['label' => 'Business', 'color' => 'orange'],
+                    'free' => ['label' => 'Free Tier (' . ($segmentCounts['free'] ?? 0) . ' users)', 'color' => 'pink'],
+                    'basic' => ['label' => 'Basic (' . ($segmentCounts['basic'] ?? 0) . ' users)', 'color' => 'blue'],
+                    'pro' => ['label' => 'Pro (' . ($segmentCounts['pro'] ?? 0) . ' users)', 'color' => 'green'],
+                    'business' => ['label' => 'Business (' . ($segmentCounts['business'] ?? 0) . ' users)', 'color' => 'orange'],
                 ]; @endphp
                 <!-- Selectable Chips -->
                 <div id="segmentChips" class="flex flex-wrap gap-2 mb-3">
