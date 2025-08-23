@@ -314,7 +314,7 @@ class TaskController extends Controller
         $this->authorize('view', $project);
 
         $val = $request->validate([
-            'count' => ['required', 'integer', 'min:1', 'max:10'],
+            'count' => ['required', 'integer', 'min:1', 'max:8'],
             'prompt' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -447,7 +447,7 @@ class TaskController extends Controller
         $this->authorize('view', $project);
 
         $max = (int) ($request->integer('max') ?: 8);
-        $max = max(3, min(10, $max));
+        $max = max(3, min(8, $max));
 
         try {
             $suggestions = $chips->fromProject($project, $max);

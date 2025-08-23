@@ -41,9 +41,9 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import SmartToyRoundedIcon from '@mui/icons-material/SmartToyRounded';
 import { getCsrfToken } from '@/utils/csrf';
 
-/** GET suggestions (no CSRF). `max` is clamped 3..10 for backend service. */
+/** GET suggestions (no CSRF). `max` is clamped 3..8 for backend service to prevent timeouts. */
 async function loadAISuggestions(projectId, max = 8) {
-    const clamped = Math.max(3, Math.min(10, max || 8));
+    const clamped = Math.max(3, Math.min(8, max || 8));
     const url = route('tasks.ai.suggestions', projectId) + `?max=${encodeURIComponent(clamped)}`;
     const res = await fetch(url, {
         headers: { Accept: 'application/json' },
@@ -267,9 +267,9 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
         }
     }, [processing]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Align with backend validation (min 1, max 10)
-    const inc = () => setCount((n) => Math.min(10, Math.max(1, n + 1)));
-    const dec = () => setCount((n) => Math.min(10, Math.max(1, n - 1)));
+    // Align with backend validation (min 1, max 8 to prevent timeouts)
+    const inc = () => setCount((n) => Math.min(8, Math.max(1, n + 1)));
+    const dec = () => setCount((n) => Math.min(8, Math.max(1, n - 1)));
     const reset = () => {
         setCount(5);
         setPrompt('');
@@ -305,7 +305,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
     };
 
     const meterPct = useMemo(
-        () => Math.max(0, Math.min(100, Math.round((count / 10) * 100))),
+        () => Math.max(0, Math.min(100, Math.round((count / 8) * 100))),
         [count]
     );
 
@@ -445,11 +445,26 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                 sx={{
                                     fontWeight: 900,
                                     letterSpacing: 0.3,
-                                    mb: 1,
+                                    mb: 0.5,
                                     color: alpha(theme.palette.text.primary, 0.85),
                                 }}
                             >
                                 NUMBER OF TASKS
+                            </Typography>
+                            
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    mb: 1.5,
+                                    color: alpha(theme.palette.text.secondary, 0.8),
+                                    fontStyle: 'italic',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                }}
+                            >
+                                <TipsAndUpdatesRoundedIcon sx={{ fontSize: 14 }} />
+                                Generate up to 8 tasks at a time to prevent timeout issues
                             </Typography>
 
                             <Stack direction="row" spacing={1} alignItems="center">
@@ -459,11 +474,11 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                     value={count}
                                     onChange={(e) =>
                                         setCount(() =>
-                                            Math.min(10, Math.max(1, Number(e.target.value) || 1))
+                                            Math.min(8, Math.max(1, Number(e.target.value) || 1))
                                         )
                                     }
                                     disabled={isGenerating || processing}
-                                    inputProps={{ min: 1, max: 10 }}
+                                    inputProps={{ min: 1, max: 8 }}
                                     sx={{ width: 120 }}
                                     InputProps={{
                                         startAdornment: (
@@ -493,7 +508,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                                             size="small"
                                                             onClick={inc}
                                                             disabled={
-                                                                count >= 10 ||
+                                                                count >= 8 ||
                                                                 isGenerating ||
                                                                 processing
                                                             }
