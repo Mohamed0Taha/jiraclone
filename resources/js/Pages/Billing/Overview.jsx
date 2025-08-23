@@ -1,5 +1,5 @@
 // resources/js/Pages/Billing/Overview.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
@@ -7,25 +7,173 @@ import {
     Box,
     Button,
     Chip,
+    Dialog,
+    DialogContent,
+    DialogTitle,
     Divider,
+    FormControl,
+    FormControlLabel,
     Grid,
+    IconButton,
     Paper,
+    Radio,
+    RadioGroup,
     Stack,
     Typography,
     useTheme,
 } from '@mui/material';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import CancelScheduleSendRoundedIcon from '@mui/icons-material/CancelScheduleSendRounded';
-import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import WorkspacePremiumRoundedIcon from '@mui/icons-material/WorkspacePremiumRounded';
 import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
+import CloseIcon from '@mui/icons-material/Close';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 /**
  * NOTE:
  * This file is self-contained and intentionally does NOT import Task/Board-related components.
  * It fixes the Vite error by removing incorrect imports and only rendering billing UI.
  */
+
+// Cancellation reasons
+const CANCELLATION_REASONS = [
+    { value: 'too_expensive', label: 'Too expensive' },
+    { value: 'not_using_enough', label: 'Not using it enough' },
+    { value: 'missing_features', label: 'Missing features I need' },
+    { value: 'technical_issues', label: 'Technical issues' },
+    { value: 'switching_service', label: 'Switching to another service' },
+    { value: 'temporary_pause', label: 'Taking a temporary break' },
+    { value: 'other', label: 'Other reason' },
+];
+
+// Cancellation confirmation dialog
+function CancellationDialog({ open, onClose, onConfirm, planName }) {
+    const [step, setStep] = useState(1); // 1: confirmation, 2: reason selection
+    const [selectedReason, setSelectedReason] = useState('');
+    const theme = useTheme();
+
+    const handleClose = () => {
+        setStep(1);
+        setSelectedReason('');
+        onClose();
+    };
+
+    const handleConfirmStep1 = () => {
+        setStep(2);
+    };
+
+    const handleFinalCancel = () => {
+        onConfirm(selectedReason);
+        handleClose();
+    };
+
+    return (
+        <Dialog 
+            open={open} 
+            onClose={handleClose}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+                sx: {
+                    borderRadius: 3,
+                    background: 'linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))',
+                    backdropFilter: 'blur(10px)',
+                }
+            }}
+        >
+            <DialogTitle sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                pb: 1
+            }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                    <WarningAmberIcon color="warning" />
+                    <Typography variant="h6" fontWeight={700}>
+                        {step === 1 ? 'Cancel Subscription?' : 'Why are you canceling?'}
+                    </Typography>
+                </Stack>
+                <IconButton onClick={handleClose} size="small">
+                    <CloseIcon />
+                </IconButton>
+            </DialogTitle>
+
+            <DialogContent sx={{ pb: 3 }}>
+                {step === 1 && (
+                    <Stack spacing={3}>
+                        <Typography variant="body1" sx={{ color: alpha(theme.palette.text.primary, 0.8) }}>
+                            Are you sure you want to cancel your <strong>{planName}</strong> subscription? 
+                            You'll lose access to premium features at the end of your current billing period.
+                        </Typography>
+                        
+                        <Stack direction="row" spacing={2} justifyContent="flex-end">
+                            <Button
+                                variant="outlined"
+                                onClick={handleClose}
+                                sx={{ textTransform: 'none', fontWeight: 600 }}
+                            >
+                                Keep Subscription
+                            </Button>
+                            <Button
+                                variant="contained"
+                                color="warning"
+                                onClick={handleConfirmStep1}
+                                sx={{ textTransform: 'none', fontWeight: 600 }}
+                            >
+                                Yes, Continue
+                            </Button>
+                        </Stack>
+                    </Stack>
+                )}
+
+                {step === 2 && (
+                    <Stack spacing={3}>
+                        <Typography variant="body1" sx={{ color: alpha(theme.palette.text.primary, 0.8) }}>
+                            Help us improve by letting us know why you're canceling:
+                        </Typography>
+                        
+                        <FormControl component="fieldset">
+                            <RadioGroup
+                                value={selectedReason}
+                                onChange={(e) => setSelectedReason(e.target.value)}
+                            >
+                                {CANCELLATION_REASONS.map((reason) => (
+                                    <FormControlLabel
+                                        key={reason.value}
+                                        value={reason.value}
+                                        control={<Radio />}
+                                        label={reason.label}
+                                        sx={{ mb: 0.5 }}
+                                    />
+                                ))}
+                            </RadioGroup>
+                        </FormControl>
+                        
+                        <Stack direction="row" spacing={2} justifyContent="flex-end">
+                            <Button
+                                variant="outlined"
+                                onClick={() => setStep(1)}
+                                sx={{ textTransform: 'none', fontWeight: 600 }}
+                            >
+                                Back
+                            </Button>
+                            <Button
+                                variant="contained"
+                                color="error"
+                                onClick={handleFinalCancel}
+                                disabled={!selectedReason}
+                                sx={{ textTransform: 'none', fontWeight: 600 }}
+                            >
+                                Cancel Subscription
+                            </Button>
+                        </Stack>
+                    </Stack>
+                )}
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function PlanCard({
     plan,
@@ -34,7 +182,6 @@ function PlanCard({
     onTrial,
     onGrace,
     onSubscribe,
-    onPortal,
     onCancel,
     onResume,
     hasUsedTrial,
@@ -216,48 +363,27 @@ function PlanCard({
                 )}
 
                 {(subscribed || onTrial) && isCurrent && !onGrace && (
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                        <Button
-                            fullWidth
-                            variant="outlined"
-                            onClick={onPortal}
-                            startIcon={<ManageAccountsRoundedIcon />}
-                            sx={{ textTransform: 'none', fontWeight: 700 }}
-                        >
-                            Manage
-                        </Button>
-                        <Button
-                            fullWidth
-                            variant="text"
-                            color="error"
-                            onClick={onCancel}
-                            sx={{ textTransform: 'none', fontWeight: 700 }}
-                        >
-                            Cancel
-                        </Button>
-                    </Stack>
+                    <Button
+                        fullWidth
+                        variant="text"
+                        color="error"
+                        onClick={() => onCancel(plan.name)}
+                        sx={{ textTransform: 'none', fontWeight: 700 }}
+                    >
+                        Cancel Subscription
+                    </Button>
                 )}
 
                 {(subscribed || onTrial) && isCurrent && onGrace && (
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            color="success"
-                            onClick={onResume}
-                            sx={{ textTransform: 'none', fontWeight: 800 }}
-                        >
-                            Resume
-                        </Button>
-                        <Button
-                            fullWidth
-                            variant="outlined"
-                            onClick={onPortal}
-                            sx={{ textTransform: 'none', fontWeight: 700 }}
-                        >
-                            Portal
-                        </Button>
-                    </Stack>
+                    <Button
+                        fullWidth
+                        variant="contained"
+                        color="success"
+                        onClick={onResume}
+                        sx={{ textTransform: 'none', fontWeight: 800 }}
+                    >
+                        Resume Subscription
+                    </Button>
                 )}
 
                 {/* Allow upgrading to different tiers when user has active subscription */}
@@ -296,6 +422,10 @@ export default function BillingOverview({
 }) {
     const theme = useTheme();
     const { flash } = usePage().props;
+    
+    // Cancellation dialog state
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [cancellingPlanName, setCancellingPlanName] = useState('');
 
     const subscribed = !!current?.subscribed;
     const onTrial = !!current?.on_trial;
@@ -308,12 +438,15 @@ export default function BillingOverview({
         router.post(route('billing.checkout'), { price_id: priceId });
     };
 
-    const portal = () => {
-        router.post(route('billing.portal'));
+    const handleCancelClick = (planName) => {
+        setCancellingPlanName(planName);
+        setCancelDialogOpen(true);
     };
 
-    const cancel = () => {
-        router.post(route('billing.cancel'));
+    const handleCancelConfirm = (reason) => {
+        router.post(route('billing.cancel'), { 
+            cancellation_reason: reason 
+        });
     };
 
     const resume = () => {
@@ -462,8 +595,7 @@ export default function BillingOverview({
                                                 onTrial={onTrial}
                                                 onGrace={onGrace}
                                                 onSubscribe={subscribe}
-                                                onPortal={portal}
-                                                onCancel={cancel}
+                                                onCancel={handleCancelClick}
                                                 onResume={resume}
                                                 hasUsedTrial={hasUsedTrial}
                                             />
@@ -489,6 +621,14 @@ export default function BillingOverview({
                         </Stack>
                     </Paper>
                 </Box>
+
+                {/* Cancellation Dialog */}
+                <CancellationDialog
+                    open={cancelDialogOpen}
+                    onClose={() => setCancelDialogOpen(false)}
+                    onConfirm={handleCancelConfirm}
+                    planName={cancellingPlanName}
+                />
             </AuthenticatedLayout>
         </>
     );

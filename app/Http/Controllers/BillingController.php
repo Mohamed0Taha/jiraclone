@@ -174,6 +174,18 @@ class BillingController extends Controller
         if (! $sub) {
             return back()->with('error', 'No active subscription.');
         }
+
+        // Validate and save the cancellation reason
+        $validatedData = $request->validate([
+            'cancellation_reason' => 'nullable|string|max:255',
+        ]);
+
+        // Save cancellation reason and timestamp to user record
+        $user->update([
+            'cancellation_reason' => $validatedData['cancellation_reason'] ?? null,
+            'cancelled_at' => now(),
+        ]);
+
         $sub->cancel(); // ends at period end (grace period)
 
         return back()->with('success', 'Subscription will end at period end.');
@@ -187,6 +199,12 @@ class BillingController extends Controller
         if (! $sub || ! $sub->onGracePeriod()) {
             return back()->with('error', 'No cancellable subscription in grace period.');
         }
+
+        // Clear cancellation data since they're resuming
+        $user->update([
+            'cancellation_reason' => null,
+            'cancelled_at' => null,
+        ]);
 
         $sub->resume();
 

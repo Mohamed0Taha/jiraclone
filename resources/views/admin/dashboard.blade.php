@@ -1,7 +1,7 @@
 <x-admin.layout title="TaskPilot Admin - Dashboard" page-title="Dashboard Overview">
 
     <!-- Quick Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
                 <!-- Users -->
                 <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-lg shadow text-white">
                     <div class="flex items-center justify-between">
@@ -56,6 +56,17 @@
                         <div class="text-4xl opacity-80">💰</div>
                     </div>
                 </div>
+
+                <!-- Cancellations -->
+                <div class="bg-gradient-to-r from-red-500 to-red-600 p-6 rounded-lg shadow text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-red-100">Cancellations</p>
+                            <p class="text-3xl font-bold">{{ number_format($totalCancellations) }}</p>
+                        </div>
+                        <div class="text-4xl opacity-80">🚫</div>
+                    </div>
+                </div>
             </div>
 
     <!-- Navigation Cards -->
@@ -87,6 +98,17 @@
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900">Billing & Revenue</h3>
                             <p class="text-gray-600">Subscription analytics</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="{{ route('admin.cancellations') }}" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+                    <div class="flex items-center">
+                        <div class="text-3xl mr-4">🚫</div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Cancellations</h3>
+                            <p class="text-gray-600">Track cancellation reasons</p>
+                            <p class="text-sm text-red-600 font-medium mt-1">{{ number_format($totalCancellations) }} total cancellations</p>
                         </div>
                     </div>
                 </a>

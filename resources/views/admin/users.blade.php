@@ -62,10 +62,24 @@
                                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ $currentPlan === 'basic' ? 'bg-blue-100 text-blue-800' : ($currentPlan === 'pro' ? 'bg-purple-100 text-purple-800' : 'bg-yellow-100 text-yellow-800') }}">
                                             {{ ucfirst($currentPlan) }}{{ $user->onTrial() ? ' (Trial)' : '' }}
                                         </span>
+                                        @if($user->cancellation_reason)
+                                            <div class="mt-1">
+                                                <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800" title="Cancelled {{ $user->cancelled_at ? $user->cancelled_at->format('M j, Y') : '' }}">
+                                                    ⚠️ {{ $user->getCancellationReasonLabel() }}
+                                                </span>
+                                            </div>
+                                        @endif
                                     @else
                                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
                                             Free
                                         </span>
+                                        @if($user->cancellation_reason)
+                                            <div class="mt-1">
+                                                <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800" title="Cancelled {{ $user->cancelled_at ? $user->cancelled_at->format('M j, Y') : '' }}">
+                                                    🚫 {{ $user->getCancellationReasonLabel() }}
+                                                </span>
+                                            </div>
+                                        @endif
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

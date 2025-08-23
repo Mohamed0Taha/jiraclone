@@ -18,6 +18,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'name', 'email', 'password', 'is_admin',
         'google_id', 'google_avatar', 'google_token', 'google_refresh_token',
         'trial_used', 'trial_plan', 'ai_tasks_used', 'usage_reset_date',
+        'cancellation_reason', 'cancelled_at',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -31,6 +32,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'trial_used' => 'boolean',
             'is_admin' => 'boolean',
             'usage_reset_date' => 'date',
+            'cancelled_at' => 'datetime',
         ];
     }
 
@@ -95,6 +97,28 @@ class User extends Authenticatable implements MustVerifyEmail
         $subscription = $this->subscription($subscription);
 
         return $subscription && $subscription->onTrial();
+    }
+
+    /**
+     * Get the readable label for the cancellation reason.
+     */
+    public function getCancellationReasonLabel(): ?string
+    {
+        if (! $this->cancellation_reason) {
+            return null;
+        }
+
+        $reasons = [
+            'too_expensive' => 'Too expensive',
+            'not_using_enough' => 'Not using it enough',
+            'missing_features' => 'Missing features I need',
+            'technical_issues' => 'Technical issues',
+            'switching_service' => 'Switching to another service',
+            'temporary_pause' => 'Taking a temporary break',
+            'other' => 'Other reason',
+        ];
+
+        return $reasons[$this->cancellation_reason] ?? 'Unknown reason';
     }
 
     public function hasActiveSubscription(): bool
