@@ -72,6 +72,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
             const result = await response.json();
 
             if (result.success) {
+                console.log('AI Analysis Result:', result.data); // Debug log
                 onDocumentAnalyzed(result.data);
             } else {
                 setError(result.message || 'Failed to analyze document');

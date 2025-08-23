@@ -102,35 +102,43 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
     const back = useCallback(() => setActive((n) => Math.max(0, n - 1)), []);
 
     const handleDocumentAnalyzed = useCallback((analysisData) => {
+        console.log('Received analysis data:', analysisData); // Debug log
         setDocumentAnalysisData(analysisData);
         setCreationMethod('document');
         
         // Populate form with AI extracted data
         if (analysisData) {
-            setData({
-                ...data,
+            console.log('Updating form data with:', analysisData); // Debug log
+            
+            // Generate key from project name
+            const projectKey = analysisData.name ? generateKeyFromName(analysisData.name) : '';
+            
+            // Update the entire form data object properly
+            setData(prevData => ({
+                ...prevData,
                 name: analysisData.name || '',
+                key: projectKey,
                 description: analysisData.description || '',
                 start_date: analysisData.start_date || '',
                 end_date: analysisData.end_date || '',
                 meta: {
-                    ...data.meta,
+                    ...prevData.meta,
                     project_type: analysisData.project_type || '',
                     domain: analysisData.domain || '',
                     area: analysisData.area || '',
                     location: analysisData.location || '',
-                    team_size: analysisData.team_size || data.meta.team_size,
+                    team_size: analysisData.team_size || prevData.meta.team_size,
                     budget: analysisData.budget || '',
                     primary_stakeholder: analysisData.primary_stakeholder || '',
                     objectives: analysisData.objectives || '',
                     constraints: analysisData.constraints || '',
                 },
-            });
+            }));
         }
         
         // Move to next step
         setActive(1);
-    }, [data, setData]);
+    }, [setData]);
 
     const handleManualCreate = useCallback(() => {
         setCreationMethod('manual');
