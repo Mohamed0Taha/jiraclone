@@ -224,13 +224,13 @@ export default function AssistantChat({ project, open, onClose }) {
         }
         
         resetTranscript();
-        setIsProcessingVoice(true);
+        setIsProcessingVoice(false); // Reset processing state
         SpeechRecognition.startListening({ 
             continuous: true, 
             language: 'en-US' 
         });
 
-        // Start monitoring for silence
+        // Clear any existing timers
         clearTimeout(silenceTimerRef.current);
         clearTimeout(voiceTimeoutRef.current);
         
@@ -246,15 +246,20 @@ export default function AssistantChat({ project, open, onClose }) {
         SpeechRecognition.stopListening();
         clearTimeout(silenceTimerRef.current);
         clearTimeout(voiceTimeoutRef.current);
-        setIsProcessingVoice(false);
         
-        // Process the transcript after a short delay to ensure it's captured
-        setTimeout(() => {
-            if (transcript && transcript.trim()) {
+        // Set processing state only if we have transcript to process
+        if (transcript && transcript.trim()) {
+            setIsProcessingVoice(true);
+            
+            // Process the transcript after a short delay to ensure it's captured
+            setTimeout(() => {
                 sendMessage(transcript.trim());
                 resetTranscript();
-            }
-        }, 500);
+                setIsProcessingVoice(false);
+            }, 500);
+        } else {
+            setIsProcessingVoice(false);
+        }
     };
 
     const toggleVoiceMode = () => {
@@ -267,6 +272,7 @@ export default function AssistantChat({ project, open, onClose }) {
         
         // Clear input when switching modes
         setInput('');
+        setIsProcessingVoice(false); // Reset processing state
     };
 
     // Monitor transcript changes for silence detection

@@ -68,8 +68,14 @@ class ProjectAssistantController extends Controller
     {
         $this->authorizeView($project);
 
-        // $labels = $this->service->labelsFor($project); // Removed: method does not exist
-        $labels = []; // TODO: Implement label fetching if needed
+        // Define common task status labels
+        $labels = [
+            'todo' => 'To Do',
+            'inprogress' => 'In Progress', 
+            'review' => 'Review',
+            'done' => 'Done'
+        ];
+
         $todo = $labels['todo'];
         $inprog = $labels['inprogress'];
         $rev = $labels['review'];
@@ -85,9 +91,12 @@ class ProjectAssistantController extends Controller
                 "Move tasks in {$rev} to {$done}",
                 'Delete urgent tasks',
                 'Update due date for medium priority to next Friday',
-                'Assign unassigned tasks to Alex',
-                'Create task Implement login',
+                'Assign unassigned tasks to team members',
+                'Create task for code review',
                 "Set all {$inprog} tasks to {$rev}",
+                'Show project timeline',
+                'List high priority tasks',
+                'Generate weekly progress report',
             ],
         ]);
     }
@@ -130,7 +139,7 @@ class ProjectAssistantController extends Controller
         } catch (Throwable $e) {
             Log::error('Assistant command execution error', [
                 'error' => $e->getMessage(),
-                'command_data' => $commandData,
+                'command_data' => $commandData
             ]);
 
             return response()->json([
