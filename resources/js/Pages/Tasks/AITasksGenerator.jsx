@@ -434,27 +434,52 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
     };
 
     const generate = () => {
-        if (!activeRef.current) startSequentialModal();
+        // Stop speech recognition if it's active to capture final transcript
+        if (listening) {
+            SpeechRecognition.stopListening();
+        }
 
-        const token = getCsrfToken() || '';
-        router.post(
-            route('tasks.ai.preview', project.id),
-            { count, prompt },
-            {
-                preserveScroll: true,
-                headers: {
-                    'X-XSRF-TOKEN': token,
-                    Accept: 'text/html, application/xhtml+xml',
-                },
-                onFinish: () => {
-                    completeSequentialModal();
-                    setTimeout(() => stopSequentialModal(), 1100);
-                },
-                onError: () => {
-                    stopSequentialModal();
-                },
+        // Small delay to allow final transcript processing
+        setTimeout(() => {
+            if (!activeRef.current) startSequentialModal();
+
+            // Build complete prompt with all context
+            let fullPrompt = prompt;
+            
+            // Add any remaining transcript that hasn't been processed
+            if (transcript && transcript.trim()) {
+                const addition = fullPrompt ? `\n${transcript}` : transcript;
+                fullPrompt = fullPrompt + addition;
             }
-        );
+
+            console.log('Generating tasks with:', {
+                count,
+                promptLength: fullPrompt.length,
+                hasFiles: uploadedFiles.length > 0,
+                hasTranscript: !!transcript
+            });
+
+            const token = getCsrfToken() || '';
+            router.post(
+                route('tasks.ai.preview', project.id),
+                { count, prompt: fullPrompt },
+                {
+                    preserveScroll: true,
+                    headers: {
+                        'X-XSRF-TOKEN': token,
+                        Accept: 'text/html, application/xhtml+xml',
+                    },
+                    onFinish: () => {
+                        completeSequentialModal();
+                        setTimeout(() => stopSequentialModal(), 1100);
+                    },
+                    onError: (errors) => {
+                        console.error('Generate tasks error:', errors);
+                        stopSequentialModal();
+                    },
+                }
+            );
+        }, listening ? 500 : 0); // Wait 500ms if listening, otherwise proceed immediately
     };
 
     const cancel = () => {
