@@ -1,0 +1,1 @@
+import{r as e}from"./ProjectReportDialog-DJSS4N_t.js";import{j as s}from"./index-BgEJ3fxA.js";const r=e.createContext();function a({value:t,...o}){return s.jsx(r.Provider,{value:t??!0,...o})}const x=()=>e.useContext(r)??!1;export{a as R,x as u};

@@ -1,0 +1,1 @@
+import{r as m,m as P,a as i}from"./useSlot-CiX-lWvG.js";import{a as S}from"./Typography-D7k_4FBJ.js";function g(o){const{elementType:s,externalSlotProps:t,ownerState:e,skipResolvingSlotProps:p=!1,...n}=o,r=p?{}:m(t,e),{props:a,internalRef:l}=P({...n,externalSlotProps:r}),f=S(l,r?.ref,o.additionalProps?.ref);return i(s,{...a,ref:f},e)}export{g as u};
