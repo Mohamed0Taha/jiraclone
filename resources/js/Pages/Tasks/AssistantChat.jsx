@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { csrfFetch } from '@/utils/csrf';
+import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import {
     Avatar,
     Box,
@@ -16,6 +17,8 @@ import {
     TextField,
     Tooltip,
     Typography,
+    Switch,
+    FormControlLabel,
     keyframes,
     alpha,
 } from '@mui/material';
@@ -27,6 +30,10 @@ import PersonOutlineRoundedIcon from '@mui/icons-material/PersonOutlineRounded';
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import ErrorOutlineRoundedIcon from '@mui/icons-material/ErrorOutlineRounded';
+import MicRoundedIcon from '@mui/icons-material/MicRounded';
+import MicOffRoundedIcon from '@mui/icons-material/MicOffRounded';
+import ChatBubbleOutlineRoundedIcon from '@mui/icons-material/ChatBubbleOutlineRounded';
+import RecordVoiceOverRoundedIcon from '@mui/icons-material/RecordVoiceOverRounded';
 
 // Animation keyframes
 const pulse = keyframes`
@@ -101,8 +108,22 @@ export default function AssistantChat({ project, open, onClose }) {
     const [copiedIndex, setCopiedIndex] = useState(null);
     const [pendingCommand, setPendingCommand] = useState(null);
 
+    // Voice interaction state
+    const [voiceMode, setVoiceMode] = useState(false);
+    const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+    
     const scrollRef = useRef(null);
     const inputRef = useRef(null);
+    const silenceTimerRef = useRef(null);
+    const voiceTimeoutRef = useRef(null);
+
+    // Speech recognition setup
+    const {
+        transcript,
+        listening,
+        resetTranscript,
+        browserSupportsSpeechRecognition
+    } = useSpeechRecognition();
 
     const navigateToBoard = () => {
         const url = `/projects/${project.id}/tasks`;
@@ -194,6 +215,87 @@ export default function AssistantChat({ project, open, onClose }) {
             setBusy(false);
         }
     };
+
+    // Voice interaction functions
+    const startVoiceInput = () => {
+        if (!browserSupportsSpeechRecognition) {
+            alert('Your browser does not support speech recognition. Please use a modern browser like Chrome or Edge.');
+            return;
+        }
+        
+        resetTranscript();
+        setIsProcessingVoice(true);
+        SpeechRecognition.startListening({ 
+            continuous: true, 
+            language: 'en-US' 
+        });
+
+        // Start monitoring for silence
+        clearTimeout(silenceTimerRef.current);
+        clearTimeout(voiceTimeoutRef.current);
+        
+        // Auto-stop after 30 seconds to prevent indefinite listening
+        voiceTimeoutRef.current = setTimeout(() => {
+            if (listening) {
+                stopVoiceInput();
+            }
+        }, 30000);
+    };
+
+    const stopVoiceInput = () => {
+        SpeechRecognition.stopListening();
+        clearTimeout(silenceTimerRef.current);
+        clearTimeout(voiceTimeoutRef.current);
+        setIsProcessingVoice(false);
+        
+        // Process the transcript after a short delay to ensure it's captured
+        setTimeout(() => {
+            if (transcript && transcript.trim()) {
+                sendMessage(transcript.trim());
+                resetTranscript();
+            }
+        }, 500);
+    };
+
+    const toggleVoiceMode = () => {
+        const newVoiceMode = !voiceMode;
+        setVoiceMode(newVoiceMode);
+        
+        if (!newVoiceMode && listening) {
+            stopVoiceInput();
+        }
+        
+        // Clear input when switching modes
+        setInput('');
+    };
+
+    // Monitor transcript changes for silence detection
+    useEffect(() => {
+        if (!listening || !voiceMode) return;
+
+        // Clear existing timer
+        clearTimeout(silenceTimerRef.current);
+
+        // Set new timer for silence detection (2 seconds of silence)
+        silenceTimerRef.current = setTimeout(() => {
+            if (listening && transcript && transcript.trim()) {
+                stopVoiceInput();
+            }
+        }, 2000);
+
+        return () => clearTimeout(silenceTimerRef.current);
+    }, [transcript, listening, voiceMode]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            clearTimeout(silenceTimerRef.current);
+            clearTimeout(voiceTimeoutRef.current);
+            if (listening) {
+                SpeechRecognition.stopListening();
+            }
+        };
+    }, []);
 
     const sendMessage = async (text) => {
         if (!text || busy) return;
@@ -371,6 +473,41 @@ export default function AssistantChat({ project, open, onClose }) {
                         border: '1px solid rgba(255,255,255,0.5)',
                     }}
                 />
+                
+                {/* Voice Mode Toggle */}
+                <FormControlLabel
+                    control={
+                        <Switch
+                            checked={voiceMode}
+                            onChange={toggleVoiceMode}
+                            size="small"
+                            sx={{
+                                '& .MuiSwitch-switchBase.Mui-checked': {
+                                    color: colors.secondary,
+                                    '& + .MuiSwitch-track': {
+                                        backgroundColor: colors.secondary,
+                                        opacity: 0.7,
+                                    },
+                                },
+                            }}
+                        />
+                    }
+                    label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            {voiceMode ? <RecordVoiceOverRoundedIcon fontSize="small" /> : <ChatBubbleOutlineRoundedIcon fontSize="small" />}
+                            <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                                {voiceMode ? 'Voice' : 'Text'}
+                            </Typography>
+                        </Box>
+                    }
+                    sx={{
+                        ml: 2,
+                        '& .MuiFormControlLabel-label': {
+                            color: 'white',
+                        },
+                    }}
+                />
+
                 <IconButton onClick={onClose} sx={{ ml: 'auto' }} aria-label="Close assistant chat">
                     <CloseRoundedIcon fontSize="small" sx={{ color: 'white' }} />
                 </IconButton>
@@ -1133,77 +1270,173 @@ export default function AssistantChat({ project, open, onClose }) {
                     zIndex: 2,
                 }}
             >
-                <TextField
-                    inputRef={inputRef}
-                    fullWidth
-                    size="small"
-                    placeholder="Type your message..."
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            sendMessage(input.trim());
-                        }
-                    }}
-                    sx={{
-                        '& .MuiOutlinedInput-root': {
-                            borderRadius: 24,
-                            backgroundColor: palette.inputBg,
-                            '&:hover': { backgroundColor: palette.inputBgHover },
-                            '&.Mui-focused': {
-                                backgroundColor: palette.inputBgFocus,
-                                boxShadow: palette.inputRing,
-                            },
-                        },
-                        '& .MuiOutlinedInput-input': {
-                            py: 1.25,
-                            px: 2,
-                            color: 'white',
-                            fontWeight: 500,
-                            '&::placeholder': {
-                                color: 'rgba(255,255,255,0.85)',
-                            },
-                        },
-                        '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: palette.borderSoft,
-                            borderWidth: 1.8,
-                        },
-                    }}
-                />
-                <Button
-                    onClick={() => sendMessage(input.trim())}
-                    disabled={!input.trim() || busy}
-                    variant="contained"
-                    sx={{
-                        textTransform: 'none',
-                        fontWeight: 900,
-                        borderRadius: 24,
-                        px: 2.8,
-                        minWidth: 112,
-                        height: 42,
-                        background: palette.sendGradient,
-                        color: '#ffffff',
-                        boxShadow: palette.sendShadow,
-                        '&:hover': {
-                            boxShadow: palette.sendShadowHover,
-                            transform: 'translateY(-1px) scale(1.03)',
-                            background: palette.sendGradientHover,
-                        },
-                        '&.Mui-focusVisible': {
-                            boxShadow: `${palette.sendShadow}, ${palette.sendFocusRing}`,
-                        },
-                        '&.Mui-disabled': {
-                            background: `linear-gradient(135deg, ${alpha(colors.secondary, 0.45)}, ${alpha(colors.primary, 0.45)})`,
-                            color: 'rgba(255,255,255,0.85)',
-                        },
-                        transition: 'all 0.25s ease',
-                    }}
-                    startIcon={!busy ? <SendRoundedIcon /> : null}
-                    aria-label="Send message"
-                >
-                    {busy ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Send'}
-                </Button>
+                {!voiceMode ? (
+                    // Text Input Mode
+                    <>
+                        <TextField
+                            inputRef={inputRef}
+                            fullWidth
+                            size="small"
+                            placeholder="Type your message..."
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    sendMessage(input.trim());
+                                }
+                            }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 24,
+                                    backgroundColor: palette.inputBg,
+                                    '&:hover': { backgroundColor: palette.inputBgHover },
+                                    '&.Mui-focused': {
+                                        backgroundColor: palette.inputBgFocus,
+                                        boxShadow: palette.inputRing,
+                                    },
+                                },
+                                '& .MuiOutlinedInput-input': {
+                                    py: 1.25,
+                                    px: 2,
+                                    color: 'white',
+                                    fontWeight: 500,
+                                    '&::placeholder': {
+                                        color: 'rgba(255,255,255,0.85)',
+                                    },
+                                },
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: palette.borderSoft,
+                                    borderWidth: 1.8,
+                                },
+                            }}
+                        />
+                        <Button
+                            onClick={() => sendMessage(input.trim())}
+                            disabled={!input.trim() || busy}
+                            variant="contained"
+                            sx={{
+                                textTransform: 'none',
+                                fontWeight: 900,
+                                borderRadius: 24,
+                                px: 2.8,
+                                minWidth: 112,
+                                height: 42,
+                                background: palette.sendGradient,
+                                color: '#ffffff',
+                                boxShadow: palette.sendShadow,
+                                '&:hover': {
+                                    boxShadow: palette.sendShadowHover,
+                                    transform: 'translateY(-1px) scale(1.03)',
+                                    background: palette.sendGradientHover,
+                                },
+                                '&.Mui-focusVisible': {
+                                    boxShadow: `${palette.sendShadow}, ${palette.sendFocusRing}`,
+                                },
+                                '&.Mui-disabled': {
+                                    background: `linear-gradient(135deg, ${alpha(colors.secondary, 0.45)}, ${alpha(colors.primary, 0.45)})`,
+                                    color: 'rgba(255,255,255,0.85)',
+                                },
+                                transition: 'all 0.25s ease',
+                            }}
+                            startIcon={!busy ? <SendRoundedIcon /> : null}
+                            aria-label="Send message"
+                        >
+                            {busy ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Send'}
+                        </Button>
+                    </>
+                ) : (
+                    // Voice Input Mode
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            width: '100%',
+                            minHeight: 42,
+                        }}
+                    >
+                        {/* Voice Status Display */}
+                        <Box
+                            sx={{
+                                flexGrow: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1.5,
+                                px: 2,
+                                py: 1.25,
+                                borderRadius: 24,
+                                backgroundColor: palette.inputBg,
+                                border: `1.8px solid ${listening ? colors.secondary : palette.borderSoft}`,
+                                minHeight: 42,
+                                transition: 'all 0.25s ease',
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    backgroundColor: listening ? colors.secondary : 'rgba(255,255,255,0.4)',
+                                    animation: listening ? `${pulse} 1.5s infinite` : 'none',
+                                }}
+                            />
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    color: listening ? 'white' : 'rgba(255,255,255,0.85)',
+                                    fontWeight: listening ? 600 : 500,
+                                    flexGrow: 1,
+                                }}
+                            >
+                                {listening 
+                                    ? (transcript || 'Listening... Speak now')
+                                    : isProcessingVoice 
+                                        ? 'Processing speech...'
+                                        : 'Tap microphone to start speaking'
+                                }
+                            </Typography>
+                        </Box>
+
+                        {/* Voice Control Button */}
+                        <IconButton
+                            onClick={listening ? stopVoiceInput : startVoiceInput}
+                            disabled={busy || isProcessingVoice || !browserSupportsSpeechRecognition}
+                            sx={{
+                                width: 56,
+                                height: 42,
+                                borderRadius: 24,
+                                backgroundColor: listening ? colors.error : colors.secondary,
+                                color: 'white',
+                                boxShadow: listening 
+                                    ? `0 4px 20px ${alpha(colors.error, 0.4)}` 
+                                    : `0 4px 20px ${alpha(colors.secondary, 0.4)}`,
+                                '&:hover': {
+                                    backgroundColor: listening ? colors.error : colors.secondary,
+                                    transform: 'translateY(-1px) scale(1.05)',
+                                    boxShadow: listening 
+                                        ? `0 6px 24px ${alpha(colors.error, 0.5)}` 
+                                        : `0 6px 24px ${alpha(colors.secondary, 0.5)}`,
+                                },
+                                '&.Mui-disabled': {
+                                    backgroundColor: alpha(colors.secondary, 0.3),
+                                    color: 'rgba(255,255,255,0.5)',
+                                },
+                                transition: 'all 0.25s ease',
+                                animation: listening ? `${pulse} 2s infinite` : 'none',
+                            }}
+                            aria-label={listening ? "Stop listening" : "Start voice input"}
+                        >
+                            {isProcessingVoice ? (
+                                <CircularProgress size={20} sx={{ color: 'inherit' }} />
+                            ) : listening ? (
+                                <MicOffRoundedIcon />
+                            ) : (
+                                <MicRoundedIcon />
+                            )}
+                        </IconButton>
+                    </Box>
+                )}
             </DialogActions>
         </Dialog>
     );
