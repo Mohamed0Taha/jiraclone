@@ -47,6 +47,13 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import SmartToyRoundedIcon from '@mui/icons-material/SmartToyRounded';
 import { getCsrfToken } from '@/utils/csrf';
 
+// Initialize SpeechRecognition
+if (typeof window !== 'undefined') {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+        console.warn('SpeechRecognition API not supported in this browser');
+    }
+}
+
 /** GET suggestions (no CSRF). `max` is clamped 3..8 for backend service to prevent timeouts. */
 async function loadAISuggestions(projectId, max = 8) {
     const clamped = Math.max(3, Math.min(8, max || 8));
@@ -323,15 +330,38 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
 
     /** Speech recognition handlers */
     const startListening = () => {
+        console.log('Starting speech recognition...', { browserSupportsSpeechRecognition, SpeechRecognition });
+        
         if (!browserSupportsSpeechRecognition) {
+            console.error('Browser does not support speech recognition');
             alert('Your browser does not support speech recognition. Please use a modern browser like Chrome or Edge.');
             return;
         }
-        SpeechRecognition.startListening({ continuous: true, language: 'en-US' });
+
+        if (!SpeechRecognition) {
+            console.error('SpeechRecognition object not available');
+            alert('Speech recognition is not available. Please check your browser settings.');
+            return;
+        }
+
+        try {
+            console.log('Attempting to start listening...');
+            SpeechRecognition.startListening({ continuous: true, language: 'en-US' });
+            console.log('Speech recognition started successfully');
+        } catch (error) {
+            console.error('Error starting speech recognition:', error);
+            alert('Failed to start speech recognition: ' + error.message);
+        }
     };
 
     const stopListening = () => {
-        SpeechRecognition.stopListening();
+        console.log('Stopping speech recognition...');
+        try {
+            SpeechRecognition.stopListening();
+            console.log('Speech recognition stopped');
+        } catch (error) {
+            console.error('Error stopping speech recognition:', error);
+        }
     };
 
     const handleSpeechResult = () => {

@@ -35,6 +35,13 @@ import MicOffRoundedIcon from '@mui/icons-material/MicOffRounded';
 import ChatBubbleOutlineRoundedIcon from '@mui/icons-material/ChatBubbleOutlineRounded';
 import RecordVoiceOverRoundedIcon from '@mui/icons-material/RecordVoiceOverRounded';
 
+// Initialize SpeechRecognition
+if (typeof window !== 'undefined') {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+        console.warn('SpeechRecognition API not supported in this browser');
+    }
+}
+
 // Animation keyframes
 const pulse = keyframes`
   0% { transform: scale(1); opacity: 1; }
@@ -218,28 +225,46 @@ export default function AssistantChat({ project, open, onClose }) {
 
     // Voice interaction functions
     const startVoiceInput = () => {
+        console.log('Starting voice input...', { browserSupportsSpeechRecognition, SpeechRecognition });
+        
         if (!browserSupportsSpeechRecognition) {
+            console.error('Browser does not support speech recognition');
             alert('Your browser does not support speech recognition. Please use a modern browser like Chrome or Edge.');
             return;
         }
-        
-        resetTranscript();
-        setIsProcessingVoice(false); // Reset processing state
-        SpeechRecognition.startListening({ 
-            continuous: true, 
-            language: 'en-US' 
-        });
 
-        // Clear any existing timers
-        clearTimeout(silenceTimerRef.current);
-        clearTimeout(voiceTimeoutRef.current);
+        if (!SpeechRecognition) {
+            console.error('SpeechRecognition object not available');
+            alert('Speech recognition is not available. Please check your browser settings.');
+            return;
+        }
         
-        // Auto-stop after 30 seconds to prevent indefinite listening
-        voiceTimeoutRef.current = setTimeout(() => {
-            if (listening) {
-                stopVoiceInput();
-            }
-        }, 30000);
+        try {
+            resetTranscript();
+            setIsProcessingVoice(false); // Reset processing state
+            console.log('Attempting to start listening...');
+            SpeechRecognition.startListening({ 
+                continuous: true, 
+                language: 'en-US' 
+            });
+            console.log('Voice input started successfully');
+
+            // Clear any existing timers
+            clearTimeout(silenceTimerRef.current);
+            clearTimeout(voiceTimeoutRef.current);
+            
+            // Auto-stop after 30 seconds to prevent indefinite listening
+            voiceTimeoutRef.current = setTimeout(() => {
+                if (listening) {
+                    console.log('Auto-stopping voice input after 30 seconds');
+                    stopVoiceInput();
+                }
+            }, 30000);
+        } catch (error) {
+            console.error('Error starting voice input:', error);
+            alert('Failed to start voice input: ' + error.message);
+            setIsProcessingVoice(false);
+        }
     };
 
     const stopVoiceInput = () => {
