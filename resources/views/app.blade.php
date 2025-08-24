@@ -7,7 +7,22 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="app-url" content="{{ rtrim(config('app.url'), '/') }}">
 
-  <title inertia>{{ config('app.name', 'TaskPilot') }}</title>
+    <title inertia>{{ config('app.name', 'TaskPilot') }}</title>
+
+    <!-- TaskPilot Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/png" sizes="48x48" href="/icon-48.svg">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-48.svg">
+    
+    <!-- TaskPilot Branding -->
+    <meta name="theme-color" content="#6366F1">
+    <meta name="application-name" content="TaskPilot">
+    <meta name="apple-mobile-web-app-title" content="TaskPilot">
+    <meta name="description" content="TaskPilot - AI-Powered Project Management">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
 
     @php
         $page ??= [

@@ -1,0 +1,23 @@
+{
+  "name": "TaskPilot",
+  "short_name": "TaskPilot",
+  "description": "AI-Powered Project Management Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366F1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-48.svg", 
+      "sizes": "48x48",
+      "type": "image/svg+xml"
+    }
+  ]
+}
