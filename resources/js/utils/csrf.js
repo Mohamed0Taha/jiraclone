@@ -9,6 +9,25 @@ function readMetaToken() {
     return null;
 }
 
+function readWindowLaravel() {
+    // Check window.Laravel object set in the blade template
+    if (typeof window !== 'undefined' && window.Laravel && window.Laravel.csrfToken) {
+        const token = window.Laravel.csrfToken;
+        if (token && token.length > 0) return token;
+    }
+    return null;
+}
+
+function readHiddenInput() {
+    // Look for hidden CSRF token inputs
+    const input = document.querySelector('input[name="_token"]');
+    if (input) {
+        const value = input.value;
+        if (value && value.length > 0) return value;
+    }
+    return null;
+}
+
 function readCookie(name) {
     const match = document.cookie.match(
         new RegExp('(?:^|; )' + name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + '=([^;]*)')
@@ -17,10 +36,29 @@ function readCookie(name) {
 }
 
 export function getCsrfToken() {
-    const meta = readMetaToken();
-    if (meta) return meta;
-    const cookie = readCookie('XSRF-TOKEN');
-    if (cookie) return cookie;
+    // Try multiple sources in order of preference
+    const windowToken = readWindowLaravel();
+    if (windowToken) return windowToken;
+    
+    const metaToken = readMetaToken();
+    if (metaToken) return metaToken;
+    
+    const inputToken = readHiddenInput();
+    if (inputToken) return inputToken;
+    
+    const cookieToken = readCookie('XSRF-TOKEN');
+    if (cookieToken) return cookieToken;
+    
+    // If no token found, log an error for debugging
+    console.error('CSRF Token Debug - No token found:', {
+        windowLaravel: !!window.Laravel,
+        windowToken: !!window.Laravel?.csrfToken,
+        metaTag: !!document.querySelector('meta[name="csrf-token"]'),
+        hiddenInput: !!document.querySelector('input[name="_token"]'),
+        cookie: !!readCookie('XSRF-TOKEN'),
+        timestamp: new Date().toISOString()
+    });
+    
     return null;
 }
 
@@ -30,14 +68,54 @@ export function withCsrf(init = {}) {
     const headers = {
         ...baseHeaders,
         'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
     };
+    
     if (token) {
         headers['X-CSRF-TOKEN'] = token;
         headers['X-XSRF-TOKEN'] = token;
+        console.log('CSRF Token applied:', token.substring(0, 10) + '...');
+    } else {
+        console.error('No CSRF token available for request - this will likely cause a 419 error');
     }
+    
     return {
         ...init,
         headers,
         credentials: 'same-origin',
     };
+}
+
+// Enhanced fetch wrapper with automatic CSRF handling and error recovery
+export async function csrfFetch(url, options = {}) {
+    const fetchOptions = withCsrf(options);
+    
+    try {
+        const response = await fetch(url, fetchOptions);
+        
+        // If 419 (CSRF token mismatch), try to refresh the page to get new token
+        if (response.status === 419) {
+            console.error('CSRF token mismatch (419) - attempting page refresh');
+            setTimeout(() => window.location.reload(), 1000);
+            throw new Error('CSRF token mismatch - refreshing page');
+        }
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('API Error:', {
+                status: response.status,
+                statusText: response.statusText,
+                url,
+                errorData,
+                token: getCsrfToken() ? 'Present' : 'Missing'
+            });
+            throw new Error(errorData?.message || `Request failed with status ${response.status}`);
+        }
+        
+        return response;
+    } catch (error) {
+        console.error('Fetch error:', error);
+        throw error;
+    }
 }

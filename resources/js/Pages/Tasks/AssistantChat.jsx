@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
+import { csrfFetch } from '@/utils/csrf';
 import {
     Avatar,
     Box,
@@ -103,92 +104,6 @@ export default function AssistantChat({ project, open, onClose }) {
     const scrollRef = useRef(null);
     const inputRef = useRef(null);
 
-    const getCsrfToken = () => {
-        // Try multiple methods to get the CSRF token
-        const token = 
-            window.Laravel?.csrfToken ||
-            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-            document.querySelector('input[name="_token"]')?.value ||
-            '';
-        
-        console.log('CSRF Token Debug:', {
-            windowLaravel: !!window.Laravel,
-            csrfFromWindow: !!window.Laravel?.csrfToken,
-            metaTag: !!document.querySelector('meta[name="csrf-token"]'),
-            tokenLength: token?.length || 0,
-            token: token ? `${token.substring(0, 10)}...` : 'MISSING'
-        });
-        
-        if (!token) {
-            console.error('CSRF token not found - this will cause 419 errors');
-        }
-        
-        return token;
-    };
-
-    const apiPost = async (url, body) => {
-        const token = getCsrfToken();
-        
-        // Fallback: if no CSRF token, try refreshing the page to get a new one
-        if (!token) {
-            console.error('No CSRF token available, attempting to refresh page');
-            window.location.reload();
-            throw new Error('CSRF token missing - page will refresh');
-        }
-        
-        try {
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-CSRF-TOKEN': token,
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify(body || {}),
-                credentials: 'same-origin',
-            });
-            
-            const data = await res.json().catch(() => ({}));
-            
-            if (!res.ok) {
-                console.error('API Error:', {
-                    status: res.status,
-                    statusText: res.statusText,
-                    data,
-                    url,
-                    token: token ? 'Present' : 'Missing',
-                });
-                
-                // If it's a 419 (CSRF token mismatch), try to refresh the page
-                if (res.status === 419) {
-                    console.error('CSRF token mismatch (419) - refreshing page');
-                    setTimeout(() => window.location.reload(), 1000);
-                }
-                
-                throw new Error(data?.message || `Request failed with status ${res.status}`);
-            }
-            
-            return data;
-        } catch (error) {
-            console.error('Fetch error:', error);
-            throw error;
-        }
-    };
-
-    const apiGet = async (url) => {
-        const res = await fetch(url, {
-            method: 'GET',
-            headers: { Accept: 'application/json' },
-            credentials: 'same-origin',
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-            throw new Error(data?.message || 'Request failed');
-        }
-        return data;
-    };
-
     const navigateToBoard = () => {
         const url = `/projects/${project.id}/tasks`;
         try {
@@ -204,7 +119,12 @@ export default function AssistantChat({ project, open, onClose }) {
 
     useEffect(() => {
         if (!open) return;
-        apiGet(`/projects/${project.id}/assistant/suggestions`)
+        fetch(`/projects/${project.id}/assistant/suggestions`, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        })
+            .then(response => response.json())
             .then((d) => {
                 if (Array.isArray(d?.suggestions)) setSuggestions(d.suggestions);
             })
@@ -233,9 +153,13 @@ export default function AssistantChat({ project, open, onClose }) {
         if (busy) return;
         setBusy(true);
         try {
-            const data = await apiPost(`/projects/${project.id}/assistant/execute`, {
-                command_data: cmdData,
+            const response = await csrfFetch(`/projects/${project.id}/assistant/execute`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    command_data: cmdData,
+                }),
             });
+            const data = await response.json();
 
             setMessages((prev) => {
                 const next = [...prev];
@@ -306,7 +230,11 @@ export default function AssistantChat({ project, open, onClose }) {
                 })),
             };
 
-            const data = await apiPost(`/projects/${project.id}/assistant/chat`, payload);
+            const response = await csrfFetch(`/projects/${project.id}/assistant/chat`, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
 
             // If backend indicates overlay (free tier), show upgrade card style message
             if (data?.show_overlay) {
