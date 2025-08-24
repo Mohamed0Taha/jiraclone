@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import {
     Avatar,
     Box,
@@ -92,6 +92,7 @@ const palette = {
 };
 
 export default function AssistantChat({ project, open, onClose }) {
+    const { props } = usePage();
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState([]);
     const [busy, setBusy] = useState(false);
@@ -102,27 +103,77 @@ export default function AssistantChat({ project, open, onClose }) {
     const scrollRef = useRef(null);
     const inputRef = useRef(null);
 
-    const csrfToken = () => {
-        const el = document.querySelector('meta[name="csrf-token"]');
-        return el ? el.getAttribute('content') : '';
+    const getCsrfToken = () => {
+        // Try multiple methods to get the CSRF token
+        const token = 
+            window.Laravel?.csrfToken ||
+            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+            document.querySelector('input[name="_token"]')?.value ||
+            '';
+        
+        console.log('CSRF Token Debug:', {
+            windowLaravel: !!window.Laravel,
+            csrfFromWindow: !!window.Laravel?.csrfToken,
+            metaTag: !!document.querySelector('meta[name="csrf-token"]'),
+            tokenLength: token?.length || 0,
+            token: token ? `${token.substring(0, 10)}...` : 'MISSING'
+        });
+        
+        if (!token) {
+            console.error('CSRF token not found - this will cause 419 errors');
+        }
+        
+        return token;
     };
 
     const apiPost = async (url, body) => {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-CSRF-TOKEN': csrfToken(),
-            },
-            body: JSON.stringify(body || {}),
-            credentials: 'same-origin',
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-            throw new Error(data?.message || 'Request failed');
+        const token = getCsrfToken();
+        
+        // Fallback: if no CSRF token, try refreshing the page to get a new one
+        if (!token) {
+            console.error('No CSRF token available, attempting to refresh page');
+            window.location.reload();
+            throw new Error('CSRF token missing - page will refresh');
         }
-        return data;
+        
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(body || {}),
+                credentials: 'same-origin',
+            });
+            
+            const data = await res.json().catch(() => ({}));
+            
+            if (!res.ok) {
+                console.error('API Error:', {
+                    status: res.status,
+                    statusText: res.statusText,
+                    data,
+                    url,
+                    token: token ? 'Present' : 'Missing',
+                });
+                
+                // If it's a 419 (CSRF token mismatch), try to refresh the page
+                if (res.status === 419) {
+                    console.error('CSRF token mismatch (419) - refreshing page');
+                    setTimeout(() => window.location.reload(), 1000);
+                }
+                
+                throw new Error(data?.message || `Request failed with status ${res.status}`);
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Fetch error:', error);
+            throw error;
+        }
     };
 
     const apiGet = async (url) => {
