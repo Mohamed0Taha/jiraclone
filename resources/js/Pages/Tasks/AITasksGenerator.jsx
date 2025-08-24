@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef, forwardRef } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import {
     alpha,
     Box,
@@ -28,6 +29,11 @@ import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import HelpRoundedIcon from '@mui/icons-material/HelpRounded';
 import TipsAndUpdatesRoundedIcon from '@mui/icons-material/TipsAndUpdatesRounded';
+import MicRoundedIcon from '@mui/icons-material/MicRounded';
+import MicOffRoundedIcon from '@mui/icons-material/MicOffRounded';
+import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
+import AttachFileRoundedIcon from '@mui/icons-material/AttachFileRounded';
+import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import { useSubscription } from '@/Hooks/useSubscription';
 import FeatureOverlay from '@/Components/FeatureOverlay';
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
@@ -56,6 +62,36 @@ async function loadAISuggestions(projectId, max = 8) {
         : [];
 }
 
+/** Read file content as text */
+async function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(e);
+        reader.readAsText(file);
+    });
+}
+
+/** Extract text from various file types */
+async function extractTextFromFile(file) {
+    const fileName = file.name.toLowerCase();
+    const fileType = file.type.toLowerCase();
+    
+    // Text files
+    if (fileType.startsWith('text/') || 
+        fileName.endsWith('.txt') || 
+        fileName.endsWith('.md') || 
+        fileName.endsWith('.json') ||
+        fileName.endsWith('.csv')) {
+        return await readFileAsText(file);
+    }
+    
+    // For other file types, just return basic info
+    return `File uploaded: ${file.name} (${(file.size / 1024).toFixed(1)} KB)
+    
+Please describe the contents or relevant details from this file that should be considered when generating tasks.`;
+}
+
 /** Case-insensitive contains */
 function includesLine(haystack, needle) {
     return haystack.toLowerCase().includes(needle.toLowerCase());
@@ -71,6 +107,20 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
     const { processing, errors = {} } = usePage().props;
     const { userPlan } = useSubscription();
 
+    // Add CSS animation for microphone pulse
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.7; transform: scale(1.1); }
+                100% { opacity: 1; transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+        return () => document.head.removeChild(style);
+    }, []);
+
     const handleUpgrade = () => {
         router.visit(userPlan?.billing_url || '/billing');
     };
@@ -80,6 +130,20 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
     const [chips, setChips] = useState([]);
     const [loadingChips, setLoadingChips] = useState(false);
     const [chipError, setChipError] = useState('');
+
+    // File upload state
+    const [uploadedFiles, setUploadedFiles] = useState([]);
+    const [fileContent, setFileContent] = useState('');
+    const [isProcessingFile, setIsProcessingFile] = useState(false);
+    const fileInputRef = useRef(null);
+
+    // Speech recognition
+    const {
+        transcript,
+        listening,
+        resetTranscript,
+        browserSupportsSpeechRecognition
+    } = useSpeechRecognition();
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [showModal, setShowModal] = useState(false);
@@ -197,6 +261,99 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
         });
         setChips((prev) => prev.filter((c) => c !== text));
     };
+
+    /** Handle file upload */
+    const handleFileUpload = async (event) => {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+
+        setIsProcessingFile(true);
+        try {
+            for (const file of files) {
+                // Check file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert(`File ${file.name} is too large. Maximum size is 5MB.`);
+                    continue;
+                }
+
+                const content = await extractTextFromFile(file);
+                setUploadedFiles(prev => [...prev, {
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    content: content.substring(0, 2000) // Limit content preview
+                }]);
+
+                // Add file content to prompt
+                setPrompt(prev => {
+                    const fileSection = `\n\n--- File: ${file.name} ---\n${content}\n--- End File ---`;
+                    return prev + fileSection;
+                });
+            }
+        } catch (error) {
+            console.error('Error processing file:', error);
+            alert('Error processing file. Please try again.');
+        } finally {
+            setIsProcessingFile(false);
+            // Reset file input
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
+    /** Remove uploaded file */
+    const removeFile = (index) => {
+        const file = uploadedFiles[index];
+        setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+        
+        // Remove file content from prompt
+        setPrompt(prev => {
+            const fileSection = `--- File: ${file.name} ---`;
+            const startIndex = prev.indexOf(fileSection);
+            if (startIndex === -1) return prev;
+            
+            const endSection = '--- End File ---';
+            const endIndex = prev.indexOf(endSection, startIndex);
+            if (endIndex === -1) return prev;
+            
+            return prev.substring(0, startIndex) + prev.substring(endIndex + endSection.length);
+        });
+    };
+
+    /** Speech recognition handlers */
+    const startListening = () => {
+        if (!browserSupportsSpeechRecognition) {
+            alert('Your browser does not support speech recognition. Please use a modern browser like Chrome or Edge.');
+            return;
+        }
+        SpeechRecognition.startListening({ continuous: true, language: 'en-US' });
+    };
+
+    const stopListening = () => {
+        SpeechRecognition.stopListening();
+    };
+
+    const handleSpeechResult = () => {
+        if (transcript) {
+            setPrompt(prev => {
+                const addition = prev ? `\n${transcript}` : transcript;
+                return prev + addition;
+            });
+            resetTranscript();
+        }
+    };
+
+    // Update prompt when speech recognition transcript changes
+    useEffect(() => {
+        if (transcript && !listening) {
+            setPrompt(prev => {
+                const addition = prev ? `\n${transcript}` : transcript;
+                return prev + addition;
+            });
+            resetTranscript();
+        }
+    }, [transcript, listening, resetTranscript]);
 
     /** Start sequential modal animation (one item at a time; stop before last) */
     const startSequentialModal = () => {
@@ -571,6 +728,145 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                             >
                                 EXTRA INSTRUCTIONS (OPTIONAL)
                             </Typography>
+
+                            {/* File Upload and Speech Recognition Controls */}
+                            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                                {/* File Upload Button */}
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileUpload}
+                                    accept=".txt,.md,.json,.csv,text/*"
+                                    multiple
+                                    style={{ display: 'none' }}
+                                />
+                                <Tooltip title="Upload context files (txt, md, json, csv)">
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        startIcon={isProcessingFile ? <CircularProgress size={16} /> : <UploadFileRoundedIcon />}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isGenerating || processing || isProcessingFile}
+                                        sx={{
+                                            textTransform: 'none',
+                                            borderColor: alpha(theme.palette.primary.main, 0.3),
+                                        }}
+                                    >
+                                        {isProcessingFile ? 'Processing...' : 'Upload Files'}
+                                    </Button>
+                                </Tooltip>
+
+                                {/* Speech Recognition Button */}
+                                {browserSupportsSpeechRecognition && (
+                                    <Tooltip title={listening ? 'Stop recording' : 'Start voice input'}>
+                                        <Button
+                                            variant={listening ? 'contained' : 'outlined'}
+                                            size="small"
+                                            startIcon={listening ? <MicOffRoundedIcon /> : <MicRoundedIcon />}
+                                            onClick={listening ? stopListening : startListening}
+                                            disabled={isGenerating || processing}
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderColor: alpha(theme.palette.primary.main, 0.3),
+                                                ...(listening && {
+                                                    backgroundColor: theme.palette.error.main,
+                                                    '&:hover': {
+                                                        backgroundColor: theme.palette.error.dark,
+                                                    },
+                                                }),
+                                            }}
+                                        >
+                                            {listening ? 'Stop' : 'Voice'}
+                                        </Button>
+                                    </Tooltip>
+                                )}
+                            </Stack>
+
+                            {/* Uploaded Files Display */}
+                            {uploadedFiles.length > 0 && (
+                                <Stack spacing={1} sx={{ mb: 2 }}>
+                                    <Typography variant="caption" sx={{ color: alpha(theme.palette.text.primary, 0.6) }}>
+                                        Uploaded Files:
+                                    </Typography>
+                                    {uploadedFiles.map((file, index) => (
+                                        <Paper
+                                            key={index}
+                                            sx={{
+                                                p: 1.5,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                                                border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+                                            }}
+                                        >
+                                            <AttachFileRoundedIcon 
+                                                fontSize="small" 
+                                                sx={{ mr: 1, color: alpha(theme.palette.text.primary, 0.6) }} 
+                                            />
+                                            <Box sx={{ flexGrow: 1 }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                    {file.name}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: alpha(theme.palette.text.primary, 0.6) }}>
+                                                    {(file.size / 1024).toFixed(1)} KB
+                                                </Typography>
+                                            </Box>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => removeFile(index)}
+                                                disabled={isGenerating || processing}
+                                                sx={{ color: theme.palette.error.main }}
+                                            >
+                                                <DeleteRoundedIcon fontSize="small" />
+                                            </IconButton>
+                                        </Paper>
+                                    ))}
+                                </Stack>
+                            )}
+
+                            {/* Speech Recognition Status */}
+                            {listening && (
+                                <Paper
+                                    sx={{
+                                        p: 1.5,
+                                        mb: 2,
+                                        backgroundColor: alpha(theme.palette.error.main, 0.1),
+                                        border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    <MicRoundedIcon 
+                                        sx={{ 
+                                            mr: 1, 
+                                            color: theme.palette.error.main,
+                                            animation: 'pulse 1.5s infinite'
+                                        }} 
+                                    />
+                                    <Typography variant="body2" sx={{ color: theme.palette.error.main, fontWeight: 600 }}>
+                                        🎤 Listening... Speak now
+                                    </Typography>
+                                </Paper>
+                            )}
+
+                            {/* Live Transcript Display */}
+                            {transcript && (
+                                <Paper
+                                    sx={{
+                                        p: 1.5,
+                                        mb: 2,
+                                        backgroundColor: alpha(theme.palette.info.main, 0.1),
+                                        border: `1px solid ${alpha(theme.palette.info.main, 0.3)}`,
+                                    }}
+                                >
+                                    <Typography variant="caption" sx={{ color: alpha(theme.palette.text.primary, 0.6) }}>
+                                        Speech Recognition:
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ mt: 0.5, fontStyle: 'italic' }}>
+                                        "{transcript}"
+                                    </Typography>
+                                </Paper>
+                            )}
 
                             <TextField
                                 multiline
