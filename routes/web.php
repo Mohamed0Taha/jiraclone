@@ -357,7 +357,7 @@ Route::middleware('auth')->group(function () {
 
     // Single, canonical AI PDF endpoint (premium feature - reports)
     Route::post('/projects/{project}/report', [ProjectController::class, 'generateReport'])
-        ->middleware('subscription:reports')
+        // Subscription gating handled inside controller with proper JSON errors (no 404 confusion)
         ->name('projects.report.generate');
 
     // Edit/Update before show
