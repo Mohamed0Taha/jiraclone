@@ -28,6 +28,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
 
+        $middleware->web(prepend: [
+            \App\Http\Middleware\PreventOversizedHeaders::class,
+            \App\Http\Middleware\ClearOversizedCookies::class,
+        ]);
+
         $middleware->web(append: [
             \App\Http\Middleware\AddCorsHeaders::class,
             \App\Http\Middleware\HandleInertiaRequests::class,

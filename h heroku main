@@ -1,0 +1,5 @@
+[33mcf5615f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Revert "refactor(csrf,cookies): remove aggressive cookie pruning; add debug header for cookie length"
+[33m2e0f1dd[m chore: retain ResetApp command before revert
+[33m2bb9d24[m[33m ([m[1;31mheroku/main[m[33m)[m refactor(csrf,cookies): remove aggressive cookie pruning; add debug header for cookie length
+[33m8e3ab27[m fix(cookies): add client-side cookie size monitoring and cleanup
+[33md655652[m fix(headers): add middleware to clear oversized cookies preventing 400 errors
