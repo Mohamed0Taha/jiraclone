@@ -5,15 +5,13 @@
 
     RewriteEngine On
 
-    # EMERGENCY FIX (refined): Only redirect oversized cookie headers for app pages (exclude tools)
-    RewriteCond %{REQUEST_URI} !^/fix-cookies\.php$
-    RewriteCond %{REQUEST_URI} !^/cookie-dump\.php$
-    RewriteCond %{REQUEST_URI} !^/cookie-clear\.html$
-    # Skip if sentinel present (means we already cleaned once this tab)
-    RewriteCond %{HTTP:Cookie} !cleaned_once=1
-    # Trigger when cookie header >= 6000 bytes (raise threshold to avoid loops) 
-    RewriteCond %{HTTP:Cookie} ^.{6000,}$
-    RewriteRule ^(.*)$ /fix-cookies.php [R=302,L]
+    # DISABLED emergency redirect (loop prevention). Keep commented for reference.
+    # RewriteCond %{REQUEST_URI} !^/fix-cookies\.php$
+    # RewriteCond %{REQUEST_URI} !^/cookie-dump\.php$
+    # RewriteCond %{REQUEST_URI} !^/cookie-clear\.html$
+    # RewriteCond %{HTTP:Cookie} !cleaned_once=1
+    # RewriteCond %{HTTP:Cookie} ^.{12000,}$
+    # RewriteRule ^(.*)$ /fix-cookies.php [R=302,L]
 
     # Increase PHP limits for file uploads (try multiple module names)
     <IfModule mod_php.c>

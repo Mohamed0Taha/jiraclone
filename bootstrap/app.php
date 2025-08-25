@@ -29,8 +29,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
 
+        // TEMP: Disable RestrictCookieHeader (was causing redirect loop at ~3KB)
         $middleware->web(prepend: [
-            \App\Http\Middleware\RestrictCookieHeader::class,
+            // \App\Http\Middleware\RestrictCookieHeader::class,
         ]);
 
         $middleware->web(append: [
