@@ -404,14 +404,6 @@ class ProjectController extends Controller
     {
         $this->authorize('view', $project);
         // Explicit subscription check to avoid vague 404 produced by middleware masking
-    $user = Auth::user();
-    if ($user && method_exists($user, 'canUseFeature') && ! $user->canUseFeature('reports')) {
-            return response()->json([
-                'message' => 'Reports feature requires an upgraded plan.',
-                'upgrade' => true,
-            ], 403);
-        }
-
         $result = $reports->generate($project);
 
         return response()->json([

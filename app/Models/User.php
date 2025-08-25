@@ -312,8 +312,8 @@ class User extends Authenticatable implements MustVerifyEmail
         $limits = [
             'free' => 0,
             'basic' => 5,
-            'pro' => 7,
-            'business' => 10,
+            'pro' => 10,
+            'business' => 20,
         ];
 
         return $limits[$plan] ?? 0;
