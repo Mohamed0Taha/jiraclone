@@ -98,6 +98,36 @@ if (document.readyState === 'loading') {
     cleanupCookies();
 }
 
+// Emergency cookie clearing function - can be called from browser console
+window.emergencyClearCookies = function() {
+    const cookies = document.cookie.split(';');
+    const domain = window.location.hostname;
+    let cleared = 0;
+    
+    console.warn('🚨 EMERGENCY COOKIE CLEAR - Clearing ALL cookies');
+    
+    cookies.forEach(cookie => {
+        const [name] = cookie.trim().split('=');
+        if (name) {
+            // Clear with all possible domain/path combinations
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain};`;
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain};`;
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC;`;
+            cleared++;
+        }
+    });
+    
+    console.log(`✅ Cleared ${cleared} cookies. New size:`, document.cookie.length, 'bytes');
+    console.log('🔄 Refreshing page in 2 seconds...');
+    
+    setTimeout(() => {
+        window.location.reload();
+    }, 2000);
+    
+    return `Cleared ${cleared} cookies`;
+};
+
 // Utility function to get CSRF token with fallbacks
 window.getCsrfToken = function() {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
