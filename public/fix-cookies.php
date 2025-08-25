@@ -1,6 +1,12 @@
 <?php
 // Emergency cookie clear - bypasses all Laravel middleware
 
+// If already cleaned this tab (sentinel), skip clearing again to prevent loop
+if (isset($_COOKIE['cleaned_once'])) {
+    header('Location: /');
+    exit;
+}
+
 // Clear ALL cookies immediately
 if (isset($_SERVER['HTTP_COOKIE'])) {
     $cookies = explode(';', $_SERVER['HTTP_COOKIE']);
@@ -30,6 +36,9 @@ foreach($problematic as $name) {
     setcookie($name, '', time() - 3600, '/', $_SERVER['HTTP_HOST'] ?? '');
     setcookie($name, '', time() - 3600, '/', '.' . ($_SERVER['HTTP_HOST'] ?? ''));
 }
+
+// Set sentinel so we don't loop again after cleaning
+setcookie('cleaned_once', '1', time() + 300, '/');
 
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
