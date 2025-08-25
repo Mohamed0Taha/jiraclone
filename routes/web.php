@@ -370,11 +370,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
 
     /* Project Members Routes (premium feature - team collaboration) */
-    Route::prefix('projects/{project}/members')->middleware('subscription:members')->group(function () {
+    // Members: view allowed for all authenticated users (overlay/upsell handled in UI), mutations gated
+    Route::prefix('projects/{project}/members')->group(function () {
         Route::get('/', [App\Http\Controllers\ProjectMemberController::class, 'index'])->name('projects.members.index');
-        Route::post('/invite', [App\Http\Controllers\ProjectMemberController::class, 'invite'])->name('projects.members.invite');
-        Route::delete('/remove', [App\Http\Controllers\ProjectMemberController::class, 'remove'])->name('projects.members.remove');
-        Route::patch('/cancel-invitation', [App\Http\Controllers\ProjectMemberController::class, 'cancelInvitation'])->name('projects.members.cancel-invitation');
+        Route::post('/invite', [App\Http\Controllers\ProjectMemberController::class, 'invite'])->middleware('subscription:members')->name('projects.members.invite');
+        Route::delete('/remove', [App\Http\Controllers\ProjectMemberController::class, 'remove'])->middleware('subscription:members')->name('projects.members.remove');
+        Route::patch('/cancel-invitation', [App\Http\Controllers\ProjectMemberController::class, 'cancelInvitation'])->middleware('subscription:members')->name('projects.members.cancel-invitation');
     });
 
     /* Nested project-scoped routes */
@@ -416,7 +417,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/timeline', [TaskController::class, 'timeline'])->name('tasks.timeline');
 
         /* AUTOMATIONS (premium feature - automation) */
-        Route::get('/automations', [AutomationController::class, 'index'])->middleware('subscription:automation')->name('automations.index');
+    // Allow all authenticated users to view automations index (overlay handles upsell)
+    Route::get('/automations', [AutomationController::class, 'index'])->name('automations.index');
         Route::post('/automations', [AutomationController::class, 'store'])->middleware('subscription:automation')->name('automations.store');
         Route::patch('/automations/{automation}', [AutomationController::class, 'update'])->middleware('subscription:automation')->name('automations.update');
         Route::delete('/automations/{automation}', [AutomationController::class, 'destroy'])->middleware('subscription:automation')->name('automations.destroy');

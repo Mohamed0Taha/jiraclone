@@ -46,9 +46,16 @@ class ProjectMemberController extends Controller
 
         $pendingInvitations = $project->pendingInvitations()->get();
 
+        // Compute per-project member limit based on owner's subscription plan
+        [$memberLimit, $currentCount] = $this->projectMemberStats($project, $members);
+
         return response()->json([
             'members' => $members,
             'invitations' => $pendingInvitations,
+            'limit' => $memberLimit,
+            'used' => $currentCount,
+            'remaining' => max(0, $memberLimit - $currentCount),
+            'plan' => $project->user->getCurrentPlan(),
         ]);
     }
 
@@ -63,6 +70,18 @@ class ProjectMemberController extends Controller
 
         $email = $request->email;
         $role = $request->role ?? 'member';
+
+        // Enforce per-project member limit BEFORE proceeding
+        [$memberLimit, $currentCount] = $this->projectMemberStats($project);
+        if ($currentCount >= $memberLimit) {
+            return response()->json([
+                'error' => "Member limit reached ({$currentCount}/{$memberLimit}). Upgrade your plan to add more team members.",
+                'limit_reached' => true,
+                'limit' => $memberLimit,
+                'used' => $currentCount,
+                'plan' => $project->user->getCurrentPlan(),
+            ], 422);
+        }
 
         // Check if user already has an invitation
         $existingInvitation = $project->invitations()
@@ -84,8 +103,18 @@ class ProjectMemberController extends Controller
             ], 422);
         }
 
-        // If user exists in the system, add them directly to the project
+        // If user exists in the system, add them directly to the project (re-check limit for safety)
         if ($existingUser) {
+            [$memberLimit, $currentCount] = $this->projectMemberStats($project);
+            if ($currentCount >= $memberLimit) {
+                return response()->json([
+                    'error' => "Member limit reached ({$currentCount}/{$memberLimit}). Upgrade your plan to add more team members.",
+                    'limit_reached' => true,
+                    'limit' => $memberLimit,
+                    'used' => $currentCount,
+                    'plan' => $project->user->getCurrentPlan(),
+                ], 422);
+            }
             $project->members()->attach($existingUser->id, [
                 'role' => $role,
                 'joined_at' => now(),
@@ -111,7 +140,7 @@ class ProjectMemberController extends Controller
             ]);
         }
 
-        // Create invitation for non-existing user
+    // Create invitation for non-existing user (re-check not necessary unless race conditions)
         $invitation = $project->invitations()->create([
             'invited_by' => Auth::id(),
             'email' => $email,
@@ -230,5 +259,38 @@ class ProjectMemberController extends Controller
 
         return redirect()->route('projects.show', $invitation->project)
             ->with('success', 'Welcome to the project! You have successfully joined '.$invitation->project->name);
+    }
+
+    /**
+     * Determine member limit for a project based on the owner's subscription plan.
+     * Returns array: [limit, usedCount]
+     * usedCount counts total distinct people on the project including the owner.
+     */
+    private function projectMemberStats(Project $project, $preloadedMembers = null): array
+    {
+        $plan = $project->user->getCurrentPlan();
+        $limits = [
+            'free' => 1,       // owner only
+            'basic' => 2,      // owner + 1
+            'pro' => 5,        // total
+            'business' => 15,  // total
+        ];
+        $limit = $limits[$plan] ?? 1;
+
+        if ($preloadedMembers) {
+            // $preloadedMembers excludes owner typically, so count +1
+            // Detect if owner already injected into collection (pivot role owner)
+            $hasOwner = $preloadedMembers->contains('id', $project->user_id);
+            $used = $preloadedMembers->count();
+            if (! $hasOwner) {
+                $used += 1; // add owner
+            }
+        } else {
+            // Count distinct members + owner if not present
+            $memberIds = $project->members()->pluck('users.id')->unique();
+            $used = $memberIds->contains($project->user_id) ? $memberIds->count() : ($memberIds->count() + 1);
+        }
+
+        return [$limit, $used];
     }
 }

@@ -376,9 +376,30 @@ class User extends Authenticatable implements MustVerifyEmail
                 return $this->canUseAiChat();
             case 'reports':
                 return $this->canGenerateReports();
+            case 'automation':
+                return $this->canCreateAutomations();
             default:
                 return $this->canAccessFeature($feature);
         }
+    }
+
+    /**
+     * Check if user can create more automations
+     */
+    public function canCreateAutomations(): bool
+    {
+        return $this->getRemainingAutomations() > 0;
+    }
+
+    /**
+     * Get remaining automation count
+     */
+    public function getRemainingAutomations(): int
+    {
+        $limit = $this->getAutomationLimit();
+        $used = $this->getAutomationsCount();
+        
+        return max(0, $limit - $used);
     }
 
     /**

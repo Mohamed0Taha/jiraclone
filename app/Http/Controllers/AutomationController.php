@@ -7,6 +7,7 @@ use App\Models\Automation;
 use App\Models\Project;
 use App\Services\AutomationEngine;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
@@ -49,11 +50,39 @@ class AutomationController extends Controller
         return Inertia::render('Automations/Index', [
             'project' => $project,
             'automations' => $automations,
+            'quota' => [
+                'used' => Auth::user()->getAutomationsCount(),
+                'limit' => Auth::user()->getAutomationLimit(),
+                'remaining' => Auth::user()->getRemainingAutomations(),
+                'can_create' => Auth::user()->canCreateAutomations(),
+                'plan' => Auth::user()->getCurrentPlan(),
+            ],
         ]);
     }
 
     public function store(Request $request, Project $project)
     {
+        $user = Auth::user();
+        
+        // Check automation quota
+        if (!$user->canCreateAutomations()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You have reached your automation limit for your current plan.',
+                    'quota_exceeded' => true,
+                    'feature' => 'automation',
+                    'current_count' => $user->getAutomationsCount(),
+                    'limit' => $user->getAutomationLimit(),
+                    'upgrade_url' => route('billing.show'),
+                ], 403);
+            }
+            
+            return redirect()
+                ->back()
+                ->with('error', 'You have reached your automation limit. Upgrade your plan to create more automations.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',

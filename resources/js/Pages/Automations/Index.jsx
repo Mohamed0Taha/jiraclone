@@ -375,7 +375,7 @@ const WorkflowCard = ({ workflow, onEdit, onToggle, onDelete }) => {
     );
 };
 
-export default function AutomationsIndex({ auth, project, automations = [] }) {
+export default function AutomationsIndex({ auth, project, automations = [], quota = {} }) {
     const theme = useTheme();
     const { shouldShowOverlay, userPlan } = useSubscription();
     const showOverlay = shouldShowOverlay('automation');
@@ -385,6 +385,7 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [toDelete, setToDelete] = useState(null);
     const [snack, setSnack] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
 
     const handleUpgrade = () => {
         router.visit(userPlan?.billing_url || '/billing');
@@ -454,6 +455,12 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
     }, [automations]);
 
     const handleCreateWorkflow = () => {
+        // Check if user has reached their automation quota
+        if (!quota.can_create) {
+            setErrorMessage(`You have reached your automation limit (${quota.used}/${quota.limit}). Upgrade your plan to create more automations.`);
+            return;
+        }
+        
         setSelectedWorkflow({
             name: '',
             description: '',
@@ -489,6 +496,12 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
     if (view === 'builder' || view === 'templates') {
         const ViewComponent = view === 'builder' ? WorkflowBuilder : WorkflowTemplates;
         const onSelect = (payload) => {
+            // Check if user has reached their automation quota
+            if (!quota.can_create) {
+                setErrorMessage(`You have reached your automation limit (${quota.used}/${quota.limit}). Upgrade your plan to create more automations.`);
+                return;
+            }
+            
             setSelectedWorkflow(payload);
             setView('builder');
         };
@@ -518,6 +531,23 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
                                     setSnack(
                                         `Workflow ${selectedWorkflow?._persisted ? 'updated' : 'created'}!`
                                     );
+                                    setErrorMessage('');
+                                },
+                                onError: (errors) => {
+                                    // Handle quota exceeded error
+                                    if (errors.quota_exceeded || (errors.message && errors.message.includes('automation limit'))) {
+                                        setErrorMessage(`You have reached your automation limit (${quota.used}/${quota.limit}). Upgrade your plan to create more automations.`);
+                                        setView('list'); // Go back to list view
+                                        return;
+                                    }
+                                    // Surface first validation error if present
+                                    const firstKey = Object.keys(errors)[0];
+                                    if (firstKey) {
+                                        const msg = Array.isArray(errors[firstKey]) ? errors[firstKey][0] : errors[firstKey];
+                                        setErrorMessage(msg || 'Failed to save workflow.');
+                                    } else {
+                                        setErrorMessage('Failed to save workflow.');
+                                    }
                                 },
                             });
                         }}
@@ -543,6 +573,15 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
                         color: 'white',
                     }}
                 >
+                    {errorMessage && (
+                        <Alert
+                            severity="error"
+                            onClose={() => setErrorMessage('')}
+                            sx={{ mb: 2, borderRadius: 3, fontWeight: 600 }}
+                        >
+                            {errorMessage}
+                        </Alert>
+                    )}
                     <Stack direction="row" alignItems="center" spacing={3} sx={{ mb: 3 }}>
                         <IconButton
                             onClick={() => router.visit(route('tasks.index', project.id))}
@@ -589,18 +628,21 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
                         <Button
                             variant="contained"
                             size="large"
-                            startIcon={<AddIcon />}
-                            onClick={handleCreateWorkflow}
+                            startIcon={quota.can_create ? <AddIcon /> : <WarningAmberIcon />}
+                            onClick={quota.can_create ? handleCreateWorkflow : () => router.visit(route('billing.show'))}
+                            disabled={!quota.can_create && quota.plan === 'free'}
                             sx={{
                                 borderRadius: 3,
                                 textTransform: 'none',
                                 fontWeight: 800,
-                                bgcolor: 'white',
-                                color: 'primary.main',
-                                '&:hover': { bgcolor: '#f0f0f0' },
+                                bgcolor: quota.can_create ? 'white' : 'warning.main',
+                                color: quota.can_create ? 'primary.main' : 'white',
+                                '&:hover': { 
+                                    bgcolor: quota.can_create ? '#f0f0f0' : 'warning.dark'
+                                },
                             }}
                         >
-                            Create Workflow
+                            {quota.can_create ? 'Create Workflow' : `Upgrade Plan (${quota.used}/${quota.limit} used)`}
                         </Button>
                         <Button
                             variant="outlined"
@@ -638,12 +680,50 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
                             Manage your automated tasks at a glance.
                         </Typography>
                     </Box>
-                    <Chip
-                        icon={<SettingsIcon />}
-                        label={`${workflows.length} Total`}
-                        variant="outlined"
-                        sx={{ fontWeight: 700 }}
-                    />
+                    <Stack direction="row" spacing={2} alignItems="center">
+                        {/* Quota Display */}
+                        <Paper
+                            elevation={1}
+                            sx={{
+                                px: 2,
+                                py: 1,
+                                borderRadius: 3,
+                                bgcolor: quota.can_create ? 'success.light' : 'warning.light',
+                                border: `1px solid ${quota.can_create ? '#4caf50' : '#ff9800'}`,
+                            }}
+                        >
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                                <Typography
+                                    variant="caption"
+                                    fontWeight={700}
+                                    color={quota.can_create ? 'success.dark' : 'warning.dark'}
+                                >
+                                    {quota.used || 0}/{quota.limit || 0} Workflows
+                                </Typography>
+                                {!quota.can_create && (
+                                    <Tooltip title="Upgrade to create more workflows">
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => router.visit(route('billing.show'))}
+                                            sx={{
+                                                width: 20,
+                                                height: 20,
+                                                color: 'warning.dark',
+                                            }}
+                                        >
+                                            <WarningAmberIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
+                            </Stack>
+                        </Paper>
+                        <Chip
+                            icon={<SettingsIcon />}
+                            label={`${workflows.length} Total`}
+                            variant="outlined"
+                            sx={{ fontWeight: 700 }}
+                        />
+                    </Stack>
                 </Stack>
 
                 <Grid container spacing={3}>
@@ -658,7 +738,7 @@ export default function AutomationsIndex({ auth, project, automations = [] }) {
                         </Grid>
                     ))}
                 </Grid>
-            </Box>
+                    </Box>
 
             <Dialog
                 open={confirmOpen}

@@ -47,7 +47,7 @@ class CheckSubscription
      */
     private function hasUsageLimit(string $feature): bool
     {
-        return in_array($feature, ['ai_tasks', 'ai_chat', 'reports']);
+        return in_array($feature, ['ai_tasks', 'ai_chat', 'reports', 'automation']);
     }
 
     /**
@@ -86,6 +86,7 @@ class CheckSubscription
             'ai_tasks' => 'You have reached your AI task generation limit for this month.',
             'ai_chat' => 'You have reached your AI chat limit for this month.',
             'reports' => 'You have reached your reports limit for this month.',
+            'automation' => 'You have reached your automation limit. Upgrade your plan to create more automations.',
         ];
 
         $message = $messages[$feature] ?? 'You have reached your limit for this feature.';
