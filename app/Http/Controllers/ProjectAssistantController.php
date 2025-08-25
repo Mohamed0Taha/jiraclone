@@ -71,9 +71,9 @@ class ProjectAssistantController extends Controller
         // Define common task status labels
         $labels = [
             'todo' => 'To Do',
-            'inprogress' => 'In Progress', 
+            'inprogress' => 'In Progress',
             'review' => 'Review',
-            'done' => 'Done'
+            'done' => 'Done',
         ];
 
         $todo = $labels['todo'];
@@ -139,7 +139,7 @@ class ProjectAssistantController extends Controller
         } catch (Throwable $e) {
             Log::error('Assistant command execution error', [
                 'error' => $e->getMessage(),
-                'command_data' => $commandData
+                'command_data' => $commandData,
             ]);
 
             return response()->json([

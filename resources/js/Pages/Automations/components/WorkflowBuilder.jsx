@@ -43,6 +43,7 @@ import {
     Storage as StorageIcon,
     Link as LinkIcon,
 } from '@mui/icons-material';
+import VariableChips from './VariableChips';
 
 /**
  * Trigger & Action catalogs
@@ -161,12 +162,18 @@ const ACTIONS = [
         color: 'primary',
         fields: [
             { name: 'to', label: 'To', type: 'text', placeholder: 'email@example.com' },
-            { name: 'subject', label: 'Subject', type: 'text', placeholder: 'Task notification' },
+            {
+                name: 'subject',
+                label: 'Subject',
+                type: 'text',
+                placeholder: 'Task Update: {{task.title}}',
+            },
             {
                 name: 'body',
                 label: 'Body',
                 type: 'textarea',
-                placeholder: 'Task {{task.title}} has been updated',
+                placeholder:
+                    'Hello {{user.name}},\n\nTask "{{task.title}}" in project {{project.name}} has been updated.\n\nStatus: {{task.status}}\nPriority: {{task.priority}}\n\nBest regards,\nTaskPilot',
             },
             {
                 name: 'provider',
@@ -195,7 +202,8 @@ const ACTIONS = [
                 name: 'message',
                 label: 'Message',
                 type: 'textarea',
-                placeholder: 'Task {{task.title}} was created',
+                placeholder:
+                    '🎯 Task Update!\n\n📋 **{{task.title}}** in *{{project.name}}*\n📊 Status: {{task.status}}\n⚡ Priority: {{task.priority}}\n👤 Assigned to: {{task.assignee.name}}',
             },
         ],
     },
@@ -216,7 +224,8 @@ const ACTIONS = [
                 name: 'content',
                 label: 'Content',
                 type: 'textarea',
-                placeholder: 'Heads up: {{task.title}} moved to {{task.status}}',
+                placeholder:
+                    '🚀 **Task Update** 🚀\n\n📝 **{{task.title}}**\n🏗️ Project: {{project.name}}\n📈 Status: {{task.status}} → Priority: {{task.priority}}\n👤 Assigned: {{task.assignee.name}}',
             },
         ],
     },
@@ -330,26 +339,23 @@ const ACTIONS = [
         ],
     },
     {
-        id: 'twilio_sms',
-        name: 'Twilio SMS',
-        description: 'Send an SMS using Twilio',
+        id: 'sms',
+        name: 'SMS',
+        description: 'Send an SMS message',
         icon: <SmsIcon />,
         color: 'primary',
         fields: [
             {
-                name: 'account_sid',
-                label: 'Account SID',
-                type: 'password',
-                placeholder: 'ACxxxxxxxx',
+                name: 'phone_number',
+                label: 'Phone Number',
+                type: 'text',
+                placeholder: '+1234567890',
             },
-            { name: 'auth_token', label: 'Auth Token', type: 'password', placeholder: '••••••••' },
-            { name: 'from', label: 'From', type: 'text', placeholder: '+12025550123' },
-            { name: 'to', label: 'To', type: 'text', placeholder: '+34600123456' },
             {
-                name: 'body',
+                name: 'message',
                 label: 'Message',
                 type: 'textarea',
-                placeholder: 'Reminder: {{task.title}} is due soon',
+                placeholder: 'Hello {{user.name}}! Task "{{task.title}}" has been {{task.status}}.',
             },
         ],
     },
@@ -434,9 +440,32 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
 
     // ---- Helpers ----
     const renderField = (field, value, onChange) => {
+        // Check if this is a field that should have template variable support
+        const isTemplateField =
+            field.type === 'textarea' &&
+            (field.name === 'body' ||
+                field.name === 'message' ||
+                field.name === 'content' ||
+                field.name === 'subject' ||
+                field.name === 'title' ||
+                field.name === 'description');
+
         switch (field.type) {
             case 'text':
             case 'password':
+                // Support template variables for subject fields
+                if (field.name === 'subject' || field.name === 'title') {
+                    return (
+                        <VariableChips
+                            value={value ?? ''}
+                            onChange={onChange}
+                            label={field.label}
+                            placeholder={field.placeholder || ''}
+                            multiline={false}
+                            size="small"
+                        />
+                    );
+                }
                 return (
                     <TextField
                         fullWidth
@@ -449,6 +478,20 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                     />
                 );
             case 'textarea':
+                // Use VariableChips for message/email body fields
+                if (isTemplateField) {
+                    return (
+                        <VariableChips
+                            value={value ?? ''}
+                            onChange={onChange}
+                            label={field.label}
+                            placeholder={field.placeholder || ''}
+                            multiline={true}
+                            rows={3}
+                            size="small"
+                        />
+                    );
+                }
                 return (
                     <TextField
                         fullWidth

@@ -26,7 +26,8 @@
         "phpoffice/phpword": "^1.2",
         "smalot/pdfparser": "^2.6",
         "tightenco/ziggy": "^2.5",
-        "torann/geoip": "^3.0"
+        "torann/geoip": "^3.0",
+        "twilio/sdk": "^8.7"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

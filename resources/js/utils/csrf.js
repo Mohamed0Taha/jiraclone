@@ -39,16 +39,16 @@ export function getCsrfToken() {
     // Try multiple sources in order of preference
     const windowToken = readWindowLaravel();
     if (windowToken) return windowToken;
-    
+
     const metaToken = readMetaToken();
     if (metaToken) return metaToken;
-    
+
     const inputToken = readHiddenInput();
     if (inputToken) return inputToken;
-    
+
     const cookieToken = readCookie('XSRF-TOKEN');
     if (cookieToken) return cookieToken;
-    
+
     // If no token found, log an error for debugging
     console.error('CSRF Token Debug - No token found:', {
         windowLaravel: !!window.Laravel,
@@ -56,9 +56,9 @@ export function getCsrfToken() {
         metaTag: !!document.querySelector('meta[name="csrf-token"]'),
         hiddenInput: !!document.querySelector('input[name="_token"]'),
         cookie: !!readCookie('XSRF-TOKEN'),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
     });
-    
+
     return null;
 }
 
@@ -69,9 +69,9 @@ export function withCsrf(init = {}) {
         ...baseHeaders,
         'X-Requested-With': 'XMLHttpRequest',
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json',
     };
-    
+
     if (token) {
         headers['X-CSRF-TOKEN'] = token;
         headers['X-XSRF-TOKEN'] = token;
@@ -79,7 +79,7 @@ export function withCsrf(init = {}) {
     } else {
         console.error('No CSRF token available for request - this will likely cause a 419 error');
     }
-    
+
     return {
         ...init,
         headers,
@@ -90,17 +90,17 @@ export function withCsrf(init = {}) {
 // Enhanced fetch wrapper with automatic CSRF handling and error recovery
 export async function csrfFetch(url, options = {}) {
     const fetchOptions = withCsrf(options);
-    
+
     try {
         const response = await fetch(url, fetchOptions);
-        
+
         // If 419 (CSRF token mismatch), try to refresh the page to get new token
         if (response.status === 419) {
             console.error('CSRF token mismatch (419) - attempting page refresh');
             setTimeout(() => window.location.reload(), 1000);
             throw new Error('CSRF token mismatch - refreshing page');
         }
-        
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.error('API Error:', {
@@ -108,11 +108,11 @@ export async function csrfFetch(url, options = {}) {
                 statusText: response.statusText,
                 url,
                 errorData,
-                token: getCsrfToken() ? 'Present' : 'Missing'
+                token: getCsrfToken() ? 'Present' : 'Missing',
             });
             throw new Error(errorData?.message || `Request failed with status ${response.status}`);
         }
-        
+
         return response;
     } catch (error) {
         console.error('Fetch error:', error);

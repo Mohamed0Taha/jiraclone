@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, useForm, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
@@ -165,42 +165,37 @@ const SERVER_DEFAULT_TO_METHOD = {
 
 const phaseStorageKey = (projectId, methodology) => `phaseMap:${projectId}:${methodology}`;
 
-// Build columns from server data (tasks is object keyed by canonical server statuses)
-function buildInitialColumns(tasksObj, methodology, phaseMap) {
+// Build columns from server data
+const buildColumnsFromServer = (tasks, methodology, phaseMap) => {
+    const columns = {};
     const statusOrder = getStatusOrder(methodology);
-    const columns = statusOrder.reduce((acc, k) => {
-        acc[k] = [];
-        return acc;
-    }, {});
-
-    if (!tasksObj || typeof tasksObj !== 'object') return columns;
-
-    // Iterate server statuses directly to avoid flatten/allocs
-    SERVER_STATUSES.forEach((serverKey) => {
-        const arr = Array.isArray(tasksObj[serverKey]) ? tasksObj[serverKey] : [];
-        if (!arr.length) return;
-        const defaultPhase = SERVER_DEFAULT_TO_METHOD[methodology]?.[serverKey] || statusOrder[0];
-        arr.forEach((task) => {
-            if (!task || task.__temp) return; // ignore stale temps if any leaked from server shape
-            const mappedPhase = phaseMap?.[task.id];
-            const phaseIsValid =
-                mappedPhase &&
-                statusOrder.includes(mappedPhase) &&
-                (METHOD_TO_SERVER[methodology][mappedPhase] || 'todo') === serverKey;
-            const finalPhase = phaseIsValid ? mappedPhase : defaultPhase;
-            columns[finalPhase].push({ ...task, status: finalPhase });
-        });
+    
+    // Initialize empty columns
+    statusOrder.forEach(status => {
+        columns[status] = [];
     });
+    
+    // Distribute tasks to columns
+    Object.values(tasks).flat().forEach(task => {
+        // Use phaseMap to determine current column, or fall back to status mapping
+        const currentPhase = phaseMap[task.id];
+        if (currentPhase && columns[currentPhase] !== undefined) {
+            columns[currentPhase].push(task);
+        } else {
+            // Default mapping based on server status
+            const defaultPhase = SERVER_DEFAULT_TO_METHOD[methodology]?.[task.status] || statusOrder[0];
+            if (columns[defaultPhase] !== undefined) {
+                columns[defaultPhase].push(task);
+            } else {
+                columns[statusOrder[0]].push(task);
+            }
+        }
+    });
+    
     return columns;
-}
+};
 
-export default function Board({
-    auth,
-    project = {},
-    tasks: initialTasks = {},
-    users = [],
-    isPro: isProProp,
-}) {
+export default function Board({ auth, project = {}, tasks: initialTasks = {}, users = [], isPro: isProProp }) {
     const page = usePage();
     const isPro = typeof isProProp === 'boolean' ? isProProp : !!(page?.props && page.props.isPro);
     const { shouldShowOverlay, userPlan } = useSubscription();
@@ -235,9 +230,7 @@ export default function Board({
     const [phaseMap, setPhaseMap] = useState(initialPhaseMap);
 
     // Task state management
-    const [taskState, setTaskState] = useState(() =>
-        buildInitialColumns(initialTasks, methodology, phaseMap)
-    );
+    const [taskState, setTaskState] = useState(() => buildColumnsFromServer(initialTasks, methodology, phaseMap));
 
     const STATUS_META = useMemo(() => getStatusMeta(methodology), [methodology]);
     const STATUS_ORDER = useMemo(() => getStatusOrder(methodology), [methodology]);
@@ -265,7 +258,7 @@ export default function Board({
             const seenIds = new Set();
 
             SERVER_STATUSES.forEach((serverKey) => {
-                const arr = Array.isArray(initialTasks?.[serverKey]) ? initialTasks[serverKey] : [];
+                const arr = Array.isArray(tasks?.[serverKey]) ? tasks[serverKey] : [];
                 const serverDefaultPhase =
                     SERVER_DEFAULT_TO_METHOD[methodology][serverKey] || STATUS_ORDER[0] || 'todo';
 
@@ -299,7 +292,7 @@ export default function Board({
             }
         } catch {}
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initialTasks, methodology]);
+    }, [tasks, methodology]);
 
     const [openForm, setOpenForm] = useState(false);
     const [editMode, setEditMode] = useState(false);
@@ -307,8 +300,6 @@ export default function Board({
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingDeleteId, setPendingDeleteId] = useState(null);
     const [formImageUploading, setFormImageUploading] = useState(false);
-    // Track tasks whose status change is in-flight (drag + server patch)
-    const [pendingMoves, setPendingMoves] = useState(() => new Set());
 
     const [searchQuery, setSearchQuery] = useState('');
     const [priorityFilter, setPriorityFilter] = useState('');
@@ -370,16 +361,14 @@ export default function Board({
     // Preload critical images when tasks load
     useEffect(() => {
         const imagesToPreload = [];
-        Object.values(taskState)
-            .flat()
-            .forEach((task) => {
-                if (task.cover_image) {
-                    imagesToPreload.push(task.cover_image);
-                }
-            });
-
+        Object.values(taskState).flat().forEach(task => {
+            if (task.cover_image) {
+                imagesToPreload.push(task.cover_image);
+            }
+        });
+        
         if (imagesToPreload.length > 0) {
-            imagesToPreload.slice(0, 10).forEach((src) => {
+            imagesToPreload.slice(0, 10).forEach(src => {
                 const img = new Image();
                 img.src = src;
             });
@@ -388,7 +377,7 @@ export default function Board({
 
     // Sync taskState when initialTasks or methodology changes
     useEffect(() => {
-        setTaskState(buildInitialColumns(initialTasks, methodology, phaseMap));
+        setTaskState(buildColumnsFromServer(initialTasks, methodology, phaseMap));
     }, [initialTasks, methodology]);
 
     // Refresh tasks function for callbacks
@@ -404,6 +393,8 @@ export default function Board({
         }
         return null;
     }, [pendingDeleteId, taskState, STATUS_ORDER]);
+        return null;
+    }, [pendingDeleteId, tasks, STATUS_ORDER]);
 
     const { data, setData, post, patch, reset, processing, errors } = useForm({
         title: '',
@@ -484,55 +475,6 @@ export default function Board({
         }
     };
 
-    // Temp id generator (string to avoid collision with numeric server ids)
-    const makeTempId = () => `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-
-    const pushTask = useCallback((task) => {
-        if (!task || !task.status) return;
-        setTaskState((prev) => {
-            const arr = prev[task.status] ? [...prev[task.status]] : [];
-            if (!arr.some((t) => t.id === task.id)) arr.unshift(task);
-            return { ...prev, [task.status]: arr };
-        });
-    }, []);
-
-    const dropTask = useCallback((id) => {
-        if (!id) return;
-        setTaskState((prev) => {
-            let changed = false;
-            const next = Object.fromEntries(
-                Object.entries(prev).map(([k, arr]) => {
-                    const na = arr.filter((t) => t.id !== id);
-                    if (na.length !== arr.length) changed = true;
-                    return [k, na];
-                })
-            );
-            return changed ? next : prev;
-        });
-    }, []);
-
-    const patchTask = useCallback((id, changes) => {
-        if (!id) return;
-        setTaskState((prev) => {
-            let changed = false;
-            const next = Object.fromEntries(
-                Object.entries(prev).map(([k, arr]) => {
-                    let innerChanged = false;
-                    const na = arr.map((t) => {
-                        if (t.id === id) {
-                            innerChanged = true;
-                            return { ...t, ...changes };
-                        }
-                        return t;
-                    });
-                    if (innerChanged) changed = true;
-                    return [k, na];
-                })
-            );
-            return changed ? next : prev;
-        });
-    }, []);
-
     const submit = (e) => {
         e.preventDefault();
 
@@ -547,8 +489,7 @@ export default function Board({
         // Optimistic update for new tasks
         if (!editMode) {
             const optimisticTask = {
-                id: makeTempId(), // Temporary string ID
-                __temp: true,
+                id: Date.now(), // Temporary ID
                 title: data.title,
                 description: data.description,
                 status: data.status,
@@ -556,13 +497,13 @@ export default function Board({
                 milestone: data.milestone || false,
                 start_date: data.start_date,
                 end_date: data.end_date,
-                assignee: data.assignee_id ? users.find((u) => u.id == data.assignee_id) : null,
+                assignee: data.assignee_id ? users.find(u => u.id == data.assignee_id) : null,
                 creator: auth.user,
                 comments_count: 0,
                 attachments_count: 0,
                 cover_image: null,
             };
-            pushTask(optimisticTask);
+            addTask(optimisticTask);
         }
 
         const action = editMode ? patch : post;
@@ -573,21 +514,17 @@ export default function Board({
                     const tid = editMode ? editingId : p?.props?.task?.id;
                     if (tid) {
                         setPhaseMap((prev) => ({ ...prev, [tid]: data.status }));
-
+                        
                         // If new task, replace optimistic task with real data
                         if (!editMode && p?.props?.task) {
                             const newTask = {
                                 ...p.props.task,
                                 status: data.status,
-                                assignee: data.assignee_id
-                                    ? users.find((u) => u.id == data.assignee_id)
-                                    : null,
+                                assignee: data.assignee_id ? users.find(u => u.id == data.assignee_id) : null,
                             };
                             // Remove optimistic and add real
-                            // Replace the first temp task for this status
-                            const temp = (taskState[data.status] || []).find((t) => t.__temp);
-                            if (temp) dropTask(temp.id);
-                            pushTask({ ...newTask, status: data.status });
+                            removeTask(Date.now(), data.status); // Remove optimistic
+                            addTask(newTask); // Add real task
                         }
                     }
                 } catch {}
@@ -599,10 +536,7 @@ export default function Board({
                 console.error('Task submission failed:', errors);
                 // If new task failed, remove optimistic update
                 if (!editMode) {
-                    // Remove temp tasks for this status
-                    (taskState[data.status] || [])
-                        .filter((t) => t.__temp)
-                        .forEach((t) => dropTask(t.id));
+                    removeTask(Date.now(), data.status);
                 }
             },
         });
@@ -617,7 +551,7 @@ export default function Board({
         const taskToDelete = pendingTask;
         if (taskToDelete) {
             // Optimistic removal
-            dropTask(pendingDeleteId);
+            removeTask(pendingDeleteId, taskToDelete.status);
         }
 
         router.delete(route('tasks.destroy', [project.id, pendingDeleteId]), {
@@ -629,7 +563,7 @@ export default function Board({
                 console.error('Task deletion failed:', errors);
                 // Restore task if deletion failed
                 if (taskToDelete) {
-                    pushTask(taskToDelete);
+                    addTask(taskToDelete);
                 }
             },
         });
@@ -642,21 +576,21 @@ export default function Board({
         formData.append('image', file);
 
         // Optimistic update for image upload indicator
-        patchTask(task.id, { uploading: true });
+        updateTask(task.id, { uploading: true });
 
         router.post(route('tasks.attachments.store', [project.id, task.id]), formData, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: (response) => {
-                patchTask(task.id, {
+                updateTask(task.id, { 
                     uploading: false,
-                    attachments_count: (task.attachments_count || 0) + 1,
+                    attachments_count: (task.attachments_count || 0) + 1 
                 });
                 refreshTasks();
             },
             onError: (errors) => {
                 console.error('Image upload failed:', errors);
-                patchTask(task.id, { uploading: false });
+                updateTask(task.id, { uploading: false });
                 // You could show a toast notification here
                 alert('Image upload failed: ' + (errors.image?.[0] || 'Unknown error'));
             },
@@ -666,11 +600,11 @@ export default function Board({
     const handleFormImageUpload = (e) => {
         const file = e.target.files?.[0];
         if (!file || !editingId) return;
-
+        
         const formData = new FormData();
         formData.append('image', file);
         setFormImageUploading(true);
-
+        
         router.post(route('tasks.attachments.store', [project.id, editingId]), formData, {
             forceFormData: true,
             preserveScroll: true,
@@ -706,12 +640,6 @@ export default function Board({
 
         // Update phaseMap for local state
         setPhaseMap((prev) => ({ ...prev, [id]: to }));
-        // Mark pending move
-        setPendingMoves((prev) => {
-            const next = new Set(prev);
-            next.add(id);
-            return next;
-        });
 
         // Map methodology statuses to server statuses
         const serverStatus = METHOD_TO_SERVER[methodology]?.[to] || to;
@@ -722,28 +650,15 @@ export default function Board({
             { status: serverStatus },
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    // Clear pending marker
-                    setPendingMoves((prev) => {
-                        const next = new Set(prev);
-                        next.delete(id);
-                        return next;
-                    });
-                },
                 onError: (errors) => {
-                    console.error('Task update failed:', errors);
                     // Revert optimistic update on error
+                    console.error('Task update failed:', errors);
                     const revertFrom = (taskState[to] || []).filter((t) => t.id !== id);
                     const revertTo = [...(taskState[from] || [])];
                     const originalTask = { ...moving, status: from };
                     revertTo.push(originalTask);
                     setTaskState({ ...taskState, [to]: revertFrom, [from]: revertTo });
                     setPhaseMap((prev) => ({ ...prev, [id]: from }));
-                    setPendingMoves((prev) => {
-                        const next = new Set(prev);
-                        next.delete(id);
-                        return next;
-                    });
                 },
             }
         );
@@ -1197,11 +1112,7 @@ export default function Board({
                                                 task={task}
                                                 onEdit={() => showEdit(task)}
                                                 onDelete={askDelete}
-                                                onClick={() =>
-                                                    router.get(
-                                                        route('tasks.show', [project.id, task.id])
-                                                    )
-                                                }
+                                                onClick={() => router.get(route('tasks.show', [project.id, task.id]))}
                                                 onImageUpload={(taskId) => {
                                                     const input = document.createElement('input');
                                                     input.type = 'file';
@@ -1212,13 +1123,8 @@ export default function Board({
                                                     };
                                                     input.click();
                                                 }}
-                                                accent={
-                                                    STATUS_META[statusKey]?.accent ||
-                                                    methodStyles.accent
-                                                }
-                                                isPending={
-                                                    !!task.__temp || pendingMoves.has(task.id)
-                                                }
+                                                accent={STATUS_META[statusKey]?.accent || methodStyles.accent}
+                                                isPending={isTaskPending(task.id, task.status)}
                                                 isUpdating={task.uploading || false}
                                                 lazy={true}
                                             />
@@ -1455,10 +1361,7 @@ export default function Board({
                                             backgroundColor: 'rgba(0,0,0,0.02)',
                                         }}
                                     >
-                                        <Typography
-                                            variant="subtitle2"
-                                            sx={{ mb: 1, fontWeight: 600, fontSize: '0.875rem' }}
-                                        >
+                                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, fontSize: '0.875rem' }}>
                                             Task Images
                                         </Typography>
                                         <Button
@@ -1469,40 +1372,25 @@ export default function Board({
                                             sx={{ mb: 1 }}
                                         >
                                             {formImageUploading ? 'Uploading...' : 'Add Image'}
-                                            <input
-                                                hidden
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleFormImageUpload}
-                                            />
+                                            <input hidden type="file" accept="image/*" onChange={handleFormImageUpload} />
                                         </Button>
-                                        {editingId &&
-                                            (() => {
-                                                // Use current in-memory taskState (includes optimistic changes)
-                                                let currentTask = null;
-                                                for (const col of Object.values(taskState)) {
-                                                    currentTask = (col || []).find(
-                                                        (t) => t.id === editingId
-                                                    );
-                                                    if (currentTask) break;
-                                                }
-                                                if (currentTask?.attachments_count > 0) {
-                                                    return (
-                                                        <Typography
-                                                            variant="caption"
-                                                            color="text.secondary"
-                                                            sx={{ display: 'block' }}
-                                                        >
-                                                            {currentTask.attachments_count} image
-                                                            {currentTask.attachments_count !== 1
-                                                                ? 's'
-                                                                : ''}{' '}
-                                                            attached
-                                                        </Typography>
-                                                    );
-                                                }
-                                                return null;
-                                            })()}
+                                        {tasks && editingId && (() => {
+                                            // Find the current task to show its images
+                                            let currentTask = null;
+                                            Object.values(tasks).forEach(column => {
+                                                const found = column.find(task => task.id === editingId);
+                                                if (found) currentTask = found;
+                                            });
+                                            
+                                            if (currentTask?.attachments_count > 0) {
+                                                return (
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                                        {currentTask.attachments_count} image{currentTask.attachments_count !== 1 ? 's' : ''} attached
+                                                    </Typography>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
                                     </Box>
                                 )}
 

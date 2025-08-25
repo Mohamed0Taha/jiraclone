@@ -21,7 +21,7 @@ class VerifyCsrfToken extends Middleware
         'projects/*/tasks/ai/generate',
         'projects/*/tasks/ai/accept',
         'projects/*/tasks/ai/reject',
-        
+
         // Assistant endpoints now properly use CSRF tokens
         // 'projects/*/assistant/chat',
         // 'projects/*/assistant/execute',

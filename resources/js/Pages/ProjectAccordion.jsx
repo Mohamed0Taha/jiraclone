@@ -245,19 +245,29 @@ export default function ProjectAccordion({ project, rowSx = {}, onDelete, endAct
                     },
                 }}
             >
-                {/* Project name button (solid text color so it never vanishes on hover) */}
-                <Button
-                    variant="text"
+                {/* Project name interactive element styled like a button (avoid nested button) */}
+                <Box
+                    role="button"
+                    tabIndex={0}
                     onClick={gotoBoard}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            gotoBoard(e);
+                        }
+                    }}
                     sx={{
                         px: 0.75,
-                        minWidth: 0,
+                        py: 0.75,
+                        cursor: 'pointer',
                         textTransform: 'none',
                         fontWeight: 800,
                         fontSize: 16,
                         color: 'text.primary',
                         borderRadius: 1.5,
                         maxWidth: { xs: 180, sm: 260, md: 360 },
+                        display: 'flex',
+                        alignItems: 'center',
                         '&:hover': {
                             backgroundColor: alpha(theme.palette.primary.main, 0.08),
                             color: 'text.primary',
@@ -275,7 +285,7 @@ export default function ProjectAccordion({ project, rowSx = {}, onDelete, endAct
                     >
                         {project.name}
                     </Typography>
-                </Button>
+                </Box>
 
                 <Stack
                     direction="row"

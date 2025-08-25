@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { csrfFetch } from '@/utils/csrf';
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { useIsolatedSpeechRecognition } from '@/hooks/useIsolatedSpeechRecognition';
 import {
     Avatar,
     Box,
@@ -34,13 +34,6 @@ import MicRoundedIcon from '@mui/icons-material/MicRounded';
 import MicOffRoundedIcon from '@mui/icons-material/MicOffRounded';
 import ChatBubbleOutlineRoundedIcon from '@mui/icons-material/ChatBubbleOutlineRounded';
 import RecordVoiceOverRoundedIcon from '@mui/icons-material/RecordVoiceOverRounded';
-
-// Initialize SpeechRecognition
-if (typeof window !== 'undefined') {
-    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-        console.warn('SpeechRecognition API not supported in this browser');
-    }
-}
 
 // Animation keyframes
 const pulse = keyframes`
@@ -118,19 +111,21 @@ export default function AssistantChat({ project, open, onClose }) {
     // Voice interaction state
     const [voiceMode, setVoiceMode] = useState(false);
     const [isProcessingVoice, setIsProcessingVoice] = useState(false);
-    
+
     const scrollRef = useRef(null);
     const inputRef = useRef(null);
     const silenceTimerRef = useRef(null);
     const voiceTimeoutRef = useRef(null);
 
-    // Speech recognition setup
+    // Isolated speech recognition setup for this component
     const {
         transcript,
         listening,
         resetTranscript,
-        browserSupportsSpeechRecognition
-    } = useSpeechRecognition();
+        browserSupportsSpeechRecognition,
+        startListening: startSpeechRecognition,
+        stopListening: stopSpeechRecognition,
+    } = useIsolatedSpeechRecognition('assistant-chat');
 
     const navigateToBoard = () => {
         const url = `/projects/${project.id}/tasks`;
@@ -152,7 +147,7 @@ export default function AssistantChat({ project, open, onClose }) {
             headers: { Accept: 'application/json' },
             credentials: 'same-origin',
         })
-            .then(response => response.json())
+            .then((response) => response.json())
             .then((d) => {
                 if (Array.isArray(d?.suggestions)) setSuggestions(d.suggestions);
             })
@@ -225,57 +220,60 @@ export default function AssistantChat({ project, open, onClose }) {
 
     // Voice interaction functions
     const startVoiceInput = () => {
-        console.log('Starting voice input...', { browserSupportsSpeechRecognition, SpeechRecognition });
-        
+        console.log('Starting voice input for assistant chat...', {
+            browserSupportsSpeechRecognition,
+        });
+
         if (!browserSupportsSpeechRecognition) {
             console.error('Browser does not support speech recognition');
-            alert('Your browser does not support speech recognition. Please use a modern browser like Chrome or Edge.');
+            alert(
+                'Your browser does not support speech recognition. Please use a modern browser like Chrome or Edge.'
+            );
             return;
         }
 
-        if (!SpeechRecognition) {
-            console.error('SpeechRecognition object not available');
-            alert('Speech recognition is not available. Please check your browser settings.');
-            return;
-        }
-        
         try {
             resetTranscript();
             setIsProcessingVoice(false); // Reset processing state
-            console.log('Attempting to start listening...');
-            SpeechRecognition.startListening({ 
-                continuous: true, 
-                language: 'en-US' 
-            });
-            console.log('Voice input started successfully');
+            console.log('Attempting to start listening for assistant chat...');
 
-            // Clear any existing timers
-            clearTimeout(silenceTimerRef.current);
-            clearTimeout(voiceTimeoutRef.current);
-            
-            // Auto-stop after 30 seconds to prevent indefinite listening
-            voiceTimeoutRef.current = setTimeout(() => {
-                if (listening) {
-                    console.log('Auto-stopping voice input after 30 seconds');
-                    stopVoiceInput();
-                }
-            }, 30000);
+            const success = startSpeechRecognition();
+            if (success) {
+                console.log('Voice input started successfully for assistant chat');
+
+                // Clear any existing timers
+                clearTimeout(silenceTimerRef.current);
+                clearTimeout(voiceTimeoutRef.current);
+
+                // Auto-stop after 30 seconds to prevent indefinite listening
+                voiceTimeoutRef.current = setTimeout(() => {
+                    if (listening) {
+                        console.log('Auto-stopping voice input after 30 seconds');
+                        stopVoiceInput();
+                    }
+                }, 30000);
+            } else {
+                console.error('Failed to start voice input for assistant chat');
+                alert('Failed to start voice input. Please try again.');
+                setIsProcessingVoice(false);
+            }
         } catch (error) {
-            console.error('Error starting voice input:', error);
+            console.error('Error starting voice input for assistant chat:', error);
             alert('Failed to start voice input: ' + error.message);
             setIsProcessingVoice(false);
         }
     };
 
     const stopVoiceInput = () => {
-        SpeechRecognition.stopListening();
+        console.log('Stopping voice input for assistant chat');
+        stopSpeechRecognition();
         clearTimeout(silenceTimerRef.current);
         clearTimeout(voiceTimeoutRef.current);
-        
+
         // Set processing state only if we have transcript to process
         if (transcript && transcript.trim()) {
             setIsProcessingVoice(true);
-            
+
             // Process the transcript after a short delay to ensure it's captured
             setTimeout(() => {
                 sendMessage(transcript.trim());
@@ -290,11 +288,11 @@ export default function AssistantChat({ project, open, onClose }) {
     const toggleVoiceMode = () => {
         const newVoiceMode = !voiceMode;
         setVoiceMode(newVoiceMode);
-        
+
         if (!newVoiceMode && listening) {
             stopVoiceInput();
         }
-        
+
         // Clear input when switching modes
         setInput('');
         setIsProcessingVoice(false); // Reset processing state
@@ -323,10 +321,10 @@ export default function AssistantChat({ project, open, onClose }) {
             clearTimeout(silenceTimerRef.current);
             clearTimeout(voiceTimeoutRef.current);
             if (listening) {
-                SpeechRecognition.stopListening();
+                stopSpeechRecognition();
             }
         };
-    }, []);
+    }, [listening, stopSpeechRecognition]);
 
     const sendMessage = async (text) => {
         if (!text || busy) return;
@@ -504,7 +502,7 @@ export default function AssistantChat({ project, open, onClose }) {
                         border: '1px solid rgba(255,255,255,0.5)',
                     }}
                 />
-                
+
                 {/* Voice Mode Toggle */}
                 <FormControlLabel
                     control={
@@ -525,7 +523,11 @@ export default function AssistantChat({ project, open, onClose }) {
                     }
                     label={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            {voiceMode ? <RecordVoiceOverRoundedIcon fontSize="small" /> : <ChatBubbleOutlineRoundedIcon fontSize="small" />}
+                            {voiceMode ? (
+                                <RecordVoiceOverRoundedIcon fontSize="small" />
+                            ) : (
+                                <ChatBubbleOutlineRoundedIcon fontSize="small" />
+                            )}
                             <Typography variant="caption" sx={{ fontWeight: 600 }}>
                                 {voiceMode ? 'Voice' : 'Text'}
                             </Typography>
@@ -1408,7 +1410,9 @@ export default function AssistantChat({ project, open, onClose }) {
                                     width: 8,
                                     height: 8,
                                     borderRadius: '50%',
-                                    backgroundColor: listening ? colors.secondary : 'rgba(255,255,255,0.4)',
+                                    backgroundColor: listening
+                                        ? colors.secondary
+                                        : 'rgba(255,255,255,0.4)',
                                     animation: listening ? `${pulse} 1.5s infinite` : 'none',
                                 }}
                             />
@@ -1420,33 +1424,34 @@ export default function AssistantChat({ project, open, onClose }) {
                                     flexGrow: 1,
                                 }}
                             >
-                                {listening 
-                                    ? (transcript || 'Listening... Speak now')
-                                    : isProcessingVoice 
-                                        ? 'Processing speech...'
-                                        : 'Tap microphone to start speaking'
-                                }
+                                {listening
+                                    ? transcript || 'Listening... Speak now'
+                                    : isProcessingVoice
+                                      ? 'Processing speech...'
+                                      : 'Tap microphone to start speaking'}
                             </Typography>
                         </Box>
 
                         {/* Voice Control Button */}
                         <IconButton
                             onClick={listening ? stopVoiceInput : startVoiceInput}
-                            disabled={busy || isProcessingVoice || !browserSupportsSpeechRecognition}
+                            disabled={
+                                busy || isProcessingVoice || !browserSupportsSpeechRecognition
+                            }
                             sx={{
                                 width: 56,
                                 height: 42,
                                 borderRadius: 24,
                                 backgroundColor: listening ? colors.error : colors.secondary,
                                 color: 'white',
-                                boxShadow: listening 
-                                    ? `0 4px 20px ${alpha(colors.error, 0.4)}` 
+                                boxShadow: listening
+                                    ? `0 4px 20px ${alpha(colors.error, 0.4)}`
                                     : `0 4px 20px ${alpha(colors.secondary, 0.4)}`,
                                 '&:hover': {
                                     backgroundColor: listening ? colors.error : colors.secondary,
                                     transform: 'translateY(-1px) scale(1.05)',
-                                    boxShadow: listening 
-                                        ? `0 6px 24px ${alpha(colors.error, 0.5)}` 
+                                    boxShadow: listening
+                                        ? `0 6px 24px ${alpha(colors.error, 0.5)}`
                                         : `0 6px 24px ${alpha(colors.secondary, 0.5)}`,
                                 },
                                 '&.Mui-disabled': {
@@ -1456,7 +1461,7 @@ export default function AssistantChat({ project, open, onClose }) {
                                 transition: 'all 0.25s ease',
                                 animation: listening ? `${pulse} 2s infinite` : 'none',
                             }}
-                            aria-label={listening ? "Stop listening" : "Start voice input"}
+                            aria-label={listening ? 'Stop listening' : 'Start voice input'}
                         >
                             {isProcessingVoice ? (
                                 <CircularProgress size={20} sx={{ color: 'inherit' }} />

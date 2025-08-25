@@ -200,7 +200,14 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                             />
                         </Box>
                     )}
-                    <CardContent sx={{ p: 1.25 }}>
+                    <CardContent
+                        sx={{
+                            p: 1.25,
+                            minHeight: 200,
+                            display: 'flex',
+                            flexDirection: 'column',
+                        }}
+                    >
                         {/* Header row: title + actions */}
                         <Box
                             sx={{
@@ -322,7 +329,6 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                 </Tooltip>
                             </Box>
                         </Box>
-
                         {/* Optional milestone badge (tiny) */}
                         {task?.milestone && (
                             <Stack
@@ -344,7 +350,6 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                 </Typography>
                             </Stack>
                         )}
-
                         {/* Priority and Comments row */}
                         <Stack direction="row" spacing={1} sx={{ mb: 0.75 }} alignItems="center">
                             {/* Priority badge */}
@@ -418,7 +423,6 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                 </Stack>
                             )}
                         </Stack>
-
                         {/* Description */}
                         {task?.description && (
                             <Typography
@@ -426,14 +430,18 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                 color="text.secondary"
                                 sx={{
                                     mb: 0.75,
-                                    whiteSpace: 'pre-wrap',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                    lineHeight: 1.4,
+                                    fontSize: '0.85rem',
                                     wordBreak: 'break-word',
                                 }}
                             >
                                 {task.description}
                             </Typography>
-                        )}
-
+                        )}{' '}
                         {/* Dates row */}
                         {(start || end) && (
                             <Stack
@@ -474,7 +482,6 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                 </Tooltip>
                             </Stack>
                         )}
-
                         {/* Progress rail */}
                         {progress !== null && (
                             <Tooltip title={scheduleTooltip} placement="top" arrow>
@@ -518,18 +525,27 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                 </Box>
                             </Tooltip>
                         )}
-
                         {/* Meta */}
-                        {task?.creator?.name && (
-                            <Typography variant="caption" color="text.secondary" display="block">
-                                Created by {task.creator.name}
-                            </Typography>
-                        )}
-                        {task?.assignee?.name && (
-                            <Typography variant="caption" color="text.secondary" display="block">
-                                Assigned to {task.assignee.name}
-                            </Typography>
-                        )}
+                        <Box sx={{ mt: 'auto' }}>
+                            {task?.creator?.name && (
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                >
+                                    Created by {task.creator.name}
+                                </Typography>
+                            )}
+                            {task?.assignee?.name && (
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                >
+                                    Assigned to {task.assignee.name}
+                                </Typography>
+                            )}
+                        </Box>
                     </CardContent>
                 </Card>
             </Tooltip>

@@ -10,6 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectAssistantController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TwilioController;
 use App\Models\Project;
 use App\Models\User;
 use App\Notifications\CustomVerifyEmail;
@@ -297,6 +298,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/openai-requests', [AdminController::class, 'openaiRequests'])->name('openai-requests');
     Route::get('/billing', [AdminController::class, 'billing'])->name('billing');
     Route::get('/cancellations', [AdminController::class, 'cancellations'])->name('cancellations');
+
+    // SMS tracking routes
+    Route::get('/sms-messages', [AdminController::class, 'smsMessages'])->name('sms-messages');
+    Route::get('/sms-messages/{smsMessage}', [AdminController::class, 'smsMessageShow'])->name('sms-message-show');
+    Route::get('/sms-stats', [AdminController::class, 'smsStats'])->name('sms-stats');
+    Route::post('/sms-messages/sync-status', [AdminController::class, 'syncSmsStatuses'])->name('sms-messages.sync');
     Route::get('/plans', [AdminController::class, 'plans'])->name('plans');
     Route::post('/plans/sync-stripe', [AdminController::class, 'syncPlansFromStripe'])->name('plans.sync');
     Route::post('/plans/update-price', [AdminController::class, 'updateStripePrice'])->name('plans.price.update');
@@ -310,6 +317,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     // Broadcast Email
     Route::get('/broadcast-email', [AdminController::class, 'broadcastEmailForm'])->name('broadcast-email.form');
     Route::post('/broadcast-email', [AdminController::class, 'sendBroadcastEmail'])->name('broadcast-email.send');
+
+    // Twilio Testing
+    Route::get('/twilio-test', [AdminController::class, 'twilioTest'])->name('twilio-test');
+    Route::post('/twilio/test-sms', [TwilioController::class, 'testSMS'])->name('twilio.test-sms');
+    Route::post('/twilio/test-whatsapp', [TwilioController::class, 'testWhatsApp'])->name('twilio.test-whatsapp');
+    Route::post('/twilio/check-status', [TwilioController::class, 'checkMessageStatus'])->name('twilio.check-status');
 });
 
 /*

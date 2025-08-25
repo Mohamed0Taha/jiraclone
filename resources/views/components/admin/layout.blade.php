@@ -52,6 +52,10 @@
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.email-logs') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
                                 📧 Email Logs
                             </a>
+                            <a href="{{ route('admin.sms-messages') }}" 
+                               class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.sms-messages*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
+                                📱 SMS Messages
+                            </a>
                             <a href="{{ route('admin.openai-requests') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.openai-requests') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
                                 🤖 AI Logs
@@ -99,6 +103,7 @@
                         <a href="{{ route('admin.billing') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.billing') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">💳 Billing</a>
                         <a href="{{ route('admin.plans') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.plans') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">🏷️ Plans</a>
                         <a href="{{ route('admin.email-logs') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.email-logs') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">📧 Email Logs</a>
+                        <a href="{{ route('admin.sms-messages') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.sms-messages*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">📱 SMS Messages</a>
                         <a href="{{ route('admin.openai-requests') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.openai-requests') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">🤖 AI Logs</a>
                     </div>
                 </div>

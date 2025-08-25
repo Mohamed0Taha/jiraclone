@@ -13,6 +13,13 @@ use Illuminate\Support\Facades\Mail;
 
 class AutomationEngine
 {
+    protected TemplateEngine $templateEngine;
+
+    public function __construct()
+    {
+        $this->templateEngine = new TemplateEngine;
+    }
+
     /**
      * Process all active automations for a project
      */
@@ -31,26 +38,81 @@ class AutomationEngine
     }
 
     /**
-     * Execute a specific automation
+     * Process automations for a project with specific event context
+     * This allows for more targeted automation execution and better deduplication
      */
-    public function executeAutomation(Automation $automation)
+    public function processProjectAutomationsWithContext(Project $project, string $eventType, int $taskId)
     {
-        Log::info("Executing automation: {$automation->name} (ID: {$automation->id})");
+        // Only process automations that match the event type
+        $relevantTriggers = $this->getRelevantTriggersForEvent($eventType);
 
-        // Check if trigger conditions are met
-        if (! $this->checkTriggerConditions($automation)) {
-            Log::info("Trigger conditions not met for automation: {$automation->name}");
+        $automations = $project->automations()
+            ->where('is_active', true)
+            ->whereIn('trigger', $relevantTriggers)
+            ->get();
+
+        Log::info("Found {$automations->count()} automations for event type '{$eventType}' in project {$project->id}");
+
+        foreach ($automations as $automation) {
+            try {
+                // Pass the specific task context to help with deduplication
+                $this->executeAutomationWithTaskContext($automation, $taskId);
+            } catch (\Exception $e) {
+                Log::error("Automation {$automation->id} failed: {$e->getMessage()}");
+                $this->updateAutomationStats($automation, false);
+            }
+        }
+    }
+
+    /**
+     * Get relevant trigger types for a given event
+     */
+    private function getRelevantTriggersForEvent(string $eventType): array
+    {
+        return match ($eventType) {
+            'created' => ['task_created', 'Task Created'],
+            'updated' => ['task_updated', 'Task Updated'],
+            default => [] // No automations should run for unknown event types
+        };
+    }
+
+    /**
+     * Execute automation with specific task context for better deduplication
+     */
+    private function executeAutomationWithTaskContext(Automation $automation, int $taskId)
+    {
+        Log::info("Executing automation with task context: {$automation->name} (ID: {$automation->id}) for task {$taskId}");
+
+        // Check cooldown period to prevent rapid re-execution
+        if ($this->isInCooldownPeriod($automation)) {
+            Log::info("Automation {$automation->id} is in cooldown period, skipping");
 
             return false;
         }
 
-        Log::info("Trigger conditions met for automation: {$automation->name}");
+        // Load the specific task for context
+        $task = Task::with(['assignee', 'creator', 'project'])->find($taskId);
+        if (! $task) {
+            Log::warning("Task {$taskId} not found for automation {$automation->id}");
 
-        // Execute all actions
+            return false;
+        }
+
+        // Check if trigger conditions are met with the specific task context
+        $triggerContext = $this->checkTriggerConditionsWithContext($automation, ['task' => $task]);
+        if (! $triggerContext) {
+            Log::info("Trigger conditions not met for automation: {$automation->name} with task {$taskId}");
+
+            return false;
+        }
+
+        Log::info("Trigger conditions met for automation: {$automation->name}", ['context' => array_keys($triggerContext)]);
+
+        // Execute all actions with trigger context
         $success = true;
         foreach ($automation->actions as $action) {
             Log::info("Executing action for automation {$automation->id}: ".json_encode($action));
-            if (! $this->executeAction($action, $automation)) {
+            if (! $this->executeAction($action, $automation, $triggerContext)) {
                 $success = false;
                 Log::error("Action failed for automation {$automation->id}");
             }
@@ -63,36 +125,89 @@ class AutomationEngine
     }
 
     /**
-     * Check if trigger conditions are met
+     * Execute a specific automation
+     */
+    public function executeAutomation(Automation $automation)
+    {
+        Log::info("Executing automation: {$automation->name} (ID: {$automation->id})");
+
+        // Check cooldown period to prevent rapid re-execution
+        if ($this->isInCooldownPeriod($automation)) {
+            Log::info("Automation {$automation->id} is in cooldown period, skipping");
+
+            return false;
+        }
+
+        // Check if trigger conditions are met and get context
+        $triggerContext = $this->checkTriggerConditionsWithContext($automation);
+        if (! $triggerContext) {
+            Log::info("Trigger conditions not met for automation: {$automation->name}");
+
+            return false;
+        }
+
+        Log::info("Trigger conditions met for automation: {$automation->name}", ['context' => array_keys($triggerContext)]);
+
+        // Execute all actions with trigger context
+        $success = true;
+        foreach ($automation->actions as $action) {
+            Log::info("Executing action for automation {$automation->id}: ".json_encode($action));
+            if (! $this->executeAction($action, $automation, $triggerContext)) {
+                $success = false;
+                Log::error("Action failed for automation {$automation->id}");
+            }
+        }
+
+        // Update automation statistics
+        $this->updateAutomationStats($automation, $success);
+
+        return $success;
+    }
+
+    /**
+     * Check if trigger conditions are met (backward compatibility)
      */
     private function checkTriggerConditions(Automation $automation): bool
+    {
+        return (bool) $this->checkTriggerConditionsWithContext($automation);
+    }
+
+    /**
+     * Check if trigger conditions are met and return context data
+     */
+    private function checkTriggerConditionsWithContext(Automation $automation, array $providedContext = []): array|false
     {
         $trigger = $automation->trigger;
         $config = $automation->trigger_config;
 
+        // If we have a provided task context, use it directly for task-based triggers
+        if (isset($providedContext['task']) && in_array($trigger, ['task_created', 'Task Created', 'task_updated', 'Task Updated'])) {
+            return $providedContext; // Use the specific task context
+        }
+
         switch ($trigger) {
             case 'Schedule':
-                return $this->checkScheduleTrigger($config, $automation);
+                return $this->checkScheduleTriggerWithContext($config, $automation);
 
             case 'Task Created':
             case 'task_created':
-                return $this->checkTaskCreatedTrigger($config, $automation);
+                return $this->checkTaskCreatedTriggerWithContext($config, $automation);
 
             case 'Task Updated':
             case 'task_updated':
-                return $this->checkTaskUpdatedTrigger($config, $automation);
+                return $this->checkTaskUpdatedTriggerWithContext($config, $automation);
 
             case 'Task Due Date':
             case 'task_due_date':
-                return $this->checkTaskDueDateTrigger($config, $automation);
+                return $this->checkTaskDueDateTriggerWithContext($config, $automation);
 
             case 'Task Priority':
             case 'task_priority':
-                return $this->checkTaskPriorityTrigger($config, $automation);
+                return $this->checkTaskPriorityTriggerWithContext($config, $automation);
 
             case 'Project Status':
             case 'project_status':
-                return $this->checkProjectStatusTrigger($config, $automation);
+                return $this->checkProjectStatusTriggerWithContext($config, $automation);
 
             default:
                 Log::warning("Unknown trigger type: {$trigger}");
@@ -106,6 +221,14 @@ class AutomationEngine
      */
     private function checkScheduleTrigger(array $config, Automation $automation): bool
     {
+        return (bool) $this->checkScheduleTriggerWithContext($config, $automation);
+    }
+
+    /**
+     * Schedule-based trigger with context
+     */
+    private function checkScheduleTriggerWithContext(array $config, Automation $automation): array|false
+    {
         $frequency = $config['frequency'] ?? 'daily';
         $time = $config['time'] ?? '09:00';
         $lastRun = $automation->last_run_at;
@@ -115,18 +238,29 @@ class AutomationEngine
 
         switch ($frequency) {
             case 'daily':
-                return ! $lastRun || $lastRun->lt($scheduledTime) && $now->gte($scheduledTime);
+                if (! $lastRun || $lastRun->lt($scheduledTime) && $now->gte($scheduledTime)) {
+                    return ['schedule' => ['frequency' => 'daily', 'time' => $time, 'triggered_at' => $now]];
+                }
+
+                return false;
 
             case 'weekly':
                 $dayOfWeek = $config['day_of_week'] ?? 1; // Monday
                 $weeklyTime = Carbon::now()->startOfWeek()->addDays($dayOfWeek - 1)->setTimeFromTimeString($time);
 
-                return ! $lastRun || $lastRun->lt($weeklyTime) && $now->gte($weeklyTime);
+                if (! $lastRun || $lastRun->lt($weeklyTime) && $now->gte($weeklyTime)) {
+                    return ['schedule' => ['frequency' => 'weekly', 'day_of_week' => $dayOfWeek, 'time' => $time, 'triggered_at' => $now]];
+                }
+
+                return false;
 
             case 'hourly':
                 $hourlyTime = Carbon::now()->startOfHour();
+                if (! $lastRun || $lastRun->lt($hourlyTime)) {
+                    return ['schedule' => ['frequency' => 'hourly', 'triggered_at' => $now]];
+                }
 
-                return ! $lastRun || $lastRun->lt($hourlyTime);
+                return false;
 
             default:
                 return false;
@@ -138,11 +272,20 @@ class AutomationEngine
      */
     private function checkTaskCreatedTrigger(array $config, Automation $automation): bool
     {
+        return (bool) $this->checkTaskCreatedTriggerWithContext($config, $automation);
+    }
+
+    /**
+     * Task created trigger with context
+     */
+    private function checkTaskCreatedTriggerWithContext(array $config, Automation $automation): array|false
+    {
         $columns = $config['columns'] ?? [];
         $timeWindow = $config['time_window'] ?? 5; // minutes
 
         $recentTasks = Task::where('project_id', $automation->project_id)
             ->where('created_at', '>=', Carbon::now()->subMinutes($timeWindow))
+            ->orderBy('created_at', 'desc')
             ->get();
 
         if ($recentTasks->isEmpty()) {
@@ -151,10 +294,18 @@ class AutomationEngine
 
         // If specific columns are configured, check if task is in those columns
         if (! empty($columns)) {
-            return $recentTasks->whereIn('status', $columns)->isNotEmpty();
+            $matchingTasks = $recentTasks->whereIn('status', $columns);
+            if ($matchingTasks->isEmpty()) {
+                return false;
+            }
+            // Use the most recent matching task
+            $task = $matchingTasks->first();
+        } else {
+            // Use the most recent task
+            $task = $recentTasks->first();
         }
 
-        return true;
+        return ['task' => $task];
     }
 
     /**
@@ -162,21 +313,43 @@ class AutomationEngine
      */
     private function checkTaskDueDateTrigger(array $config, Automation $automation): bool
     {
+        return (bool) $this->checkTaskDueDateTriggerWithContext($config, $automation);
+    }
+
+    /**
+     * Task due date trigger with context
+     */
+    private function checkTaskDueDateTriggerWithContext(array $config, Automation $automation): array|false
+    {
         $hours = $config['hours_before'] ?? 24;
         $notificationTime = Carbon::now()->addHours($hours);
 
         $dueTasks = Task::where('project_id', $automation->project_id)
             ->whereNotNull('due_date')
             ->whereBetween('due_date', [Carbon::now(), $notificationTime])
+            ->orderBy('due_date', 'asc')
             ->get();
 
-        return $dueTasks->isNotEmpty();
+        if ($dueTasks->isEmpty()) {
+            return false;
+        }
+
+        // Use the task with the earliest due date
+        return ['task' => $dueTasks->first()];
     }
 
     /**
      * Task priority trigger
      */
     private function checkTaskPriorityTrigger(array $config, Automation $automation): bool
+    {
+        return (bool) $this->checkTaskPriorityTriggerWithContext($config, $automation);
+    }
+
+    /**
+     * Task priority trigger with context
+     */
+    private function checkTaskPriorityTriggerWithContext(array $config, Automation $automation): array|false
     {
         $priority = $config['priority'] ?? 'high';
         $hoursUnassigned = $config['hours_unassigned'] ?? 2;
@@ -185,15 +358,29 @@ class AutomationEngine
             ->where('priority', $priority)
             ->whereNull('assigned_to')
             ->where('created_at', '<=', Carbon::now()->subHours($hoursUnassigned))
+            ->orderBy('created_at', 'asc')
             ->get();
 
-        return $criticalTasks->isNotEmpty();
+        if ($criticalTasks->isEmpty()) {
+            return false;
+        }
+
+        // Use the oldest unassigned high priority task
+        return ['task' => $criticalTasks->first()];
     }
 
     /**
      * Task updated trigger
      */
     private function checkTaskUpdatedTrigger(array $config, Automation $automation): bool
+    {
+        return (bool) $this->checkTaskUpdatedTriggerWithContext($config, $automation);
+    }
+
+    /**
+     * Task updated trigger with context
+     */
+    private function checkTaskUpdatedTriggerWithContext(array $config, Automation $automation): array|false
     {
         $timeWindow = $config['time_window'] ?? 5; // minutes
 
@@ -205,6 +392,7 @@ class AutomationEngine
                     ->from('tasks as t2')
                     ->whereColumn('t2.id', 'tasks.id');
             })
+            ->orderBy('updated_at', 'desc')
             ->get();
 
         if ($recentlyUpdated->isEmpty()) {
@@ -237,24 +425,39 @@ class AutomationEngine
 
             Log::info('Found '.$matchingTasks->count()." tasks with status '{$toStatus}' for automation {$automation->id}");
 
-            return true;
+            // Use the most recently updated matching task
+            return ['task' => $matchingTasks->first()];
         }
 
         // Fallback to old format
         $statusChanges = $config['status_changes'] ?? [];
         if (! empty($statusChanges)) {
-            return $recentlyUpdated->whereIn('status', $statusChanges)->isNotEmpty();
+            $matchingTasks = $recentlyUpdated->whereIn('status', $statusChanges);
+            if ($matchingTasks->isEmpty()) {
+                return false;
+            }
+
+            return ['task' => $matchingTasks->first()];
         }
 
         Log::info("Task updated trigger fired for automation {$automation->id} - ".$recentlyUpdated->count().' tasks updated');
 
-        return true;
+        // Use the most recently updated task
+        return ['task' => $recentlyUpdated->first()];
     }
 
     /**
      * Project status trigger
      */
     private function checkProjectStatusTrigger(array $config, Automation $automation): bool
+    {
+        return (bool) $this->checkProjectStatusTriggerWithContext($config, $automation);
+    }
+
+    /**
+     * Project status trigger with context
+     */
+    private function checkProjectStatusTriggerWithContext(array $config, Automation $automation): array|false
     {
         $targetStatus = $config['status'] ?? 'completed';
         $checkType = $config['check_type'] ?? 'completion_percentage';
@@ -274,23 +477,47 @@ class AutomationEngine
 
                 $completionPercentage = ($completedTasks / $totalTasks) * 100;
 
-                return $completionPercentage >= $threshold;
+                if ($completionPercentage >= $threshold) {
+                    return [
+                        'project' => $automation->project,
+                        'completion_stats' => [
+                            'total_tasks' => $totalTasks,
+                            'completed_tasks' => $completedTasks,
+                            'completion_percentage' => $completionPercentage,
+                            'threshold' => $threshold,
+                        ],
+                    ];
+                }
+
+                return false;
 
             case 'all_tasks_completed':
                 $incompleteTasks = Task::where('project_id', $automation->project_id)
                     ->whereNotIn('status', ['done', 'completed'])
                     ->count();
 
-                return $incompleteTasks === 0;
+                if ($incompleteTasks === 0) {
+                    return ['project' => $automation->project, 'all_tasks_completed' => true];
+                }
+
+                return false;
 
             case 'overdue_tasks':
                 $overdueTasks = Task::where('project_id', $automation->project_id)
                     ->whereNotNull('due_date')
                     ->where('due_date', '<', Carbon::now())
                     ->whereNotIn('status', ['done', 'completed'])
-                    ->count();
+                    ->get();
 
-                return $overdueTasks > 0;
+                if ($overdueTasks->isNotEmpty()) {
+                    return [
+                        'project' => $automation->project,
+                        'overdue_tasks' => $overdueTasks,
+                        'overdue_count' => $overdueTasks->count(),
+                    ];
+                }
+
+                return false;
 
             default:
                 return false;
@@ -300,26 +527,36 @@ class AutomationEngine
     /**
      * Execute an action
      */
-    private function executeAction(array $action, Automation $automation): bool
+    private function executeAction(array $action, Automation $automation, array $context = []): bool
     {
         $type = $action['type'] ?? $action['name'];
 
         switch ($type) {
             case 'Email':
             case 'send_email': // Support both formats
-                return $this->sendEmailAction($action, $automation);
+                return $this->sendEmailAction($action, $automation, $context);
+
+            case 'SMS':
+            case 'sms':
+            case 'send_sms':
+            case 'twilio_sms': // Legacy support
+                return $this->sendSMSAction($action, $automation, $context);
+
+            case 'WhatsApp':
+            case 'send_whatsapp':
+                return $this->sendWhatsAppAction($action, $automation, $context);
 
             case 'Slack':
-                return $this->sendSlackAction($action, $automation);
+                return $this->sendSlackAction($action, $automation, $context);
 
             case 'Discord':
-                return $this->sendDiscordAction($action, $automation);
+                return $this->sendDiscordAction($action, $automation, $context);
 
             case 'Calendar':
-                return $this->createCalendarEventAction($action, $automation);
+                return $this->createCalendarEventAction($action, $automation, $context);
 
             case 'Webhook':
-                return $this->sendWebhookAction($action, $automation);
+                return $this->sendWebhookAction($action, $automation, $context);
 
             default:
                 Log::warning("Unknown action type: {$type}");
@@ -331,7 +568,7 @@ class AutomationEngine
     /**
      * Send email action
      */
-    private function sendEmailAction(array $action, Automation $automation): bool
+    private function sendEmailAction(array $action, Automation $automation, array $context = []): bool
     {
         try {
             // Handle both old and new config formats
@@ -341,8 +578,9 @@ class AutomationEngine
             $subject = $config['subject'] ?? "Automation: {$automation->name}";
             $message = $config['body'] ?? $config['message'] ?? "Automation '{$automation->name}' has been triggered.";
 
-            // Replace placeholders
-            $message = $this->replacePlaceholders($message, $automation);
+            // Replace template variables using the new TemplateEngine
+            $subject = $this->templateEngine->replaceVariables($subject, $automation, $context);
+            $message = $this->templateEngine->replaceVariables($message, $automation, $context);
 
             Log::info("Attempting to send email for automation {$automation->id} to {$recipient} with subject: {$subject}");
 
@@ -360,12 +598,107 @@ class AutomationEngine
     }
 
     /**
-     * Send Slack notification
+     * Send SMS action
      */
-    private function sendSlackAction(array $action, Automation $automation): bool
+    private function sendSMSAction(array $action, Automation $automation, array $context = []): bool
     {
         try {
-            $webhookUrl = $action['webhook_url'] ?? config('services.slack.webhook_url');
+            $twilioService = app(TwilioService::class);
+
+            // Handle both old and new config formats
+            $config = $action['config'] ?? $action;
+
+            $phoneNumber = $config['phone_number'] ?? $config['to'] ?? null;
+            $message = $config['message'] ?? $config['body'] ?? "Automation '{$automation->name}' triggered for project '{$automation->project->name}'";
+
+            if (! $phoneNumber) {
+                Log::warning("SMS phone number not configured for automation {$automation->id}");
+
+                return false;
+            }
+
+            // Replace template variables using the new TemplateEngine
+            $message = $this->templateEngine->replaceVariables($message, $automation, $context);
+
+            Log::info("Attempting to send SMS for automation {$automation->id} to {$phoneNumber}");
+
+            // Pass automation data for tracking
+            $options = [
+                'automation_id' => $automation->id,
+                'user_id' => $automation->user_id ?? null,
+            ];
+
+            $result = $twilioService->sendSMS($phoneNumber, $message, $options);
+
+            if ($result['success']) {
+                Log::info("SMS sent successfully for automation {$automation->id}. SID: {$result['message_sid']}");
+
+                return true;
+            } else {
+                Log::error("Failed to send SMS for automation {$automation->id}: {$result['error']}");
+
+                return false;
+            }
+        } catch (\Exception $e) {
+            Log::error("SMS action failed for automation {$automation->id}: {$e->getMessage()}");
+
+            return false;
+        }
+    }
+
+    /**
+     * Send WhatsApp action
+     */
+    private function sendWhatsAppAction(array $action, Automation $automation, array $context = []): bool
+    {
+        try {
+            $twilioService = app(TwilioService::class);
+
+            // Handle both old and new config formats
+            $config = $action['config'] ?? $action;
+
+            $phoneNumber = $config['phone_number'] ?? $config['to'] ?? null;
+            $message = $config['message'] ?? $config['body'] ?? "🤖 Automation '{$automation->name}' triggered for project '{$automation->project->name}'";
+
+            if (! $phoneNumber) {
+                Log::warning("WhatsApp phone number not configured for automation {$automation->id}");
+
+                return false;
+            }
+
+            // Replace template variables using the new TemplateEngine
+            $message = $this->templateEngine->replaceVariables($message, $automation, $context);
+
+            Log::info("Attempting to send WhatsApp message for automation {$automation->id} to {$phoneNumber}");
+
+            $result = $twilioService->sendWhatsApp($phoneNumber, $message);
+
+            if ($result['success']) {
+                Log::info("WhatsApp message sent successfully for automation {$automation->id}. SID: {$result['sid']}");
+
+                return true;
+            } else {
+                Log::error("Failed to send WhatsApp message for automation {$automation->id}: {$result['error']}");
+
+                return false;
+            }
+        } catch (\Exception $e) {
+            Log::error("WhatsApp action failed for automation {$automation->id}: {$e->getMessage()}");
+
+            return false;
+        }
+    }
+
+    /**
+     * Send Slack notification
+     */
+    private function sendSlackAction(array $action, Automation $automation, array $context = []): bool
+    {
+        try {
+            // Handle both old and new config formats
+            $config = $action['config'] ?? $action;
+
+            $webhookUrl = $config['webhook_url'] ?? config('services.slack.webhook_url');
 
             if (! $webhookUrl) {
                 Log::warning("Slack webhook URL not configured for automation {$automation->id}");
@@ -373,14 +706,22 @@ class AutomationEngine
                 return false;
             }
 
-            $message = $action['message'] ?? "🤖 Automation '{$automation->name}' triggered for project '{$automation->project->name}'";
-            $message = $this->replacePlaceholders($message, $automation);
+            $message = $config['message'] ?? "🤖 Automation '{$automation->name}' triggered for project '{$automation->project->name}'";
+
+            // Use TemplateEngine with context
+            $message = $this->templateEngine->replaceVariables($message, $automation, $context);
+
+            $channel = $config['channel'] ?? null;
 
             $payload = [
                 'text' => $message,
-                'username' => 'Automation Bot',
+                'username' => 'TaskPilot Bot',
                 'icon_emoji' => ':robot_face:',
             ];
+
+            if ($channel) {
+                $payload['channel'] = $channel;
+            }
 
             $response = Http::post($webhookUrl, $payload);
 
@@ -403,10 +744,13 @@ class AutomationEngine
     /**
      * Send Discord notification
      */
-    private function sendDiscordAction(array $action, Automation $automation): bool
+    private function sendDiscordAction(array $action, Automation $automation, array $context = []): bool
     {
         try {
-            $webhookUrl = $action['webhook_url'] ?? config('services.discord.webhook_url');
+            // Handle both old and new config formats
+            $config = $action['config'] ?? $action;
+
+            $webhookUrl = $config['webhook_url'] ?? config('services.discord.webhook_url');
 
             if (! $webhookUrl) {
                 Log::warning("Discord webhook URL not configured for automation {$automation->id}");
@@ -414,12 +758,15 @@ class AutomationEngine
                 return false;
             }
 
-            $message = $action['message'] ?? "🤖 Automation '{$automation->name}' triggered for project '{$automation->project->name}'";
-            $message = $this->replacePlaceholders($message, $automation);
+            $message = $config['message'] ?? "🤖 Automation '{$automation->name}' triggered for project '{$automation->project->name}'";
+
+            // Use TemplateEngine with context
+            $message = $this->templateEngine->replaceVariables($message, $automation, $context);
 
             $payload = [
                 'content' => $message,
-                'username' => 'Automation Bot',
+                'username' => 'TaskPilot Bot',
+                'avatar_url' => 'https://cdn.discordapp.com/attachments/123456789/robot.png',
             ];
 
             $response = Http::post($webhookUrl, $payload);
@@ -443,19 +790,35 @@ class AutomationEngine
     /**
      * Create calendar event
      */
-    private function createCalendarEventAction(array $action, Automation $automation): bool
+    private function createCalendarEventAction(array $action, Automation $automation, array $context = []): bool
     {
-        // This would integrate with Google Calendar, Outlook, etc.
-        // For now, we'll just log it
-        Log::info("Calendar event created for automation {$automation->id}");
+        try {
+            // Handle both old and new config formats
+            $config = $action['config'] ?? $action;
 
-        return true;
+            $title = $config['title'] ?? "Automation Event: {$automation->name}";
+            $description = $config['description'] ?? "Event created by automation '{$automation->name}' in project '{$automation->project->name}'";
+
+            // Use TemplateEngine for variable replacement
+            $title = $this->templateEngine->replaceVariables($title, $automation, $context);
+            $description = $this->templateEngine->replaceVariables($description, $automation, $context);
+
+            // This would integrate with Google Calendar, Outlook, etc.
+            // For now, we'll just log it
+            Log::info("Calendar event created for automation {$automation->id}: {$title} - {$description}");
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Calendar event creation failed for automation {$automation->id}: {$e->getMessage()}");
+
+            return false;
+        }
     }
 
     /**
      * Send webhook
      */
-    private function sendWebhookAction(array $action, Automation $automation): bool
+    private function sendWebhookAction(array $action, Automation $automation, array $context = []): bool
     {
         try {
             $url = $action['url'];
@@ -469,6 +832,9 @@ class AutomationEngine
                 'project' => $automation->project->name,
                 'triggered_at' => Carbon::now()->toISOString(),
             ];
+
+            // Apply template replacement to all string values in payload recursively
+            $payload = $this->replacePayloadVariables($payload, $automation, $context);
 
             $response = Http::send($method, $url, ['json' => $payload]);
 
@@ -489,19 +855,61 @@ class AutomationEngine
     }
 
     /**
-     * Replace placeholders in messages
+     * Apply template replacement to payload values recursively
+     */
+    private function replacePayloadVariables($payload, Automation $automation, array $context = []): array
+    {
+        if (is_array($payload)) {
+            return array_map(function ($value) use ($automation, $context) {
+                return $this->replacePayloadVariables($value, $automation, $context);
+            }, $payload);
+        } elseif (is_string($payload)) {
+            return $this->templateEngine->replaceVariables($payload, $automation, $context);
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Replace placeholders in messages with template engine
      */
     private function replacePlaceholders(string $message, Automation $automation): string
     {
-        $replacements = [
-            '{project_name}' => $automation->project->name,
-            '{automation_name}' => $automation->name,
-            '{date}' => Carbon::now()->format('Y-m-d'),
-            '{time}' => Carbon::now()->format('H:i:s'),
-            '{datetime}' => Carbon::now()->format('Y-m-d H:i:s'),
-        ];
+        // For now, we don't have context here, but the TemplateEngine will still
+        // replace project, automation, user, and date variables
+        return $this->templateEngine->replaceVariables($message, $automation, []);
+    }
 
-        return str_replace(array_keys($replacements), array_values($replacements), $message);
+    /**
+     * Check if automation is in cooldown period to prevent rapid re-execution
+     */
+    private function isInCooldownPeriod(Automation $automation): bool
+    {
+        if (! $automation->last_run_at) {
+            return false; // Never run before, not in cooldown
+        }
+
+        // Get trigger-specific cooldown or fall back to default
+        $triggerCooldowns = config('automations.trigger_cooldowns', []);
+        $defaultCooldown = config('automations.cooldown_minutes', 5);
+
+        $trigger = strtolower($automation->trigger);
+        $cooldownMinutes = $triggerCooldowns[$trigger] ?? $defaultCooldown;
+
+        // If cooldown is 0, never apply cooldown (useful for scheduled automations)
+        if ($cooldownMinutes <= 0) {
+            return false;
+        }
+
+        $cooldownEnds = $automation->last_run_at->addMinutes($cooldownMinutes);
+        $isInCooldown = Carbon::now()->isBefore($cooldownEnds);
+
+        if ($isInCooldown && config('automations.execution_tracking.enabled', true)) {
+            $remainingMinutes = Carbon::now()->diffInMinutes($cooldownEnds, false);
+            Log::info("Automation {$automation->id} is in cooldown for {$remainingMinutes} more minutes");
+        }
+
+        return $isInCooldown;
     }
 
     /**
@@ -511,6 +919,11 @@ class AutomationEngine
     {
         $automation->increment('runs_count');
         $automation->update(['last_run_at' => Carbon::now()]);
+
+        // Log execution for debugging
+        if (config('automations.execution_tracking.enabled', true)) {
+            Log::info("Automation {$automation->id} executed. Run count: {$automation->runs_count}, Success: ".($success ? 'Yes' : 'No'));
+        }
 
         // Update success rate
         if ($automation->runs_count > 0) {
@@ -532,11 +945,44 @@ class AutomationEngine
         ];
 
         foreach ($automation->actions as $action) {
-            $results['actions'][] = [
-                'type' => $action['type'] ?? $action['name'],
-                'config' => $action,
+            $actionType = $action['type'] ?? $action['name'];
+            $config = $action['config'] ?? $action;
+
+            $actionResult = [
+                'type' => $actionType,
+                'config' => $config,
                 'would_execute' => true,
+                'validation' => [],
             ];
+
+            // Add validation checks for different action types
+            switch ($actionType) {
+                case 'SMS':
+                case 'send_sms':
+                    if (empty($config['phone_number']) && empty($config['to'])) {
+                        $actionResult['validation'][] = 'Phone number is required';
+                        $actionResult['would_execute'] = false;
+                    }
+                    break;
+
+                case 'WhatsApp':
+                case 'send_whatsapp':
+                    if (empty($config['phone_number']) && empty($config['to'])) {
+                        $actionResult['validation'][] = 'Phone number is required';
+                        $actionResult['would_execute'] = false;
+                    }
+                    break;
+
+                case 'Email':
+                case 'send_email':
+                    if (empty($config['to']) && empty($config['recipient'])) {
+                        $actionResult['validation'][] = 'Email recipient is required';
+                        $actionResult['would_execute'] = false;
+                    }
+                    break;
+            }
+
+            $results['actions'][] = $actionResult;
         }
 
         return $results;

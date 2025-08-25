@@ -36,6 +36,24 @@ return [
         'per_project' => 10,    // seconds between processing any automation in the same project
     ],
 
+    // Cooldown settings to prevent duplicate executions (in minutes)
+    'cooldown_minutes' => env('AUTOMATION_COOLDOWN_MINUTES', 5),
+
+    // Trigger-specific cooldown periods (in minutes)
+    'trigger_cooldowns' => [
+        'task_created' => env('AUTOMATION_TASK_CREATED_COOLDOWN', 2),
+        'task_updated' => env('AUTOMATION_TASK_UPDATED_COOLDOWN', 1),
+        'schedule' => env('AUTOMATION_SCHEDULE_COOLDOWN', 0),
+        'task_priority' => env('AUTOMATION_TASK_PRIORITY_COOLDOWN', 5),
+        'task_overdue' => env('AUTOMATION_TASK_OVERDUE_COOLDOWN', 10),
+    ],
+
+    // Execution tracking
+    'execution_tracking' => [
+        'enabled' => env('AUTOMATION_EXECUTION_TRACKING', true),
+        'log_level' => env('AUTOMATION_LOG_LEVEL', 'info'),
+    ],
+
     // Retry settings for failed actions
     'retry' => [
         'max_attempts' => 3,

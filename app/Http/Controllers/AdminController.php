@@ -1452,4 +1452,214 @@ class AdminController extends Controller
             return false;
         }
     }
+
+    /**
+     * Show Twilio testing page
+     */
+    public function twilioTest()
+    {
+        return view('admin.twilio-test');
+    }
+
+    /**
+     * Show SMS messages dashboard
+     */
+    public function smsMessages(Request $request)
+    {
+        $query = \App\Models\SmsMessage::with(['user', 'automation'])
+            ->orderBy('created_at', 'desc');
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Filter by user
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        $messages = $query->paginate(50);
+
+        // Get statistics
+        $stats = [
+            'total_messages' => \App\Models\SmsMessage::count(),
+            'delivered' => \App\Models\SmsMessage::where('status', 'delivered')->count(),
+            'failed' => \App\Models\SmsMessage::whereIn('status', ['failed', 'undelivered'])->count(),
+            'pending' => \App\Models\SmsMessage::whereIn('status', ['queued', 'sent'])->count(),
+            'total_cost' => \App\Models\SmsMessage::sum('price'),
+            'monthly_cost' => \App\Models\SmsMessage::whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->sum('price'),
+        ];
+
+        // Get recent activity (last 30 days)
+        $recentActivity = \App\Models\SmsMessage::selectRaw('DATE(created_at) as date, COUNT(*) as count, SUM(price) as daily_cost')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->groupBy('date')
+            ->orderBy('date', 'desc')
+            ->get();
+
+        return view('admin.sms-messages', compact('messages', 'stats', 'recentActivity'));
+    }
+
+    /**
+     * Show SMS message details
+     */
+    public function smsMessageShow($id)
+    {
+        $smsMessage = \App\Models\SmsMessage::with(['user', 'automation'])->findOrFail($id);
+
+        // Sync status from Twilio if message is still pending
+        if (in_array($smsMessage->status, ['queued', 'sent', 'accepted']) && $smsMessage->twilio_sid) {
+            try {
+                $twilioService = app(\App\Services\TwilioService::class);
+                $twilioService->syncMessageStatus($smsMessage);
+                // Refresh the model to get updated data
+                $smsMessage = $smsMessage->fresh();
+            } catch (\Exception $e) {
+                \Log::warning('Failed to sync SMS status in detail view', [
+                    'sms_id' => $id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return view('admin.sms-message-show', compact('smsMessage'));
+    }
+
+    /**
+     * Get SMS statistics for API
+     */
+    public function smsStats(Request $request)
+    {
+        // Overall statistics
+        $totalMessages = \App\Models\SmsMessage::count();
+
+        $stats = [
+            'total_messages' => $totalMessages,
+            'delivery_rate' => $totalMessages > 0
+                ? (\App\Models\SmsMessage::where('status', 'delivered')->count() / $totalMessages) * 100
+                : 0,
+            'total_cost' => \App\Models\SmsMessage::sum('price') ?? 0,
+            'avg_cost' => $totalMessages > 0
+                ? (\App\Models\SmsMessage::sum('price') / $totalMessages)
+                : 0,
+            'status_counts' => [
+                'delivered' => \App\Models\SmsMessage::where('status', 'delivered')->count(),
+                'sent' => \App\Models\SmsMessage::where('status', 'sent')->count(),
+                'failed' => \App\Models\SmsMessage::where('status', 'failed')->count(),
+                'undelivered' => \App\Models\SmsMessage::where('status', 'undelivered')->count(),
+                'queued' => \App\Models\SmsMessage::where('status', 'queued')->count(),
+            ],
+            'daily_volume' => \App\Models\SmsMessage::selectRaw('DATE(created_at) as date, COUNT(*) as count')
+                ->where('created_at', '>=', now()->subDays(7))
+                ->groupBy('date')
+                ->orderBy('date', 'desc')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'date' => \Carbon\Carbon::parse($item->date)->format('M j'),
+                        'count' => $item->count,
+                    ];
+                }),
+            'max_daily' => \App\Models\SmsMessage::selectRaw('DATE(created_at) as date, COUNT(*) as count')
+                ->where('created_at', '>=', now()->subDays(7))
+                ->groupBy('date')
+                ->max('count') ?? 1,
+            'cost_this_month' => \App\Models\SmsMessage::whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->sum('price') ?? 0,
+            'cost_last_month' => \App\Models\SmsMessage::whereMonth('created_at', now()->subMonth()->month)
+                ->whereYear('created_at', now()->subMonth()->year)
+                ->sum('price') ?? 0,
+            'cost_change' => 0, // Will calculate below
+            'top_users' => \App\Models\SmsMessage::selectRaw('user_id, COUNT(*) as total_messages, SUM(price) as total_cost, AVG(price) as avg_cost')
+                ->whereNotNull('user_id')
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->groupBy('user_id')
+                ->orderBy('total_messages', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function ($item) {
+                    $user = \App\Models\User::find($item->user_id);
+                    $delivered = \App\Models\SmsMessage::where('user_id', $item->user_id)
+                        ->whereMonth('created_at', now()->month)
+                        ->whereYear('created_at', now()->year)
+                        ->where('status', 'delivered')
+                        ->count();
+
+                    return [
+                        'name' => $user->name ?? 'Unknown',
+                        'email' => $user->email ?? 'N/A',
+                        'total_messages' => $item->total_messages,
+                        'total_cost' => $item->total_cost ?? 0,
+                        'avg_cost' => $item->avg_cost ?? 0,
+                        'success_rate' => $item->total_messages > 0
+                            ? ($delivered / $item->total_messages) * 100
+                            : 0,
+                    ];
+                }),
+        ];
+
+        // Calculate cost change percentage
+        if ($stats['cost_last_month'] > 0) {
+            $stats['cost_change'] = (($stats['cost_this_month'] - $stats['cost_last_month']) / $stats['cost_last_month']) * 100;
+        } elseif ($stats['cost_this_month'] > 0) {
+            $stats['cost_change'] = 100; // 100% increase from 0
+        }
+
+        // Return JSON for API requests, view for web requests
+        if ($request->expectsJson()) {
+            return response()->json($stats);
+        }
+
+        return view('admin.sms-stats', compact('stats'));
+    }
+
+    /**
+     * Sync SMS message statuses from Twilio
+     */
+    public function syncSmsStatuses(Request $request)
+    {
+        try {
+            $twilioService = app(\App\Services\TwilioService::class);
+            $results = $twilioService->syncAllPendingMessages();
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Synced {$results['synced']} messages successfully.",
+                    'results' => $results,
+                ]);
+            }
+
+            return redirect()->back()->with('success',
+                "SMS Status Sync Complete: {$results['synced']} messages updated, {$results['failed']} failed."
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to sync SMS statuses via admin panel', [
+                'error' => $e->getMessage(),
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to sync SMS statuses: '.$e->getMessage(),
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'Failed to sync SMS statuses: '.$e->getMessage());
+        }
+    }
 }

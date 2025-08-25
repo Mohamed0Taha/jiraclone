@@ -17,10 +17,34 @@ use Illuminate\Support\Facades\Log;
  */
 class OpenAIService
 {
+    /**
+     * Resolve API key (prefer config; fall back to env for non-cached local dev).
+     */
+    private function apiKey(): string
+    {
+        return (string) (config('openai.api_key') ?: env('OPENAI_API_KEY', ''));
+    }
+
+    /**
+     * Resolve model name from config/env.
+     */
+    private function model(string $default = 'gpt-4o-mini'): string
+    {
+        return (string) (config('openai.model') ?: env('OPENAI_MODEL', $default));
+    }
+
+    /**
+     * Base URI override support.
+     */
+    private function baseUri(): string
+    {
+        return rtrim((string) (config('openai.base_uri') ?: env('OPENAI_BASE_URL', 'https://api.openai.com/v1')), '/');
+    }
+
     public function chatJson(array $messages, float $temperature = 0.1): array
     {
-        $apiKey = (string) env('OPENAI_API_KEY', '');
-        $model = (string) env('OPENAI_MODEL', 'gpt-4o-mini');
+        $apiKey = $this->apiKey();
+        $model = $this->model('gpt-4o-mini');
         if ($apiKey === '') {
             throw new Exception('OpenAI API key missing');
         }
@@ -33,7 +57,7 @@ class OpenAIService
             $res = Http::withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
-            ])->post('https://api.openai.com/v1/chat/completions', [
+            ])->post($this->baseUri().'/chat/completions', [
                 'model' => $model,
                 'temperature' => $temperature,
                 'response_format' => ['type' => 'json_object'],
@@ -106,8 +130,8 @@ class OpenAIService
 
     public function chatText(array $messages, float $temperature = 0.2): string
     {
-        $apiKey = (string) env('OPENAI_API_KEY', '');
-        $model = (string) env('OPENAI_MODEL', 'gpt-4o-mini');
+        $apiKey = $this->apiKey();
+        $model = $this->model('gpt-4o-mini');
         if ($apiKey === '') {
             throw new Exception('OpenAI API key missing');
         }
@@ -119,7 +143,7 @@ class OpenAIService
             $res = Http::withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
-            ])->post('https://api.openai.com/v1/chat/completions', [
+            ])->post($this->baseUri().'/chat/completions', [
                 'model' => $model,
                 'temperature' => $temperature,
                 'messages' => $messages,
@@ -212,7 +236,7 @@ class OpenAIService
      */
     public function uploadFile(string $fileContent, string $fileName, string $purpose = 'assistants'): array
     {
-        $apiKey = (string) env('OPENAI_API_KEY', '');
+        $apiKey = $this->apiKey();
         if ($apiKey === '') {
             throw new Exception('OpenAI API key missing');
         }
@@ -228,7 +252,7 @@ class OpenAIService
             $res = Http::withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
             ])->attach('file', $fileContent, $fileName)
-                ->post('https://api.openai.com/v1/files', [
+                ->post($this->baseUri().'/files', [
                     'purpose' => $purpose,
                 ]);
 
@@ -306,7 +330,7 @@ class OpenAIService
      */
     public function deleteFile(string $fileId): array
     {
-        $apiKey = (string) env('OPENAI_API_KEY', '');
+        $apiKey = $this->apiKey();
         if ($apiKey === '') {
             throw new Exception('OpenAI API key missing');
         }
@@ -314,7 +338,7 @@ class OpenAIService
         try {
             $res = Http::withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
-            ])->delete("https://api.openai.com/v1/files/{$fileId}");
+            ])->delete($this->baseUri()."/files/{$fileId}");
 
             if (! $res->ok()) {
                 Log::warning('OpenAI file deletion failed', [
@@ -351,7 +375,7 @@ class OpenAIService
      */
     public function chatJsonVision(array $messages, float $temperature = 0.1): array
     {
-        $apiKey = (string) env('OPENAI_API_KEY', '');
+        $apiKey = $this->apiKey();
         $model = 'gpt-4o'; // Use vision-capable model
         if ($apiKey === '') {
             throw new Exception('OpenAI API key missing');
@@ -365,7 +389,7 @@ class OpenAIService
             $res = Http::withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
-            ])->post('https://api.openai.com/v1/chat/completions', [
+            ])->post($this->baseUri().'/chat/completions', [
                 'model' => $model,
                 'temperature' => $temperature,
                 'response_format' => ['type' => 'json_object'],

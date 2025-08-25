@@ -49,6 +49,27 @@ class TaskController extends Controller
     {
         $this->authorize('view', $project);
 
+        // Check if this is an AJAX request for cache updates
+        if (request()->wantsJson()) {
+            return response()->json([
+                'tasks' => $this->getTasksData($project),
+                'users' => User::select('id', 'name')->get(),
+            ]);
+        }
+
+        return Inertia::render('Tasks/Board', [
+            'project' => $project,
+            'tasks' => $this->getTasksData($project),
+            'users' => User::select('id', 'name')->get(),
+        ]);
+    }
+
+    /**
+     * Get optimized tasks data for board
+     */
+    private function getTasksData(Project $project)
+    {
+
         $raw = $project->tasks()
             ->with(['creator:id,name', 'assignee:id,name', 'comments.user:id,name', 'attachments'])
             ->orderBy('created_at')
@@ -80,9 +101,7 @@ class TaskController extends Controller
             $tasks[$status] = $map($raw->get($status, collect()));
         }
 
-        $users = User::select('id', 'name')->get();
-
-        return Inertia::render('Tasks/Board', compact('project', 'tasks', 'users'));
+        return $tasks;
     }
 
     /* ------------------------------------------------ Timeline -------- */

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef, forwardRef } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { useIsolatedSpeechRecognition } from '@/hooks/useIsolatedSpeechRecognition';
 import {
     alpha,
     Box,
@@ -47,13 +47,6 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import SmartToyRoundedIcon from '@mui/icons-material/SmartToyRounded';
 import { getCsrfToken } from '@/utils/csrf';
 
-// Initialize SpeechRecognition
-if (typeof window !== 'undefined') {
-    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-        console.warn('SpeechRecognition API not supported in this browser');
-    }
-}
-
 /** GET suggestions (no CSRF). `max` is clamped 3..8 for backend service to prevent timeouts. */
 async function loadAISuggestions(projectId, max = 8) {
     const clamped = Math.max(3, Math.min(8, max || 8));
@@ -83,16 +76,18 @@ async function readFileAsText(file) {
 async function extractTextFromFile(file) {
     const fileName = file.name.toLowerCase();
     const fileType = file.type.toLowerCase();
-    
+
     // Text files
-    if (fileType.startsWith('text/') || 
-        fileName.endsWith('.txt') || 
-        fileName.endsWith('.md') || 
+    if (
+        fileType.startsWith('text/') ||
+        fileName.endsWith('.txt') ||
+        fileName.endsWith('.md') ||
         fileName.endsWith('.json') ||
-        fileName.endsWith('.csv')) {
+        fileName.endsWith('.csv')
+    ) {
         return await readFileAsText(file);
     }
-    
+
     // For other file types, just return basic info
     return `File uploaded: ${file.name} (${(file.size / 1024).toFixed(1)} KB)
     
@@ -144,13 +139,15 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
     const [isProcessingFile, setIsProcessingFile] = useState(false);
     const fileInputRef = useRef(null);
 
-    // Speech recognition
+    // Isolated speech recognition for this component
     const {
         transcript,
         listening,
         resetTranscript,
-        browserSupportsSpeechRecognition
-    } = useSpeechRecognition();
+        browserSupportsSpeechRecognition,
+        startListening: startSpeechRecognition,
+        stopListening: stopSpeechRecognition,
+    } = useIsolatedSpeechRecognition('ai-task-generator');
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [showModal, setShowModal] = useState(false);
@@ -284,15 +281,18 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                 }
 
                 const content = await extractTextFromFile(file);
-                setUploadedFiles(prev => [...prev, {
-                    name: file.name,
-                    size: file.size,
-                    type: file.type,
-                    content: content.substring(0, 2000) // Limit content preview
-                }]);
+                setUploadedFiles((prev) => [
+                    ...prev,
+                    {
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        content: content.substring(0, 2000), // Limit content preview
+                    },
+                ]);
 
                 // Add file content to prompt
-                setPrompt(prev => {
+                setPrompt((prev) => {
                     const fileSection = `\n\n--- File: ${file.name} ---\n${content}\n--- End File ---`;
                     return prev + fileSection;
                 });
@@ -312,61 +312,64 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
     /** Remove uploaded file */
     const removeFile = (index) => {
         const file = uploadedFiles[index];
-        setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-        
+        setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+
         // Remove file content from prompt
-        setPrompt(prev => {
+        setPrompt((prev) => {
             const fileSection = `--- File: ${file.name} ---`;
             const startIndex = prev.indexOf(fileSection);
             if (startIndex === -1) return prev;
-            
+
             const endSection = '--- End File ---';
             const endIndex = prev.indexOf(endSection, startIndex);
             if (endIndex === -1) return prev;
-            
+
             return prev.substring(0, startIndex) + prev.substring(endIndex + endSection.length);
         });
     };
 
     /** Speech recognition handlers */
     const startListening = () => {
-        console.log('Starting speech recognition...', { browserSupportsSpeechRecognition, SpeechRecognition });
-        
+        console.log('Starting speech recognition for AI task generator...', {
+            browserSupportsSpeechRecognition,
+        });
+
         if (!browserSupportsSpeechRecognition) {
             console.error('Browser does not support speech recognition');
-            alert('Your browser does not support speech recognition. Please use a modern browser like Chrome or Edge.');
-            return;
-        }
-
-        if (!SpeechRecognition) {
-            console.error('SpeechRecognition object not available');
-            alert('Speech recognition is not available. Please check your browser settings.');
+            alert(
+                'Your browser does not support speech recognition. Please use a modern browser like Chrome or Edge.'
+            );
             return;
         }
 
         try {
-            console.log('Attempting to start listening...');
-            SpeechRecognition.startListening({ continuous: true, language: 'en-US' });
-            console.log('Speech recognition started successfully');
+            console.log('Attempting to start listening for AI task generator...');
+            const success = startSpeechRecognition();
+            if (success) {
+                console.log('Speech recognition started successfully for AI task generator');
+            } else {
+                console.error('Failed to start speech recognition for AI task generator');
+                alert('Failed to start speech recognition. Please try again.');
+            }
         } catch (error) {
-            console.error('Error starting speech recognition:', error);
+            console.error('Error starting speech recognition for AI task generator:', error);
             alert('Failed to start speech recognition: ' + error.message);
         }
     };
 
     const stopListening = () => {
-        console.log('Stopping speech recognition...');
+        console.log('Stopping speech recognition for AI task generator...');
         try {
-            SpeechRecognition.stopListening();
-            console.log('Speech recognition stopped');
+            stopSpeechRecognition();
+            console.log('Speech recognition stopped for AI task generator');
         } catch (error) {
-            console.error('Error stopping speech recognition:', error);
+            console.error('Error stopping speech recognition for AI task generator:', error);
         }
     };
 
     const handleSpeechResult = () => {
         if (transcript) {
-            setPrompt(prev => {
+            setPrompt((prev) => {
                 const addition = prev ? `\n${transcript}` : transcript;
                 return prev + addition;
             });
@@ -377,7 +380,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
     // Update prompt when speech recognition transcript changes
     useEffect(() => {
         if (transcript && !listening) {
-            setPrompt(prev => {
+            setPrompt((prev) => {
                 const addition = prev ? `\n${transcript}` : transcript;
                 return prev + addition;
             });
@@ -466,50 +469,53 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
     const generate = () => {
         // Stop speech recognition if it's active to capture final transcript
         if (listening) {
-            SpeechRecognition.stopListening();
+            stopSpeechRecognition();
         }
 
         // Small delay to allow final transcript processing
-        setTimeout(() => {
-            if (!activeRef.current) startSequentialModal();
+        setTimeout(
+            () => {
+                if (!activeRef.current) startSequentialModal();
 
-            // Build complete prompt with all context
-            let fullPrompt = prompt;
-            
-            // Add any remaining transcript that hasn't been processed
-            if (transcript && transcript.trim()) {
-                const addition = fullPrompt ? `\n${transcript}` : transcript;
-                fullPrompt = fullPrompt + addition;
-            }
+                // Build complete prompt with all context
+                let fullPrompt = prompt;
 
-            console.log('Generating tasks with:', {
-                count,
-                promptLength: fullPrompt.length,
-                hasFiles: uploadedFiles.length > 0,
-                hasTranscript: !!transcript
-            });
-
-            const token = getCsrfToken() || '';
-            router.post(
-                route('tasks.ai.preview', project.id),
-                { count, prompt: fullPrompt },
-                {
-                    preserveScroll: true,
-                    headers: {
-                        'X-XSRF-TOKEN': token,
-                        Accept: 'text/html, application/xhtml+xml',
-                    },
-                    onFinish: () => {
-                        completeSequentialModal();
-                        setTimeout(() => stopSequentialModal(), 1100);
-                    },
-                    onError: (errors) => {
-                        console.error('Generate tasks error:', errors);
-                        stopSequentialModal();
-                    },
+                // Add any remaining transcript that hasn't been processed
+                if (transcript && transcript.trim()) {
+                    const addition = fullPrompt ? `\n${transcript}` : transcript;
+                    fullPrompt = fullPrompt + addition;
                 }
-            );
-        }, listening ? 500 : 0); // Wait 500ms if listening, otherwise proceed immediately
+
+                console.log('Generating tasks with:', {
+                    count,
+                    promptLength: fullPrompt.length,
+                    hasFiles: uploadedFiles.length > 0,
+                    hasTranscript: !!transcript,
+                });
+
+                const token = getCsrfToken() || '';
+                router.post(
+                    route('tasks.ai.preview', project.id),
+                    { count, prompt: fullPrompt },
+                    {
+                        preserveScroll: true,
+                        headers: {
+                            'X-XSRF-TOKEN': token,
+                            Accept: 'text/html, application/xhtml+xml',
+                        },
+                        onFinish: () => {
+                            completeSequentialModal();
+                            setTimeout(() => stopSequentialModal(), 1100);
+                        },
+                        onError: (errors) => {
+                            console.error('Generate tasks error:', errors);
+                            stopSequentialModal();
+                        },
+                    }
+                );
+            },
+            listening ? 500 : 0
+        ); // Wait 500ms if listening, otherwise proceed immediately
     };
 
     const cancel = () => {
@@ -799,7 +805,13 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                     <Button
                                         variant="outlined"
                                         size="small"
-                                        startIcon={isProcessingFile ? <CircularProgress size={16} /> : <UploadFileRoundedIcon />}
+                                        startIcon={
+                                            isProcessingFile ? (
+                                                <CircularProgress size={16} />
+                                            ) : (
+                                                <UploadFileRoundedIcon />
+                                            )
+                                        }
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={isGenerating || processing || isProcessingFile}
                                         sx={{
@@ -813,11 +825,19 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
 
                                 {/* Speech Recognition Button */}
                                 {browserSupportsSpeechRecognition && (
-                                    <Tooltip title={listening ? 'Stop recording' : 'Start voice input'}>
+                                    <Tooltip
+                                        title={listening ? 'Stop recording' : 'Start voice input'}
+                                    >
                                         <Button
                                             variant={listening ? 'contained' : 'outlined'}
                                             size="small"
-                                            startIcon={listening ? <MicOffRoundedIcon /> : <MicRoundedIcon />}
+                                            startIcon={
+                                                listening ? (
+                                                    <MicOffRoundedIcon />
+                                                ) : (
+                                                    <MicRoundedIcon />
+                                                )
+                                            }
                                             onClick={listening ? stopListening : startListening}
                                             disabled={isGenerating || processing}
                                             sx={{
@@ -840,7 +860,10 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                             {/* Uploaded Files Display */}
                             {uploadedFiles.length > 0 && (
                                 <Stack spacing={1} sx={{ mb: 2 }}>
-                                    <Typography variant="caption" sx={{ color: alpha(theme.palette.text.primary, 0.6) }}>
+                                    <Typography
+                                        variant="caption"
+                                        sx={{ color: alpha(theme.palette.text.primary, 0.6) }}
+                                    >
                                         Uploaded Files:
                                     </Typography>
                                     {uploadedFiles.map((file, index) => (
@@ -850,19 +873,36 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                                 p: 1.5,
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                                                backgroundColor: alpha(
+                                                    theme.palette.primary.main,
+                                                    0.05
+                                                ),
                                                 border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
                                             }}
                                         >
-                                            <AttachFileRoundedIcon 
-                                                fontSize="small" 
-                                                sx={{ mr: 1, color: alpha(theme.palette.text.primary, 0.6) }} 
+                                            <AttachFileRoundedIcon
+                                                fontSize="small"
+                                                sx={{
+                                                    mr: 1,
+                                                    color: alpha(theme.palette.text.primary, 0.6),
+                                                }}
                                             />
                                             <Box sx={{ flexGrow: 1 }}>
-                                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{ fontWeight: 600 }}
+                                                >
                                                     {file.name}
                                                 </Typography>
-                                                <Typography variant="caption" sx={{ color: alpha(theme.palette.text.primary, 0.6) }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                        color: alpha(
+                                                            theme.palette.text.primary,
+                                                            0.6
+                                                        ),
+                                                    }}
+                                                >
                                                     {(file.size / 1024).toFixed(1)} KB
                                                 </Typography>
                                             </Box>
@@ -891,14 +931,17 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                         alignItems: 'center',
                                     }}
                                 >
-                                    <MicRoundedIcon 
-                                        sx={{ 
-                                            mr: 1, 
+                                    <MicRoundedIcon
+                                        sx={{
+                                            mr: 1,
                                             color: theme.palette.error.main,
-                                            animation: 'pulse 1.5s infinite'
-                                        }} 
+                                            animation: 'pulse 1.5s infinite',
+                                        }}
                                     />
-                                    <Typography variant="body2" sx={{ color: theme.palette.error.main, fontWeight: 600 }}>
+                                    <Typography
+                                        variant="body2"
+                                        sx={{ color: theme.palette.error.main, fontWeight: 600 }}
+                                    >
                                         🎤 Listening... Speak now
                                     </Typography>
                                 </Paper>
@@ -914,10 +957,16 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                         border: `1px solid ${alpha(theme.palette.info.main, 0.3)}`,
                                     }}
                                 >
-                                    <Typography variant="caption" sx={{ color: alpha(theme.palette.text.primary, 0.6) }}>
+                                    <Typography
+                                        variant="caption"
+                                        sx={{ color: alpha(theme.palette.text.primary, 0.6) }}
+                                    >
                                         Speech Recognition:
                                     </Typography>
-                                    <Typography variant="body2" sx={{ mt: 0.5, fontStyle: 'italic' }}>
+                                    <Typography
+                                        variant="body2"
+                                        sx={{ mt: 0.5, fontStyle: 'italic' }}
+                                    >
                                         "{transcript}"
                                     </Typography>
                                 </Paper>
