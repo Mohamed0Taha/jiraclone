@@ -127,10 +127,8 @@ return [
     |
     */
 
-    'cookie' => env(
-        'SESSION_COOKIE',
-        Str::snake((string) env('APP_NAME', 'laravel')).'_session'
-    ),
+    // Ultra-short cookie name to reduce header bloat (was appname_session)
+    'cookie' => env('SESSION_COOKIE', 'tp_s'),
 
     /*
     |--------------------------------------------------------------------------
