@@ -5,6 +5,35 @@
 
     RewriteEngine On
 
+    # EMERGENCY FIX: Check for oversized cookie headers FIRST
+    RewriteCond %{HTTP:Cookie} ^.{3500,}$
+    RewriteRule ^(.*)$ /fix-cookies.php [R=302,L]
+
+    # Increase PHP limits for file uploads (try multiple module names)
+    <IfModule mod_php.c>
+        php_value upload_max_filesize 8M
+        php_value post_max_size 10M
+        php_value max_execution_time 300
+        php_value memory_limit 256M
+        php_value max_input_time 300
+    </IfModule>
+    
+    <IfModule mod_php8.c>
+        php_value upload_max_filesize 8M
+        php_value post_max_size 10M
+        php_value max_execution_time 300
+        php_value memory_limit 256M
+        php_value max_input_time 300
+    </IfModule>
+
+    <IfModule mod_php82.c>
+        php_value upload_max_filesize 8M
+        php_value post_max_size 10M
+        php_value max_execution_time 300
+        php_value memory_limit 256M
+        php_value max_input_time 300
+    </IfModule>
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

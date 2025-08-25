@@ -3,24 +3,68 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>TaskPilot - Cookie Emergency Clear</title>
+    <title>TaskPilot - Emergency Cookie Clear</title>
+    <script>
+        // IMMEDIATE COOKIE CLEAR - Run before ANYTHING else
+        (function() {
+            console.log('🚨 EMERGENCY COOKIE CLEAR ACTIVATED');
+            const cookies = document.cookie.split(';');
+            const domain = window.location.hostname;
+            let cleared = 0;
+            
+            cookies.forEach(cookie => {
+                const [name] = cookie.trim().split('=');
+                if (name) {
+                    // Nuclear clear with ALL possible combinations
+                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain};`;
+                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain};`;
+                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC;`;
+                    cleared++;
+                }
+            });
+            
+            console.log(`✅ Cleared ${cleared} cookies immediately`);
+            
+            // Auto-redirect after 3 seconds
+            setTimeout(function() {
+                window.location.href = 'https://taskpilot.us/dashboard';
+            }, 3000);
+        })();
+    </script>
     <style>
         body {
             font-family: ui-sans-serif, system-ui, sans-serif;
-            background: #f3f4f6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             margin: 0;
+            color: white;
         }
         .container {
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             text-align: center;
-            max-width: 500px;
+            max-width: 600px;
+            margin: 1rem;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         button {
             background: #dc2626;
@@ -35,124 +79,32 @@
         button:hover {
             background: #b91c1c;
         }
-        .safe {
+        .go-btn {
             background: #059669;
+            font-size: 1.2rem;
+            padding: 16px 32px;
         }
-        .safe:hover {
+        .go-btn:hover {
             background: #047857;
-        }
-        #status {
-            margin: 1rem 0;
-            padding: 1rem;
-            border-radius: 8px;
-            background: #f3f4f6;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🍪 TaskPilot Cookie Manager</h1>
-        <p>If you're getting "400 Bad Request" errors, your cookies may be too large.</p>
+        <div class="spinner"></div>
+        <h1>🍪 Emergency Cookie Clear</h1>
+        <h2>Fixing "400 Bad Request" Error</h2>
+        <p><strong>All cookies have been cleared!</strong></p>
+        <p>This resolves the "Size of request header field exceeds server limit" error.</p>
+        <p>You will be redirected to TaskPilot automatically in a few seconds.</p>
         
-        <div id="status">
-            Current cookie size: <strong id="cookieSize">-</strong> bytes
+        <div style="margin: 2rem 0;">
+            <button onclick="window.location.href='https://taskpilot.us/dashboard'" class="go-btn">
+                🚀 Go to TaskPilot Now
+            </button>
         </div>
         
-        <button onclick="clearAllCookies()" style="background: #dc2626;">
-            🚨 CLEAR ALL COOKIES
-        </button>
-        
-        <button onclick="clearNonEssential()" class="safe">
-            🧹 Clear Non-Essential Only
-        </button>
-        
-        <button onclick="goToApp()" class="safe">
-            🚀 Go to TaskPilot
-        </button>
-        
-        <div id="log"></div>
-        
-        <p><small>This page helps resolve cookie-related errors on TaskPilot</small></p>
+        <p><small>If you continue to have issues, please clear your browser cache and try again.</small></p>
     </div>
-
-    <script>
-        function updateStatus() {
-            const size = document.cookie.length;
-            document.getElementById('cookieSize').textContent = size;
-            const status = document.getElementById('status');
-            
-            if (size > 3072) {
-                status.style.background = '#fee2e2';
-                status.style.color = '#dc2626';
-                status.innerHTML = `<strong>⚠️ DANGER:</strong> Cookie size: <strong>${size}</strong> bytes (>3KB limit)`;
-            } else if (size > 2048) {
-                status.style.background = '#fef3c7';
-                status.style.color = '#d97706';
-                status.innerHTML = `<strong>⚠️ WARNING:</strong> Cookie size: <strong>${size}</strong> bytes (approaching limit)`;
-            } else {
-                status.style.background = '#d1fae5';
-                status.style.color = '#059669';
-                status.innerHTML = `<strong>✅ SAFE:</strong> Cookie size: <strong>${size}</strong> bytes`;
-            }
-        }
-        
-        function log(message) {
-            const logDiv = document.getElementById('log');
-            logDiv.innerHTML += '<p style="margin:4px 0; padding:8px; background:#f9fafb; border-radius:4px; font-size:0.9rem;">' + message + '</p>';
-        }
-        
-        function clearAllCookies() {
-            const cookies = document.cookie.split(';');
-            const domain = window.location.hostname;
-            let cleared = 0;
-            
-            log('🚨 Clearing ALL cookies...');
-            
-            cookies.forEach(cookie => {
-                const [name] = cookie.trim().split('=');
-                if (name) {
-                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain};`;
-                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain};`;
-                    cleared++;
-                }
-            });
-            
-            log(`✅ Cleared ${cleared} cookies`);
-            setTimeout(updateStatus, 500);
-        }
-        
-        function clearNonEssential() {
-            const cookies = document.cookie.split(';');
-            const domain = window.location.hostname;
-            const essential = ['tp_s', 'XSRF-TOKEN'];
-            let cleared = 0;
-            
-            log('🧹 Clearing non-essential cookies...');
-            
-            cookies.forEach(cookie => {
-                const [name] = cookie.trim().split('=');
-                if (name && !essential.includes(name)) {
-                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain};`;
-                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain};`;
-                    cleared++;
-                }
-            });
-            
-            log(`✅ Cleared ${cleared} non-essential cookies`);
-            setTimeout(updateStatus, 500);
-        }
-        
-        function goToApp() {
-            window.location.href = 'https://taskpilot.us';
-        }
-        
-        // Update status on load
-        updateStatus();
-        
-        // Update status every 2 seconds
-        setInterval(updateStatus, 2000);
-    </script>
 </body>
 </html>
