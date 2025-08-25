@@ -29,11 +29,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web(prepend: [
-            \App\Http\Middleware\PreventOversizedHeaders::class,
-            \App\Http\Middleware\ClearOversizedCookies::class,
+            \App\Http\Middleware\RestrictCookieHeader::class,
         ]);
 
         $middleware->web(append: [
+            \App\Http\Middleware\LimitCookieSize::class,
             \App\Http\Middleware\AddCorsHeaders::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,

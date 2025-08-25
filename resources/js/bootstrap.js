@@ -98,6 +98,27 @@ if (document.readyState === 'loading') {
     cleanupCookies();
 }
 
+// NUCLEAR OPTION: Clear ALL cookies immediately if header is too large
+if (document.cookie.length > 3072) { // 3KB emergency threshold
+    console.warn('🚨 NUCLEAR COOKIE CLEAR - Header too large:', document.cookie.length, 'bytes');
+    const cookies = document.cookie.split(';');
+    const domain = window.location.hostname;
+    
+    cookies.forEach(cookie => {
+        const [name] = cookie.trim().split('=');
+        if (name) {
+            // Clear with ALL possible combinations immediately
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain};`;
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain};`;
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC;`;
+        }
+    });
+    
+    console.log('🔄 Reloading page after nuclear clear...');
+    setTimeout(() => window.location.reload(), 1000);
+}
+
 // Emergency cookie clearing function - can be called from browser console
 window.emergencyClearCookies = function() {
     const cookies = document.cookie.split(';');
