@@ -27,7 +27,12 @@ use Inertia\Inertia;
 | Public Landing
 |--------------------------------------------------------------------------
 */
-Route::get('/', fn () => Inertia::render('Landing'))->name('landing');
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    return Inertia::render('Landing');
+})->name('landing');
 
 /* Project Invitation Acceptance (public) */
 Route::get('/invitation/{token}', [App\Http\Controllers\ProjectMemberController::class, 'acceptInvitation'])->name('projects.invitation.accept');
@@ -298,7 +303,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/openai-requests', [AdminController::class, 'openaiRequests'])->name('openai-requests');
     Route::get('/billing', [AdminController::class, 'billing'])->name('billing');
     Route::get('/cancellations', [AdminController::class, 'cancellations'])->name('cancellations');
-
+    
     // SMS tracking routes
     Route::get('/sms-messages', [AdminController::class, 'smsMessages'])->name('sms-messages');
     Route::get('/sms-messages/{smsMessage}', [AdminController::class, 'smsMessageShow'])->name('sms-message-show');
@@ -307,7 +312,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/plans', [AdminController::class, 'plans'])->name('plans');
     Route::post('/plans/sync-stripe', [AdminController::class, 'syncPlansFromStripe'])->name('plans.sync');
     Route::post('/plans/update-price', [AdminController::class, 'updateStripePrice'])->name('plans.price.update');
-
+    
     // Refund management routes
     Route::get('/refunds', [AdminController::class, 'refunds'])->name('refunds');
     Route::post('/refunds/process', [AdminController::class, 'processRefund'])->name('refunds.process');
@@ -317,7 +322,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     // Broadcast Email
     Route::get('/broadcast-email', [AdminController::class, 'broadcastEmailForm'])->name('broadcast-email.form');
     Route::post('/broadcast-email', [AdminController::class, 'sendBroadcastEmail'])->name('broadcast-email.send');
-
+    
     // Twilio Testing
     Route::get('/twilio-test', [AdminController::class, 'twilioTest'])->name('twilio-test');
     Route::post('/twilio/test-sms', [TwilioController::class, 'testSMS'])->name('twilio.test-sms');
@@ -398,12 +403,12 @@ Route::middleware('auth')->group(function () {
         Route::patch('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
         Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
-        // Task attachments (images)
-        Route::post('/tasks/{task}/attachments', [\App\Http\Controllers\TaskAttachmentController::class, 'store'])->name('tasks.attachments.store');
-        Route::delete('/tasks/{task}/attachments/{attachment}', [\App\Http\Controllers\TaskAttachmentController::class, 'destroy'])->name('tasks.attachments.destroy');
+    // Task attachments (images)
+    Route::post('/tasks/{task}/attachments', [\App\Http\Controllers\TaskAttachmentController::class, 'store'])->name('tasks.attachments.store');
+    Route::delete('/tasks/{task}/attachments/{attachment}', [\App\Http\Controllers\TaskAttachmentController::class, 'destroy'])->name('tasks.attachments.destroy');
 
         /* COMMENTS */
-        Route::post('/tasks/{task}/comments', [CommentController::class, 'store'])->name('comments.store');
+    Route::post('/tasks/{task}/comments', [CommentController::class, 'store'])->name('comments.store');
         Route::patch('/tasks/{task}/comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
         Route::delete('/tasks/{task}/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 
