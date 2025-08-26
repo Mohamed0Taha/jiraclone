@@ -11,6 +11,7 @@ use App\Http\Controllers\ProjectAssistantController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TwilioController;
+use App\Models\CertificationAttempt;
 use App\Models\Project;
 use App\Models\User;
 use App\Notifications\CustomVerifyEmail;
@@ -220,6 +221,58 @@ Route::post('/email/verification-notification', function (Request $request) {
 
     return back()->with('status', 'verification-link-sent');
 })->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+
+/*
+|--------------------------------------------------------------------------
+| Certification Program (authenticated)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth'])->group(function () {
+    Route::get('/certification', function (Request $request) {
+        $attempt = CertificationAttempt::firstOrCreate(
+            ['user_id' => $request->user()->id],
+            ['current_step' => 1]
+        );
+        return Inertia::render('Certification/Index', [
+            'attempt' => [
+                'id' => $attempt->id,
+                'current_step' => $attempt->current_step,
+                'serial' => $attempt->serial,
+                'completed_at' => $attempt->completed_at,
+            ],
+        ]);
+    })->name('certification.index');
+
+    Route::post('/certification/progress', function (Request $request) {
+        $request->validate([
+            'step' => 'required|integer|min:1|max:6',
+        ]);
+        $attempt = CertificationAttempt::firstOrCreate(
+            ['user_id' => $request->user()->id],
+            ['current_step' => 1]
+        );
+        // Only allow forward progress
+        if ($request->step > $attempt->current_step) {
+            $attempt->current_step = $request->step;
+            $attempt->save();
+        }
+        return back();
+    })->name('certification.progress');
+
+    Route::post('/certification/complete', function (Request $request) {
+        $attempt = CertificationAttempt::firstOrCreate(
+            ['user_id' => $request->user()->id],
+            ['current_step' => 1]
+        );
+        if (! $attempt->completed_at) {
+            $attempt->current_step = 6; // mark as done
+            $attempt->completed_at = now();
+            $attempt->serial = $attempt->serial ?: strtoupper(bin2hex(random_bytes(6)));
+            $attempt->save();
+        }
+        return back();
+    })->name('certification.complete');
+});
 
 /*
 |--------------------------------------------------------------------------
