@@ -40,6 +40,7 @@ import GroupIcon from '@mui/icons-material/Group';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PersonIcon from '@mui/icons-material/Person';
+import ProjectAccordion from '@/Pages/ProjectAccordion';
 const designTokens = {
     radii: {
         xl: 12,
