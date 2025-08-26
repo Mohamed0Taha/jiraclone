@@ -116,29 +116,37 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                 key={status}
                 sx={{
                     position: 'relative',
-                    px: 1.2,
-                    py: 0.4,
+                    px: 1,
+                    pl: 1.05,
+                    pr: 1,
+                    height: 30,
                     borderRadius: 2,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 0.65,
+                    gap: 0.6,
                     lineHeight: 1,
-                    background: alpha(meta.accent, 0.12),
-                    border: `1px solid ${alpha(meta.accent, 0.4)}`,
-                    boxShadow: `0 1px 2px ${alpha(meta.accent, 0.25)} inset`,
+                    background: alpha(meta.accent, 0.10),
+                    border: `1px solid ${alpha(meta.accent, 0.35)}`,
+                    boxShadow: `0 1px 2px ${alpha(meta.accent, 0.18)} inset`,
+                    flexShrink: 0,
+                    transition: 'background-color .25s, border-color .25s, transform .25s',
+                    '&:hover': {
+                        background: alpha(meta.accent, 0.16),
+                        borderColor: alpha(meta.accent, 0.55),
+                    },
                 }}
             >
                 <Box
                     sx={{
-                        width: 22,
-                        height: 22,
+                        width: 18,
+                        height: 18,
                         borderRadius: '50%',
                         display: 'grid',
                         placeItems: 'center',
                         background: meta.iconBg,
                         color: '#fff',
-                        boxShadow: `0 2px 4px -2px ${alpha(meta.accent, 0.5)}`,
-                        fontSize: 12,
+                        boxShadow: `0 1px 3px -1px ${alpha(meta.accent, 0.55)}`,
+                        fontSize: 11.5,
                     }}
                 >
                     {meta.icon}
@@ -147,13 +155,13 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                     variant="caption"
                     sx={{
                         fontWeight: 600,
-                        letterSpacing: 0.3,
+                        letterSpacing: 0.4,
                         textTransform: 'uppercase',
-                        fontSize: 10.5,
-                        color: alpha(theme.palette.text.primary, 0.8),
+                        fontSize: 10.2,
+                        color: alpha(theme.palette.text.primary, 0.78),
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 0.5,
+                        gap: 0.45,
                         whiteSpace: 'nowrap',
                     }}
                 >
@@ -161,15 +169,15 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                     <Box
                         component="span"
                         sx={{
-                            px: 0.65,
+                            px: 0.55,
                             py: 0.1,
-                            ml: 0.2,
-                            fontSize: 11,
-                            lineHeight: 1.15,
+                            ml: 0.15,
+                            fontSize: 10.5,
+                            lineHeight: 1.1,
                             fontWeight: 600,
-                            borderRadius: 1.5,
-                            background: alpha(meta.accent, 0.18),
-                            color: alpha(theme.palette.text.primary, 0.85),
+                            borderRadius: 1.25,
+                            background: alpha(meta.accent, 0.22),
+                            color: alpha(theme.palette.text.primary, 0.87),
                         }}
                     >
                         {count}
@@ -379,13 +387,15 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
 
                 <Stack
                     direction="row"
-                    spacing={1}
+                    spacing={1.1}
                     sx={{
                         ml: 'auto',
                         mr: 1.5,
-                        flexWrap: 'wrap',
-                        rowGap: 0.6,
-                        maxWidth: { xs: '40%', sm: '60%', md: '70%' },
+                        flexWrap: 'nowrap',
+                        overflow: 'hidden',
+                        alignItems: 'center',
+                        maxWidth: { xs: '55%', sm: '60%', md: '65%' },
+                        justifyContent: 'flex-end',
                     }}
                 >
                     {ORDER.map((s) => (
