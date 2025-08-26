@@ -1,10 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, lazy, Suspense } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { 
   Box, Stepper, Step, StepLabel, Button, Typography, Paper, Stack, Alert, 
   TextField, Card, CardContent, Chip, Dialog, DialogTitle, DialogContent, 
-  DialogActions, List, ListItem, ListItemText, IconButton, alpha 
+  DialogActions, List, ListItem, ListItemText, IconButton, alpha, CircularProgress
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -15,6 +15,18 @@ import {
   CheckCircle as CheckIcon,
   LinkedIn as LinkedInIcon
 } from '@mui/icons-material';
+
+// Import real components from the main app
+const CreateStepBasics = lazy(() => import('../Projects/CreateStepBasics'));
+const TaskFormDialog = lazy(() => import('./components/TaskFormDialog')); 
+const MembersManagerDialog = lazy(() => import('../Tasks/MembersManagerDialog'));
+const AssistantChat = lazy(() => import('../Tasks/AssistantChat'));
+
+const StepLoader = () => (
+  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+    <CircularProgress size={24} />
+  </Box>
+);
 
 /* Steps definition */
 const STEPS = [
@@ -30,14 +42,46 @@ export default function CertificationIndex({ auth, attempt }) {
   const current = attempt?.current_step || 1; // 1-based
   const [activeStep, setActiveStep] = useState(current - 1);
   
-  // Mock state for interactive elements
-  const [mockProject, setMockProject] = useState({ name: '', description: '' });
-  const [mockTasks, setMockTasks] = useState([]);
-  const [mockMembers, setMockMembers] = useState(['John Doe', 'Sarah Chen']);
+  // Mock data that mimics real app state but doesn't persist
+  const [mockProject, setMockProject] = useState({ 
+    name: 'E-commerce Platform Redesign', 
+    description: 'Complete redesign of our online store with modern UX/UI',
+    key: 'ECOM-001',
+    start_date: '2025-09-01',
+    end_date: '2025-12-31',
+    meta: {
+      project_type: 'Web Development',
+      domain: 'E-commerce',
+      team_size: 5,
+      budget: '$50,000'
+    }
+  });
+  
+  const [mockTasks, setMockTasks] = useState([
+    { id: 1, title: 'User Research & Analysis', status: 'todo', assignee_id: '2', priority: 'high' },
+    { id: 2, title: 'UI/UX Design Mockups', status: 'inprogress', assignee_id: '1', priority: 'medium' },
+    { id: 3, title: 'Frontend Development', status: 'todo', assignee_id: '', priority: 'medium' }
+  ]);
+  
+  const [mockUsers] = useState([
+    { id: '1', name: 'Sarah Chen' },
+    { id: '2', name: 'John Doe' },
+    { id: '3', name: 'Alex Johnson' }
+  ]);
+  
+  const [mockMembers, setMockMembers] = useState([
+    { id: '2', name: 'John Doe', email: 'john@example.com', role: 'member' },
+    { id: '3', name: 'Alex Johnson', email: 'alex@example.com', role: 'member' }
+  ]);
+  
   const [chatQuery, setChatQuery] = useState('');
   const [chatResponse, setChatResponse] = useState('');
   const [showDialog, setShowDialog] = useState(false);
   const [dialogType, setDialogType] = useState('');
+  const [taskFormOpen, setTaskFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [membersDialogOpen, setMembersDialogOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   const advance = useCallback((targetStep) => {
     router.post(route('certification.progress'), { step: targetStep }, {
@@ -62,41 +106,35 @@ export default function CertificationIndex({ auth, attempt }) {
               <AssignmentIcon color="primary" /> Step 1: Create a Project from Requirements
             </Typography>
             <Typography variant="body2" paragraph>
-              Practice creating a project by filling out the form below with project requirements.
+              Experience our project creation workflow using real components from the main application.
             </Typography>
             
-            <Card variant="outlined" sx={{ mb: 3, bgcolor: alpha('#4F46E5', 0.02) }}>
-              <CardContent>
-                <Stack spacing={2}>
-                  <TextField
-                    label="Project Name"
-                    value={mockProject.name}
-                    onChange={(e) => setMockProject(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="E.g., E-commerce Website Redesign"
-                    size="small"
-                    fullWidth
+            <Suspense fallback={<StepLoader />}>
+              <Card variant="outlined" sx={{ mb: 3, bgcolor: alpha('#4F46E5', 0.02) }}>
+                <CardContent>
+                  <CreateStepBasics
+                    data={mockProject}
+                    setData={(field, value) => setMockProject(prev => ({ ...prev, [field]: value }))}
+                    setMeta={(field, value) => setMockProject(prev => ({ 
+                      ...prev, 
+                      meta: { ...prev.meta, [field]: value }
+                    }))}
+                    errors={{}}
+                    localErrors={{}}
+                    projectTypes={['Web Development', 'Mobile App', 'Data Analysis']}
+                    domains={['E-commerce', 'Healthcare', 'Finance', 'Education']}
                   />
-                  <TextField
-                    label="Project Description"
-                    value={mockProject.description}
-                    onChange={(e) => setMockProject(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Describe the project requirements and goals..."
-                    multiline
-                    rows={3}
-                    size="small"
-                    fullWidth
-                  />
-                </Stack>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Suspense>
             
             <Button 
               variant="contained" 
-              disabled={!mockProject.name || !mockProject.description}
+              disabled={!mockProject.name}
               onClick={() => advance(2)}
               startIcon={<CheckIcon />}
             >
-              Project Created - Next Step
+              Project Details Completed - Next Step
             </Button>
           </Box>
         );
@@ -105,58 +143,71 @@ export default function CertificationIndex({ auth, attempt }) {
         return (
           <Box>
             <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <AddIcon color="primary" /> Step 2: Generate Tasks from Prompts
+              <AddIcon color="primary" /> Step 2: Generate and Manage Tasks
             </Typography>
             <Typography variant="body2" paragraph>
-              Use AI suggestions to generate project tasks. Try adding some tasks below.
+              Use our task creation system to add and organize project tasks.
             </Typography>
             
             <Card variant="outlined" sx={{ mb: 3, bgcolor: alpha('#10B981', 0.02) }}>
               <CardContent>
                 <Stack spacing={2}>
-                  <Typography variant="subtitle2">Suggested Task Templates:</Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
-                    {['User Research', 'Design Mockups', 'Frontend Development', 'Testing', 'Deployment'].map(suggestion => (
-                      <Chip 
-                        key={suggestion}
-                        label={suggestion}
-                        onClick={() => {
-                          if (!mockTasks.find(t => t.title === suggestion)) {
-                            setMockTasks(prev => [...prev, { 
-                              id: Date.now(), 
-                              title: suggestion, 
-                              status: 'todo',
-                              assignee: 'Unassigned'
-                            }]);
-                          }
-                        }}
-                        color="primary"
-                        variant="outlined"
-                        clickable
-                        size="small"
-                      />
-                    ))}
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="subtitle2">Current Tasks:</Typography>
+                    <Button 
+                      variant="outlined" 
+                      size="small"
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        setEditingTask(null);
+                        setTaskFormOpen(true);
+                      }}
+                    >
+                      Add Task
+                    </Button>
                   </Stack>
                   
-                  {mockTasks.length > 0 && (
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ mb: 1 }}>Generated Tasks:</Typography>
-                      {mockTasks.map(task => (
-                        <Chip key={task.id} label={task.title} sx={{ mr: 1, mb: 1 }} />
-                      ))}
-                    </Box>
-                  )}
+                  <Stack spacing={1}>
+                    {mockTasks.map(task => {
+                      const assignedUser = mockUsers.find(u => u.id === task.assignee_id);
+                      return (
+                        <Paper key={task.id} sx={{ p: 2, border: '1px solid', borderColor: 'divider' }}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Box>
+                              <Typography variant="subtitle2">{task.title}</Typography>
+                              <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                                <Chip label={task.status} size="small" color="primary" />
+                                <Chip label={task.priority} size="small" />
+                                {assignedUser && (
+                                  <Chip label={`Assigned: ${assignedUser.name}`} size="small" variant="outlined" />
+                                )}
+                              </Stack>
+                            </Box>
+                            <Button 
+                              size="small" 
+                              onClick={() => {
+                                setEditingTask(task);
+                                setTaskFormOpen(true);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          </Stack>
+                        </Paper>
+                      );
+                    })}
+                  </Stack>
                 </Stack>
               </CardContent>
             </Card>
             
             <Button 
               variant="contained" 
-              disabled={mockTasks.length === 0}
+              disabled={mockTasks.length < 2}
               onClick={() => advance(3)}
               startIcon={<CheckIcon />}
             >
-              Tasks Generated - Next Step
+              Tasks Created - Next Step
             </Button>
           </Box>
         );
@@ -168,70 +219,65 @@ export default function CertificationIndex({ auth, attempt }) {
               <AssignmentIcon color="primary" /> Step 3: Edit Task Details
             </Typography>
             <Typography variant="body2" paragraph>
-              Practice editing task assignees, dates, and status. Try modifying a task below.
+              Practice editing task assignments, priorities, and status using our task management interface.
             </Typography>
             
             <Card variant="outlined" sx={{ mb: 3, bgcolor: alpha('#F59E0B', 0.02) }}>
               <CardContent>
-                {mockTasks.length > 0 ? (
-                  <Stack spacing={2}>
-                    <Typography variant="subtitle2">Sample Task to Edit:</Typography>
-                    {mockTasks.slice(0,1).map(task => (
-                      <Box key={task.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2 }}>
-                        <Stack direction="row" spacing={2} alignItems="center">
-                          <Typography sx={{ fontWeight: 500, flexGrow: 1 }}>{task.title}</Typography>
-                          <TextField
-                            select
-                            label="Assignee"
-                            value={task.assignee}
-                            onChange={(e) => {
-                              setMockTasks(prev => prev.map(t => 
-                                t.id === task.id ? { ...t, assignee: e.target.value } : t
-                              ));
+                <Typography variant="subtitle2" gutterBottom>Try editing any task:</Typography>
+                <Stack spacing={1}>
+                  {mockTasks.map(task => {
+                    const assignedUser = mockUsers.find(u => u.id === task.assignee_id);
+                    const hasAssignee = !!assignedUser;
+                    return (
+                      <Paper 
+                        key={task.id} 
+                        sx={{ 
+                          p: 2, 
+                          border: '1px solid', 
+                          borderColor: hasAssignee ? 'success.main' : 'divider',
+                          bgcolor: hasAssignee ? alpha('#4CAF50', 0.05) : 'background.paper'
+                        }}
+                      >
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                          <Box>
+                            <Typography variant="subtitle2">{task.title}</Typography>
+                            <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                              <Chip label={task.status} size="small" color="primary" />
+                              <Chip label={task.priority} size="small" />
+                              <Chip 
+                                label={hasAssignee ? `Assigned: ${assignedUser.name}` : 'Unassigned'} 
+                                size="small" 
+                                variant="outlined"
+                                color={hasAssignee ? 'success' : 'default'}
+                              />
+                            </Stack>
+                          </Box>
+                          <Button 
+                            size="small" 
+                            variant="outlined"
+                            onClick={() => {
+                              setEditingTask(task);
+                              setTaskFormOpen(true);
                             }}
-                            size="small"
-                            SelectProps={{ native: true }}
-                            sx={{ minWidth: 120 }}
                           >
-                            <option value="Unassigned">Unassigned</option>
-                            <option value="John Doe">John Doe</option>
-                            <option value="Sarah Chen">Sarah Chen</option>
-                          </TextField>
-                          <TextField
-                            select
-                            label="Status" 
-                            value={task.status}
-                            onChange={(e) => {
-                              setMockTasks(prev => prev.map(t =>
-                                t.id === task.id ? { ...t, status: e.target.value } : t
-                              ));
-                            }}
-                            size="small"
-                            SelectProps={{ native: true }}
-                            sx={{ minWidth: 120 }}
-                          >
-                            <option value="todo">To Do</option>
-                            <option value="inprogress">In Progress</option>
-                            <option value="review">Review</option>
-                            <option value="done">Done</option>
-                          </TextField>
+                            Edit
+                          </Button>
                         </Stack>
-                      </Box>
-                    ))}
-                  </Stack>
-                ) : (
-                  <Alert severity="info">Complete Step 2 first to have tasks to edit.</Alert>
-                )}
+                      </Paper>
+                    );
+                  })}
+                </Stack>
               </CardContent>
             </Card>
             
             <Button 
-              variant="contained" 
-              disabled={mockTasks.length === 0 || mockTasks[0]?.assignee === 'Unassigned'}
+              variant="contained"
+              disabled={mockTasks.some(t => !t.assignee_id)}
               onClick={() => advance(4)}
               startIcon={<CheckIcon />}
             >
-              Task Edited - Next Step
+              All Tasks Assigned - Next Step
             </Button>
           </Box>
         );
@@ -240,20 +286,20 @@ export default function CertificationIndex({ auth, attempt }) {
         return (
           <Box>
             <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <ChatIcon color="primary" /> Step 4: Chat Assistant Interaction
+              <ChatIcon color="primary" /> Step 4: AI Assistant Interaction
             </Typography>
             <Typography variant="body2" paragraph>
-              Practice querying the AI assistant and executing commands. Try both actions below.
+              Experience our AI assistant feature that helps with project insights and automation.
             </Typography>
             
             <Card variant="outlined" sx={{ mb: 3, bgcolor: alpha('#8B5CF6', 0.02) }}>
               <CardContent>
                 <Stack spacing={3}>
                   <Box>
-                    <Typography variant="subtitle2" gutterBottom>Query Assistant:</Typography>
+                    <Typography variant="subtitle2" gutterBottom>Query Project Status:</Typography>
                     <Stack direction="row" spacing={1}>
                       <TextField
-                        placeholder="Ask about project status, team progress, etc."
+                        placeholder="Ask about project progress, team workload, etc."
                         value={chatQuery}
                         onChange={(e) => setChatQuery(e.target.value)}
                         size="small"
@@ -263,12 +309,15 @@ export default function CertificationIndex({ auth, attempt }) {
                         variant="outlined"
                         onClick={() => {
                           if (chatQuery) {
-                            setChatResponse(`Based on your query "${chatQuery}", I can see that your project "${mockProject.name || 'Sample Project'}" has ${mockTasks.length} tasks with ${mockTasks.filter(t => t.status === 'done').length} completed.`);
+                            const completedTasks = mockTasks.filter(t => t.status === 'done').length;
+                            const totalTasks = mockTasks.length;
+                            const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+                            setChatResponse(`Project "${mockProject.name}" is ${progress}% complete. ${completedTasks}/${totalTasks} tasks finished. Team has ${mockMembers.length} active members.`);
                           }
                         }}
                         disabled={!chatQuery}
                       >
-                        Ask
+                        Ask AI
                       </Button>
                     </Stack>
                     {chatResponse && (
@@ -277,28 +326,14 @@ export default function CertificationIndex({ auth, attempt }) {
                   </Box>
                   
                   <Box>
-                    <Typography variant="subtitle2" gutterBottom>Execute Command:</Typography>
-                    <Stack direction="row" spacing={1}>
-                      <Button 
-                        variant="outlined"
-                        onClick={() => {
-                          setShowDialog(true);
-                          setDialogType('command');
-                        }}
-                      >
-                        "Create summary report"
-                      </Button>
-                      <Button 
-                        variant="outlined" 
-                        onClick={() => {
-                          setMockTasks(prev => prev.map(t => ({ ...t, status: 'inprogress' })));
-                          setShowDialog(true);
-                          setDialogType('bulk');
-                        }}
-                      >
-                        "Move all tasks to In Progress"
-                      </Button>
-                    </Stack>
+                    <Typography variant="subtitle2" gutterBottom>AI Assistant Actions:</Typography>
+                    <Button 
+                      variant="outlined"
+                      startIcon={<ChatIcon />}
+                      onClick={() => setAssistantOpen(true)}
+                    >
+                      Open Assistant Chat
+                    </Button>
                   </Box>
                 </Stack>
               </CardContent>
@@ -310,7 +345,7 @@ export default function CertificationIndex({ auth, attempt }) {
               onClick={() => advance(5)}
               startIcon={<CheckIcon />}
             >
-              Assistant Used - Next Step
+              Assistant Queried - Next Step
             </Button>
           </Box>
         );
@@ -319,52 +354,57 @@ export default function CertificationIndex({ auth, attempt }) {
         return (
           <Box>
             <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <GroupIcon color="primary" /> Step 5: Manage Project Members
+              <GroupIcon color="primary" /> Step 5: Team Member Management
             </Typography>
             <Typography variant="body2" paragraph>
-              Practice adding and removing team members from your project.
+              Learn to manage project team members using our member management interface.
             </Typography>
             
             <Card variant="outlined" sx={{ mb: 3, bgcolor: alpha('#EF4444', 0.02) }}>
               <CardContent>
-                <Stack spacing={2}>
-                  <Typography variant="subtitle2">Current Team Members:</Typography>
-                  <List dense>
-                    {mockMembers.map((member, idx) => (
-                      <ListItem key={idx} sx={{ pl: 0 }}>
-                        <ListItemText primary={member} />
-                        <IconButton
-                          size="small"
-                          onClick={() => setMockMembers(prev => prev.filter((_, i) => i !== idx))}
-                          color="error"
-                        >
-                          ✕
-                        </IconButton>
-                      </ListItem>
-                    ))}
-                  </List>
-                  
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2">Project Team:</Typography>
                   <Button
                     variant="outlined"
-                    startIcon={<AddIcon />}
-                    onClick={() => {
-                      const newMember = `Team Member ${mockMembers.length + 1}`;
-                      setMockMembers(prev => [...prev, newMember]);
-                    }}
+                    startIcon={<GroupIcon />}
+                    onClick={() => setMembersDialogOpen(true)}
                   >
-                    Add Member
+                    Manage Members
                   </Button>
+                </Stack>
+                
+                <Stack spacing={1}>
+                  <Paper sx={{ p: 2, bgcolor: alpha('#4CAF50', 0.1) }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Box>
+                        <Typography variant="subtitle2">{auth?.user?.name} (You)</Typography>
+                        <Typography variant="caption" color="text.secondary">Project Owner</Typography>
+                      </Box>
+                      <Chip label="Owner" size="small" color="primary" />
+                    </Stack>
+                  </Paper>
+                  
+                  {mockMembers.map(member => (
+                    <Paper key={member.id} sx={{ p: 2 }}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Box>
+                          <Typography variant="subtitle2">{member.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{member.email}</Typography>
+                        </Box>
+                        <Chip label={member.role} size="small" variant="outlined" />
+                      </Stack>
+                    </Paper>
+                  ))}
                 </Stack>
               </CardContent>
             </Card>
             
             <Button 
               variant="contained"
-              disabled={mockMembers.length === 2} // Must have added/removed someone
               onClick={() => complete()}
               startIcon={<CheckIcon />}
             >
-              Members Managed - Complete Certification
+              Team Management Complete
             </Button>
           </Box>
         );
@@ -380,8 +420,8 @@ export default function CertificationIndex({ auth, attempt }) {
               TaskPilot Product Certification
             </Typography>
             <Typography variant="body1" paragraph>
-              You have successfully completed all certification requirements and demonstrated 
-              proficiency with TaskPilot's core features.
+              You have successfully completed all certification requirements and gained hands-on 
+              experience with TaskPilot's core features using our real application components.
             </Typography>
             
             {attempt?.serial && (
@@ -450,7 +490,59 @@ export default function CertificationIndex({ auth, attempt }) {
         </Paper>
       </Box>
 
-      {/* Mock Dialogs */}
+      {/* Real Task Creation Dialog */}
+      <Suspense fallback={null}>
+        <TaskFormDialog
+          open={taskFormOpen}
+          onClose={() => setTaskFormOpen(false)}
+          task={editingTask}
+          users={mockUsers}
+          onSubmit={(taskData) => {
+            if (editingTask) {
+              // Edit existing task
+              setMockTasks(prev => prev.map(t => 
+                t.id === editingTask.id 
+                  ? { ...t, ...taskData }
+                  : t
+              ));
+            } else {
+              // Create new task
+              const newTask = {
+                id: Date.now(),
+                ...taskData
+              };
+              setMockTasks(prev => [...prev, newTask]);
+            }
+          }}
+        />
+      </Suspense>
+
+      {/* Real Members Management Dialog */}
+      <Suspense fallback={null}>
+        <MembersManagerDialog
+          open={membersDialogOpen}
+          onClose={() => setMembersDialogOpen(false)}
+          project={{
+            ...mockProject,
+            id: 'cert-demo',
+            user_id: auth?.user?.id,
+            members: mockMembers
+          }}
+        />
+      </Suspense>
+
+      {/* Real Assistant Chat */}
+      <Suspense fallback={null}>
+        <AssistantChat
+          open={assistantOpen}
+          onClose={() => setAssistantOpen(false)}
+          projectId="cert-demo"
+          project={mockProject}
+          onAddTask={() => setTaskFormOpen(true)}
+        />
+      </Suspense>
+
+      {/* Mock Action Confirmation Dialogs */}
       <Dialog open={showDialog} onClose={() => setShowDialog(false)}>
         <DialogTitle>
           {dialogType === 'command' ? 'Command Executed' : 'Bulk Action Complete'}
