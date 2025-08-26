@@ -114,14 +114,38 @@ class ProjectController extends Controller
             'document' => 'required|file|max:5120', // 5MB max
         ]);
 
+        /** @var User $user */
+        $user = Auth::user();
+        
+        // Check if user can extract documents
+        if (!$user->canExtractDocuments()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Document extraction quota exceeded. Upgrade your plan to extract more documents.',
+                'quota' => [
+                    'used' => $user->documents_extracted ?? 0,
+                    'limit' => $user->getDocumentExtractionLimit(),
+                    'remaining' => $user->getRemainingDocumentExtractions(),
+                ],
+            ], 403);
+        }
+
         try {
             $file = $request->file('document');
             $extractedData = $analysisService->analyzeDocument($file);
+            
+            // Increment usage after successful extraction
+            $user->incrementDocumentExtractionUsage();
 
             return response()->json([
                 'success' => true,
                 'data' => $extractedData,
                 'message' => 'Document analyzed successfully',
+                'quota' => [
+                    'used' => $user->documents_extracted ?? 0,
+                    'limit' => $user->getDocumentExtractionLimit(),
+                    'remaining' => $user->getRemainingDocumentExtractions(),
+                ],
             ]);
 
         } catch (\Exception $e) {
@@ -406,10 +430,42 @@ class ProjectController extends Controller
         // Explicit subscription check to avoid vague 404 produced by middleware masking
         $result = $reports->generate($project);
 
+    /** @var User $user */
+    $user = Auth::user();
+        // Increment usage (guard inside model ensures monthly reset)
+        $user->incrementReportsUsage();
+
+        // Persist report record
+        try {
+            \App\Models\ProjectReport::create([
+                'project_id' => $project->id,
+                'user_id' => $user->id,
+                'plan' => $user->getCurrentPlan(),
+                'storage_path' => $result['path'],
+                'public_url' => $result['download_url'],
+                'meta' => [
+                    'summary' => $result['json']['summary'] ?? null,
+                    'executive_summary' => $result['json']['executive_summary'] ?? null,
+                    'charts' => $result['charts'] ?? null,
+                    'generated_at' => $result['generated_at'] ?? now()->toISOString(),
+                ],
+                'size_bytes' => \Illuminate\Support\Facades\Storage::disk('public')->size($result['path']) ?? null,
+                'generated_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            // swallow persistence issues to not block user download
+        }
+
         return response()->json([
             'download_url' => $result['download_url'],
             'path' => $result['path'],
             'summary' => $result['json']['summary'] ?? null,
+            // Include quota context so UI can show remaining allowance without extra round trip
+            'reports' => [
+                'used' => $user->reports_generated ?? 0,
+                'limit' => $user->getReportsLimit(),
+                'remaining' => $user->getRemainingReports(),
+            ],
         ]);
     }
 

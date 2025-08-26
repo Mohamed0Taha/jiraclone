@@ -57,4 +57,9 @@ class Project extends Model
     {
         return $this->hasMany(Automation::class);
     }
+
+    public function reports()
+    {
+        return $this->hasMany(ProjectReport::class);
+    }
 }

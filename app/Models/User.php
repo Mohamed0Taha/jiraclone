@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Notifications\CustomVerifyEmail;
+use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -80,6 +81,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function tasks()
     {
         return $this->hasMany(Task::class, 'creator_id');
+    }
+
+    public function projectReports()
+    {
+        return $this->hasMany(ProjectReport::class);
     }
 
     public function assignedTasks()
@@ -160,6 +166,8 @@ class User extends Authenticatable implements MustVerifyEmail
                 return in_array($plan, ['basic', 'pro', 'business']);
             case 'reports':
                 return in_array($plan, ['basic', 'pro', 'business']);
+            case 'documents':
+                return in_array($plan, ['basic', 'pro', 'business']);
             case 'ai_assistant':
                 return true; // Everyone can access (but free users see overlay)
             default:
@@ -181,6 +189,7 @@ class User extends Authenticatable implements MustVerifyEmail
                 case 'automation':
                 case 'members':
                 case 'reports':
+                case 'documents':
                     return true; // Free users see overlay for disabled features
                 default:
                     return false;
@@ -212,6 +221,11 @@ class User extends Authenticatable implements MustVerifyEmail
                 'used' => $this->reports_generated ?? 0,
                 'limit' => $this->getReportsLimit(),
                 'remaining' => $this->getRemainingReports(),
+            ],
+            'documents' => [
+                'used' => $this->documents_extracted ?? 0,
+                'limit' => $this->getDocumentExtractionLimit(),
+                'remaining' => $this->getRemainingDocumentExtractions(),
             ],
             'automation' => [
                 'used' => $this->getAutomationsCount(),
@@ -320,6 +334,23 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Get document extraction limit for current plan
+     */
+    public function getDocumentExtractionLimit(): int
+    {
+        $plan = $this->getCurrentPlan();
+
+        $limits = [
+            'free' => 0,
+            'basic' => 5,
+            'pro' => 10,
+            'business' => 20,
+        ];
+
+        return $limits[$plan] ?? 0;
+    }
+
+    /**
      * Get remaining AI task generation count
      */
     public function getRemainingAiTasks(): int
@@ -376,6 +407,8 @@ class User extends Authenticatable implements MustVerifyEmail
                 return $this->canUseAiChat();
             case 'reports':
                 return $this->canGenerateReports();
+            case 'documents':
+                return $this->canExtractDocuments();
             case 'automation':
                 return $this->canCreateAutomations();
             default:
@@ -469,30 +502,100 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Reset usage tracking if needed (monthly reset)
+     * Get remaining document extraction count
+     */
+    public function getRemainingDocumentExtractions(): int
+    {
+        $this->resetUsageIfNeeded();
+
+        $limit = $this->getDocumentExtractionLimit();
+        $used = $this->documents_extracted ?? 0;
+
+        return max(0, $limit - $used);
+    }
+
+    /**
+     * Check if user can extract documents
+     */
+    public function canExtractDocuments(int $count = 1): bool
+    {
+        return $this->getRemainingDocumentExtractions() >= $count;
+    }
+
+    /**
+     * Increment document extraction usage
+     */
+    public function incrementDocumentExtractionUsage(int $count = 1): bool
+    {
+        $this->resetUsageIfNeeded();
+
+        if ($this->getRemainingDocumentExtractions() >= $count) {
+            $this->increment('documents_extracted', $count);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Reset usage tracking if needed (monthly reset based on billing cycle)
      */
     private function resetUsageIfNeeded(): void
     {
-        $resetDate = $this->usage_reset_date;
-        $now = now()->startOfDay();
+        $resetDate = $this->getUsageResetDate();
+        $now = now();
 
-        // If no reset date set, set it to beginning of current month
-        if (! $resetDate) {
+        // If we've passed the reset date, reset usage counters
+        if ($now->isAfter($resetDate)) {
+            $nextResetDate = $this->calculateNextResetDate();
+            
             $this->update([
-                'usage_reset_date' => $now->firstOfMonth(),
+                'usage_reset_date' => $nextResetDate->startOfDay(),
                 'ai_tasks_used' => 0,
-            ]);
-
-            return;
-        }
-
-        // If we've passed into a new month, reset usage
-        if ($now->firstOfMonth()->isAfter($resetDate)) {
-            $this->update([
-                'usage_reset_date' => $now->firstOfMonth(),
-                'ai_tasks_used' => 0,
+                'ai_chat_used' => 0,
+                'reports_generated' => 0,
+                'documents_extracted' => 0,
             ]);
         }
+    }
+
+    /**
+     * Get the current usage reset date
+     */
+    private function getUsageResetDate(): Carbon
+    {
+        if ($this->usage_reset_date) {
+            return $this->usage_reset_date;
+        }
+
+        // If no reset date set, calculate based on subscription or use current month
+        return $this->calculateNextResetDate();
+    }
+
+    /**
+     * Calculate the next usage reset date based on subscription billing cycle
+     */
+    private function calculateNextResetDate(): Carbon
+    {
+        $subscription = $this->subscription('default');
+        
+        if ($subscription && $subscription->created_at) {
+            // Use subscription billing cycle - reset on the same day of month as subscription started
+            $billingDay = $subscription->created_at->day;
+            $now = now();
+            
+            // If we're past the billing day this month, next reset is next month's billing day
+            if ($now->day >= $billingDay) {
+                return $now->addMonth()->startOfMonth()->addDays($billingDay - 1);
+            } else {
+                // Otherwise, reset on this month's billing day
+                return $now->startOfMonth()->addDays($billingDay - 1);
+            }
+        }
+
+        // Fallback to calendar month reset for free users or users without subscription
+        return now()->addMonth()->firstOfMonth();
     }
 
     /**

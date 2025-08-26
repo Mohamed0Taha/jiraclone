@@ -51,6 +51,7 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
     const [downloadUrl, setDownloadUrl] = useState(null);
     const [summary, setSummary] = useState(null);
     const [error, setError] = useState(null);
+    const [quota, setQuota] = useState(null); // { used, limit, remaining }
 
     // Keep a ref of the latest in-flight controller to cancel when re-generating.
     const controllerRef = useRef(null);
@@ -61,6 +62,8 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
             setDownloadUrl(null);
             setSummary(null);
             setError(null);
+            // Fetch initial quota when dialog opens
+            fetchQuota();
         }
         // Cleanup on unmount: abort any in-flight request.
         return () => {
@@ -70,6 +73,26 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
             }
         };
     }, [open]);
+
+    const fetchQuota = async () => {
+        try {
+            const response = await fetch(route('api.usage-summary'), {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                setQuota(data.reports);
+            }
+        } catch (e) {
+            // Silently fail quota fetch - user can still generate reports
+        }
+    };
 
     const generate = async () => {
         if (!project?.id || loading) return;
@@ -156,6 +179,9 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
 
             setDownloadUrl(stampedUrl);
             setSummary(json.summary ?? '');
+            if (json.reports) {
+                setQuota(json.reports);
+            }
         } catch (e) {
             if (e?.name === 'AbortError') {
                 setError('The report generation took too long and was canceled. Please try again.');
@@ -172,6 +198,11 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
             }
         }
     };
+
+    const remaining = quota?.remaining;
+    const limit = quota?.limit;
+    const used = quota?.used;
+    const noRemaining = typeof remaining === 'number' && remaining <= 0;
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -260,6 +291,18 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
                         {error}
                     </Alert>
                 )}
+
+                {quota && (
+                    <Box sx={{ mt: 1.5 }}>
+                        <Alert severity={noRemaining ? 'warning' : 'info'} sx={{ alignItems: 'center' }}>
+                            {noRemaining ? (
+                                <><strong>Report quota reached.</strong> You've used {used} of {limit} this period. Upgrade your plan to unlock more reports.</>
+                            ) : (
+                                <>Reports remaining this period: <strong>{remaining}</strong> (used {used} of {limit}).</>
+                            )}
+                        </Alert>
+                    </Box>
+                )}
             </DialogContent>
 
             <DialogActions sx={{ px: 2.5, py: 2 }}>
@@ -267,12 +310,12 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
                 {!downloadUrl ? (
                     <Button
                         onClick={generate}
-                        disabled={loading}
+                        disabled={loading || noRemaining}
                         variant="contained"
                         startIcon={<AutoAwesomeIcon />}
                         sx={{ textTransform: 'none', fontWeight: 800, px: 2.2 }}
                     >
-                        {loading ? 'Generating…' : 'Generate AI Report'}
+                        {loading ? 'Generating…' : noRemaining ? 'Quota Reached' : 'Generate AI Report'}
                     </Button>
                 ) : (
                     <Stack direction="row" spacing={1}>
@@ -291,10 +334,10 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
                             onClick={generate}
                             startIcon={<RefreshRoundedIcon />}
                             variant="text"
-                            disabled={loading}
+                            disabled={loading || noRemaining}
                             sx={{ textTransform: 'none', fontWeight: 600 }}
                         >
-                            Regenerate
+                            {noRemaining ? 'Quota Reached' : 'Regenerate'}
                         </Button>
                     </Stack>
                 )}

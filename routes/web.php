@@ -231,12 +231,12 @@ Route::get('/dashboard', function (Request $request) {
 
     // Get projects owned by the user
     $ownedProjects = $user->projects()
-        ->with(['tasks:id,project_id,title,status'])
+        ->with(['tasks:id,project_id,title,status', 'user:id,name'])
         ->get();
 
     // Get projects where the user is a member
     $memberProjects = $user->memberProjects()
-        ->with(['tasks:id,project_id,title,status'])
+        ->with(['tasks:id,project_id,title,status', 'user:id,name'])
         ->get();
 
     // Combine both collections
@@ -254,6 +254,10 @@ Route::get('/dashboard', function (Request $request) {
             'name' => $p->name,
             'description' => $p->description,
             'is_owner' => $p->user_id === $user->id,
+            'owner' => [
+                'id' => $p->user->id,
+                'name' => $p->user->name,
+            ],
             'tasks' => [
                 'todo' => $group('todo'),
                 'inprogress' => $group('inprogress'),
@@ -348,6 +352,9 @@ Route::middleware('auth')->group(function () {
     /* Email Statistics API */
     Route::get('/api/email-stats', [\App\Http\Controllers\EmailStatsController::class, 'getStats'])->name('api.email-stats');
     Route::get('/api/email-logs', [\App\Http\Controllers\EmailStatsController::class, 'getRecentLogs'])->name('api.email-logs');
+    
+    /* Usage Summary API */
+    Route::get('/api/usage-summary', [\App\Http\Controllers\Api\UsageController::class, 'summary'])->name('api.usage-summary');
 
     /* Projects */
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
@@ -376,6 +383,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/invite', [App\Http\Controllers\ProjectMemberController::class, 'invite'])->middleware('subscription:members')->name('projects.members.invite');
         Route::delete('/remove', [App\Http\Controllers\ProjectMemberController::class, 'remove'])->middleware('subscription:members')->name('projects.members.remove');
         Route::patch('/cancel-invitation', [App\Http\Controllers\ProjectMemberController::class, 'cancelInvitation'])->middleware('subscription:members')->name('projects.members.cancel-invitation');
+    Route::post('/leave', [App\Http\Controllers\ProjectMemberController::class, 'leave'])->name('projects.members.leave');
     });
 
     /* Nested project-scoped routes */

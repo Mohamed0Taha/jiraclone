@@ -29,6 +29,32 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState('');
     const [aiWarning, setAiWarning] = useState('');
+    const [quota, setQuota] = useState(null); // { used, limit, remaining }
+
+    // Fetch quota on component mount
+    useEffect(() => {
+        fetchQuota();
+    }, []);
+
+    const fetchQuota = async () => {
+        try {
+            const response = await fetch(route('api.usage-summary'), {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                setQuota(data.documents);
+            }
+        } catch (e) {
+            // Silently fail quota fetch
+        }
+    };
 
     // Listen for AI empty event
     useEffect(() => {
@@ -46,6 +72,12 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
     const handleFileUpload = useCallback(
         async (file) => {
             if (!file) return;
+            
+            // Check quota before proceeding
+            if (quota && quota.remaining <= 0) {
+                setError('Document extraction quota exceeded. Upgrade your plan to extract more documents.');
+                return;
+            }
 
             // Validate file type
             const allowedTypes = [
@@ -76,13 +108,13 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                 '.xlsx',
             ].some((ext) => name.endsWith(ext));
             if (!allowedTypes.includes(file.type) && !extAllowed) {
-                setError('Allowed types: TXT, PDF, DOC, DOCX, RTF, MD, CSV, XLS, XLSX (max 5MB).');
+                setError('Allowed types: TXT, PDF, DOC, DOCX, RTF, MD, CSV, XLS, XLSX (max 8MB).');
                 return;
             }
 
-            // Validate file size (5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                setError('File size must be less than 5MB.');
+            // Validate file size (8MB)
+            if (file.size > 8 * 1024 * 1024) {
+                setError('File size must be less than 8MB.');
                 return;
             }
 
@@ -110,14 +142,43 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                     console.log('AI Analysis Result:', result.data); // Debug log
                     console.log('Available result.data keys:', Object.keys(result.data)); // Debug log
                     console.log('Full result structure:', result); // Debug log
+                    
+                    // Update quota if provided
+                    if (result.quota) {
+                        setQuota(result.quota);
+                    }
+                    
                     onDocumentAnalyzed(result.data);
                 } else {
                     console.error('API Error:', result.message); // Debug log
-                    setError(result.message || 'Failed to analyze document');
+                    let errorMessage = result.message || 'Failed to analyze document';
+                    
+                    // Handle quota exceeded error specifically
+                    if (response.status === 403 && result.quota) {
+                        setQuota(result.quota);
+                        errorMessage = result.message || 'Document extraction quota exceeded. Upgrade your plan to extract more documents.';
+                    }
+                    
+                    // Handle specific error types
+                    if (result.errors) {
+                        const errorValues = Object.values(result.errors).flat();
+                        errorMessage = errorValues.length > 0 ? errorValues[0] : errorMessage;
+                    }
+                    
+                    setError(errorMessage);
                 }
             } catch (err) {
                 console.error('Document upload error:', err);
-                setError('Failed to upload and analyze document. Please try again.');
+                let errorMessage = 'Failed to upload and analyze document. Please try again.';
+                
+                // Handle network errors
+                if (err.name === 'TypeError' && err.message.includes('fetch')) {
+                    errorMessage = 'Network error. Please check your connection and try again.';
+                } else if (err.message) {
+                    errorMessage = err.message;
+                }
+                
+                setError(errorMessage);
             } finally {
                 setUploading(false);
             }
@@ -129,6 +190,12 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
         (e) => {
             e.preventDefault();
             setDragOver(false);
+
+            // Check quota before proceeding
+            if (quota && quota.remaining <= 0) {
+                setError('Document extraction quota exceeded. Upgrade your plan to extract more documents.');
+                return;
+            }
 
             const files = Array.from(e.dataTransfer.files);
             if (files.length > 0) {
@@ -273,6 +340,28 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                             objectives, and constraints automatically.
                         </Typography>
 
+                        {quota && (
+                            <Box sx={{ mb: 3 }}>
+                                <Alert 
+                                    severity={quota.remaining > 0 ? 'info' : 'warning'}
+                                    sx={{ 
+                                        maxWidth: 400,
+                                        mx: 'auto',
+                                        '& .MuiAlert-message': {
+                                            width: '100%',
+                                            textAlign: 'center'
+                                        }
+                                    }}
+                                >
+                                    {quota.remaining > 0 ? (
+                                        <>Documents remaining this period: <strong>{quota.remaining}</strong> (used {quota.used} of {quota.limit})</>
+                                    ) : (
+                                        <><strong>Document extraction quota reached.</strong> You've used {quota.used} of {quota.limit} this period. Upgrade your plan to extract more documents.</>
+                                    )}
+                                </Alert>
+                            </Box>
+                        )}
+
                         <Box
                             sx={{
                                 border: `2px dashed ${
@@ -286,10 +375,17 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 bgcolor: dragOver
                                     ? alpha(theme.palette.primary.main, 0.05)
                                     : alpha(theme.palette.grey[50], 0.5),
-                                cursor: 'pointer',
+                                cursor: (quota && quota.remaining <= 0) ? 'not-allowed' : 'pointer',
                                 transition: 'all 0.3s ease',
+                                opacity: (quota && quota.remaining <= 0) ? 0.6 : 1,
                             }}
-                            onClick={() => document.getElementById('document-input')?.click()}
+                            onClick={() => {
+                                if (quota && quota.remaining <= 0) {
+                                    setError('Document extraction quota exceeded. Upgrade your plan to extract more documents.');
+                                    return;
+                                }
+                                document.getElementById('document-input')?.click();
+                            }}
                         >
                             <CloudUploadIcon
                                 sx={{
@@ -299,12 +395,16 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 }}
                             />
                             <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                                {dragOver
+                                {quota && quota.remaining <= 0 
+                                    ? 'Document extraction quota reached'
+                                    : dragOver
                                     ? 'Drop your document here'
                                     : 'Click to browse or drag & drop your document'}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                                Supports: PDF, Word (.doc/.docx), Text (.txt), RTF • Max 5MB
+                                {quota && quota.remaining <= 0 
+                                    ? 'Upgrade your plan to extract more documents'
+                                    : 'Supports: PDF, Word (.doc/.docx), Text (.txt), RTF • Max 5MB'}
                             </Typography>
                         </Box>
 
@@ -314,7 +414,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                             accept=".txt,.pdf,.doc,.docx,.rtf,.md,.markdown,.csv,.xls,.xlsx"
                             style={{ display: 'none' }}
                             onChange={handleFileInputChange}
-                            disabled={uploading}
+                            disabled={uploading || (quota && quota.remaining <= 0)}
                         />
 
                         {error && (

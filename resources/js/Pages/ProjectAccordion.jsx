@@ -63,8 +63,12 @@ const STATUS_META = {
 
 const ORDER = ['todo', 'inprogress', 'review', 'done'];
 
-export default function ProjectAccordion({ project, rowSx = {}, onDelete, endActions }) {
+export default function ProjectAccordion({ project, ownership, rowSx = {}, onDelete, endActions }) {
     const theme = useTheme();
+    
+    // Determine ownership colors
+    const isOwner = ownership === 'owner';
+    const ownershipColor = isOwner ? theme.palette.primary.main : theme.palette.secondary.main;
 
     /* Normalize tasks */
     const grouped = useMemo(() => {
@@ -207,42 +211,111 @@ export default function ProjectAccordion({ project, rowSx = {}, onDelete, endAct
         <Accordion
             disableGutters
             sx={{
-                borderRadius: 4,
+                borderRadius: 2, // Reduced border radius
                 overflow: 'hidden',
                 position: 'relative',
-                border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
-                background: 'linear-gradient(135deg,rgba(255,255,255,0.85),rgba(255,255,255,0.55))',
-                backdropFilter: 'blur(10px)',
-                boxShadow:
-                    '0 6px 18px -8px rgba(15,35,60,0.25), 0 1px 0 0 rgba(255,255,255,0.65) inset',
-                transition: 'background .35s, box-shadow .35s, transform .35s',
-                '&:before': {
+                border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+                background: theme.palette.mode === 'light' 
+                    ? `linear-gradient(135deg, 
+                        rgba(255,255,255,0.95) 0%, 
+                        rgba(255,255,255,0.85) 100%
+                      ), 
+                      radial-gradient(ellipse at top left, 
+                        ${alpha(theme.palette.primary.main, 0.03)} 0%, 
+                        transparent 50%
+                      )`
+                    : `linear-gradient(135deg, 
+                        ${alpha(theme.palette.background.paper, 0.95)} 0%, 
+                        ${alpha(theme.palette.background.paper, 0.85)} 100%
+                      )`,
+                backdropFilter: 'blur(20px)',
+                boxShadow: `
+                    0 4px 12px -3px ${alpha(theme.palette.common.black, 0.08)},
+                    0 2px 4px -2px ${alpha(theme.palette.common.black, 0.04)},
+                    inset 0 1px 0 ${alpha(theme.palette.common.white, 0.1)}
+                `, // Reduced shadow for slimmer look
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&::before': {
                     content: '""',
                     position: 'absolute',
-                    inset: 0,
-                    pointerEvents: 'none',
-                    background:
-                        'radial-gradient(circle at 85% 15%, rgba(255,255,255,0.5), transparent 60%)',
-                    opacity: 0.8,
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '1px',
+                    background: `linear-gradient(90deg, 
+                        transparent, 
+                        ${alpha(theme.palette.primary.main, 0.4)}, 
+                        transparent
+                    )`,
                 },
                 '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow:
-                        '0 10px 28px -10px rgba(20,40,70,0.35), 0 1px 0 0 rgba(255,255,255,0.75) inset',
+                    transform: 'translateY(-2px)', // Reduced hover lift for slimmer appearance
+                    boxShadow: `
+                        0 8px 20px -4px ${alpha(theme.palette.common.black, 0.12)},
+                        0 4px 8px -4px ${alpha(theme.palette.common.black, 0.06)},
+                        inset 0 1px 0 ${alpha(theme.palette.common.white, 0.2)},
+                        0 0 0 1px ${alpha(theme.palette.primary.main, 0.1)}
+                    `,
+                    '&::before': {
+                        background: `linear-gradient(90deg, 
+                            transparent, 
+                            ${theme.palette.primary.main}, 
+                            transparent
+                        )`,
+                        height: '2px',
+                    }
+                },
+                '&.Mui-expanded': {
+                    '&::before': {
+                        background: `linear-gradient(90deg, 
+                            ${theme.palette.primary.main}, 
+                            ${theme.palette.secondary.main}, 
+                            ${theme.palette.primary.main}
+                        )`,
+                        height: '3px',
+                    }
                 },
                 ...rowSx,
             }}
         >
             <AccordionSummary
-                expandIcon={<ExpandMoreRoundedIcon sx={{ color: alpha('#102040', 0.6) }} />}
+                expandIcon={
+                    <ExpandMoreRoundedIcon 
+                        sx={{ 
+                            color: theme.palette.text.secondary,
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                                color: theme.palette.primary.main,
+                                transform: 'scale(1.1)',
+                            }
+                        }} 
+                    />
+                }
                 sx={{
-                    minHeight: 60,
-                    px: 2,
+                    minHeight: 56, // Reduced from 72 to make slimmer
+                    px: 3,
+                    py: 1.5, // Reduced padding
+                    background: `linear-gradient(135deg, 
+                        ${alpha(theme.palette.background.default, 0.4)} 0%, 
+                        ${alpha(theme.palette.background.default, 0.1)} 100%
+                    )`,
                     '& .MuiAccordionSummary-content': {
                         alignItems: 'center',
                         my: 0,
-                        gap: 1,
+                        gap: 2,
                     },
+                    '& .MuiAccordionSummary-expandIconWrapper': {
+                        color: theme.palette.text.secondary,
+                        '&.Mui-expanded': {
+                            color: theme.palette.primary.main,
+                        }
+                    },
+                    '&:hover': {
+                        background: `linear-gradient(135deg, 
+                            ${alpha(theme.palette.primary.main, 0.04)} 0%, 
+                            ${alpha(theme.palette.secondary.main, 0.02)} 100%
+                        )`,
+                    }
                 }}
             >
                 {/* Project name interactive element styled like a button (avoid nested button) */}
@@ -285,6 +358,23 @@ export default function ProjectAccordion({ project, rowSx = {}, onDelete, endAct
                     >
                         {project.name}
                     </Typography>
+                    <Chip 
+                        size="small" 
+                        label={isOwner ? "OWNER" : "COLLABORATOR"}
+                        sx={{ 
+                            ml: 1.5,
+                            height: 20,
+                            fontWeight: 700,
+                            fontSize: '0.65rem',
+                            letterSpacing: '0.05em',
+                            background: alpha(ownershipColor, 0.12),
+                            color: ownershipColor,
+                            border: `1px solid ${alpha(ownershipColor, 0.25)}`,
+                            '& .MuiChip-label': {
+                                px: 1,
+                            }
+                        }} 
+                    />
                 </Box>
 
                 <Stack

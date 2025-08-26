@@ -209,6 +209,26 @@ class ProjectMemberController extends Controller
         ]);
     }
 
+    public function leave(Project $project)
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+        // Cannot leave if you're the owner
+        if ($project->user_id === $user->id) {
+            return response()->json([
+                'error' => 'Project owners cannot leave their own project. Transfer ownership or delete the project.'
+            ], 422);
+        }
+        // Detach membership if exists
+        $project->members()->detach($user->id);
+
+        return response()->json([
+            'message' => 'You have left the project successfully.'
+        ]);
+    }
+
     public function acceptInvitation($token)
     {
         $invitation = ProjectInvitation::where('token', $token)
