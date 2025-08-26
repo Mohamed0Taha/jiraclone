@@ -51,16 +51,26 @@ class TaskController extends Controller
 
         // Check if this is an AJAX request for cache updates
         if (request()->wantsJson()) {
+            $projectUsers = $project->members()->select('users.id', 'users.name')->get()
+                ->push(User::select('id','name')->find($project->user_id))
+                ->unique('id')
+                ->values();
             return response()->json([
                 'tasks' => $this->getTasksData($project),
-                'users' => User::select('id', 'name')->get(),
+                'users' => $projectUsers,
             ]);
         }
+
+        // Only expose project members (including owner) instead of every system user
+        $projectUsers = $project->members()->select('users.id', 'users.name')->get()
+            ->push(User::select('id','name')->find($project->user_id))
+            ->unique('id')
+            ->values();
 
         return Inertia::render('Tasks/Board', [
             'project' => $project,
             'tasks' => $this->getTasksData($project),
-            'users' => User::select('id', 'name')->get(),
+            'users' => $projectUsers,
         ]);
     }
 
