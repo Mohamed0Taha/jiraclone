@@ -1079,7 +1079,7 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
                     <Chip
                         size="small"
                         label="Collaborator"
-                        icon={<CollaborationIcon sx={{ fontSize: 14 }} />}
+                        icon={<GroupIcon sx={{ fontSize: 14 }} />}
                         sx={{
                             bgcolor: alpha(theme.palette.warning.main, 0.15),
                             color: theme.palette.warning.main,
