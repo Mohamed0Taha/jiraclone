@@ -378,7 +378,25 @@
                 <div class="qr-section">
                     <p class="qr-label">Scan to verify authenticity</p>
                     <div style="display: flex; justify-content: center; margin: 20px 0;">
-                        {!! QrCode::size(120)->generate(url('/certificates/' . $attempt->serial)) !!}
+                        @php
+                            $qrRender = null; $qrError = null; $certUrl = url('/certificates/' . $attempt->serial);
+                            try {
+                                if (class_exists('SimpleSoftwareIO\\QrCode\\Facades\\QrCode')) {
+                                    $qrRender = SimpleSoftwareIO\QrCode\Facades\QrCode::size(120)->generate($certUrl);
+                                }
+                            } catch (\Throwable $e) { $qrError = $e->getMessage(); }
+                        @endphp
+                        @if($qrRender)
+                            {!! $qrRender !!}
+                        @else
+                            <div style="text-align:center;">
+                                <div style="font-size:12px;color:#6c757d;margin-bottom:6px;">QR unavailable</div>
+                                <div style="font-family:monospace;font-size:11px;word-break:break-all;max-width:240px;">{{ $certUrl }}</div>
+                                @if($qrError)
+                                    <div style="color:#dc3545;font-size:11px;margin-top:4px;">{{ Str::limit($qrError, 80) }}</div>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 </div>
                 
