@@ -18,6 +18,15 @@ class CertificationController extends Controller
     public function index(Request $request)
     {
         try {
+            // DIAGNOSTIC: verify runtime DB connection + question visibility (temporary)
+            try {
+                $conn = config('database.default');
+                $driver = config('database.connections.'.$conn.'.driver');
+                $questionTotal = PMQuestion::count();
+                Log::warning('[CERT DIAG] index boot: db_default='.$conn.' driver='.$driver.' question_total='.$questionTotal);
+            } catch (\Throwable $e) {
+                Log::error('[CERT DIAG] failed to gather initial diagnostics: '.$e->getMessage());
+            }
             // Check for existing completed certification
             $latestCompleted = CertificationAttempt::where('user_id',$request->user()->id)
                 ->whereNotNull('completed_at')
@@ -63,12 +72,23 @@ class CertificationController extends Controller
             
             // If no attempt exists, show intro page
             if (!$attempt) {
+                $projectMgmtCount = PMQuestion::where('category','project_management')->count();
+                if ($projectMgmtCount === 0) {
+                    // Hard guard: no questions visible to web dyno -> configuration / connection mismatch
+                    Log::error('[CERT DIAG] No project_management questions visible in web dyno context. Suggest config:clear & migrate --seed.');
+                }
                 return Inertia::render('Certification/Intro', [
                     'attempt' => null,
-                    'totalQuestions' => min(15, PMQuestion::where('category','project_management')->count()),
+                    'totalQuestions' => min(15, $projectMgmtCount),
                     'theoryDurationMinutes' => 20,
                     'practicalEstimatedMinutes' => 10,
                     'passingScore' => 70,
+                    'diag' => [
+                        'db' => config('database.default'),
+                        'question_total' => PMQuestion::count(),
+                        'project_mgmt_total' => $projectMgmtCount,
+                    ],
+                    'diagWarning' => $projectMgmtCount === 0 ? 'No certification questions found on server. Please run migrations & seed or clear config cache.' : null,
                 ]);
             }
 
@@ -86,12 +106,20 @@ class CertificationController extends Controller
 
             // Intro gate: if no answers yet and no active start timestamp -> show intro page
             if ($attempt->phase === 'pm_concepts' && $answeredSoFar === 0 && !isset($meta['pm_concepts_started_at'])) {
+                $projectMgmtCount = PMQuestion::where('category','project_management')->count();
                 return Inertia::render('Certification/Intro', [
                     'attempt' => $attempt,
-                    'totalQuestions' => min(15, PMQuestion::where('category','project_management')->count()),
+                    'totalQuestions' => min(15, $projectMgmtCount),
                     'theoryDurationMinutes' => 20,
                     'practicalEstimatedMinutes' => 10,
                     'passingScore' => 70,
+                    'diag' => [
+                        'db' => config('database.default'),
+                        'question_total' => PMQuestion::count(),
+                        'project_mgmt_total' => $projectMgmtCount,
+                        'selected_question_ids' => $attempt->selected_question_ids,
+                    ],
+                    'diagWarning' => $projectMgmtCount === 0 ? 'No certification questions found on server. Please run migrations & seed or clear config cache.' : null,
                 ]);
             }
 
@@ -535,11 +563,13 @@ class CertificationController extends Controller
             
             // If this is a new attempt (no answered questions), select a mixed set (MC + Free Form)
             if (empty($answeredQuestionIds)) {
-                // General project management pool category. Treat NULL is_active as active for legacy seeded rows.
-                $baseQuery = PMQuestion::where('category','project_management')
-                    ->where(function($q){
+                // Broad pool: include all categories (production data may have different category labels or NULL)
+                // Treat NULL is_active as active for legacy seeded rows.
+                $baseQuery = PMQuestion::where(function($q){
                         $q->where('is_active', true)->orWhereNull('is_active');
                     });
+                $totalAvailable = (clone $baseQuery)->count();
+                Log::info('Question pool total (all categories): '.$totalAvailable);
 
                 // Fetch by type
                 // Broaden selection: some seeds may store type variants like 'mc', 'multiple', etc.
@@ -571,11 +601,17 @@ class CertificationController extends Controller
                     $selected = array_merge($selected, $backfill);
                 }
 
-                // Absolute fallback: if still empty, pull any questions from category ignoring is_active & type filters
+                // Absolute fallback 1: any questions (ignoring category & type filters already removed)
                 if (empty($selected)) {
-                    $fallback = PMQuestion::where('category','project_management')->inRandomOrder()->limit($targetTotal)->pluck('id')->toArray();
+                    $fallback = PMQuestion::inRandomOrder()->limit($targetTotal)->pluck('id')->toArray();
                     Log::warning('Fallback question selection engaged; original filtered set empty.', ['fallback_ids' => $fallback]);
                     $selected = $fallback;
+                }
+                // Absolute fallback 2: if STILL empty, try without limit just to detect existence
+                if (empty($selected)) {
+                    $allIds = PMQuestion::pluck('id')->toArray();
+                    Log::error('Fallback level 2 engaged: still no questions. allIds count='.count($allIds));
+                    $selected = array_slice($allIds,0,15);
                 }
 
                 // If STILL empty, return null (controller will interpret as no questions configured)
