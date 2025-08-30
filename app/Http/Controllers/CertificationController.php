@@ -55,10 +55,22 @@ class CertificationController extends Controller
                     'canRetake' => true, // Always allow retake for older certificates
                 ]);
             }
-            $attempt = CertificationAttempt::firstOrCreate(
-                ['user_id' => $request->user()->id, 'phase' => 'pm_concepts'],
-                ['current_step' => 1, 'total_score' => 0, 'max_possible_score' => 0]
-            );
+            
+            // Check for existing attempt BEFORE creating one
+            $attempt = CertificationAttempt::where('user_id', $request->user()->id)
+                ->where('phase', 'pm_concepts')
+                ->first();
+            
+            // If no attempt exists, show intro page
+            if (!$attempt) {
+                return Inertia::render('Certification/Intro', [
+                    'attempt' => null,
+                    'totalQuestions' => min(15, PMQuestion::where('category','project_management')->count()),
+                    'theoryDurationMinutes' => 20,
+                    'practicalEstimatedMinutes' => 10,
+                    'passingScore' => 70,
+                ]);
+            }
 
             $answeredSoFar = CertificationAnswer::where('certification_attempt_id', $attempt->id)->count();
             $meta = $attempt->meta ?? [];
