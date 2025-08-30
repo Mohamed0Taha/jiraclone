@@ -1318,13 +1318,21 @@ class CertificationController extends Controller
      */
     public function certificateOgImage($serial)
     {
-        $attempt = CertificationAttempt::where('serial',$serial)->firstOrFail();
-        $user = $attempt->user;
-        
-        // Generate a simple OG image using GD or return a pre-made template
-        $width = 1200;
-        $height = 630;
-        $image = imagecreatetruecolor($width, $height);
+        try {
+            $attempt = CertificationAttempt::where('serial',$serial)->firstOrFail();
+            $user = $attempt->user;
+        } catch (\Throwable $e) {
+            \Log::error('[CERT OG] Attempt lookup failed: '.$e->getMessage());
+            return response('Not found',404);
+        }
+        if (!function_exists('imagecreatetruecolor')) {
+            \Log::error('[CERT OG] GD not available on server.');
+            return response()->json(['error'=>'GD extension missing'],500);
+        }
+        try {
+            // Generate a simple OG image using GD or return a pre-made template
+            $width = 1200; $height = 630;
+            $image = imagecreatetruecolor($width, $height);
         
         // Colors
         $white = imagecolorallocate($image, 255, 255, 255);
@@ -1367,8 +1375,13 @@ class CertificationController extends Controller
         
         header('Content-Type: image/png');
         header('Cache-Control: public, max-age=31536000');
-        imagepng($image);
-        imagedestroy($image);
+            imagepng($image);
+            imagedestroy($image);
+            return response()->noContent(); // already sent
+        } catch (\Throwable $e) {
+            \Log::error('[CERT OG] Render failure: '.$e->getMessage());
+            return response()->json(['error'=>'OG generation failed'],500);
+        }
     }
 
     /**
@@ -1376,12 +1389,22 @@ class CertificationController extends Controller
      */
     public function badgeOgImage($serial)
     {
-        $attempt = CertificationAttempt::where('serial',$serial)->firstOrFail();
-        $user = $attempt->user;
+        try {
+            $attempt = CertificationAttempt::where('serial',$serial)->firstOrFail();
+            $user = $attempt->user;
+        } catch (\Throwable $e) {
+            \Log::error('[BADGE OG] Attempt lookup failed: '.$e->getMessage());
+            return response('Not found',404);
+        }
+        if (!function_exists('imagecreatetruecolor')) {
+            \Log::error('[BADGE OG] GD not available on server.');
+            return response()->json(['error'=>'GD extension missing'],500);
+        }
         
-        // Generate a badge-style OG image
-        $size = 630;
-        $image = imagecreatetruecolor($size, $size);
+        try {
+            // Generate a badge-style OG image
+            $size = 630;
+            $image = imagecreatetruecolor($size, $size);
         
         // Colors
         $gold = imagecolorallocate($image, 212, 175, 55);
@@ -1419,7 +1442,12 @@ class CertificationController extends Controller
         
         header('Content-Type: image/png');
         header('Cache-Control: public, max-age=31536000');
-        imagepng($image);
-        imagedestroy($image);
+            imagepng($image);
+            imagedestroy($image);
+            return response()->noContent();
+        } catch (\Throwable $e) {
+            \Log::error('[BADGE OG] Render failure: '.$e->getMessage());
+            return response()->json(['error'=>'OG generation failed'],500);
+        }
     }
 }
