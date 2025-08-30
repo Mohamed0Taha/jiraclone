@@ -125,6 +125,35 @@
                 This certificate can be verified at taskpilot.us/verify/{{ $attempt->serial }}
             </div>
         </div>
+        
+        <div style="margin-top: 30px; text-align: center;">
+            <button onclick="shareOnLinkedIn()" style="
+                background: #0077b5; 
+                color: white; 
+                border: none; 
+                padding: 12px 24px; 
+                border-radius: 6px; 
+                font-size: 16px; 
+                cursor: pointer; 
+                font-weight: bold;
+                box-shadow: 0 2px 4px rgba(0,119,181,0.3);
+                transition: all 0.3s;
+            " onmouseover="this.style.background='#005885'" onmouseout="this.style.background='#0077b5'">
+                📱 Share on LinkedIn
+            </button>
+        </div>
+        
+        <script>
+        function shareOnLinkedIn() {
+            const certificationTitle = 'TaskPilot Product Certification Program';
+            const issuer = 'TaskPilot';
+            const shareText = encodeURIComponent(`🎉 Excited to share that I've earned my ${certificationTitle} certification! I've demonstrated proficiency in project management, task automation, team collaboration, and advanced TaskPilot platform features.`);
+            const shareUrl = encodeURIComponent(window.location.origin + '/certification/certificate');
+            
+            const linkedInShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}&summary=${shareText}`;
+            window.open(linkedInShareUrl, '_blank', 'width=600,height=600');
+        }
+        </script>
     </div>
 </body>
 </html>

@@ -447,12 +447,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                 <Person />
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography
-                    variant="subtitle1"
-                    fontWeight={800}
-                    sx={{ lineHeight: 1.1 }}
-                    noWrap
-                >
+                <Typography variant="subtitle1" fontWeight={800} sx={{ lineHeight: 1.1 }} noWrap>
                     Team Members
                 </Typography>
                 <Typography
@@ -493,9 +488,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                         }
                         sx={{
                             color:
-                                designVariant === 'compact'
-                                    ? theme.palette.primary.main
-                                    : 'white',
+                                designVariant === 'compact' ? theme.palette.primary.main : 'white',
                             '&:hover': {
                                 bgcolor:
                                     designVariant === 'compact'
@@ -550,7 +543,11 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                 {memberLimit != null && memberUsed != null && (
                     <Stack spacing={1.2} sx={{ mb: 3 }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Typography variant="caption" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            <Typography
+                                variant="caption"
+                                fontWeight={700}
+                                sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}
+                            >
                                 Usage
                             </Typography>
                             <Chip
@@ -623,7 +620,11 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                             size="small"
                             disabled={loading || atLimit}
                         />
-                        <FormControl sx={{ minWidth: 140 }} size="small" disabled={loading || atLimit}>
+                        <FormControl
+                            sx={{ minWidth: 140 }}
+                            size="small"
+                            disabled={loading || atLimit}
+                        >
                             <InputLabel>Role</InputLabel>
                             <Select
                                 value={role}
@@ -665,12 +666,22 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                     <Typography variant="subtitle1" fontWeight={700}>
                         Current Members
                     </Typography>
-                    <Chip label={members.length} size="small" variant="outlined" sx={{ fontWeight: 600, height: 22 }} />
+                    <Chip
+                        label={members.length}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontWeight: 600, height: 22 }}
+                    />
                 </Stack>
                 {members.length === 0 ? (
                     <Paper
                         variant="outlined"
-                        sx={{ p: 4, textAlign: 'center', borderRadius: 4, background: alpha(theme.palette.primary.light, 0.04) }}
+                        sx={{
+                            p: 4,
+                            textAlign: 'center',
+                            borderRadius: 4,
+                            background: alpha(theme.palette.primary.light, 0.04),
+                        }}
                     >
                         <Avatar
                             sx={{
@@ -729,7 +740,9 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                                 height: 46,
                                             }}
                                         >
-                                            {member.name?.charAt(0) || member.email?.charAt(0) || 'U'}
+                                            {member.name?.charAt(0) ||
+                                                member.email?.charAt(0) ||
+                                                'U'}
                                         </Avatar>
                                         <Box sx={{ flex: 1, minWidth: 0 }}>
                                             <Stack
@@ -753,19 +766,41 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                                     sx={{ fontWeight: 600 }}
                                                 />
                                                 {isOwnerFlag && (
-                                                    <Chip label="owner" size="small" color="warning" sx={{ fontWeight: 600 }} />
+                                                    <Chip
+                                                        label="owner"
+                                                        size="small"
+                                                        color="warning"
+                                                        sx={{ fontWeight: 600 }}
+                                                    />
                                                 )}
-                                                <Chip label="Active" size="small" color="success" variant="outlined" />
+                                                <Chip
+                                                    label="Active"
+                                                    size="small"
+                                                    color="success"
+                                                    variant="outlined"
+                                                />
                                             </Stack>
-                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }} noWrap>
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ mb: 0.5 }}
+                                                noWrap
+                                            >
                                                 {member.email}
                                             </Typography>
                                             {member?.pivot?.joined_at && (
-                                                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                    sx={{ mb: 1, display: 'block' }}
+                                                >
                                                     Joined {formatDate(member.pivot.joined_at)}
                                                 </Typography>
                                             )}
-                                            <AuthorizationChips member={member} isOwnerFlag={isOwnerFlag} />
+                                            <AuthorizationChips
+                                                member={member}
+                                                isOwnerFlag={isOwnerFlag}
+                                            />
                                         </Box>
                                         <Box>
                                             {!isOwnerFlag && (
@@ -796,7 +831,13 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                             <Typography variant="subtitle1" fontWeight={700}>
                                 Pending Invitations
                             </Typography>
-                            <Chip label={invitations.length} size="small" variant="outlined" color="warning" sx={{ fontWeight: 600, height: 22 }} />
+                            <Chip
+                                label={invitations.length}
+                                size="small"
+                                variant="outlined"
+                                color="warning"
+                                sx={{ fontWeight: 600, height: 22 }}
+                            />
                         </Stack>
                         <List>
                             {invitations.map((invitation) => (
@@ -814,12 +855,27 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                             position: 'relative',
                                         }}
                                     >
-                                        <Avatar sx={{ bgcolor: theme.palette.warning.main, width: 46, height: 46 }}>
+                                        <Avatar
+                                            sx={{
+                                                bgcolor: theme.palette.warning.main,
+                                                width: 46,
+                                                height: 46,
+                                            }}
+                                        >
                                             <Email />
                                         </Avatar>
                                         <Box sx={{ flex: 1 }}>
-                                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5, flexWrap: 'wrap' }}>
-                                                <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.1 }}>
+                                            <Stack
+                                                direction="row"
+                                                spacing={1}
+                                                alignItems="center"
+                                                sx={{ mb: 0.5, flexWrap: 'wrap' }}
+                                            >
+                                                <Typography
+                                                    variant="subtitle1"
+                                                    fontWeight={700}
+                                                    sx={{ lineHeight: 1.1 }}
+                                                >
                                                     {invitation.email}
                                                 </Typography>
                                                 <Chip
@@ -827,21 +883,40 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                                     label="Pending"
                                                     size="small"
                                                     color="warning"
-                                                    sx={{ fontWeight: 600, animation: 'pulse 2s infinite', '@keyframes pulse': { '0%': { opacity: 1 }, '50%': { opacity: 0.65 }, '100%': { opacity: 1 } } }}
+                                                    sx={{
+                                                        fontWeight: 600,
+                                                        animation: 'pulse 2s infinite',
+                                                        '@keyframes pulse': {
+                                                            '0%': { opacity: 1 },
+                                                            '50%': { opacity: 0.65 },
+                                                            '100%': { opacity: 1 },
+                                                        },
+                                                    }}
                                                 />
                                                 {invitation.role && (
-                                                    <Chip label={invitation.role} size="small" variant="outlined" />
+                                                    <Chip
+                                                        label={invitation.role}
+                                                        size="small"
+                                                        variant="outlined"
+                                                    />
                                                 )}
                                             </Stack>
-                                            <Typography variant="caption" color="warning.main" sx={{ fontWeight: 500, mb: 1, display: 'block' }}>
-                                                📧 Sent {formatDate(invitation.created_at)} • ⏰ Expires {formatDate(invitation.expires_at)}
+                                            <Typography
+                                                variant="caption"
+                                                color="warning.main"
+                                                sx={{ fontWeight: 500, mb: 1, display: 'block' }}
+                                            >
+                                                📧 Sent {formatDate(invitation.created_at)} • ⏰
+                                                Expires {formatDate(invitation.expires_at)}
                                             </Typography>
                                             <InvitationPermissionPreview invitation={invitation} />
                                         </Box>
                                         <Box>
                                             <Tooltip title="Cancel invitation">
                                                 <IconButton
-                                                    onClick={() => handleCancelInvitation(invitation.id)}
+                                                    onClick={() =>
+                                                        handleCancelInvitation(invitation.id)
+                                                    }
                                                     color="error"
                                                     disabled={loading}
                                                     size="small"
@@ -859,7 +934,11 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
             </DialogContent>
 
             <DialogActions sx={{ px: 2.5, pb: 1.5 }}>
-                <Button onClick={onClose} sx={{ textTransform: 'none', fontWeight: 600 }} size="small">
+                <Button
+                    onClick={onClose}
+                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                    size="small"
+                >
                     Close
                 </Button>
             </DialogActions>

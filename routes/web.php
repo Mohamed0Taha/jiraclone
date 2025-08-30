@@ -230,10 +230,74 @@ Route::post('/email/verification-notification', function (Request $request) {
 */
 Route::middleware(['auth'])->group(function () {
     Route::get('/certification', [CertificationController::class, 'index'])->name('certification.index');
-    Route::post('/certification/progress', [CertificationController::class, 'progress'])->name('certification.progress');
+    Route::post('/certification/answer', [CertificationController::class, 'submitAnswer'])->name('certification.answer');
+    Route::get('/certification/answer', function(){ return redirect()->route('certification.index'); });
+    Route::post('/certification/previous', [CertificationController::class, 'previousQuestion'])->name('certification.previous');
+    Route::post('/certification/start-practical', [CertificationController::class, 'startPracticalScenario'])->name('certification.start-practical');
+    Route::post('/certification/begin', [CertificationController::class, 'begin'])->name('certification.begin');
+    Route::get('/certification/practical', [CertificationController::class, 'practicalScenario'])->name('certification.practical');
+    Route::post('/certification/practical', [CertificationController::class, 'submitPractical'])->name('certification.practical.submit');
+    Route::get('/certification/results', [CertificationController::class, 'results'])->name('certification.results');
+    Route::post('/certification/generate-simulation', [CertificationController::class, 'generateSimulation'])->name('certification.generate-simulation');
+    Route::post('/certification/reset', [CertificationController::class, 'reset'])->name('certification.reset');
+    Route::get('/certification/reset', [CertificationController::class, 'reset'])->name('certification.reset.get');
     Route::post('/certification/complete', [CertificationController::class, 'complete'])->name('certification.complete');
     Route::get('/certification/certificate', [CertificationController::class, 'certificate'])->name('certification.certificate');
+    Route::get('/certification/badge', [CertificationController::class, 'badge'])->name('certification.badge');
+    Route::post('/certification/time-up', [CertificationController::class, 'timeUp'])->name('certification.timeup');
+    
+    // Project Management Simulator
+    Route::get('/simulator', function (\Illuminate\Http\Request $request) {
+        $payload = $request->session()->get('simulator_payload');
+        return Inertia::render('Simulator/Index', [
+            'simulation' => $payload,
+        ]);
+    })->name('simulator.index');
+    
+    // Testing bypass route for development
+    Route::get('/certification/bypass-to-practical', function(Request $request) {
+        $attempt = \App\Models\CertificationAttempt::firstOrCreate(
+            ['user_id' => $request->user()->id],
+            ['phase' => 'pm_concepts', 'current_step' => 1, 'total_score' => 0, 'max_possible_score' => 0]
+        );
+        
+        // Force the attempt to have a high score for testing
+        $attempt->update([
+            'phase' => 'practical_scenario', 
+            'total_score' => 100, 
+            'max_possible_score' => 100, 
+            'percentage' => 100.0
+        ]);
+        
+        return redirect()->route('certification.practical-scenario')
+            ->with('certification_mode', true)
+            ->with('certification_attempt_id', $attempt->id)
+            ->with('message', 'Testing bypass - Proceeding to practical scenario!');
+    })->name('certification.bypass');
+
+    // Local only: fully pass certification and jump to simulator
+    if (app()->environment('local')) {
+        Route::get('/certification/dev-force-pass', [CertificationController::class, 'devForcePass'])->name('certification.dev.force');
+        // Dev helper: wipe attempts (GET added for convenience in local env)
+        Route::match(['get','delete'],'/certification/dev-wipe', [CertificationController::class, 'devWipeAttempts'])->name('certification.dev.wipe');
+    }
+    
+    // Removed Virtual Project Simulation Routes - no longer needed
+    // All virtual project related routes have been removed as the feature is deprecated
+    
+    // Add new practical scenario route for certification
 });
+
+// Public certificate access + verification (no auth required)
+Route::get('/verify/{serial}', [CertificationController::class, 'verifyPublic'])->name('certification.verify.public');
+Route::get('/certificates/{serial}', [CertificationController::class, 'publicCertificate'])->name('certification.public.certificate');
+Route::get('/certificates/{serial}/badge', [CertificationController::class, 'publicBadge'])->name('certification.public.badge');
+// HD downloadable images (server-side rendered to JPEG)
+Route::get('/certificates/{serial}/download.jpg', [CertificationController::class, 'downloadCertificateJpeg'])->name('certification.public.certificate.download');
+Route::get('/certificates/{serial}/badge/download.jpg', [CertificationController::class, 'downloadBadgeJpeg'])->name('certification.public.badge.download');
+// Open Graph images for social sharing
+Route::get('/certificates/{serial}/download/og-image', [CertificationController::class, 'certificateOgImage'])->name('certification.public.certificate.og');
+Route::get('/certificates/{serial}/badge/download/og-image', [CertificationController::class, 'badgeOgImage'])->name('certification.public.badge.og');
 
 /*
 |--------------------------------------------------------------------------

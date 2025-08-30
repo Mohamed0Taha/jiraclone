@@ -12,18 +12,8 @@ let CssBaseline = React.Fragment;
 let CircularProgress = () => <div>Loading...</div>;
 let theme = null;
 
-try {
-    // eslint-disable-next-line import/extensions
-    theme = (await import('./theme')).default;
-    ({ ThemeProvider, CssBaseline, CircularProgress } = await import('@mui/material'));
-} catch (err) {
-    console.warn(
-        '⚠️  MUI theme not applied:',
-        err.message,
-        '\nRun `npm i @mui/material @mui/icons-material @emotion/react @emotion/styled` ' +
-            'and ensure resources/js/theme.js exists.'
-    );
-}
+// Removed Material-UI theme loading to avoid 404 errors
+console.log('Material-UI theme disabled for simulator');
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

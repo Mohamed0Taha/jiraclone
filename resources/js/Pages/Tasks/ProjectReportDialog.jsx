@@ -84,7 +84,7 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
                     'X-Requested-With': 'XMLHttpRequest',
                 },
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 setQuota(data.reports);
@@ -294,11 +294,20 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
 
                 {quota && (
                     <Box sx={{ mt: 1.5 }}>
-                        <Alert severity={noRemaining ? 'warning' : 'info'} sx={{ alignItems: 'center' }}>
+                        <Alert
+                            severity={noRemaining ? 'warning' : 'info'}
+                            sx={{ alignItems: 'center' }}
+                        >
                             {noRemaining ? (
-                                <><strong>Report quota reached.</strong> You've used {used} of {limit} this period. Upgrade your plan to unlock more reports.</>
+                                <>
+                                    <strong>Report quota reached.</strong> You've used {used} of{' '}
+                                    {limit} this period. Upgrade your plan to unlock more reports.
+                                </>
                             ) : (
-                                <>Reports remaining this period: <strong>{remaining}</strong> (used {used} of {limit}).</>
+                                <>
+                                    Reports remaining this period: <strong>{remaining}</strong>{' '}
+                                    (used {used} of {limit}).
+                                </>
                             )}
                         </Alert>
                     </Box>
@@ -315,7 +324,11 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
                         startIcon={<AutoAwesomeIcon />}
                         sx={{ textTransform: 'none', fontWeight: 800, px: 2.2 }}
                     >
-                        {loading ? 'Generating…' : noRemaining ? 'Quota Reached' : 'Generate AI Report'}
+                        {loading
+                            ? 'Generating…'
+                            : noRemaining
+                              ? 'Quota Reached'
+                              : 'Generate AI Report'}
                     </Button>
                 ) : (
                     <Stack direction="row" spacing={1}>

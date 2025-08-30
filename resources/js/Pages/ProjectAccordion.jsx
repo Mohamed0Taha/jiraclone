@@ -65,7 +65,7 @@ const ORDER = ['todo', 'inprogress', 'review', 'done'];
 
 export default function ProjectAccordion({ project, ownership, rowSx = {}, onDelete, endActions }) {
     const theme = useTheme();
-    
+
     // Determine ownership colors
     const isOwner = ownership === 'owner';
     const ownershipColor = isOwner ? theme.palette.primary.main : theme.palette.secondary.main;
@@ -125,7 +125,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                     alignItems: 'center',
                     gap: 0.6,
                     lineHeight: 1,
-                    background: alpha(meta.accent, 0.10),
+                    background: alpha(meta.accent, 0.1),
                     border: `1px solid ${alpha(meta.accent, 0.35)}`,
                     boxShadow: `0 1px 2px ${alpha(meta.accent, 0.18)} inset`,
                     flexShrink: 0,
@@ -223,8 +223,9 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                 overflow: 'hidden',
                 position: 'relative',
                 border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
-                background: theme.palette.mode === 'light' 
-                    ? `linear-gradient(135deg, 
+                background:
+                    theme.palette.mode === 'light'
+                        ? `linear-gradient(135deg, 
                         rgba(255,255,255,0.95) 0%, 
                         rgba(255,255,255,0.85) 100%
                       ), 
@@ -232,7 +233,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                         ${alpha(theme.palette.primary.main, 0.03)} 0%, 
                         transparent 50%
                       )`
-                    : `linear-gradient(135deg, 
+                        : `linear-gradient(135deg, 
                         ${alpha(theme.palette.background.paper, 0.95)} 0%, 
                         ${alpha(theme.palette.background.paper, 0.85)} 100%
                       )`,
@@ -271,7 +272,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                             transparent
                         )`,
                         height: '2px',
-                    }
+                    },
                 },
                 '&.Mui-expanded': {
                     '&::before': {
@@ -281,22 +282,22 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                             ${theme.palette.primary.main}
                         )`,
                         height: '3px',
-                    }
+                    },
                 },
                 ...rowSx,
             }}
         >
             <AccordionSummary
                 expandIcon={
-                    <ExpandMoreRoundedIcon 
-                        sx={{ 
+                    <ExpandMoreRoundedIcon
+                        sx={{
                             color: theme.palette.text.secondary,
                             transition: 'all 0.3s ease',
                             '&:hover': {
                                 color: theme.palette.primary.main,
                                 transform: 'scale(1.1)',
-                            }
-                        }} 
+                            },
+                        }}
                     />
                 }
                 sx={{
@@ -316,14 +317,14 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                         color: theme.palette.text.secondary,
                         '&.Mui-expanded': {
                             color: theme.palette.primary.main,
-                        }
+                        },
                     },
                     '&:hover': {
                         background: `linear-gradient(135deg, 
                             ${alpha(theme.palette.primary.main, 0.04)} 0%, 
                             ${alpha(theme.palette.secondary.main, 0.02)} 100%
                         )`,
-                    }
+                    },
                 }}
             >
                 {/* Project name interactive element styled like a button (avoid nested button) */}
@@ -366,10 +367,10 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                     >
                         {project.name}
                     </Typography>
-                    <Chip 
-                        size="small" 
-                        label={isOwner ? "OWNER" : "COLLABORATOR"}
-                        sx={{ 
+                    <Chip
+                        size="small"
+                        label={isOwner ? 'OWNER' : 'COLLABORATOR'}
+                        sx={{
                             ml: 1.5,
                             height: 20,
                             fontWeight: 700,
@@ -380,8 +381,8 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                             border: `1px solid ${alpha(ownershipColor, 0.25)}`,
                             '& .MuiChip-label': {
                                 px: 1,
-                            }
-                        }} 
+                            },
+                        }}
                     />
                 </Box>
 

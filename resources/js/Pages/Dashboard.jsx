@@ -48,13 +48,15 @@ const designTokens = {
         md: 6,
     },
     gradients: (theme) => ({
-        hero: theme.palette.mode === 'dark' 
-            ? `linear-gradient(135deg, #1a1b3a 0%, #2d1b69 50%, #4338ca 100%)`
-            : `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`,
+        hero:
+            theme.palette.mode === 'dark'
+                ? `linear-gradient(135deg, #1a1b3a 0%, #2d1b69 50%, #4338ca 100%)`
+                : `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`,
         accent: `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`,
-        card: theme.palette.mode === 'dark'
-            ? `linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)`
-            : `linear-gradient(145deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)`,
+        card:
+            theme.palette.mode === 'dark'
+                ? `linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)`
+                : `linear-gradient(145deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)`,
         stats: `linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)`,
     }),
     blur: {
@@ -67,7 +69,7 @@ const designTokens = {
         soft: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
         medium: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
         elevated: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    }
+    },
 };
 
 // Enhanced row color generator with more vibrant palette
@@ -95,7 +97,7 @@ const useRowColor = () => {
             return {
                 bgcolor: colors.bg,
                 transition: 'background-color .3s ease, transform .3s ease, box-shadow .3s ease',
-                '&:hover': { 
+                '&:hover': {
                     bgcolor: colors.hover,
                     transform: 'translateY(-2px)',
                     boxShadow: designTokens.shadows.soft,
@@ -120,7 +122,7 @@ export default function Dashboard({ auth, projects }) {
     const [viewMode, setViewMode] = useState('list');
     const [isClient, setIsClient] = useState(false);
     const [stars, setStars] = useState([]); // regenerated each "beat"
-    const [orbs, setOrbs] = useState([]);   // smooth shifting circular lights
+    const [orbs, setOrbs] = useState([]); // smooth shifting circular lights
     const STAR_REGEN_INTERVAL = 7000; // ms (visual beat)
     const [scope, setScope] = useState('all'); // 'all' | 'owned'
 
@@ -141,16 +143,16 @@ export default function Dashboard({ auth, projects }) {
                 size: 1.5 + Math.random() * 3.5,
                 delay: +(Math.random() * 2).toFixed(2),
                 duration: 6 + Math.random() * 10,
-                driftX: (Math.random() * 60 - 30),
-                driftY: (Math.random() * 40 - 20),
+                driftX: Math.random() * 60 - 30,
+                driftY: Math.random() * 40 - 20,
                 twinkleOffset: Math.random(),
             }));
             setStars(newStars);
 
             const newOrbs = Array.from({ length: ORB_COUNT }, (_, i) => ({
                 id: i,
-                top: Math.random() * 60 + (i * 10),
-                left: Math.random() * 70 + (i * 5),
+                top: Math.random() * 60 + i * 10,
+                left: Math.random() * 70 + i * 5,
                 size: 140 + Math.random() * 120,
                 duration: 30 + Math.random() * 25,
                 opacity: 0.25 + Math.random() * 0.25,
@@ -188,13 +190,13 @@ export default function Dashboard({ auth, projects }) {
         if (!Array.isArray(projects)) return { ownedProjects: [], memberProjects: [] };
 
         // Separate projects by ownership first
-        const owned = projects.filter(p => p.is_owner);
-        const member = projects.filter(p => !p.is_owner);
+        const owned = projects.filter((p) => p.is_owner);
+        const member = projects.filter((p) => !p.is_owner);
 
         // Apply filtering to both groups
         const filterProjects = (projectList) => {
             if (!query.trim()) return projectList;
-            
+
             const q = query.toLowerCase();
             return projectList.filter((project) => {
                 const { name = '', key = '', description = '', owner = {} } = project;
@@ -211,9 +213,13 @@ export default function Dashboard({ auth, projects }) {
         const sortProjects = (projectList) => {
             switch (sort) {
                 case 'name_asc':
-                    return [...projectList].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                    return [...projectList].sort((a, b) =>
+                        (a.name || '').localeCompare(b.name || '')
+                    );
                 case 'name_desc':
-                    return [...projectList].sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+                    return [...projectList].sort((a, b) =>
+                        (b.name || '').localeCompare(a.name || '')
+                    );
                 case 'recent':
                 default:
                     return [...projectList].sort((a, b) => {
@@ -227,7 +233,7 @@ export default function Dashboard({ auth, projects }) {
 
         return {
             ownedProjects: sortProjects(filterProjects(owned)),
-            memberProjects: sortProjects(filterProjects(member))
+            memberProjects: sortProjects(filterProjects(member)),
         };
     }, [projects, query, sort]);
 
@@ -241,21 +247,24 @@ export default function Dashboard({ auth, projects }) {
     const stats = useMemo(() => {
         const aggregate = { totalTasks: 0, doneTasks: 0 };
         const all = Array.isArray(projects) ? projects : [];
-        all.forEach(p => {
+        all.forEach((p) => {
             if (!p || !p.tasks) return;
             if (Array.isArray(p.tasks)) {
                 aggregate.totalTasks += p.tasks.length;
-                aggregate.doneTasks += p.tasks.filter(t => t.status === 'done').length;
+                aggregate.doneTasks += p.tasks.filter((t) => t.status === 'done').length;
             } else if (typeof p.tasks === 'object') {
                 const buckets = Object.values(p.tasks).filter(Array.isArray);
-                buckets.forEach(arr => {
+                buckets.forEach((arr) => {
                     aggregate.totalTasks += arr.length;
                 });
                 const doneArr = p.tasks.done;
                 if (Array.isArray(doneArr)) aggregate.doneTasks += doneArr.length;
             }
         });
-        const completion = aggregate.totalTasks === 0 ? 0 : Math.round((aggregate.doneTasks / aggregate.totalTasks) * 100);
+        const completion =
+            aggregate.totalTasks === 0
+                ? 0
+                : Math.round((aggregate.doneTasks / aggregate.totalTasks) * 100);
         return {
             owned: ownedProjects.length,
             shared: memberProjects.length,
@@ -270,32 +279,35 @@ export default function Dashboard({ auth, projects }) {
     }, []);
 
     // Create stats items with actual color values
-    const statsItems = useMemo(() => [
-        { 
-            label: 'Owned', 
-            value: stats.owned, 
-            color: theme.palette.primary.main, 
-            icon: <StarIcon /> 
-        },
-        { 
-            label: 'Shared', 
-            value: stats.shared, 
-            color: theme.palette.secondary.main, 
-            icon: <GroupIcon /> 
-        },
-        { 
-            label: 'Tasks', 
-            value: stats.tasks, 
-            color: theme.palette.info.main, 
-            icon: <AutoAwesomeIcon /> 
-        },
-        { 
-            label: 'Completion', 
-            value: `${stats.completion}%`, 
-            color: theme.palette.success.main, 
-            icon: <AdminPanelSettingsIcon /> 
-        },
-    ], [stats, theme.palette]);
+    const statsItems = useMemo(
+        () => [
+            {
+                label: 'Owned',
+                value: stats.owned,
+                color: theme.palette.primary.main,
+                icon: <StarIcon />,
+            },
+            {
+                label: 'Shared',
+                value: stats.shared,
+                color: theme.palette.secondary.main,
+                icon: <GroupIcon />,
+            },
+            {
+                label: 'Tasks',
+                value: stats.tasks,
+                color: theme.palette.info.main,
+                icon: <AutoAwesomeIcon />,
+            },
+            {
+                label: 'Completion',
+                value: `${stats.completion}%`,
+                color: theme.palette.success.main,
+                icon: <AdminPanelSettingsIcon />,
+            },
+        ],
+        [stats, theme.palette]
+    );
 
     // Enhanced hero styles with modern gradient
     const heroStyles = useMemo(() => {
@@ -320,18 +332,21 @@ export default function Dashboard({ auth, projects }) {
             '& .decor-orb': {
                 position: 'absolute',
                 borderRadius: '50%',
-                background: 'radial-gradient(circle at 35% 35%, rgba(255,255,255,0.28), rgba(255,255,255,0))',
+                background:
+                    'radial-gradient(circle at 35% 35%, rgba(255,255,255,0.28), rgba(255,255,255,0))',
                 mixBlendMode: 'overlay',
                 filter: 'blur(8px)',
-                transition: 'top 6s ease, left 6s ease, width 8s ease, height 8s ease, opacity 2s ease',
+                transition:
+                    'top 6s ease, left 6s ease, width 8s ease, height 8s ease, opacity 2s ease',
             },
             '&::before': {
                 content: '""',
                 position: 'absolute',
                 inset: 0,
-                background: theme.palette.mode === 'dark' 
-                    ? 'linear-gradient(135deg, rgba(0,0,0,0.2) 0%, transparent 50%)'
-                    : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%)',
+                background:
+                    theme.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, rgba(0,0,0,0.2) 0%, transparent 50%)'
+                        : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%)',
                 pointerEvents: 'none',
             },
             '&::after': {
@@ -341,19 +356,18 @@ export default function Dashboard({ auth, projects }) {
                 left: '-10%',
                 width: '140%',
                 height: '160%',
-                background: 'radial-gradient(circle at 70% 30%, rgba(255,255,255,0.18), rgba(255,255,255,0) 60%)',
+                background:
+                    'radial-gradient(circle at 70% 30%, rgba(255,255,255,0.18), rgba(255,255,255,0) 60%)',
                 mixBlendMode: 'overlay',
                 animation: 'lightSweep 18s ease-in-out infinite',
-                pointerEvents: 'none'
+                pointerEvents: 'none',
             },
             '@media (prefers-reduced-motion: reduce)': {
                 '& .decor-star, & .decor-orb': { animation: 'none', transition: 'none' },
-                '&::after': { animation: 'none' }
+                '&::after': { animation: 'none' },
             },
         };
     }, [theme]);
-
-
 
     // Enhanced filter styles with subtle elevation
     const filterPaperStyles = useMemo(
@@ -390,12 +404,12 @@ export default function Dashboard({ auth, projects }) {
         <>
             <Head title="Dashboard" />
 
-                        <AuthenticatedLayout user={auth.user}>
+            <AuthenticatedLayout user={auth.user}>
                 {/* Clean Hero Section */}
                 <Box sx={heroStyles}>
                     <Container maxWidth="lg" sx={{ position: 'relative' }}>
                         {/* Dynamic randomized stars (client-side only) */}
-                        {stars.map(star => (
+                        {stars.map((star) => (
                             <Box
                                 key={star.id}
                                 className="decor-star"
@@ -412,7 +426,7 @@ export default function Dashboard({ auth, projects }) {
                                 }}
                             />
                         ))}
-                        {orbs.map(o => (
+                        {orbs.map((o) => (
                             <Box
                                 key={o.id}
                                 className="decor-orb"
@@ -438,7 +452,8 @@ export default function Dashboard({ auth, projects }) {
                                     fontWeight={800}
                                     sx={{
                                         mb: 3,
-                                        background: 'linear-gradient(135deg,#fff 0%,#f2f5ff 45%,#ffffff 80%)',
+                                        background:
+                                            'linear-gradient(135deg,#fff 0%,#f2f5ff 45%,#ffffff 80%)',
                                         backgroundClip: 'text',
                                         WebkitBackgroundClip: 'text',
                                         WebkitTextFillColor: 'transparent',
@@ -446,7 +461,8 @@ export default function Dashboard({ auth, projects }) {
                                         letterSpacing: '-0.025em',
                                         lineHeight: 1.05,
                                         position: 'relative',
-                                        textShadow: '0 0 14px rgba(255,255,255,0.6), 0 0 38px rgba(120,160,255,0.35)',
+                                        textShadow:
+                                            '0 0 14px rgba(255,255,255,0.6), 0 0 38px rgba(120,160,255,0.35)',
                                         // Removed all ::after shimmer/rectangle
                                     }}
                                 >
@@ -461,10 +477,11 @@ export default function Dashboard({ auth, projects }) {
                                         fontSize: { xs: '1.1rem', md: '1.25rem' },
                                         lineHeight: 1.6,
                                         textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                        mb: 2
+                                        mb: 2,
                                     }}
                                 >
-                                    Orchestrate your ideas into reality. Create, collaborate, and achieve extraordinary results.
+                                    Orchestrate your ideas into reality. Create, collaborate, and
+                                    achieve extraordinary results.
                                 </Typography>
                                 {/* Scope Toggle (positioned under subtitle) */}
                                 <Stack direction="row" spacing={1.5} sx={{ mb: { xs: 3, md: 0 } }}>
@@ -477,19 +494,30 @@ export default function Dashboard({ auth, projects }) {
                                             borderRadius: 1.5,
                                             fontWeight: 600,
                                             textTransform: 'none',
-                                            background: scope === 'owned' 
-                                                ? `linear-gradient(135deg, ${alpha(theme.palette.primary.light,0.85)}, ${theme.palette.primary.main})`
-                                                : 'rgba(255,255,255,0.06)',
-                                            color: scope === 'owned' ? '#fff' : 'rgba(255,255,255,0.85)',
-                                            boxShadow: scope === 'owned' ? `0 4px 14px ${alpha(theme.palette.primary.main,0.35)}` : 'none',
-                                            borderColor: alpha('#ffffff', scope==='owned'?0.35:0.15),
+                                            background:
+                                                scope === 'owned'
+                                                    ? `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.85)}, ${theme.palette.primary.main})`
+                                                    : 'rgba(255,255,255,0.06)',
+                                            color:
+                                                scope === 'owned'
+                                                    ? '#fff'
+                                                    : 'rgba(255,255,255,0.85)',
+                                            boxShadow:
+                                                scope === 'owned'
+                                                    ? `0 4px 14px ${alpha(theme.palette.primary.main, 0.35)}`
+                                                    : 'none',
+                                            borderColor: alpha(
+                                                '#ffffff',
+                                                scope === 'owned' ? 0.35 : 0.15
+                                            ),
                                             px: 2.5,
                                             backdropFilter: 'blur(6px)',
                                             '&:hover': {
-                                                background: scope === 'owned'
-                                                    ? `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`
-                                                    : 'rgba(255,255,255,0.12)'
-                                            }
+                                                background:
+                                                    scope === 'owned'
+                                                        ? `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`
+                                                        : 'rgba(255,255,255,0.12)',
+                                            },
                                         }}
                                     >
                                         {`${ownedProjects.length} Projects`}
@@ -502,18 +530,24 @@ export default function Dashboard({ auth, projects }) {
                                             borderRadius: 1.5,
                                             fontWeight: 600,
                                             textTransform: 'none',
-                                            background: scope === 'all' 
-                                                ? 'rgba(30,41,59,0.6)'
-                                                : 'rgba(255,255,255,0.06)',
-                                            color: scope === 'all' ? '#fff' : 'rgba(255,255,255,0.85)',
-                                            borderColor: alpha('#ffffff', scope==='all'?0.35:0.15),
+                                            background:
+                                                scope === 'all'
+                                                    ? 'rgba(30,41,59,0.6)'
+                                                    : 'rgba(255,255,255,0.06)',
+                                            color:
+                                                scope === 'all' ? '#fff' : 'rgba(255,255,255,0.85)',
+                                            borderColor: alpha(
+                                                '#ffffff',
+                                                scope === 'all' ? 0.35 : 0.15
+                                            ),
                                             px: 2.5,
                                             backdropFilter: 'blur(6px)',
                                             '&:hover': {
-                                                background: scope === 'all'
-                                                    ? 'rgba(15,23,42,0.75)'
-                                                    : 'rgba(255,255,255,0.12)'
-                                            }
+                                                background:
+                                                    scope === 'all'
+                                                        ? 'rgba(15,23,42,0.75)'
+                                                        : 'rgba(255,255,255,0.12)',
+                                            },
                                         }}
                                     >
                                         {`All ${filtered.length}`}
@@ -556,26 +590,27 @@ export default function Dashboard({ auth, projects }) {
 
                 {/* Main content */}
                 <Box
-                    sx={{ 
-                        py: { xs: 5, md: 7 }, 
-                        bgcolor: 'background.default', 
+                    sx={{
+                        py: { xs: 5, md: 7 },
+                        bgcolor: 'background.default',
                         minHeight: '60vh',
-                        background: theme.palette.mode === 'dark' 
-                            ? 'radial-gradient(circle at 50% 50%, #1a1c2b 0%, #141620 100%)' 
-                            : 'radial-gradient(circle at 50% 50%, #f8f9ff 0%, #f0f2f9 100%)'
+                        background:
+                            theme.palette.mode === 'dark'
+                                ? 'radial-gradient(circle at 50% 50%, #1a1c2b 0%, #141620 100%)'
+                                : 'radial-gradient(circle at 50% 50%, #f8f9ff 0%, #f0f2f9 100%)',
                     }}
                 >
                     <Container maxWidth="lg">
                         <Stack spacing={4}>
                             {/* Enhanced Filter + Sort Bar */}
-                <Paper 
-                                elevation={0} 
+                            <Paper
+                                elevation={0}
                                 sx={{
                                     p: 3,
                                     mb: 2,
                                     borderRadius: designTokens.radii.xl,
                                     background: designTokens.gradients(theme).card,
-                    backdropFilter: `blur(${designTokens.blur.heavy})`,
+                                    backdropFilter: `blur(${designTokens.blur.heavy})`,
                                     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                                     boxShadow: designTokens.shadows.subtle,
                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -600,7 +635,9 @@ export default function Dashboard({ auth, projects }) {
                                     justifyContent="space-between"
                                 >
                                     <Stack direction="row" alignItems="center" spacing={2} flex={1}>
-                                        <SearchIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                                        <SearchIcon
+                                            sx={{ color: 'text.secondary', fontSize: 20 }}
+                                        />
                                         <TextField
                                             fullWidth
                                             placeholder="Search by name, key or description..."
@@ -610,25 +647,35 @@ export default function Dashboard({ auth, projects }) {
                                             InputProps={{
                                                 sx: {
                                                     borderRadius: designTokens.radii.lg,
-                                                    backgroundColor: alpha(theme.palette.background.paper, 0.8),
+                                                    backgroundColor: alpha(
+                                                        theme.palette.background.paper,
+                                                        0.8
+                                                    ),
                                                     '& .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: alpha(theme.palette.divider, 0.2),
+                                                        borderColor: alpha(
+                                                            theme.palette.divider,
+                                                            0.2
+                                                        ),
                                                     },
                                                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: alpha(theme.palette.primary.main, 0.3),
+                                                        borderColor: alpha(
+                                                            theme.palette.primary.main,
+                                                            0.3
+                                                        ),
                                                     },
-                                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: theme.palette.primary.main,
-                                                        borderWidth: '2px',
-                                                        boxShadow: `0 0 0 4px ${alpha(theme.palette.primary.main, 0.1)}`,
-                                                    },
+                                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline':
+                                                        {
+                                                            borderColor: theme.palette.primary.main,
+                                                            borderWidth: '2px',
+                                                            boxShadow: `0 0 0 4px ${alpha(theme.palette.primary.main, 0.1)}`,
+                                                        },
                                                 },
                                             }}
-                                            sx={{ 
+                                            sx={{
                                                 maxWidth: 480,
                                                 '& .MuiOutlinedInput-root': {
                                                     borderRadius: designTokens.radii.lg,
-                                                }
+                                                },
                                             }}
                                         />
                                     </Stack>
@@ -642,19 +689,27 @@ export default function Dashboard({ auth, projects }) {
                                         rowGap={2}
                                     >
                                         <Stack direction="row" alignItems="center" spacing={1.5}>
-                                            <SortIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                                            <SortIcon
+                                                sx={{ color: 'text.secondary', fontSize: 20 }}
+                                            />
                                             <Select
                                                 size="small"
                                                 value={sort}
                                                 onChange={handleSortChange}
-                                                sx={{ 
+                                                sx={{
                                                     minWidth: 180,
                                                     borderRadius: designTokens.radii.md,
                                                     '& .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: alpha(theme.palette.divider, 0.2),
+                                                        borderColor: alpha(
+                                                            theme.palette.divider,
+                                                            0.2
+                                                        ),
                                                     },
                                                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: alpha(theme.palette.primary.main, 0.3),
+                                                        borderColor: alpha(
+                                                            theme.palette.primary.main,
+                                                            0.3
+                                                        ),
                                                     },
                                                 }}
                                                 displayEmpty
@@ -665,9 +720,13 @@ export default function Dashboard({ auth, projects }) {
                                                 <MenuItem value="name_desc">Name (Z → A)</MenuItem>
                                             </Select>
                                         </Stack>
-                                        
-                                        <Divider flexItem orientation="vertical" sx={{ display: { xs: 'none', md: 'block' } }} />
-                                        
+
+                                        <Divider
+                                            flexItem
+                                            orientation="vertical"
+                                            sx={{ display: { xs: 'none', md: 'block' } }}
+                                        />
+
                                         <ToggleButtonGroup
                                             exclusive
                                             size="small"
@@ -684,7 +743,10 @@ export default function Dashboard({ auth, projects }) {
                                                     fontWeight: 600,
                                                     textTransform: 'none',
                                                     '&:hover': {
-                                                        backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                                                        backgroundColor: alpha(
+                                                            theme.palette.primary.main,
+                                                            0.08
+                                                        ),
                                                         color: 'primary.main',
                                                     },
                                                     '&.Mui-selected': {
@@ -692,7 +754,8 @@ export default function Dashboard({ auth, projects }) {
                                                         color: theme.palette.primary.contrastText,
                                                         boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.3)}`,
                                                         '&:hover': {
-                                                            backgroundColor: theme.palette.primary.dark,
+                                                            backgroundColor:
+                                                                theme.palette.primary.dark,
                                                         },
                                                     },
                                                 },
@@ -707,12 +770,12 @@ export default function Dashboard({ auth, projects }) {
                                                 Grid
                                             </ToggleButton>
                                         </ToggleButtonGroup>
-                                        
+
                                         <Button
                                             variant="contained"
                                             startIcon={<AddIcon />}
                                             href="/projects/create"
-                                            sx={{ 
+                                            sx={{
                                                 textTransform: 'none',
                                                 borderRadius: designTokens.radii.lg,
                                                 fontWeight: 700,
@@ -734,12 +797,11 @@ export default function Dashboard({ auth, projects }) {
                                 </Stack>
                             </Paper>
 
-
                             {/* Compact Stats Chips */}
-                            <Stack 
-                                direction="row" 
-                                spacing={2} 
-                                flexWrap="wrap" 
+                            <Stack
+                                direction="row"
+                                spacing={2}
+                                flexWrap="wrap"
                                 justifyContent="center"
                                 sx={{ mb: 4 }}
                                 aria-label="Project statistics overview"
@@ -748,30 +810,44 @@ export default function Dashboard({ auth, projects }) {
                                     <Chip
                                         key={s.label}
                                         icon={
-                                            <Box sx={{ 
-                                                width: 20, 
-                                                height: 20, 
-                                                borderRadius: '50%',
-                                                background: `linear-gradient(135deg, ${s.color}, ${alpha(s.color, 0.7)})`,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                color: '#ffffff',
-                                                '& svg': { fontSize: 12 }
-                                            }}>
+                                            <Box
+                                                sx={{
+                                                    width: 20,
+                                                    height: 20,
+                                                    borderRadius: '50%',
+                                                    background: `linear-gradient(135deg, ${s.color}, ${alpha(s.color, 0.7)})`,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: '#ffffff',
+                                                    '& svg': { fontSize: 12 },
+                                                }}
+                                            >
                                                 {s.icon}
                                             </Box>
                                         }
                                         label={
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{ fontWeight: 600, fontSize: '0.75rem' }}
+                                                >
                                                     {s.label.toUpperCase()}
                                                 </Typography>
-                                                <Typography variant="body2" sx={{ 
-                                                    fontWeight: 800, 
-                                                    color: s.color,
-                                                    fontSize: '0.875rem' 
-                                                }}>
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        fontWeight: 800,
+                                                        color: s.color,
+                                                        fontSize: '0.875rem',
+                                                    }}
+                                                >
                                                     {isClient ? s.value : '...'}
                                                 </Typography>
                                             </Box>
@@ -814,10 +890,7 @@ export default function Dashboard({ auth, projects }) {
                                     mb={4}
                                 >
                                     <Box>
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                        >
+                                        <Typography variant="body2" color="text.secondary">
                                             {displayCount === 0
                                                 ? 'No projects match your current filters.'
                                                 : `Showing ${displayCount} project${displayCount === 1 ? '' : 's'}`}
@@ -828,7 +901,7 @@ export default function Dashboard({ auth, projects }) {
                                             size="small"
                                             variant="text"
                                             onClick={handleClearSearch}
-                                            sx={{ 
+                                            sx={{
                                                 textTransform: 'none',
                                                 fontWeight: 600,
                                             }}
@@ -844,24 +917,46 @@ export default function Dashboard({ auth, projects }) {
                                     <FilteredEmptyState reset={handleClearSearch} />
                                 ) : viewMode === 'grid' ? (
                                     <Grid container spacing={3} aria-label="Projects grid view">
-                                        {(scope==='owned'? ownedProjects : ownedProjects).map((p, idx) => (
-                                            <Grid item xs={12} sm={6} md={4} key={p.id}>
-                                                <Fade in timeout={500} style={{ transitionDelay: `${idx * 50}ms` }}>
-                                                    <div>
-                                                        <ProjectCard project={p} ownership="owner" onDelete={askDelete} />
-                                                    </div>
-                                                </Fade>
-                                            </Grid>
-                                        ))}
-                                        {scope==='owned'? null : memberProjects.map((p, idx) => (
-                                            <Grid item xs={12} sm={6} md={4} key={p.id}>
-                                                <Fade in timeout={500} style={{ transitionDelay: `${(idx + ownedProjects.length) * 50}ms` }}>
-                                                    <div>
-                                                        <ProjectCard project={p} ownership="member" onDelete={askDelete} />
-                                                    </div>
-                                                </Fade>
-                                            </Grid>
-                                        ))}
+                                        {(scope === 'owned' ? ownedProjects : ownedProjects).map(
+                                            (p, idx) => (
+                                                <Grid item xs={12} sm={6} md={4} key={p.id}>
+                                                    <Fade
+                                                        in
+                                                        timeout={500}
+                                                        style={{ transitionDelay: `${idx * 50}ms` }}
+                                                    >
+                                                        <div>
+                                                            <ProjectCard
+                                                                project={p}
+                                                                ownership="owner"
+                                                                onDelete={askDelete}
+                                                            />
+                                                        </div>
+                                                    </Fade>
+                                                </Grid>
+                                            )
+                                        )}
+                                        {scope === 'owned'
+                                            ? null
+                                            : memberProjects.map((p, idx) => (
+                                                  <Grid item xs={12} sm={6} md={4} key={p.id}>
+                                                      <Fade
+                                                          in
+                                                          timeout={500}
+                                                          style={{
+                                                              transitionDelay: `${(idx + ownedProjects.length) * 50}ms`,
+                                                          }}
+                                                      >
+                                                          <div>
+                                                              <ProjectCard
+                                                                  project={p}
+                                                                  ownership="member"
+                                                                  onDelete={askDelete}
+                                                              />
+                                                          </div>
+                                                      </Fade>
+                                                  </Grid>
+                                              ))}
                                     </Grid>
                                 ) : (
                                     <Stack spacing={3}>
@@ -874,7 +969,10 @@ export default function Dashboard({ auth, projects }) {
                                             }}
                                         >
                                             {/* Owned Projects with Visual Distinction */}
-                                            {(scope==='owned'? ownedProjects : ownedProjects).map((p, idx) => (
+                                            {(scope === 'owned'
+                                                ? ownedProjects
+                                                : ownedProjects
+                                            ).map((p, idx) => (
                                                 <Box
                                                     key={p.id}
                                                     sx={{
@@ -898,7 +996,10 @@ export default function Dashboard({ auth, projects }) {
                                                             background: `linear-gradient(90deg, ${theme.palette.primary.main}, transparent)`,
                                                         },
                                                         '@keyframes fadeSlide': {
-                                                            to: { opacity: 1, transform: 'translateY(0)' },
+                                                            to: {
+                                                                opacity: 1,
+                                                                transform: 'translateY(0)',
+                                                            },
                                                         },
                                                     }}
                                                 >
@@ -918,48 +1019,56 @@ export default function Dashboard({ auth, projects }) {
                                             ))}
 
                                             {/* Member Projects with Visual Distinction */}
-                                            {scope==='owned'? null : memberProjects.map((p, idx) => (
-                                                <Box
-                                                    key={p.id}
-                                                    sx={{
-                                                        position: 'relative',
-                                                        borderLeft: `4px solid ${theme.palette.secondary.main}`,
-                                                        borderRadius: 2, // Fixed border radius to match accordion
-                                                        background: `linear-gradient(145deg, ${alpha(theme.palette.secondary.main, 0.02)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
-                                                        boxShadow: `0 2px 8px ${alpha(theme.palette.secondary.main, 0.1)}`,
-                                                        overflow: 'hidden',
-                                                        opacity: 0,
-                                                        transform: 'translateY(8px)',
-                                                        animation: 'fadeSlide 0.55s ease forwards',
-                                                        animationDelay: `${0.1 + idx * 0.02}s`,
-                                                        '&::before': {
-                                                            content: '""',
-                                                            position: 'absolute',
-                                                            top: 0,
-                                                            left: 0,
-                                                            right: 0,
-                                                            height: '2px',
-                                                            background: `linear-gradient(90deg, ${theme.palette.secondary.main}, transparent)`,
-                                                        },
-                                                        '@keyframes fadeSlide': {
-                                                            to: { opacity: 1, transform: 'translateY(0)' },
-                                                        },
-                                                    }}
-                                                >
-                                                    <ProjectAccordion
-                                                        project={p}
-                                                        ownership="member"
-                                                        rowSx={rowSx(idx + ownedProjects.length)}
-                                                        onDelete={askDelete}
-                                                        endActions={
-                                                            <ProjectActionButtons
-                                                                project={p}
-                                                                onDelete={askDelete}
-                                                            />
-                                                        }
-                                                    />
-                                                </Box>
-                                            ))}
+                                            {scope === 'owned'
+                                                ? null
+                                                : memberProjects.map((p, idx) => (
+                                                      <Box
+                                                          key={p.id}
+                                                          sx={{
+                                                              position: 'relative',
+                                                              borderLeft: `4px solid ${theme.palette.secondary.main}`,
+                                                              borderRadius: 2, // Fixed border radius to match accordion
+                                                              background: `linear-gradient(145deg, ${alpha(theme.palette.secondary.main, 0.02)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
+                                                              boxShadow: `0 2px 8px ${alpha(theme.palette.secondary.main, 0.1)}`,
+                                                              overflow: 'hidden',
+                                                              opacity: 0,
+                                                              transform: 'translateY(8px)',
+                                                              animation:
+                                                                  'fadeSlide 0.55s ease forwards',
+                                                              animationDelay: `${0.1 + idx * 0.02}s`,
+                                                              '&::before': {
+                                                                  content: '""',
+                                                                  position: 'absolute',
+                                                                  top: 0,
+                                                                  left: 0,
+                                                                  right: 0,
+                                                                  height: '2px',
+                                                                  background: `linear-gradient(90deg, ${theme.palette.secondary.main}, transparent)`,
+                                                              },
+                                                              '@keyframes fadeSlide': {
+                                                                  to: {
+                                                                      opacity: 1,
+                                                                      transform: 'translateY(0)',
+                                                                  },
+                                                              },
+                                                          }}
+                                                      >
+                                                          <ProjectAccordion
+                                                              project={p}
+                                                              ownership="member"
+                                                              rowSx={rowSx(
+                                                                  idx + ownedProjects.length
+                                                              )}
+                                                              onDelete={askDelete}
+                                                              endActions={
+                                                                  <ProjectActionButtons
+                                                                      project={p}
+                                                                      onDelete={askDelete}
+                                                                  />
+                                                              }
+                                                          />
+                                                      </Box>
+                                                  ))}
                                         </Box>
                                     </Stack>
                                 )}
@@ -979,7 +1088,7 @@ export default function Dashboard({ auth, projects }) {
                         borderRadius: designTokens.radii.lg,
                         background: theme.palette.background.paper,
                         boxShadow: designTokens.shadows.heavy,
-                    }
+                    },
                 }}
             >
                 <DialogTitle id="delete-project-title" sx={{ fontWeight: 700, fontSize: '1.5rem' }}>
@@ -999,9 +1108,9 @@ export default function Dashboard({ auth, projects }) {
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, py: 2 }}>
-                    <Button 
-                        onClick={handleCloseDialog} 
-                        sx={{ 
+                    <Button
+                        onClick={handleCloseDialog}
+                        sx={{
                             textTransform: 'none',
                             fontWeight: 600,
                             borderRadius: designTokens.radii.md,
@@ -1013,7 +1122,7 @@ export default function Dashboard({ auth, projects }) {
                         variant="contained"
                         color="error"
                         onClick={confirmDelete}
-                        sx={{ 
+                        sx={{
                             textTransform: 'none',
                             fontWeight: 600,
                             borderRadius: designTokens.radii.md,
@@ -1031,7 +1140,7 @@ export default function Dashboard({ auth, projects }) {
 const ProjectActionButtons = memo(({ project, onDelete }) => {
     const theme = useTheme();
     const [leaving, setLeaving] = useState(false);
-    
+
     const handleEdit = useCallback(
         (e) => {
             e.stopPropagation();
@@ -1040,21 +1149,33 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
         [project.id]
     );
 
-    const handleDelete = useCallback((e) => { onDelete(e, project); }, [onDelete, project]);
+    const handleDelete = useCallback(
+        (e) => {
+            onDelete(e, project);
+        },
+        [onDelete, project]
+    );
 
-    const handleLeave = useCallback(async (e) => {
-        e.stopPropagation();
-        if (leaving) return;
-        setLeaving(true);
-        try {
-            await router.post(`/projects/${project.id}/members/leave`, {}, {
-                preserveScroll: true,
-                onFinish: () => setLeaving(false),
-            });
-        } catch (err) {
-            setLeaving(false);
-        }
-    }, [leaving, project.id]);
+    const handleLeave = useCallback(
+        async (e) => {
+            e.stopPropagation();
+            if (leaving) return;
+            setLeaving(true);
+            try {
+                await router.post(
+                    `/projects/${project.id}/members/leave`,
+                    {},
+                    {
+                        preserveScroll: true,
+                        onFinish: () => setLeaving(false),
+                    }
+                );
+            } catch (err) {
+                setLeaving(false);
+            }
+        },
+        [leaving, project.id]
+    );
 
     return (
         <Stack direction="row" spacing={1} alignItems="center">
@@ -1075,7 +1196,10 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
                     />
                 </Tooltip>
             ) : (
-                <Tooltip title={project.owner?.name ? `Owner: ${project.owner.name}` : 'Collaborator'} arrow>
+                <Tooltip
+                    title={project.owner?.name ? `Owner: ${project.owner.name}` : 'Collaborator'}
+                    arrow
+                >
                     <Chip
                         size="small"
                         label="Collaborator"
@@ -1094,35 +1218,35 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
             {project.is_owner ? (
                 <>
                     <Tooltip title="Edit" arrow>
-                        <IconButton 
-                            size="small" 
-                            onClick={handleEdit} 
-                            aria-label="Edit project" 
-                            sx={{ 
-                                width: 36, 
+                        <IconButton
+                            size="small"
+                            onClick={handleEdit}
+                            aria-label="Edit project"
+                            sx={{
+                                width: 36,
                                 height: 36,
                                 background: alpha(theme.palette.primary.main, 0.1),
                                 '&:hover': {
                                     background: alpha(theme.palette.primary.main, 0.2),
-                                }
+                                },
                             }}
                         >
                             <EditRoundedIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
                     <Tooltip title="Delete" arrow>
-                        <IconButton 
-                            size="small" 
-                            onClick={handleDelete} 
-                            aria-label="Delete project" 
-                            sx={{ 
-                                width: 36, 
+                        <IconButton
+                            size="small"
+                            onClick={handleDelete}
+                            aria-label="Delete project"
+                            sx={{
+                                width: 36,
                                 height: 36,
                                 background: alpha(theme.palette.error.main, 0.1),
                                 '&:hover': {
                                     background: alpha(theme.palette.error.main, 0.2),
-                                }
-                            }} 
+                                },
+                            }}
                             color="error"
                         >
                             <DeleteForeverIcon fontSize="small" />
@@ -1136,16 +1260,16 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
                         variant="outlined"
                         onClick={handleLeave}
                         disabled={leaving}
-                        sx={{ 
-                            textTransform: 'none', 
-                            fontSize: '0.75rem', 
-                            fontWeight: 700, 
+                        sx={{
+                            textTransform: 'none',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
                             color: theme.palette.error.main,
                             borderColor: alpha(theme.palette.error.main, 0.3),
                             '&:hover': {
                                 borderColor: theme.palette.error.main,
                                 background: alpha(theme.palette.error.main, 0.05),
-                            }
+                            },
                         }}
                     >
                         {leaving ? 'Leaving...' : 'Leave'}
@@ -1177,8 +1301,8 @@ function EmptyState() {
                     animation: 'pulse 2s ease-in-out infinite',
                     '@keyframes pulse': {
                         '0%, 100%': { transform: 'scale(1)' },
-                        '50%': { transform: 'scale(1.05)' }
-                    }
+                        '50%': { transform: 'scale(1.05)' },
+                    },
                 }}
                 aria-hidden
             >
@@ -1195,9 +1319,9 @@ function EmptyState() {
                 href="/projects/create"
                 variant="contained"
                 startIcon={<AddIcon />}
-                sx={{ 
-                    mt: 2, 
-                    textTransform: 'none', 
+                sx={{
+                    mt: 2,
+                    textTransform: 'none',
                     fontWeight: 700,
                     fontSize: '1.1rem',
                     px: 4,
@@ -1222,7 +1346,8 @@ function FilteredEmptyState({ reset }) {
                     height: 130,
                     mb: 4,
                     borderRadius: '28px',
-                    background: 'linear-gradient(145deg, rgba(123, 104, 238, 0.1), transparent 70%)',
+                    background:
+                        'linear-gradient(145deg, rgba(123, 104, 238, 0.1), transparent 70%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1239,10 +1364,10 @@ function FilteredEmptyState({ reset }) {
             <Typography variant="body1" sx={{ maxWidth: 480, mx: 'auto', mb: 4 }}>
                 Try adjusting your search terms or reset the filters to view all projects again.
             </Typography>
-            <Button 
-                onClick={reset} 
-                variant="outlined" 
-                sx={{ 
+            <Button
+                onClick={reset}
+                variant="outlined"
+                sx={{
                     textTransform: 'none',
                     fontWeight: 600,
                     borderRadius: designTokens.radii.lg,
@@ -1266,17 +1391,21 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
         router.visit(`/projects/${project.id}/tasks`);
     }, [project.id]);
 
-    const handleDelete = useCallback((e) => {
-        e.stopPropagation();
-        onDelete(e, project);
-    }, [onDelete, project]);
+    const handleDelete = useCallback(
+        (e) => {
+            e.stopPropagation();
+            onDelete(e, project);
+        },
+        [onDelete, project]
+    );
 
     // Completion estimation
-    let done = 0, total = 0;
+    let done = 0,
+        total = 0;
     if (project.tasks) {
         if (Array.isArray(project.tasks)) {
             total = project.tasks.length;
-            done = project.tasks.filter(t => t.status === 'done').length;
+            done = project.tasks.filter((t) => t.status === 'done').length;
         } else if (typeof project.tasks === 'object') {
             Object.entries(project.tasks).forEach(([status, arr]) => {
                 if (Array.isArray(arr)) {
@@ -1289,7 +1418,9 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
     const pct = total === 0 ? 0 : Math.round((done / total) * 100);
 
     const ownershipColor = isOwner ? theme.palette.primary.main : theme.palette.secondary.main;
-    const ownershipBg = isOwner ? alpha(theme.palette.primary.main, 0.05) : alpha(theme.palette.secondary.main, 0.05);
+    const ownershipBg = isOwner
+        ? alpha(theme.palette.primary.main, 0.05)
+        : alpha(theme.palette.secondary.main, 0.05);
 
     return (
         <Card
@@ -1318,7 +1449,7 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                 },
                 '&:focus-visible': {
                     outline: `2px solid ${ownershipColor}`,
-                    outlineOffset: 2
+                    outlineOffset: 2,
                 },
                 '&::before': {
                     content: '""',
@@ -1331,8 +1462,8 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                 },
                 '@media (prefers-reduced-motion: reduce)': {
                     transition: 'none',
-                    '&:hover': { transform: 'none' }
-                }
+                    '&:hover': { transform: 'none' },
+                },
             }}
         >
             {/* Ownership Badge */}
@@ -1344,10 +1475,10 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                     zIndex: 10,
                 }}
             >
-                <Chip 
-                    size="small" 
-                    label={isOwner ? "OWNER" : "COLLABORATOR"}
-                    sx={{ 
+                <Chip
+                    size="small"
+                    label={isOwner ? 'OWNER' : 'COLLABORATOR'}
+                    sx={{
                         fontWeight: 800,
                         fontSize: '0.65rem',
                         letterSpacing: '0.1em',
@@ -1356,13 +1487,20 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                         border: `1px solid ${alpha(ownershipColor, 0.3)}`,
                         '& .MuiChip-label': {
                             px: 1.5,
-                        }
-                    }} 
+                        },
+                    }}
                 />
             </Box>
 
-            <CardContent sx={{ p: 3, pt: 5, display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}>
-                <Stack direction="row" spacing={1} alignItems="flex-start" justifyContent="space-between">
+            <CardContent
+                sx={{ p: 3, pt: 5, display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}
+            >
+                <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="flex-start"
+                    justifyContent="space-between"
+                >
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography
                             variant="h6"
@@ -1373,12 +1511,13 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,
-                                background: theme.palette.mode === 'dark' 
-                                    ? `linear-gradient(90deg, ${theme.palette.text.primary}, ${alpha(theme.palette.text.primary, 0.8)})`
-                                    : `linear-gradient(90deg, ${ownershipColor}, ${alpha(ownershipColor, 0.7)})`,
+                                background:
+                                    theme.palette.mode === 'dark'
+                                        ? `linear-gradient(90deg, ${theme.palette.text.primary}, ${alpha(theme.palette.text.primary, 0.8)})`
+                                        : `linear-gradient(90deg, ${ownershipColor}, ${alpha(ownershipColor, 0.7)})`,
                                 backgroundClip: 'text',
                                 WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent'
+                                WebkitTextFillColor: 'transparent',
                             }}
                             noWrap
                             title={project.name}
@@ -1388,9 +1527,9 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                         {project.description && (
                             <Typography
                                 variant="body2"
-                                sx={{ 
-                                    color: 'text.secondary', 
-                                    display: 'block', 
+                                sx={{
+                                    color: 'text.secondary',
+                                    display: 'block',
                                     mt: 1,
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
@@ -1410,8 +1549,8 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                         size="small"
                         icon={<PersonIcon sx={{ fontSize: 14 }} />}
                         label={ownerName}
-                        sx={{ 
-                            alignSelf: 'flex-start', 
+                        sx={{
+                            alignSelf: 'flex-start',
                             bgcolor: alpha(theme.palette.info.main, 0.12),
                             color: theme.palette.info.main,
                             fontWeight: 600,
@@ -1420,11 +1559,24 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                     />
                 )}
                 <Box sx={{ mt: 'auto' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            mb: 1,
+                        }}
+                    >
+                        <Typography
+                            variant="caption"
+                            sx={{ fontWeight: 700, color: 'text.secondary' }}
+                        >
                             Progress
                         </Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                        <Typography
+                            variant="caption"
+                            sx={{ fontWeight: 700, color: 'text.primary' }}
+                        >
                             {pct}%
                         </Typography>
                     </Box>
@@ -1434,7 +1586,7 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                             height: 8,
                             bgcolor: alpha(theme.palette.primary.main, 0.15),
                             borderRadius: 4,
-                            overflow: 'hidden'
+                            overflow: 'hidden',
                         }}
                         aria-label={`Completion ${pct}%`}
                     >
@@ -1449,21 +1601,30 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                             }}
                         />
                     </Box>
-                    <Stack direction="row" spacing={1} mt={2} alignItems="center" justifyContent="space-between">
-                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        mt={2}
+                        alignItems="center"
+                        justifyContent="space-between"
+                    >
+                        <Typography
+                            variant="caption"
+                            sx={{ fontWeight: 600, color: 'text.secondary' }}
+                        >
                             {done} of {total} tasks
                         </Typography>
                         {isOwner ? (
                             <Tooltip title="Delete project" arrow>
-                                <IconButton 
-                                    size="small" 
-                                    onClick={handleDelete} 
+                                <IconButton
+                                    size="small"
+                                    onClick={handleDelete}
                                     aria-label={`Delete ${project.name}`}
                                     sx={{
                                         background: alpha(theme.palette.error.main, 0.1),
                                         '&:hover': {
                                             background: alpha(theme.palette.error.main, 0.2),
-                                        }
+                                        },
                                     }}
                                 >
                                     <DeleteForeverIcon fontSize="small" />
@@ -1474,11 +1635,14 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                                 <Button
                                     size="small"
                                     variant="text"
-                                    onClick={(e) => { e.stopPropagation(); router.post(`/projects/${project.id}/members/leave`, {}); }}
-                                    sx={{ 
-                                        textTransform: 'none', 
-                                        fontSize: '0.7rem', 
-                                        fontWeight: 700, 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        router.post(`/projects/${project.id}/members/leave`, {});
+                                    }}
+                                    sx={{
+                                        textTransform: 'none',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 700,
                                         color: theme.palette.error.main,
                                     }}
                                 >
@@ -1532,4 +1696,3 @@ if (typeof document !== 'undefined' && !document.getElementById('dashboard-anim-
     }`;
     document.head.appendChild(style);
 }
-

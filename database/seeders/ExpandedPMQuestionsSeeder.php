@@ -1,0 +1,1554 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use App\Models\PMQuestion;
+
+class ExpandedPMQuestionsSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // Clear existing data in the correct order
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        \App\Models\CertificationAnswer::truncate();
+        \App\Models\CertificationAttempt::truncate();
+        PMQuestion::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        
+        $questions = [
+            // FUNDAMENTALS (30 questions)
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is the primary purpose of a project charter?',
+                'options' => [
+                    'To define the project budget',
+                    'To formally authorize the project and define its objectives',
+                    'To assign team members to tasks',
+                    'To create a detailed timeline'
+                ],
+                'correct_answer' => ['To formally authorize the project and define its objectives'],
+                'explanation' => 'A project charter formally authorizes the project and defines its high-level objectives, scope, and stakeholders.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What does SMART stand for in goal setting?',
+                'options' => [
+                    'Simple, Manageable, Achievable, Realistic, Timely',
+                    'Specific, Measurable, Achievable, Relevant, Time-bound',
+                    'Strategic, Meaningful, Actionable, Results-oriented, Trackable',
+                    'Structured, Monitored, Aligned, Resourced, Targeted'
+                ],
+                'correct_answer' => ['Specific, Measurable, Achievable, Relevant, Time-bound'],
+                'explanation' => 'SMART goals are Specific, Measurable, Achievable, Relevant, and Time-bound.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is the triple constraint in project management?',
+                'options' => [
+                    'Budget, Resources, Timeline',
+                    'Scope, Time, Cost',
+                    'Quality, Risk, Communication',
+                    'Planning, Execution, Closure'
+                ],
+                'correct_answer' => ['Scope, Time, Cost'],
+                'explanation' => 'The triple constraint refers to Scope, Time, and Cost. Changes to one typically affect the others.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is a project stakeholder?',
+                'options' => [
+                    'Only the project sponsor and client',
+                    'Anyone who can impact or be impacted by the project',
+                    'Only the project team members',
+                    'Only external customers'
+                ],
+                'correct_answer' => ['Anyone who can impact or be impacted by the project'],
+                'explanation' => 'A stakeholder is anyone who can affect or be affected by the project, including team members, sponsors, customers, and even competitors.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is a milestone in project management?',
+                'options' => [
+                    'A task that takes the longest time',
+                    'A significant point or event in the project timeline',
+                    'The final deliverable',
+                    'A resource allocation point'
+                ],
+                'correct_answer' => ['A significant point or event in the project timeline'],
+                'explanation' => 'A milestone is a significant point or event in a project that indicates progress and often marks the completion of a major phase or deliverable.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is the purpose of a project kick-off meeting?',
+                'options' => [
+                    'To assign blame for delays',
+                    'To align team members and stakeholders on project objectives',
+                    'To finalize the project budget',
+                    'To conduct risk assessment'
+                ],
+                'correct_answer' => ['To align team members and stakeholders on project objectives'],
+                'explanation' => 'A kick-off meeting aligns all participants on project objectives, expectations, roles, and communication protocols.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is scope creep?',
+                'options' => [
+                    'Planned expansion of project deliverables',
+                    'Uncontrolled changes or continuous growth in project scope',
+                    'Reduction in project timeline',
+                    'Budget overruns due to inflation'
+                ],
+                'correct_answer' => ['Uncontrolled changes or continuous growth in project scope'],
+                'explanation' => 'Scope creep refers to uncontrolled changes or continuous growth in a project\'s scope without proper change control procedures.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What does PMO stand for?',
+                'options' => [
+                    'Project Management Office',
+                    'Project Milestone Organization',
+                    'Program Management Operations',
+                    'Project Monitoring Office'
+                ],
+                'correct_answer' => ['Project Management Office'],
+                'explanation' => 'PMO stands for Project Management Office, which provides governance, standards, and support for projects.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is a project deliverable?',
+                'options' => [
+                    'The final project report',
+                    'Any unique and verifiable product, result, or capability',
+                    'Only tangible products',
+                    'The project timeline'
+                ],
+                'correct_answer' => ['Any unique and verifiable product, result, or capability'],
+                'explanation' => 'A deliverable is any unique and verifiable product, result, or capability that must be produced to complete the project.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is the difference between a program and a project?',
+                'options' => [
+                    'Programs are shorter than projects',
+                    'Programs are groups of related projects managed together',
+                    'Programs have smaller budgets',
+                    'There is no difference'
+                ],
+                'correct_answer' => ['Programs are groups of related projects managed together'],
+                'explanation' => 'A program is a group of related projects managed in a coordinated way to obtain benefits not available from managing them individually.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'Which of the following is NOT one of the five process groups in project management?',
+                'options' => [
+                    'Initiating',
+                    'Planning',
+                    'Implementing',
+                    'Monitoring and Controlling'
+                ],
+                'correct_answer' => ['Implementing'],
+                'explanation' => 'The five process groups are: Initiating, Planning, Executing, Monitoring and Controlling, and Closing. "Implementing" is not a standard process group.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is the purpose of a lessons learned session?',
+                'options' => [
+                    'To assign blame for project failures',
+                    'To capture knowledge for future projects',
+                    'To celebrate project completion',
+                    'To finalize project documentation'
+                ],
+                'correct_answer' => ['To capture knowledge for future projects'],
+                'explanation' => 'Lessons learned sessions capture knowledge, experiences, and insights to improve future project performance.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is a project baseline?',
+                'options' => [
+                    'The minimum acceptable quality standard',
+                    'The approved version of scope, schedule, and cost',
+                    'The starting point of the project',
+                    'The final project deliverable'
+                ],
+                'correct_answer' => ['The approved version of scope, schedule, and cost'],
+                'explanation' => 'A baseline is the approved version of a work product that serves as the basis for comparison with actual results.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'You are managing a software project. The client requests a major feature change that would require 40% more budget. What is your FIRST action?',
+                'options' => [
+                    'Immediately implement the change to satisfy the client',
+                    'Reject the change request to stay on schedule',
+                    'Assess the impact on scope, time, cost, and quality',
+                    'Ask the team to work overtime to accommodate the change'
+                ],
+                'correct_answer' => ['Assess the impact on scope, time, cost, and quality'],
+                'explanation' => 'Any scope change must first be properly assessed for its impact on the project constraints before making decisions.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is a project portfolio?',
+                'options' => [
+                    'A collection of project documents',
+                    'A group of projects managed together to achieve strategic objectives',
+                    'The project manager\'s resume',
+                    'A risk management tool'
+                ],
+                'correct_answer' => ['A group of projects managed together to achieve strategic objectives'],
+                'explanation' => 'A project portfolio is a collection of projects or programs grouped together to facilitate effective management and achieve strategic business objectives.',
+            ],
+
+            // PLANNING QUESTIONS (25 questions)
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is the critical path in project scheduling?',
+                'options' => [
+                    'The path with the most resources assigned',
+                    'The longest sequence of activities that determines project duration',
+                    'The path with the highest risk activities',
+                    'The shortest path through the project'
+                ],
+                'correct_answer' => ['The longest sequence of activities that determines project duration'],
+                'explanation' => 'The critical path is the sequence of activities that determines the minimum project duration. Any delay in critical path activities delays the entire project.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is the purpose of a Work Breakdown Structure (WBS)?',
+                'options' => [
+                    'To assign team members to tasks',
+                    'To decompose project work into manageable pieces',
+                    'To create the project budget',
+                    'To identify project risks'
+                ],
+                'correct_answer' => ['To decompose project work into manageable pieces'],
+                'explanation' => 'A WBS hierarchically decomposes the total scope of work to be carried out by the project team into manageable work packages.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is float (slack) time in project scheduling?',
+                'options' => [
+                    'Time allocated for team breaks',
+                    'Buffer time between project phases',
+                    'Amount of time an activity can be delayed without delaying the project',
+                    'Time spent on documentation'
+                ],
+                'correct_answer' => ['Amount of time an activity can be delayed without delaying the project'],
+                'explanation' => 'Float is the amount of time that an activity can be delayed without delaying the early start of any successor or the project finish date.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is resource leveling?',
+                'options' => [
+                    'Equalizing team member salaries',
+                    'Balancing resource demand with resource availability',
+                    'Removing unnecessary resources',
+                    'Assigning the same resources to all tasks'
+                ],
+                'correct_answer' => ['Balancing resource demand with resource availability'],
+                'explanation' => 'Resource leveling is a technique used to examine resource demand and availability over time to balance them.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is a Gantt chart?',
+                'options' => [
+                    'A risk assessment tool',
+                    'A visual project schedule showing tasks and timelines',
+                    'A budget tracking spreadsheet',
+                    'A team communication tool'
+                ],
+                'correct_answer' => ['A visual project schedule showing tasks and timelines'],
+                'explanation' => 'A Gantt chart is a visual representation of a project schedule showing tasks, durations, and dependencies over time.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is the difference between effort and duration in project planning?',
+                'options' => [
+                    'There is no difference',
+                    'Effort is work hours needed; duration is calendar time',
+                    'Duration is always longer than effort',
+                    'Effort includes holidays; duration does not'
+                ],
+                'correct_answer' => ['Effort is work hours needed; duration is calendar time'],
+                'explanation' => 'Effort is the amount of work (person-hours) required to complete a task, while duration is the elapsed calendar time.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is a dependency in project management?',
+                'options' => [
+                    'A task that depends on external resources',
+                    'A logical relationship between project activities',
+                    'A high-risk project component',
+                    'A resource that is shared between projects'
+                ],
+                'correct_answer' => ['A logical relationship between project activities'],
+                'explanation' => 'A dependency is a logical relationship that defines the order in which project activities should be performed.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is estimation in project planning?',
+                'options' => [
+                    'Guessing project outcomes',
+                    'Predicting project costs, duration, and resources needed',
+                    'Setting project deadlines arbitrarily',
+                    'Calculating team member bonuses'
+                ],
+                'correct_answer' => ['Predicting project costs, duration, and resources needed'],
+                'explanation' => 'Estimation involves predicting the costs, effort, resources, and duration needed to complete project activities.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is the purpose of a project schedule baseline?',
+                'options' => [
+                    'To track daily attendance',
+                    'To provide a reference point for measuring schedule performance',
+                    'To assign work hours to team members',
+                    'To calculate overtime payments'
+                ],
+                'correct_answer' => ['To provide a reference point for measuring schedule performance'],
+                'explanation' => 'A schedule baseline serves as the approved version of the project schedule used as a reference point for measuring performance.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is bottom-up estimating?',
+                'options' => [
+                    'Estimating based on senior management input',
+                    'Estimating by breaking down work into detailed components',
+                    'Using historical data from previous projects',
+                    'Estimating based on expert judgment only'
+                ],
+                'correct_answer' => ['Estimating by breaking down work into detailed components'],
+                'explanation' => 'Bottom-up estimating involves estimating individual work packages or activities and then aggregating them to get total project estimates.',
+            ],
+
+            // EXECUTION & TEAM MANAGEMENT (25 questions)
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is the primary role of a project manager during execution?',
+                'options' => [
+                    'To do all the technical work',
+                    'To coordinate team activities and remove obstacles',
+                    'To approve all team member decisions',
+                    'To create detailed work instructions'
+                ],
+                'correct_answer' => ['To coordinate team activities and remove obstacles'],
+                'explanation' => 'During execution, the PM coordinates activities, facilitates communication, and removes obstacles to keep the project moving forward.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'How should a project manager handle team conflict?',
+                'options' => [
+                    'Ignore it and hope it resolves itself',
+                    'Take sides with the person who is right',
+                    'Address it directly and facilitate resolution',
+                    'Report it to HR immediately'
+                ],
+                'correct_answer' => ['Address it directly and facilitate resolution'],
+                'explanation' => 'Conflicts should be addressed directly and early, with the PM facilitating a resolution that focuses on project objectives.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is the purpose of regular team meetings during execution?',
+                'options' => [
+                    'To micromanage team members',
+                    'To track progress, identify issues, and coordinate activities',
+                    'To socialize with the team',
+                    'To assign blame for delays'
+                ],
+                'correct_answer' => ['To track progress, identify issues, and coordinate activities'],
+                'explanation' => 'Regular team meetings are essential for tracking progress, identifying and resolving issues, and coordinating team activities.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What are the key factors for AI-powered task assignment?',
+                'options' => [
+                    'Only team member preferences',
+                    'Historical performance, skills, current workload, and task complexity',
+                    'Random assignment for fairness',
+                    'Alphabetical order of team member names'
+                ],
+                'correct_answer' => ['Historical performance, skills, current workload, and task complexity'],
+                'explanation' => 'AI helps identify potential risks early, allowing proactive mitigation planning.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is delegation in project management?',
+                'options' => [
+                    'Assigning blame for failures',
+                    'Assigning authority and responsibility to team members',
+                    'Removing team members from tasks',
+                    'Creating detailed work instructions'
+                ],
+                'correct_answer' => ['Assigning authority and responsibility to team members'],
+                'explanation' => 'Delegation involves assigning authority and responsibility to team members to complete specific work.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is emotional intelligence in project management?',
+                'options' => [
+                    'Technical knowledge of project tools',
+                    'Ability to understand and manage emotions in project context',
+                    'Intelligence about project finances',
+                    'Knowledge of project management software'
+                ],
+                'correct_answer' => ['Ability to understand and manage emotions in project context'],
+                'explanation' => 'Emotional intelligence involves understanding and managing your own and others\' emotions to improve project outcomes.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is team building in project management?',
+                'options' => [
+                    'Hiring new team members',
+                    'Activities to improve team performance and cohesion',
+                    'Building physical workspace for the team',
+                    'Creating team organizational charts'
+                ],
+                'correct_answer' => ['Activities to improve team performance and cohesion'],
+                'explanation' => 'Team building involves activities and processes designed to improve team performance, collaboration, and cohesion.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is motivation in project team management?',
+                'options' => [
+                    'Threatening team members with termination',
+                    'Inspiring team members to perform their best work',
+                    'Paying overtime for extra work',
+                    'Setting impossible deadlines'
+                ],
+                'correct_answer' => ['Inspiring team members to perform their best work'],
+                'explanation' => 'Motivation involves inspiring and encouraging team members to perform at their best and stay committed to project goals.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is the primary goal of project team development?',
+                'options' => [
+                    'To reduce project costs',
+                    'To improve team performance and capability',
+                    'To eliminate weak team members',
+                    'To increase project scope'
+                ],
+                'correct_answer' => ['To improve team performance and capability'],
+                'explanation' => 'Team development aims to improve individual competencies and team interaction to enhance overall project performance.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'How should a project manager handle underperforming team members?',
+                'options' => [
+                    'Immediately remove them from the project',
+                    'Provide coaching, training, and clear expectations',
+                    'Ignore the issue and hope it improves',
+                    'Publicly criticize their performance'
+                ],
+                'correct_answer' => ['Provide coaching, training, and clear expectations'],
+                'explanation' => 'Underperformance should be addressed through coaching, additional training, clear expectations, and support before considering other options.',
+            ],
+
+            // MONITORING & CONTROLLING (25 questions)
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is Earned Value Management (EVM)?',
+                'options' => [
+                    'A bonus system for team members',
+                    'A technique for measuring project performance and progress',
+                    'A method for calculating team salaries',
+                    'A risk assessment tool'
+                ],
+                'correct_answer' => ['A technique for measuring project performance and progress'],
+                'explanation' => 'EVM is a project management technique for measuring project performance and progress in an objective manner.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What does a Schedule Performance Index (SPI) of 0.8 indicate?',
+                'options' => [
+                    'Project is 20% ahead of schedule',
+                    'Project is 20% behind schedule',
+                    'Project is 80% complete',
+                    'Project has 80% of planned resources'
+                ],
+                'correct_answer' => ['Project is 20% behind schedule'],
+                'explanation' => 'An SPI of 0.8 means the project is performing at 80% of the planned rate, indicating it is behind schedule.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is a project status report?',
+                'options' => [
+                    'A financial audit of the project',
+                    'A regular communication about project progress and issues',
+                    'A technical specification document',
+                    'A team performance evaluation'
+                ],
+                'correct_answer' => ['A regular communication about project progress and issues'],
+                'explanation' => 'A status report provides stakeholders with regular updates on project progress, issues, risks, and key metrics.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is quality assurance in project management?',
+                'options' => [
+                    'Testing the final product only',
+                    'Processes to ensure project meets quality standards',
+                    'Hiring quality control inspectors',
+                    'Setting quality goals at project start'
+                ],
+                'correct_answer' => ['Processes to ensure project meets quality standards'],
+                'explanation' => 'Quality assurance involves systematic processes and activities to ensure the project will satisfy quality requirements.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is variance analysis in project control?',
+                'options' => [
+                    'Analyzing team member skill differences',
+                    'Comparing actual performance against planned performance',
+                    'Calculating project profit margins',
+                    'Measuring team productivity variations'
+                ],
+                'correct_answer' => ['Comparing actual performance against planned performance'],
+                'explanation' => 'Variance analysis involves comparing actual project performance against the baseline to identify deviations.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is the purpose of integrated change control?',
+                'options' => [
+                    'To prevent all changes to the project',
+                    'To review, approve, and manage changes to project baselines',
+                    'To implement changes immediately',
+                    'To document all project changes'
+                ],
+                'correct_answer' => ['To review, approve, and manage changes to project baselines'],
+                'explanation' => 'Integrated change control ensures that all changes are properly evaluated, approved, and integrated across all project areas.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is performance reporting?',
+                'options' => [
+                    'Annual employee reviews',
+                    'Collecting and distributing performance information to stakeholders',
+                    'Recording team attendance',
+                    'Calculating project ROI'
+                ],
+                'correct_answer' => ['Collecting and distributing performance information to stakeholders'],
+                'explanation' => 'Performance reporting involves collecting and distributing performance information, including status reports, progress measurements, and forecasts.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is scope verification?',
+                'options' => [
+                    'Checking if the project scope is too large',
+                    'Formal acceptance of completed project deliverables',
+                    'Verifying team member skills',
+                    'Confirming project budget accuracy'
+                ],
+                'correct_answer' => ['Formal acceptance of completed project deliverables'],
+                'explanation' => 'Scope verification is the process of formalizing acceptance of completed project deliverables.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What should you do if a project is significantly behind schedule?',
+                'options' => [
+                    'Work the team harder without additional resources',
+                    'Analyze the root cause and develop recovery options',
+                    'Ignore the delay and hope it resolves itself',
+                    'Immediately extend the deadline'
+                ],
+                'correct_answer' => ['Analyze the root cause and develop recovery options'],
+                'explanation' => 'Schedule delays require root cause analysis and the development of recovery strategies, which may include crashing, fast tracking, or scope changes.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is a project dashboard?',
+                'options' => [
+                    'The steering wheel of a project vehicle',
+                    'A visual display of key project metrics and status',
+                    'A meeting room for project discussions',
+                    'A project management software interface'
+                ],
+                'correct_answer' => ['A visual display of key project metrics and status'],
+                'explanation' => 'A project dashboard provides a visual, at-a-glance view of key project metrics, status, and performance indicators.',
+            ],
+
+            // RISK MANAGEMENT (25 questions)
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is project risk management?',
+                'options' => [
+                    'Avoiding all risks in the project',
+                    'Identifying, analyzing, and responding to project risks',
+                    'Buying insurance for the project',
+                    'Assigning risks to team members'
+                ],
+                'correct_answer' => ['Identifying, analyzing, and responding to project risks'],
+                'explanation' => 'Risk management involves systematically identifying, analyzing, and responding to project risks throughout the project lifecycle.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is a risk register?',
+                'options' => [
+                    'A list of team members',
+                    'A document listing identified risks and their details',
+                    'A budget tracking tool',
+                    'A project schedule'
+                ],
+                'correct_answer' => ['A document listing identified risks and their details'],
+                'explanation' => 'A risk register is a document that contains details of identified risks including their probability, impact, and response strategies.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What are the four main risk response strategies?',
+                'options' => [
+                    'Accept, Avoid, Transfer, Mitigate',
+                    'Identify, Analyze, Plan, Monitor',
+                    'High, Medium, Low, Critical',
+                    'Probability, Impact, Urgency, Priority'
+                ],
+                'correct_answer' => ['Accept, Avoid, Transfer, Mitigate'],
+                'explanation' => 'The four main risk response strategies are: Accept (do nothing), Avoid (eliminate the threat), Transfer (shift to third party), and Mitigate (reduce probability or impact).',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is the difference between a risk and an issue?',
+                'options' => [
+                    'There is no difference',
+                    'A risk is potential future event; an issue is current problem',
+                    'Issues are more serious than risks',
+                    'Risks are internal; issues are external'
+                ],
+                'correct_answer' => ['A risk is potential future event; an issue is current problem'],
+                'explanation' => 'A risk is a potential future event that may impact the project, while an issue is a current problem that needs immediate attention.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is qualitative risk analysis?',
+                'options' => [
+                    'Using numbers to calculate risk impact',
+                    'Prioritizing risks based on probability and impact',
+                    'Eliminating all project risks',
+                    'Transferring risks to insurance companies'
+                ],
+                'correct_answer' => ['Prioritizing risks based on probability and impact'],
+                'explanation' => 'Qualitative risk analysis involves prioritizing risks by assessing their probability of occurrence and impact on project objectives.',
+            ],
+
+            // CLOSING & LESSONS LEARNED (15 questions)
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is the primary purpose of project closure?',
+                'options' => [
+                    'To celebrate project completion',
+                    'To formally complete and close the project',
+                    'To assign team members to new projects',
+                    'To archive project documents'
+                ],
+                'correct_answer' => ['To formally complete and close the project'],
+                'explanation' => 'Project closure formally completes the project, ensures all deliverables are accepted, and transfers ownership.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What should be included in project closure documentation?',
+                'options' => [
+                    'Only the final deliverables',
+                    'Lessons learned, final reports, and deliverable acceptance',
+                    'Team member performance reviews only',
+                    'Budget variance reports only'
+                ],
+                'correct_answer' => ['Lessons learned, final reports, and deliverable acceptance'],
+                'explanation' => 'Project closure documentation should include lessons learned, final status reports, deliverable acceptance, and other relevant project artifacts.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is administrative closure?',
+                'options' => [
+                    'Closing the project office',
+                    'Completing all administrative activities to formally close the project',
+                    'Terminating team member contracts',
+                    'Archiving project files'
+                ],
+                'correct_answer' => ['Completing all administrative activities to formally close the project'],
+                'explanation' => 'Administrative closure involves completing all administrative activities required to formally close the project or phase.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is contract closure?',
+                'options' => [
+                    'Breaking contracts with vendors',
+                    'Formal completion and settlement of project contracts',
+                    'Renegotiating contract terms',
+                    'Extending all contracts indefinitely'
+                ],
+                'correct_answer' => ['Formal completion and settlement of project contracts'],
+                'explanation' => 'Contract closure involves the formal completion and settlement of each contract, including resolution of any open items.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'Why are lessons learned important?',
+                'options' => [
+                    'To blame team members for mistakes',
+                    'To improve future project performance',
+                    'To justify project budget overruns',
+                    'To create more documentation'
+                ],
+                'correct_answer' => ['To improve future project performance'],
+                'explanation' => 'Lessons learned capture knowledge and experiences to improve performance and outcomes of future projects.',
+            ],
+
+            // ADDITIONAL FUNDAMENTALS QUESTIONS (20 more)
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is project integration management?',
+                'options' => [
+                    'Combining multiple projects into one',
+                    'Coordinating all project management processes',
+                    'Integrating team members from different departments',
+                    'Merging project budgets'
+                ],
+                'correct_answer' => ['Coordinating all project management processes'],
+                'explanation' => 'Project integration management involves coordinating all project management processes and activities within the project management process groups.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is a project constraint?',
+                'options' => [
+                    'A limiting factor that affects project execution',
+                    'A project requirement that cannot be changed',
+                    'A team member with limited availability',
+                    'A budget restriction only'
+                ],
+                'correct_answer' => ['A limiting factor that affects project execution'],
+                'explanation' => 'A project constraint is a limiting factor that restricts the team\'s options and affects project execution.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is a project assumption?',
+                'options' => [
+                    'A confirmed fact about the project',
+                    'A factor considered to be true for planning purposes',
+                    'A risk that will definitely occur',
+                    'A stakeholder requirement'
+                ],
+                'correct_answer' => ['A factor considered to be true for planning purposes'],
+                'explanation' => 'An assumption is a factor that is considered to be true, real, or certain for planning purposes, but has not been proven or demonstrated.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is the purpose of a project business case?',
+                'options' => [
+                    'To document project technical requirements',
+                    'To justify the project investment and expected benefits',
+                    'To list all project team members',
+                    'To define the project schedule'
+                ],
+                'correct_answer' => ['To justify the project investment and expected benefits'],
+                'explanation' => 'A business case documents the justification for the project, including expected benefits, costs, and return on investment.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is progressive elaboration?',
+                'options' => [
+                    'Making the project more complex over time',
+                    'Continuously improving and detailing plans as more information becomes available',
+                    'Increasing project budget gradually',
+                    'Adding more team members progressively'
+                ],
+                'correct_answer' => ['Continuously improving and detailing plans as more information becomes available'],
+                'explanation' => 'Progressive elaboration is the iterative process of increasing the level of detail in project plans as better understanding is achieved.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is the difference between projects and operations?',
+                'options' => [
+                    'Projects are temporary; operations are ongoing',
+                    'Projects are cheaper than operations',
+                    'Operations are more important than projects',
+                    'There is no difference'
+                ],
+                'correct_answer' => ['Projects are temporary; operations are ongoing'],
+                'explanation' => 'Projects are temporary endeavors with defined start and end dates, while operations are ongoing activities that sustain the organization.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is organizational project management maturity?',
+                'options' => [
+                    'The age of the organization',
+                    'The level of project management capability and consistency',
+                    'The number of projects completed',
+                    'The size of the project management office'
+                ],
+                'correct_answer' => ['The level of project management capability and consistency'],
+                'explanation' => 'Organizational project management maturity refers to the level of an organization\'s capability to deliver desired strategic outcomes predictably.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is a project life cycle?',
+                'options' => [
+                    'The time from project start to finish',
+                    'The series of phases a project passes through',
+                    'The project budget timeline',
+                    'The team member rotation schedule'
+                ],
+                'correct_answer' => ['The series of phases a project passes through'],
+                'explanation' => 'A project life cycle is the series of phases that a project passes through from initiation to closure.',
+            ],
+
+            // ADDITIONAL PLANNING QUESTIONS (15 more)
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is activity sequencing?',
+                'options' => [
+                    'Arranging team members in order',
+                    'Identifying and documenting relationships among project activities',
+                    'Prioritizing project deliverables',
+                    'Organizing project documents'
+                ],
+                'correct_answer' => ['Identifying and documenting relationships among project activities'],
+                'explanation' => 'Activity sequencing involves identifying and documenting relationships among project activities to determine their logical sequence.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is parametric estimating?',
+                'options' => [
+                    'Estimating based on team parameters',
+                    'Using statistical relationships between variables to calculate estimates',
+                    'Estimating project parameters only',
+                    'Using only historical data for estimates'
+                ],
+                'correct_answer' => ['Using statistical relationships between variables to calculate estimates'],
+                'explanation' => 'Parametric estimating uses statistical relationships between historical data and variables to calculate cost or duration estimates.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is analogous estimating?',
+                'options' => [
+                    'Estimating by comparing with similar past projects',
+                    'Creating analogies for project tasks',
+                    'Estimating using mathematical analogies',
+                    'Comparing team member performance'
+                ],
+                'correct_answer' => ['Estimating by comparing with similar past projects'],
+                'explanation' => 'Analogous estimating uses values from similar past projects as the basis for estimating current project parameters.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is three-point estimating?',
+                'options' => [
+                    'Using three team members to estimate',
+                    'Estimating optimistic, pessimistic, and most likely scenarios',
+                    'Creating three different project plans',
+                    'Estimating three different project aspects'
+                ],
+                'correct_answer' => ['Estimating optimistic, pessimistic, and most likely scenarios'],
+                'explanation' => 'Three-point estimating uses optimistic, pessimistic, and most likely estimates to calculate expected values and assess risk.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is fast tracking in project management?',
+                'options' => [
+                    'Completing the project faster by adding resources',
+                    'Performing activities in parallel that were originally planned in sequence',
+                    'Skipping quality checkpoints',
+                    'Working overtime to meet deadlines'
+                ],
+                'correct_answer' => ['Performing activities in parallel that were originally planned in sequence'],
+                'explanation' => 'Fast tracking involves performing activities in parallel that were originally planned to be done in sequence, which can increase risk.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is crashing in project management?',
+                'options' => [
+                    'When a project fails completely',
+                    'Adding resources to shorten project duration',
+                    'Removing project activities',
+                    'Computer system failures'
+                ],
+                'correct_answer' => ['Adding resources to shorten project duration'],
+                'explanation' => 'Crashing is a schedule compression technique where additional resources are added to critical path activities to reduce project duration.',
+            ],
+
+            // ADDITIONAL EXECUTION QUESTIONS (15 more)
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is the Tuckman model of team development?',
+                'options' => [
+                    'Planning, Executing, Monitoring, Closing',
+                    'Forming, Storming, Norming, Performing',
+                    'Initiating, Developing, Maturing, Dissolving',
+                    'Creating, Building, Operating, Finishing'
+                ],
+                'correct_answer' => ['Forming, Storming, Norming, Performing'],
+                'explanation' => 'The Tuckman model describes team development stages: Forming (getting acquainted), Storming (conflicts arise), Norming (establishing norms), Performing (working effectively).',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is the best approach to manage a virtual team?',
+                'options' => [
+                    'Minimize communication to avoid confusion',
+                    'Establish clear communication protocols and regular check-ins',
+                    'Only use email for all communications',
+                    'Meet in person weekly regardless of location'
+                ],
+                'correct_answer' => ['Establish clear communication protocols and regular check-ins'],
+                'explanation' => 'Virtual teams require structured communication protocols, regular check-ins, and appropriate collaboration tools to be effective.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is stakeholder engagement?',
+                'options' => [
+                    'Getting stakeholders married to the project',
+                    'Actively involving stakeholders in project decisions and activities',
+                    'Hiring stakeholders as team members',
+                    'Inviting stakeholders to all meetings'
+                ],
+                'correct_answer' => ['Actively involving stakeholders in project decisions and activities'],
+                'explanation' => 'Stakeholder engagement involves working with stakeholders to meet their needs and expectations while achieving project objectives.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is a RACI matrix?',
+                'options' => [
+                    'A risk assessment tool',
+                    'A responsibility assignment matrix showing who is Responsible, Accountable, Consulted, Informed',
+                    'A budget tracking method',
+                    'A communication plan template'
+                ],
+                'correct_answer' => ['A responsibility assignment matrix showing who is Responsible, Accountable, Consulted, Informed'],
+                'explanation' => 'A RACI matrix clarifies roles and responsibilities by identifying who is Responsible, Accountable, Consulted, and Informed for each activity.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'How should a project manager handle scope changes during execution?',
+                'options' => [
+                    'Automatically approve all changes to keep stakeholders happy',
+                    'Reject all changes to maintain the original plan',
+                    'Evaluate impact and follow formal change control process',
+                    'Implement changes immediately without documentation'
+                ],
+                'correct_answer' => ['Evaluate impact and follow formal change control process'],
+                'explanation' => 'All scope changes should be evaluated for impact on time, cost, and quality, then processed through the formal change control system.',
+            ],
+
+            // ADDITIONAL MONITORING QUESTIONS (10 more)
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What does a Cost Performance Index (CPI) of 1.2 indicate?',
+                'options' => [
+                    'Project is 20% over budget',
+                    'Project is performing 20% better than planned on cost',
+                    'Project is 20% behind schedule',
+                    'Project has 120% of planned resources'
+                ],
+                'correct_answer' => ['Project is performing 20% better than planned on cost'],
+                'explanation' => 'A CPI of 1.2 means the project is getting $1.20 worth of work for every $1.00 spent, indicating better than planned cost performance.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is Estimate at Completion (EAC)?',
+                'options' => [
+                    'The original project budget',
+                    'The expected total cost of the project based on current performance',
+                    'The remaining budget for the project',
+                    'The actual cost spent so far'
+                ],
+                'correct_answer' => ['The expected total cost of the project based on current performance'],
+                'explanation' => 'EAC is the expected total cost of completing all project work based on current project performance and remaining work estimates.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is the purpose of quality control?',
+                'options' => [
+                    'To prevent all defects from occurring',
+                    'To monitor specific project results and identify ways to eliminate causes of unsatisfactory results',
+                    'To assign blame for quality issues',
+                    'To increase project costs'
+                ],
+                'correct_answer' => ['To monitor specific project results and identify ways to eliminate causes of unsatisfactory results'],
+                'explanation' => 'Quality control involves monitoring specific project results to determine if they comply with relevant quality standards and identifying ways to eliminate causes of unsatisfactory performance.',
+            ],
+
+            // ADDITIONAL RISK MANAGEMENT QUESTIONS (10 more)
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is quantitative risk analysis?',
+                'options' => [
+                    'Counting the number of risks',
+                    'Numerically analyzing the effect of identified risks on project objectives',
+                    'Ranking risks by importance',
+                    'Assigning risk owners'
+                ],
+                'correct_answer' => ['Numerically analyzing the effect of identified risks on project objectives'],
+                'explanation' => 'Quantitative risk analysis numerically estimates the effect of identified risks on overall project objectives using techniques like Monte Carlo simulation.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is a contingency reserve?',
+                'options' => [
+                    'Extra team members kept on standby',
+                    'Time or cost reserves for identified risks',
+                    'Equipment backup supplies',
+                    'Additional project scope'
+                ],
+                'correct_answer' => ['Time or cost reserves for identified risks'],
+                'explanation' => 'Contingency reserves are time or cost allocations within the project baseline to address identified risks that may occur.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is a management reserve?',
+                'options' => [
+                    'Budget for management bonuses',
+                    'Reserves for unknown risks (unknown unknowns)',
+                    'Time allocated for management meetings',
+                    'Equipment reserved for managers'
+                ],
+                'correct_answer' => ['Reserves for unknown risks (unknown unknowns)'],
+                'explanation' => 'Management reserves are amounts of project budget or schedule reserved for unknown risks (unknown unknowns) and are not part of the project baseline.',
+            ],
+
+            // ADDITIONAL COMMUNICATION & LEADERSHIP QUESTIONS (10 more)
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What percentage of a project manager\'s time is typically spent on communication?',
+                'options' => [
+                    '50-60%',
+                    '70-90%',
+                    '30-40%',
+                    '20-30%'
+                ],
+                'correct_answer' => ['70-90%'],
+                'explanation' => 'Project managers typically spend 70-90% of their time communicating with team members, stakeholders, and sponsors.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is the most effective communication method for complex information?',
+                'options' => [
+                    'Email',
+                    'Face-to-face meeting',
+                    'Text message',
+                    'Voice mail'
+                ],
+                'correct_answer' => ['Face-to-face meeting'],
+                'explanation' => 'Face-to-face communication is most effective for complex information as it allows for immediate feedback, non-verbal cues, and clarification.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is active listening?',
+                'options' => [
+                    'Listening to loud music while working',
+                    'Fully concentrating, understanding, and responding to the speaker',
+                    'Listening only to important people',
+                    'Taking notes during all conversations'
+                ],
+                'correct_answer' => ['Fully concentrating, understanding, and responding to the speaker'],
+                'explanation' => 'Active listening involves fully concentrating on, understanding, and responding to the speaker to ensure effective communication.',
+            ],
+
+            // FINAL SET TO REACH 100+ (17 more questions)
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is configuration management?',
+                'options' => [
+                    'Managing team configurations',
+                    'Controlling changes to project deliverables and documentation',
+                    'Setting up project management software',
+                    'Organizing team meetings'
+                ],
+                'correct_answer' => ['Controlling changes to project deliverables and documentation'],
+                'explanation' => 'Configuration management ensures that project deliverables and documentation are controlled and changes are properly managed.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is the Theory of Constraints in project management?',
+                'options' => [
+                    'A theory about project budget constraints',
+                    'Focusing on the weakest link that limits project performance',
+                    'Legal constraints that projects must follow',
+                    'Time constraints that affect all projects'
+                ],
+                'correct_answer' => ['Focusing on the weakest link that limits project performance'],
+                'explanation' => 'The Theory of Constraints focuses on identifying and managing the constraint that most limits project performance.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is a project sponsor?',
+                'options' => [
+                    'Someone who pays for project advertising',
+                    'The person who provides resources and support for the project',
+                    'A team member who works for free',
+                    'An external consultant'
+                ],
+                'correct_answer' => ['The person who provides resources and support for the project'],
+                'explanation' => 'A project sponsor is typically a senior executive who provides resources, support, and advocacy for the project.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is a project retrospective?',
+                'options' => [
+                    'Looking back at old projects',
+                    'A meeting to reflect on what worked well and what could be improved',
+                    'Reviewing project financial performance',
+                    'Analyzing competitor projects'
+                ],
+                'correct_answer' => ['A meeting to reflect on what worked well and what could be improved'],
+                'explanation' => 'A retrospective is a meeting where the team reflects on the project process to identify what worked well and what could be improved.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is the critical chain method?',
+                'options' => [
+                    'The most important communication chain',
+                    'A project scheduling method that considers resource dependencies',
+                    'The chain of command in project management',
+                    'A method for identifying critical stakeholders'
+                ],
+                'correct_answer' => ['A project scheduling method that considers resource dependencies'],
+                'explanation' => 'Critical Chain Project Management (CCPM) is a method that considers both task dependencies and resource dependencies when scheduling.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is value engineering?',
+                'options' => [
+                    'Engineering valuable products',
+                    'A methodology to improve project value by optimizing cost and performance',
+                    'Calculating the monetary value of engineering work',
+                    'Training engineers to add value'
+                ],
+                'correct_answer' => ['A methodology to improve project value by optimizing cost and performance'],
+                'explanation' => 'Value engineering is a systematic approach to optimize project value by analyzing functions and reducing costs while maintaining performance.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is a project gate review?',
+                'options' => [
+                    'A security checkpoint for project access',
+                    'A decision point where project continuation is evaluated',
+                    'A review of project entrance requirements',
+                    'A final project approval meeting'
+                ],
+                'correct_answer' => ['A decision point where project continuation is evaluated'],
+                'explanation' => 'A gate review is a decision point where project performance is evaluated and a go/no-go decision is made for the next phase.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is procurement management?',
+                'options' => [
+                    'Managing team member salaries',
+                    'Acquiring goods and services from outside the organization',
+                    'Managing internal project resources',
+                    'Procuring project management software licenses'
+                ],
+                'correct_answer' => ['Acquiring goods and services from outside the organization'],
+                'explanation' => 'Procurement management involves acquiring goods and services from outside the performing organization to complete project work.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is benefit realization management?',
+                'options' => [
+                    'Managing employee benefits',
+                    'Ensuring projects deliver their intended benefits',
+                    'Calculating project profit margins',
+                    'Managing stakeholder expectations'
+                ],
+                'correct_answer' => ['Ensuring projects deliver their intended benefits'],
+                'explanation' => 'Benefit realization management ensures that projects and programs deliver their intended benefits and create value for the organization.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What is a burndown chart?',
+                'options' => [
+                    'A chart showing team member burnout levels',
+                    'A visual representation of work remaining over time',
+                    'A budget depletion tracking tool',
+                    'A chart showing equipment depreciation'
+                ],
+                'correct_answer' => ['A visual representation of work remaining over time'],
+                'explanation' => 'A burndown chart is a graphical representation of work left to do versus time, commonly used in Agile project management.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is the difference between influence and authority?',
+                'options' => [
+                    'There is no difference',
+                    'Influence is earned; authority is given',
+                    'Authority is more important than influence',
+                    'Influence only works with junior team members'
+                ],
+                'correct_answer' => ['Influence is earned; authority is given'],
+                'explanation' => 'Influence is the ability to affect others\' behavior through persuasion and is earned, while authority is formally granted power.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is change management in projects?',
+                'options' => [
+                    'Making changes to project requirements',
+                    'Managing the human side of change to achieve desired outcomes',
+                    'Changing project managers mid-project',
+                    'Managing small coins and bills'
+                ],
+                'correct_answer' => ['Managing the human side of change to achieve desired outcomes'],
+                'explanation' => 'Change management focuses on helping individuals and organizations transition from current state to desired future state.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is a Kanban board?',
+                'options' => [
+                    'A Japanese project management certification',
+                    'A visual tool for managing work flow',
+                    'A type of project budget',
+                    'A team building exercise from Japan'
+                ],
+                'correct_answer' => ['A visual tool for managing work flow'],
+                'explanation' => 'A Kanban board is a visual tool that helps teams manage workflow by visualizing work items and their status.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 1,
+                'points' => 5,
+                'type' => 'multiple_choice',
+                'question' => 'What does MVP stand for in project management?',
+                'options' => [
+                    'Most Valuable Player',
+                    'Minimum Viable Product',
+                    'Maximum Value Proposition',
+                    'Minimum Viable Process'
+                ],
+                'correct_answer' => ['Minimum Viable Product'],
+                'explanation' => 'MVP (Minimum Viable Product) is a version of a product with just enough features to satisfy early customers and provide feedback.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is technical debt in project management?',
+                'options' => [
+                    'Money owed to technical consultants',
+                    'The cost of rework caused by choosing quick solutions over better approaches',
+                    'Loans taken to buy technical equipment',
+                    'The technical knowledge deficit of team members'
+                ],
+                'correct_answer' => ['The cost of rework caused by choosing quick solutions over better approaches'],
+                'explanation' => 'Technical debt represents the implied cost of additional rework caused by choosing an easy solution now instead of a better approach.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 3,
+                'points' => 10,
+                'type' => 'multiple_choice',
+                'question' => 'What is portfolio management?',
+                'options' => [
+                    'Managing financial investment portfolios',
+                    'Centralized management of multiple projects and programs to achieve strategic objectives',
+                    'Managing individual project portfolios',
+                    'Collecting and organizing project documents'
+                ],
+                'correct_answer' => ['Centralized management of multiple projects and programs to achieve strategic objectives'],
+                'explanation' => 'Portfolio management involves centralized management of projects and programs to achieve strategic business objectives.',
+            ],
+            [
+                'category' => 'project_management',
+                'difficulty' => 2,
+                'points' => 7,
+                'type' => 'multiple_choice',
+                'question' => 'What is continuous improvement in project management?',
+                'options' => [
+                    'Never ending project work',
+                    'Ongoing effort to improve processes, products, or services',
+                    'Continuous project funding',
+                    'Working without breaks'
+                ],
+                'correct_answer' => ['Ongoing effort to improve processes, products, or services'],
+                'explanation' => 'Continuous improvement is an ongoing effort to improve processes, products, or services through incremental and breakthrough improvements.',
+            ]
+        ];
+
+        foreach ($questions as $question) {
+            PMQuestion::create($question);
+        }
+
+        echo "Created " . count($questions) . " project management questions.\n";
+    }
+}

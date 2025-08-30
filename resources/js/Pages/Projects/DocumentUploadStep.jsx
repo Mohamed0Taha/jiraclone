@@ -46,7 +46,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                     'X-Requested-With': 'XMLHttpRequest',
                 },
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 setQuota(data.documents);
@@ -72,10 +72,12 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
     const handleFileUpload = useCallback(
         async (file) => {
             if (!file) return;
-            
+
             // Check quota before proceeding
             if (quota && quota.remaining <= 0) {
-                setError('Document extraction quota exceeded. Upgrade your plan to extract more documents.');
+                setError(
+                    'Document extraction quota exceeded. Upgrade your plan to extract more documents.'
+                );
                 return;
             }
 
@@ -142,42 +144,44 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                     console.log('AI Analysis Result:', result.data); // Debug log
                     console.log('Available result.data keys:', Object.keys(result.data)); // Debug log
                     console.log('Full result structure:', result); // Debug log
-                    
+
                     // Update quota if provided
                     if (result.quota) {
                         setQuota(result.quota);
                     }
-                    
+
                     onDocumentAnalyzed(result.data);
                 } else {
                     console.error('API Error:', result.message); // Debug log
                     let errorMessage = result.message || 'Failed to analyze document';
-                    
+
                     // Handle quota exceeded error specifically
                     if (response.status === 403 && result.quota) {
                         setQuota(result.quota);
-                        errorMessage = result.message || 'Document extraction quota exceeded. Upgrade your plan to extract more documents.';
+                        errorMessage =
+                            result.message ||
+                            'Document extraction quota exceeded. Upgrade your plan to extract more documents.';
                     }
-                    
+
                     // Handle specific error types
                     if (result.errors) {
                         const errorValues = Object.values(result.errors).flat();
                         errorMessage = errorValues.length > 0 ? errorValues[0] : errorMessage;
                     }
-                    
+
                     setError(errorMessage);
                 }
             } catch (err) {
                 console.error('Document upload error:', err);
                 let errorMessage = 'Failed to upload and analyze document. Please try again.';
-                
+
                 // Handle network errors
                 if (err.name === 'TypeError' && err.message.includes('fetch')) {
                     errorMessage = 'Network error. Please check your connection and try again.';
                 } else if (err.message) {
                     errorMessage = err.message;
                 }
-                
+
                 setError(errorMessage);
             } finally {
                 setUploading(false);
@@ -193,7 +197,9 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
 
             // Check quota before proceeding
             if (quota && quota.remaining <= 0) {
-                setError('Document extraction quota exceeded. Upgrade your plan to extract more documents.');
+                setError(
+                    'Document extraction quota exceeded. Upgrade your plan to extract more documents.'
+                );
                 return;
             }
 
@@ -342,21 +348,29 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
 
                         {quota && (
                             <Box sx={{ mb: 3 }}>
-                                <Alert 
+                                <Alert
                                     severity={quota.remaining > 0 ? 'info' : 'warning'}
-                                    sx={{ 
+                                    sx={{
                                         maxWidth: 400,
                                         mx: 'auto',
                                         '& .MuiAlert-message': {
                                             width: '100%',
-                                            textAlign: 'center'
-                                        }
+                                            textAlign: 'center',
+                                        },
                                     }}
                                 >
                                     {quota.remaining > 0 ? (
-                                        <>Documents remaining this period: <strong>{quota.remaining}</strong> (used {quota.used} of {quota.limit})</>
+                                        <>
+                                            Documents remaining this period:{' '}
+                                            <strong>{quota.remaining}</strong> (used {quota.used} of{' '}
+                                            {quota.limit})
+                                        </>
                                     ) : (
-                                        <><strong>Document extraction quota reached.</strong> You've used {quota.used} of {quota.limit} this period. Upgrade your plan to extract more documents.</>
+                                        <>
+                                            <strong>Document extraction quota reached.</strong>{' '}
+                                            You've used {quota.used} of {quota.limit} this period.
+                                            Upgrade your plan to extract more documents.
+                                        </>
                                     )}
                                 </Alert>
                             </Box>
@@ -375,13 +389,15 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 bgcolor: dragOver
                                     ? alpha(theme.palette.primary.main, 0.05)
                                     : alpha(theme.palette.grey[50], 0.5),
-                                cursor: (quota && quota.remaining <= 0) ? 'not-allowed' : 'pointer',
+                                cursor: quota && quota.remaining <= 0 ? 'not-allowed' : 'pointer',
                                 transition: 'all 0.3s ease',
-                                opacity: (quota && quota.remaining <= 0) ? 0.6 : 1,
+                                opacity: quota && quota.remaining <= 0 ? 0.6 : 1,
                             }}
                             onClick={() => {
                                 if (quota && quota.remaining <= 0) {
-                                    setError('Document extraction quota exceeded. Upgrade your plan to extract more documents.');
+                                    setError(
+                                        'Document extraction quota exceeded. Upgrade your plan to extract more documents.'
+                                    );
                                     return;
                                 }
                                 document.getElementById('document-input')?.click();
@@ -395,14 +411,14 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 }}
                             />
                             <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                                {quota && quota.remaining <= 0 
+                                {quota && quota.remaining <= 0
                                     ? 'Document extraction quota reached'
                                     : dragOver
-                                    ? 'Drop your document here'
-                                    : 'Click to browse or drag & drop your document'}
+                                      ? 'Drop your document here'
+                                      : 'Click to browse or drag & drop your document'}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                                {quota && quota.remaining <= 0 
+                                {quota && quota.remaining <= 0
                                     ? 'Upgrade your plan to extract more documents'
                                     : 'Supports: PDF, Word (.doc/.docx), Text (.txt), RTF • Max 5MB'}
                             </Typography>

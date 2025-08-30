@@ -457,10 +457,12 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
     const handleCreateWorkflow = () => {
         // Check if user has reached their automation quota
         if (!quota.can_create) {
-            setErrorMessage(`You have reached your automation limit (${quota.used}/${quota.limit}). Upgrade your plan to create more automations.`);
+            setErrorMessage(
+                `You have reached your automation limit (${quota.used}/${quota.limit}). Upgrade your plan to create more automations.`
+            );
             return;
         }
-        
+
         setSelectedWorkflow({
             name: '',
             description: '',
@@ -498,10 +500,12 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
         const onSelect = (payload) => {
             // Check if user has reached their automation quota
             if (!quota.can_create) {
-                setErrorMessage(`You have reached your automation limit (${quota.used}/${quota.limit}). Upgrade your plan to create more automations.`);
+                setErrorMessage(
+                    `You have reached your automation limit (${quota.used}/${quota.limit}). Upgrade your plan to create more automations.`
+                );
                 return;
             }
-            
+
             setSelectedWorkflow(payload);
             setView('builder');
         };
@@ -535,15 +539,23 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
                                 },
                                 onError: (errors) => {
                                     // Handle quota exceeded error
-                                    if (errors.quota_exceeded || (errors.message && errors.message.includes('automation limit'))) {
-                                        setErrorMessage(`You have reached your automation limit (${quota.used}/${quota.limit}). Upgrade your plan to create more automations.`);
+                                    if (
+                                        errors.quota_exceeded ||
+                                        (errors.message &&
+                                            errors.message.includes('automation limit'))
+                                    ) {
+                                        setErrorMessage(
+                                            `You have reached your automation limit (${quota.used}/${quota.limit}). Upgrade your plan to create more automations.`
+                                        );
                                         setView('list'); // Go back to list view
                                         return;
                                     }
                                     // Surface first validation error if present
                                     const firstKey = Object.keys(errors)[0];
                                     if (firstKey) {
-                                        const msg = Array.isArray(errors[firstKey]) ? errors[firstKey][0] : errors[firstKey];
+                                        const msg = Array.isArray(errors[firstKey])
+                                            ? errors[firstKey][0]
+                                            : errors[firstKey];
                                         setErrorMessage(msg || 'Failed to save workflow.');
                                     } else {
                                         setErrorMessage('Failed to save workflow.');
@@ -629,7 +641,11 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
                             variant="contained"
                             size="large"
                             startIcon={quota.can_create ? <AddIcon /> : <WarningAmberIcon />}
-                            onClick={quota.can_create ? handleCreateWorkflow : () => router.visit(route('billing.show'))}
+                            onClick={
+                                quota.can_create
+                                    ? handleCreateWorkflow
+                                    : () => router.visit(route('billing.show'))
+                            }
                             disabled={!quota.can_create && quota.plan === 'free'}
                             sx={{
                                 borderRadius: 3,
@@ -637,12 +653,14 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
                                 fontWeight: 800,
                                 bgcolor: quota.can_create ? 'white' : 'warning.main',
                                 color: quota.can_create ? 'primary.main' : 'white',
-                                '&:hover': { 
-                                    bgcolor: quota.can_create ? '#f0f0f0' : 'warning.dark'
+                                '&:hover': {
+                                    bgcolor: quota.can_create ? '#f0f0f0' : 'warning.dark',
                                 },
                             }}
                         >
-                            {quota.can_create ? 'Create Workflow' : `Upgrade Plan (${quota.used}/${quota.limit} used)`}
+                            {quota.can_create
+                                ? 'Create Workflow'
+                                : `Upgrade Plan (${quota.used}/${quota.limit} used)`}
                         </Button>
                         <Button
                             variant="outlined"
@@ -738,7 +756,7 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
                         </Grid>
                     ))}
                 </Grid>
-                    </Box>
+            </Box>
 
             <Dialog
                 open={confirmOpen}

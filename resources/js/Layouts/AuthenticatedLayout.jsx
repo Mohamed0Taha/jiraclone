@@ -146,7 +146,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <Dropdown.Link href={route('billing.show')}>
                                             Subscriptions
                                         </Dropdown.Link>
-                                        <Dropdown.Link href={route('certification.index')}>
+                                        <Dropdown.Link
+                                            href={route('certification.index')}
+                                            onClick={(e)=>{ e.preventDefault(); window.location.href=route('certification.index'); }}
+                                        >
                                             Get Certified
                                         </Dropdown.Link>
                                         <Dropdown.Link href={route('contact.show')}>
@@ -264,7 +267,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 </ResponsiveNavLink>
                                 <ResponsiveNavLink
                                     href={route('certification.index')}
-                                    onClick={closeMobile}
+                                    onClick={(e)=>{ e.preventDefault(); closeMobile(); window.location.href=route('certification.index'); }}
                                 >
                                     Get Certified
                                 </ResponsiveNavLink>
