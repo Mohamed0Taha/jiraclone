@@ -346,13 +346,15 @@
                 <div class="score-section">
                     <div class="score-label">Final Score</div>
                     <div class="score-value">{{ number_format($percentage ?? ($attempt->percentage ?? 0), 1) }}%</div>
-                        <div class="score-grade">
-                            @php($__score = $percentage ?? ($attempt->percentage ?? 0))
-                            @if($__score >= 90)
+                    <div class="score-grade">
+                        @php
+                            $__score = $percentage ?? ($attempt->percentage ?? 0);
+                        @endphp
+                        @if($__score >= 90)
                             Outstanding Performance
-                            @elseif($__score >= 80)
+                        @elseif($__score >= 80)
                             Excellent Performance
-                            @elseif($__score >= 70)
+                        @elseif($__score >= 70)
                             Good Performance
                         @else
                             Satisfactory Performance
