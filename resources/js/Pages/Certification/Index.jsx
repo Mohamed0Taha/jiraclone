@@ -461,31 +461,45 @@ export default function CertificationIndex({
         }
     };
 
-    /* Countdown: use local state to tick each second; resync with server every 30s */
+    /* Enhanced countdown: continuous timer with automatic expiration handling */
     useEffect(()=>{ setLocalRemaining(remainingSeconds ?? null); },[remainingSeconds]);
 
     useEffect(()=>{
-        if (phase !== 'pm_concepts' || timeUp) return; 
+        if (phase !== 'pm_concepts') return; 
         if (typeof remainingSeconds !== 'number') return;
-        let lastUpdate = Date.now();
+        
+        // If already time up, don't start timer
+        if (timeUp || remainingSeconds <= 0) {
+            setLocalRemaining(0);
+            return;
+        }
+        
         const tick = () => {
             setLocalRemaining(prev => {
                 // initialize
                 if (prev === null || prev === undefined) return remainingSeconds;
-                if (prev <= 0) return 0;
-                return prev - 1;
+                const newValue = prev - 1;
+                
+                // When timer hits 0, automatically redirect to cooldown page
+                if (newValue <= 0) {
+                    setTimeout(() => {
+                        router.reload(); // This will trigger the backend to detect expiration and show cooldown
+                    }, 1000);
+                    return 0;
+                }
+                return newValue;
             });
         };
-        const interval = setInterval(()=>{
-            tick();
-        },1000);
+        
+        const interval = setInterval(tick, 1000);
         return ()=> clearInterval(interval);
-    },[phase, timeUp, remainingSeconds]);
+    },[phase, remainingSeconds, timeUp]);
 
     useEffect(()=>{
-        // periodic server sync (30s) to correct drift
-        if (phase !== 'pm_concepts' || timeUp) return; 
-        if (!remainingSeconds) return;
+        // periodic server sync (30s) to correct drift and check expiration
+        if (phase !== 'pm_concepts') return; 
+        if (!remainingSeconds || timeUp) return;
+        
         const sync = setInterval(()=>{
             router.reload({ only: ['remainingSeconds','timeUp']});
         },30000);

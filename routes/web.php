@@ -235,6 +235,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/certification/previous', [CertificationController::class, 'previousQuestion'])->name('certification.previous');
     Route::post('/certification/start-practical', [CertificationController::class, 'startPracticalScenario'])->name('certification.start-practical');
     Route::post('/certification/begin', [CertificationController::class, 'begin'])->name('certification.begin');
+    Route::post('/certification/cleanup', [CertificationController::class, 'cleanupExpiredAttempt'])->name('certification.cleanup');
     Route::get('/certification/practical', [CertificationController::class, 'practicalScenario'])->name('certification.practical');
     Route::post('/certification/practical', [CertificationController::class, 'submitPractical'])->name('certification.practical.submit');
     Route::get('/certification/results', [CertificationController::class, 'results'])->name('certification.results');

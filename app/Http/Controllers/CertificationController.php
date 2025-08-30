@@ -27,6 +27,7 @@ class CertificationController extends Controller
             } catch (\Throwable $e) {
                 Log::error('[CERT DIAG] failed to gather initial diagnostics: '.$e->getMessage());
             }
+
             // Check for existing completed certification
             $latestCompleted = CertificationAttempt::where('user_id',$request->user()->id)
                 ->whereNotNull('completed_at')
@@ -64,11 +65,40 @@ class CertificationController extends Controller
                     'canRetake' => true, // Always allow retake for older certificates
                 ]);
             }
-            
-            // Check for existing attempt BEFORE creating one
+
+            // Check for existing incomplete attempts
             $attempt = CertificationAttempt::where('user_id', $request->user()->id)
                 ->where('phase', 'pm_concepts')
                 ->first();
+
+            // Check for expired attempts with cooldown
+            if ($attempt && $attempt->is_expired && !$attempt->canStartNewAttempt()) {
+                $hoursRemaining = $attempt->getHoursUntilNextAttempt();
+                return Inertia::render('Certification/Cooldown', [
+                    'hoursRemaining' => $hoursRemaining,
+                    'nextAttemptAt' => $attempt->next_attempt_allowed_at->format('M j, Y g:i A'),
+                    'reason' => 'Previous exam time expired without completion',
+                ]);
+            }
+
+            // If expired attempt exists and cooldown has passed, allow new attempt
+            if ($attempt && $attempt->is_expired && $attempt->canStartNewAttempt()) {
+                $attempt->delete(); // Clean up expired attempt
+                $attempt = null;
+            }
+
+            // Check for active exam that has expired
+            if ($attempt && $attempt->exam_expires_at && $attempt->isTimeExpired() && !$attempt->is_expired) {
+                // Mark as expired and set cooldown
+                $attempt->markAsExpired();
+                $hoursRemaining = $attempt->getHoursUntilNextAttempt();
+                
+                return Inertia::render('Certification/Cooldown', [
+                    'hoursRemaining' => $hoursRemaining,
+                    'nextAttemptAt' => $attempt->next_attempt_allowed_at->format('M j, Y g:i A'),
+                    'reason' => 'Exam time limit exceeded',
+                ]);
+            }
             
             // If no attempt exists, show intro page
             if (!$attempt) {
@@ -93,19 +123,11 @@ class CertificationController extends Controller
             }
 
             $answeredSoFar = CertificationAnswer::where('certification_attempt_id', $attempt->id)->count();
-            $meta = $attempt->meta ?? [];
-            $examDurationSeconds = 20 * 60; // 20 minutes for theory
-            $remainingSeconds = null; $timeUp = false;
-
-            if (isset($meta['pm_concepts_started_at'])) {
-                $startedAt = Carbon::parse($meta['pm_concepts_started_at']);
-                $elapsed = max(0, now()->diffInSeconds($startedAt));
-                $remainingSeconds = max(0, $examDurationSeconds - $elapsed);
-                if ($remainingSeconds === 0 && $attempt->phase === 'pm_concepts') { $timeUp = true; }
-            }
+            $remainingSeconds = $attempt->getRemainingTimeSeconds();
+            $timeUp = $attempt->isTimeExpired();
 
             // Intro gate: if no answers yet and no active start timestamp -> show intro page
-            if ($attempt->phase === 'pm_concepts' && $answeredSoFar === 0 && !isset($meta['pm_concepts_started_at'])) {
+            if ($attempt->phase === 'pm_concepts' && $answeredSoFar === 0 && !$attempt->exam_started_at) {
                 $projectMgmtCount = PMQuestion::where('category','project_management')->count();
                 return Inertia::render('Certification/Intro', [
                     'attempt' => $attempt,
@@ -350,9 +372,19 @@ class CertificationController extends Controller
             ['phase' => 'theory', 'current_step' => 1]
         );
 
+        // Check if exam time has expired
+        if ($attempt->isTimeExpired()) {
+            // Mark as expired if not already marked
+            if (!$attempt->is_expired) {
+                $attempt->markAsExpired();
+            }
+            return redirect()->route('certification.index')
+                ->with('error', 'Exam time has expired. You must wait 24 hours before your next attempt.');
+        }
+
         $question = PMQuestion::findOrFail($request->question_id);
 
-        // Prevent answering if time is up
+        // Prevent answering if time is up (legacy check for backward compatibility)
         $meta = $attempt->meta ?? [];
         if (($attempt->phase === 'pm_concepts') && isset($meta['pm_concepts_started_at'])) {
             $startedAt = Carbon::parse($meta['pm_concepts_started_at']);
@@ -1317,16 +1349,64 @@ class CertificationController extends Controller
     /** Start the theory exam (sets start timestamp) */
     public function begin(Request $request)
     {
+        // Check for existing expired attempt with cooldown
+        $existingAttempt = CertificationAttempt::where('user_id', $request->user()->id)
+            ->where('phase', 'pm_concepts')
+            ->first();
+
+        if ($existingAttempt && $existingAttempt->is_expired && !$existingAttempt->canStartNewAttempt()) {
+            return redirect()->route('certification.index')
+                ->with('error', 'You must wait 24 hours before starting a new exam attempt.');
+        }
+
+        // Clean up expired attempt if cooldown has passed
+        if ($existingAttempt && $existingAttempt->is_expired && $existingAttempt->canStartNewAttempt()) {
+            $existingAttempt->delete();
+            $existingAttempt = null;
+        }
+
+        // Create new attempt or use existing one
         $attempt = CertificationAttempt::firstOrCreate(
             ['user_id' => $request->user()->id, 'phase' => 'pm_concepts'],
             ['current_step' => 1, 'total_score' => 0, 'max_possible_score' => 0]
         );
-        $meta = $attempt->meta ?? [];
-        if (!isset($meta['pm_concepts_started_at'])) {
+
+        // Set exam timing when starting for the first time
+        if (!$attempt->exam_started_at) {
+            $examDurationMinutes = 20; // 20 minutes for the theory exam
+            $attempt->update([
+                'exam_started_at' => now(),
+                'exam_expires_at' => now()->addMinutes($examDurationMinutes),
+                'is_expired' => false,
+                'next_attempt_allowed_at' => null,
+            ]);
+
+            // Update old meta field for backward compatibility
+            $meta = $attempt->meta ?? [];
             $meta['pm_concepts_started_at'] = now()->toIso8601String();
             $attempt->update(['meta' => $meta]);
         }
+
         return redirect()->route('certification.index');
+    }
+
+    /**
+     * Clean up expired attempt and allow new one
+     */
+    public function cleanupExpiredAttempt(Request $request)
+    {
+        $attempt = CertificationAttempt::where('user_id', $request->user()->id)
+            ->where('is_expired', true)
+            ->first();
+
+        if ($attempt && $attempt->canStartNewAttempt()) {
+            $attempt->delete();
+            return redirect()->route('certification.index')
+                ->with('success', 'Ready for your new exam attempt!');
+        }
+
+        return redirect()->route('certification.index')
+            ->with('error', 'No expired attempt to clean up or cooldown period not complete.');
     }
 
     /**
