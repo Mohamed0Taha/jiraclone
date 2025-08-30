@@ -290,6 +290,29 @@ Route::middleware(['auth'])->group(function () {
 
 // Public certificate access + verification (no auth required)
 Route::get('/verify/{serial}', [CertificationController::class, 'verifyPublic'])->name('certification.verify.public');
+
+// DEBUG: Minimal certificate test
+Route::get('/certificates/{serial}/debug', function($serial) {
+    try {
+        $attempt = \App\Models\CertificationAttempt::where('serial', $serial)->first();
+        if (!$attempt) return response('Serial not found', 404);
+        
+        $user = $attempt->user;
+        if (!$user) return response('User missing', 500);
+        
+        return response()->json([
+            'serial' => $serial,
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'percentage' => $attempt->percentage,
+            'completed_at' => $attempt->completed_at,
+            'debug' => 'OK'
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage(), 'line' => $e->getLine()], 500);
+    }
+});
+
 Route::get('/certificates/{serial}', [CertificationController::class, 'publicCertificate'])->name('certification.public.certificate');
 Route::get('/certificates/{serial}/badge', [CertificationController::class, 'publicBadge'])->name('certification.public.badge');
 // HD downloadable images (server-side rendered to JPEG)
