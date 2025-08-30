@@ -7,7 +7,13 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        // Drop existing table if it exists with wrong schema
+        // Drop foreign key constraint first, then drop and recreate table
+        if (Schema::hasTable('certification_answers')) {
+            Schema::table('certification_answers', function (Blueprint $table) {
+                $table->dropForeign(['certification_attempt_id']);
+            });
+        }
+        
         Schema::dropIfExists('certification_attempts');
         
         // Recreate with correct schema
@@ -28,6 +34,13 @@ return new class extends Migration {
             $table->json('selected_question_ids')->nullable(); // Add this directly
             $table->timestamps();
         });
+        
+        // Recreate foreign key constraint if certification_answers table exists
+        if (Schema::hasTable('certification_answers')) {
+            Schema::table('certification_answers', function (Blueprint $table) {
+                $table->foreign('certification_attempt_id')->references('id')->on('certification_attempts')->onDelete('cascade');
+            });
+        }
     }
 
     public function down(): void
