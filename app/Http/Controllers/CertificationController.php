@@ -1166,19 +1166,35 @@ class CertificationController extends Controller
 
     public function publicCertificate($serial)
     {
-        $attempt = CertificationAttempt::where('serial',$serial)->firstOrFail();
-        $user = $attempt->user;
-        $site = rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/');
-        $ogImageUrl = $site . '/certificates/' . $serial . '/download/og-image';
-        
-        return view('certificates.certificate', [
-            'user' => $user,
-            'attempt' => $attempt,
-            'issued_date' => optional($attempt->completed_at)->format('F j, Y'),
-            'percentage' => round($attempt->percentage ?? 0,1),
-            'ogImageUrl' => $ogImageUrl,
-            'site' => $site
-        ]);
+        try {
+            $attempt = CertificationAttempt::with('user')->where('serial',$serial)->first();
+            if (!$attempt) {
+                \Log::warning('[CERT VIEW] Serial not found '.$serial);
+                return response()->view('certificates.verify', [
+                    'found' => false,
+                    'serial' => $serial,
+                ], 404);
+            }
+            if (!$attempt->user) {
+                \Log::error('[CERT VIEW] Attempt has no user relation serial='.$serial.' attempt_id='.$attempt->id);
+                return response('User missing',500);
+            }
+            $user = $attempt->user;
+            $site = rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/');
+            $ogImageUrl = $site . '/certificates/' . $serial . '/download/og-image';
+            $percentage = round($attempt->percentage ?? 0,1);
+            return view('certificates.certificate', [
+                'user' => $user,
+                'attempt' => $attempt,
+                'issued_date' => optional($attempt->completed_at)->format('F j, Y'),
+                'percentage' => $percentage,
+                'ogImageUrl' => $ogImageUrl,
+                'site' => $site
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('[CERT VIEW] Render failed serial='.$serial.' error='.$e->getMessage());
+            return response('Certificate render error',500);
+        }
     }
 
     public function publicBadge($serial)

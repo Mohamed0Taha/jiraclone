@@ -393,7 +393,8 @@
                                 <div style="font-size:12px;color:#6c757d;margin-bottom:6px;">QR unavailable</div>
                                 <div style="font-family:monospace;font-size:11px;word-break:break-all;max-width:240px;">{{ $certUrl }}</div>
                                 @if($qrError)
-                                    <div style="color:#dc3545;font-size:11px;margin-top:4px;">{{ Str::limit($qrError, 80) }}</div>
+                                    @php $shortErr = mb_substr($qrError,0,80); @endphp
+                                    <div style="color:#dc3545;font-size:11px;margin-top:4px;">{{ $shortErr }}</div>
                                 @endif
                             </div>
                         @endif
