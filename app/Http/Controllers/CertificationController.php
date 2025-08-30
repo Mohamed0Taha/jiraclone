@@ -535,8 +535,11 @@ class CertificationController extends Controller
             
             // If this is a new attempt (no answered questions), select a mixed set (MC + Free Form)
             if (empty($answeredQuestionIds)) {
-                // General project management pool category
-                $baseQuery = PMQuestion::where('category','project_management')->where('is_active', true);
+                // General project management pool category. Treat NULL is_active as active for legacy seeded rows.
+                $baseQuery = PMQuestion::where('category','project_management')
+                    ->where(function($q){
+                        $q->where('is_active', true)->orWhereNull('is_active');
+                    });
 
                 // Fetch by type
                 // Broaden selection: some seeds may store type variants like 'mc', 'multiple', etc.
@@ -566,6 +569,19 @@ class CertificationController extends Controller
                     $remaining = $targetTotal - count($selected);
                     $backfill = $baseQuery->whereNotIn('id', $selected)->inRandomOrder()->limit($remaining)->pluck('id')->toArray();
                     $selected = array_merge($selected, $backfill);
+                }
+
+                // Absolute fallback: if still empty, pull any questions from category ignoring is_active & type filters
+                if (empty($selected)) {
+                    $fallback = PMQuestion::where('category','project_management')->inRandomOrder()->limit($targetTotal)->pluck('id')->toArray();
+                    Log::warning('Fallback question selection engaged; original filtered set empty.', ['fallback_ids' => $fallback]);
+                    $selected = $fallback;
+                }
+
+                // If STILL empty, return null (controller will interpret as no questions configured)
+                if (empty($selected)) {
+                    Log::error('No project management questions available after all fallbacks.');
+                    return null;
                 }
 
                 shuffle($selected); // randomize order across types
