@@ -20,8 +20,12 @@ class DatabaseSeeder extends Seeder
                 'email' => 'test@example.com',
             ]);
         }
-
-    // Seed general project management question bank (100 MC + 50 free-form)
-    $this->call(GeneralPMQuestionBankSeeder::class);
+        // Prefer expanded PM question bank (100+ questions) for production readiness
+        // Falls back to general bank if expanded seeder missing
+        if (class_exists(ExpandedPMQuestionsSeeder::class)) {
+            $this->call(ExpandedPMQuestionsSeeder::class);
+        } else {
+            $this->call(GeneralPMQuestionBankSeeder::class);
+        }
     }
 }
