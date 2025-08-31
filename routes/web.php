@@ -488,6 +488,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/appsumo', [AdminController::class, 'appSumoDashboard'])->name('appsumo.dashboard');
     Route::post('/appsumo/generate', [AdminController::class, 'generateAppSumoCodes'])->name('appsumo.generate');
     Route::get('/appsumo/export', [AdminController::class, 'exportAppSumoCodes'])->name('appsumo.export');
+    Route::delete('/appsumo/delete', [AdminController::class, 'deleteAppSumoCodes'])->name('appsumo.delete');
 });
 
 /*

@@ -13,11 +13,20 @@
                     <p class="mt-1 text-sm text-gray-600">Generate, manage, and export AppSumo redemption codes</p>
                 </div>
                 <div class="flex items-center gap-3">
+                    <button id="selectAllBtn" onclick="toggleSelectAll()" 
+                            class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        ☑️ Select All
+                    </button>
+                    <button id="deleteSelectedBtn" onclick="deleteSelected()" 
+                            class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed" 
+                            disabled>
+                        🗑️ Delete Selected (<span id="selectedCount">0</span>)
+                    </button>
                     <a href="{{ route('admin.appsumo.export') }}" 
                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
-                        📥 Download for AppSumo
+                        📥 Download Active Codes
                     </a>
-                    <p class="text-xs text-gray-500">CSV contains only active codes (AppSumo format)</p>
+                    <p class="text-xs text-gray-500">CSV contains {{ $stats['active'] }} active codes only (AppSumo format)</p>
                 </div>
             </div>
         </div>
@@ -174,7 +183,11 @@
                 @if($codes->count() > 0)
                     <div class="overflow-hidden border border-gray-200 rounded-lg">
                         <!-- Table Header -->
-                        <div class="bg-gray-50 px-6 py-3 grid grid-cols-6 gap-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div class="bg-gray-50 px-6 py-3 grid grid-cols-7 gap-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" 
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            </div>
                             <div>Code</div>
                             <div>Status</div>
                             <div>Redeemed By</div>
@@ -186,17 +199,25 @@
                         <!-- Table Body -->
                         <div class="bg-white divide-y divide-gray-200">
                             @foreach($codes as $code)
-                                <div class="px-6 py-4 grid grid-cols-6 gap-4 items-center">
-                    <!-- Code -->
+                                <div class="px-6 py-4 grid grid-cols-7 gap-4 items-center">
+                                    <!-- Checkbox -->
+                                    <div>
+                                        @if($code->status === 'active')
+                                            <input type="checkbox" 
+                                                   class="code-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                                                   value="{{ $code->id }}" 
+                                                   onchange="updateSelectedCount()">
+                                        @endif
+                                    </div>
+
+                                    <!-- Code -->
                                     <div class="code-cell" data-code="{{ $code->code }}">
                                         <span class="code-visible font-mono text-sm">{{ $code->code }}</span>
                                         <button data-copy-text="{{ $code->code }}" 
                                                 class="copy-btn ml-2 text-gray-400 hover:text-gray-600">
                                             📋
                                         </button>
-                                    </div>
-
-                                    <!-- Status -->
+                                    </div>                                    <!-- Status -->
                                     <div>
                                         @switch($code->status)
                                             @case('active')
@@ -315,6 +336,99 @@
     </div>
 
     <script>
+        let selectedCodes = [];
+
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            const codeCheckboxes = document.querySelectorAll('.code-checkbox');
+            const isChecked = selectAllCheckbox.checked;
+
+            codeCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+
+            updateSelectedCount();
+            updateSelectAllButton();
+        }
+
+        function updateSelectedCount() {
+            const checkedBoxes = document.querySelectorAll('.code-checkbox:checked');
+            const count = checkedBoxes.length;
+            
+            document.getElementById('selectedCount').textContent = count;
+            document.getElementById('deleteSelectedBtn').disabled = count === 0;
+
+            // Update select all checkbox state
+            const allCheckboxes = document.querySelectorAll('.code-checkbox');
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            
+            if (count === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (count === allCheckboxes.length) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+
+            updateSelectAllButton();
+        }
+
+        function updateSelectAllButton() {
+            const checkedBoxes = document.querySelectorAll('.code-checkbox:checked');
+            const allCheckboxes = document.querySelectorAll('.code-checkbox');
+            const selectAllBtn = document.getElementById('selectAllBtn');
+            
+            if (checkedBoxes.length === allCheckboxes.length && allCheckboxes.length > 0) {
+                selectAllBtn.innerHTML = '☑️ Deselect All';
+            } else {
+                selectAllBtn.innerHTML = '☑️ Select All';
+            }
+        }
+
+        function deleteSelected() {
+            const checkedBoxes = document.querySelectorAll('.code-checkbox:checked');
+            const count = checkedBoxes.length;
+            
+            if (count === 0) return;
+
+            if (confirm(`Are you sure you want to delete ${count} selected code${count > 1 ? 's' : ''}? This action cannot be undone.`)) {
+                const codeIds = Array.from(checkedBoxes).map(cb => cb.value);
+                
+                // Create form and submit
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route("admin.appsumo.delete") }}';
+                
+                // CSRF token
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                form.appendChild(csrfToken);
+                
+                // Method spoofing for DELETE
+                const methodField = document.createElement('input');
+                methodField.type = 'hidden';
+                methodField.name = '_method';
+                methodField.value = 'DELETE';
+                form.appendChild(methodField);
+                
+                // Code IDs
+                codeIds.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'code_ids[]';
+                    input.value = id;
+                    form.appendChild(input);
+                });
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
         // Event delegation for copy buttons
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('copy-btn') || e.target.closest('.copy-btn')) {
@@ -336,6 +450,11 @@
                     }, 1500);
                 });
             }
+        });
+
+        // Initialize count on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSelectedCount();
         });
     </script>
 </x-admin.layout>

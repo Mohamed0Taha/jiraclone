@@ -1768,6 +1768,35 @@ class AdminController extends Controller
     }
 
     /**
+     * Delete selected AppSumo codes
+     */
+    public function deleteAppSumoCodes(Request $request)
+    {
+        $request->validate([
+            'code_ids' => 'required|array',
+            'code_ids.*' => 'integer|exists:appsumo_codes,id',
+        ]);
+
+        try {
+            $codeIds = $request->input('code_ids');
+            
+            // Only allow deletion of active codes (not redeemed ones)
+            $deletedCount = AppSumoCode::whereIn('id', $codeIds)
+                ->where('status', 'active')
+                ->delete();
+
+            return redirect()
+                ->route('admin.appsumo.dashboard')
+                ->with('message', "Successfully deleted {$deletedCount} AppSumo codes!");
+
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.appsumo.dashboard')
+                ->with('error', 'Failed to delete codes: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Generate a unique AppSumo code
      */
     private function generateUniqueAppSumoCode()
