@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CertificationAttempt;
 use App\Models\CertificationAnswer;
+use App\Models\CertificationAttempt;
 use App\Models\PMQuestion;
+use App\Services\OpenAIService;
+use App\Services\SimpleSimulationGenerator;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Inertia\Inertia;
-use Carbon\Carbon;
-use App\Services\SimpleSimulationGenerator;
-use App\Services\OpenAIService;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 class CertificationController extends Controller
 {
@@ -29,11 +29,11 @@ class CertificationController extends Controller
             }
 
             // Check for existing completed certification
-            $latestCompleted = CertificationAttempt::where('user_id',$request->user()->id)
+            $latestCompleted = CertificationAttempt::where('user_id', $request->user()->id)
                 ->whereNotNull('completed_at')
                 ->orderByDesc('completed_at')
                 ->first();
-            
+
             if ($latestCompleted && $latestCompleted->phase === 'certification_complete') {
                 // Backfill serial if missing (older records created before public certificate feature)
                 if (empty($latestCompleted->serial)) {
@@ -45,12 +45,12 @@ class CertificationController extends Controller
                     }
                 }
                 $daysSinceCompletion = now()->diffInDays($latestCompleted->completed_at);
-                
+
                 // If certificate is less than 30 days old, redirect directly to certificate
                 if ($daysSinceCompletion < 30) {
-                    return redirect('/certificates/' . $latestCompleted->serial);
+                    return redirect('/certificates/'.$latestCompleted->serial);
                 }
-                
+
                 // If certificate is older than 30 days, show choice page
                 return Inertia::render('Certification/CertificateChoice', [
                     'existingCertificate' => [
@@ -60,20 +60,22 @@ class CertificationController extends Controller
                         'serial' => $latestCompleted->serial,
                         'days_ago' => $daysSinceCompletion,
                     ],
-                    'certificateUrl' => url('/certificates/' . $latestCompleted->serial),
-                    'badgeUrl' => url('/certificates/' . $latestCompleted->serial . '/badge'),
+                    'certificateUrl' => url('/certificates/'.$latestCompleted->serial),
+                    'badgeUrl' => url('/certificates/'.$latestCompleted->serial.'/badge'),
                     'canRetake' => true, // Always allow retake for older certificates
                 ]);
             }
 
             // Check for existing incomplete attempts
             $attempt = CertificationAttempt::where('user_id', $request->user()->id)
-                ->where('phase', 'pm_concepts')
+                ->whereIn('phase', ['pm_concepts', 'practical_scenario'])
+                ->orderBy('created_at', 'desc')
                 ->first();
 
             // Check for expired attempts with cooldown
-            if ($attempt && $attempt->is_expired && !$attempt->canStartNewAttempt()) {
+            if ($attempt && $attempt->is_expired && ! $attempt->canStartNewAttempt()) {
                 $hoursRemaining = $attempt->getHoursUntilNextAttempt();
+
                 return Inertia::render('Certification/Cooldown', [
                     'hoursRemaining' => $hoursRemaining,
                     'nextAttemptAt' => $attempt->next_attempt_allowed_at->format('M j, Y g:i A'),
@@ -88,25 +90,26 @@ class CertificationController extends Controller
             }
 
             // Check for active exam that has expired
-            if ($attempt && $attempt->exam_expires_at && $attempt->isTimeExpired() && !$attempt->is_expired) {
+            if ($attempt && $attempt->exam_expires_at && $attempt->isTimeExpired() && ! $attempt->is_expired) {
                 // Mark as expired and set cooldown
                 $attempt->markAsExpired();
                 $hoursRemaining = $attempt->getHoursUntilNextAttempt();
-                
+
                 return Inertia::render('Certification/Cooldown', [
                     'hoursRemaining' => $hoursRemaining,
                     'nextAttemptAt' => $attempt->next_attempt_allowed_at->format('M j, Y g:i A'),
                     'reason' => 'Exam time limit exceeded',
                 ]);
             }
-            
+
             // If no attempt exists, show intro page
-            if (!$attempt) {
-                $projectMgmtCount = PMQuestion::where('category','project_management')->count();
+            if (! $attempt) {
+                $projectMgmtCount = PMQuestion::where('category', 'project_management')->count();
                 if ($projectMgmtCount === 0) {
                     // Hard guard: no questions visible to web dyno -> configuration / connection mismatch
                     Log::error('[CERT DIAG] No project_management questions visible in web dyno context. Suggest config:clear & migrate --seed.');
                 }
+
                 return Inertia::render('Certification/Intro', [
                     'attempt' => null,
                     'totalQuestions' => min(15, $projectMgmtCount),
@@ -127,8 +130,9 @@ class CertificationController extends Controller
             $timeUp = $attempt->isTimeExpired();
 
             // Intro gate: if no answers yet and no active start timestamp -> show intro page
-            if ($attempt->phase === 'pm_concepts' && $answeredSoFar === 0 && !$attempt->exam_started_at) {
-                $projectMgmtCount = PMQuestion::where('category','project_management')->count();
+            if ($attempt->phase === 'pm_concepts' && $answeredSoFar === 0 && ! $attempt->exam_started_at) {
+                $projectMgmtCount = PMQuestion::where('category', 'project_management')->count();
+
                 return Inertia::render('Certification/Intro', [
                     'attempt' => $attempt,
                     'totalQuestions' => min(15, $projectMgmtCount),
@@ -150,42 +154,42 @@ class CertificationController extends Controller
             // Get current question for PM concepts phase
             $currentQuestion = null;
             // Determine total questions from unified general pool
-            $availableConceptQuestions = PMQuestion::where('category','project_management')->count();
+            $availableConceptQuestions = PMQuestion::where('category', 'project_management')->count();
             $totalQuestions = min(15, $availableConceptQuestions);
             $score = $attempt->total_score ?? 0;
             $maxScore = $attempt->max_possible_score ?? 0;
-            
+
             if ($attempt->phase === 'pm_concepts') {
                 // Get the current question (this will handle random selection if needed)
                 try {
-                    if (!$timeUp) {
+                    if (! $timeUp) {
                         $currentQuestion = $this->getCurrentQuestion($attempt);
                     } else {
                         $currentQuestion = null; // Time expired -> lock further questions
                     }
                 } catch (\Exception $e) {
-                    Log::error('Failed to get current question: ' . $e->getMessage());
+                    Log::error('Failed to get current question: '.$e->getMessage());
                     $currentQuestion = null;
                 }
-                
+
                 // Calculate score from answered questions
                 $answeredQuestions = CertificationAnswer::where('certification_attempt_id', $attempt->id)
                     ->with('pmQuestion')
                     ->get();
-                
+
                 $score = $answeredQuestions->sum('points_earned');
-                $maxScore = $answeredQuestions->sum(function($answer) { 
-                    return $answer->pmQuestion ? $answer->pmQuestion->points : 0; 
+                $maxScore = $answeredQuestions->sum(function ($answer) {
+                    return $answer->pmQuestion ? $answer->pmQuestion->points : 0;
                 });
                 $answeredCount = $answeredQuestions->count();
-                
+
                 // Update attempt with current scores
                 $attempt->update([
                     'total_score' => $score,
                     'max_possible_score' => $maxScore,
-                    'percentage' => $maxScore > 0 ? ($score / $maxScore * 100) : 0
+                    'percentage' => $maxScore > 0 ? ($score / $maxScore * 100) : 0,
                 ]);
-                
+
                 return Inertia::render('Certification/Index', [
                     'attempt' => $attempt->fresh(),
                     'currentQuestion' => $currentQuestion,
@@ -210,7 +214,8 @@ class CertificationController extends Controller
             // Default fallback
             return redirect()->route('certification.index');
         } catch (\Exception $e) {
-            Log::error('Certification index error: ' . $e->getMessage());
+            Log::error('Certification index error: '.$e->getMessage());
+
             return redirect()->route('dashboard')->with('error', 'Unable to load certification page');
         }
     }
@@ -222,7 +227,7 @@ class CertificationController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$attempt) {
+        if (! $attempt) {
             return redirect()->route('certification.index');
         }
 
@@ -242,7 +247,7 @@ class CertificationController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$attempt) {
+        if (! $attempt) {
             return redirect()->route('certification.index');
         }
 
@@ -258,6 +263,7 @@ class CertificationController extends Controller
         $data = $generator->generate($user);
         // Store ephemeral simulation in session so simulator page can retrieve
         $request->session()->put('simulator_payload', $data);
+
         return redirect()->route('simulator.index');
     }
 
@@ -266,13 +272,13 @@ class CertificationController extends Controller
         // Get questions by category in progressive order
         $categories = ['fundamentals', 'planning', 'execution', 'monitoring', 'ai_integration'];
         $currentCategory = $categories[$attempt->current_step - 1] ?? 'fundamentals';
-        
+
         return PMQuestion::where('category', $currentCategory)
             ->where('is_active', true)
             ->orderBy('difficulty')
             ->orderBy('id')
             ->get()
-            ->map(function($question) {
+            ->map(function ($question) {
                 return [
                     'id' => $question->id,
                     'category' => $question->category,
@@ -297,7 +303,7 @@ class CertificationController extends Controller
                     'budget' => 80000,
                     'timeline' => 16, // weeks
                     'team_size' => 6,
-                    'client_priority' => 'Time to market'
+                    'client_priority' => 'Time to market',
                 ],
                 'team_members' => [
                     ['id' => 1, 'name' => 'Sarah Chen', 'role' => 'UI/UX Designer', 'skills' => ['Design', 'User Research'], 'capacity' => 40],
@@ -315,10 +321,10 @@ class CertificationController extends Controller
                     'Order tracking and history',
                     'Admin dashboard for inventory management',
                     'Push notifications',
-                    'Social media integration'
-                ]
+                    'Social media integration',
+                ],
             ],
-            'challenges' => $this->getPracticalChallenges($attempt->current_step)
+            'challenges' => $this->getPracticalChallenges($attempt->current_step),
         ];
     }
 
@@ -329,32 +335,32 @@ class CertificationController extends Controller
                 'type' => 'requirements_definition',
                 'description' => 'The client has provided vague requirements. You need to define clear, measurable requirements for the project.',
                 'task' => 'Convert the initial requirements into SMART objectives with acceptance criteria.',
-                'points' => 20
+                'points' => 20,
             ],
             2 => [
                 'type' => 'timeline_creation',
                 'description' => 'Create a realistic project timeline with milestones and dependencies.',
                 'task' => 'Build a project schedule that accounts for dependencies, resource constraints, and includes buffer time.',
-                'points' => 25
+                'points' => 25,
             ],
             3 => [
                 'type' => 'crisis_management',
                 'description' => 'Week 6: Lead developer reports payment gateway security vulnerability. Junior developer quit. Client wants UI redesign.',
                 'task' => 'Prioritize these issues and create an action plan with timeline and resource implications.',
-                'points' => 30
+                'points' => 30,
             ],
             4 => [
                 'type' => 'resource_optimization',
                 'description' => 'Project is 15% behind schedule. You need to optimize resources without increasing budget significantly.',
                 'task' => 'Propose resource reallocation and timeline adjustments to get back on track.',
-                'points' => 25
+                'points' => 25,
             ],
             5 => [
                 'type' => 'ai_implementation',
                 'description' => 'Implement AI-powered project optimization for task assignment and risk prediction.',
                 'task' => 'Design and configure AI workflows for automated task assignment and risk monitoring.',
-                'points' => 35
-            ]
+                'points' => 35,
+            ],
         ];
 
         return $challenges[$step] ?? $challenges[1];
@@ -375,9 +381,10 @@ class CertificationController extends Controller
         // Check if exam time has expired
         if ($attempt->isTimeExpired()) {
             // Mark as expired if not already marked
-            if (!$attempt->is_expired) {
+            if (! $attempt->is_expired) {
                 $attempt->markAsExpired();
             }
+
             return redirect()->route('certification.index')
                 ->with('error', 'Exam time has expired. You must wait 24 hours before your next attempt.');
         }
@@ -388,18 +395,18 @@ class CertificationController extends Controller
         $meta = $attempt->meta ?? [];
         if (($attempt->phase === 'pm_concepts') && isset($meta['pm_concepts_started_at'])) {
             $startedAt = Carbon::parse($meta['pm_concepts_started_at']);
-            if (now()->diffInSeconds($startedAt) >= 20*60) {
+            if (now()->diffInSeconds($startedAt) >= 20 * 60) {
                 return redirect()->route('certification.index')->with('error', 'Time is up – no further answers accepted.');
             }
         }
-        
+
         // Check if answer is correct
         $userAnswerRaw = $request->answer;
         $userAnswer = is_array($userAnswerRaw) ? $userAnswerRaw : [$userAnswerRaw];
-    // Support dynamically shuffled options (correct answers stored in attempt meta when question served)
-    $attemptMeta = $attempt->meta ?? [];
-    $dynamicKey = 'dynamic_correct_'.$question->id;
-    $correctAnswer = $attemptMeta[$dynamicKey] ?? $question->correct_answer;
+        // Support dynamically shuffled options (correct answers stored in attempt meta when question served)
+        $attemptMeta = $attempt->meta ?? [];
+        $dynamicKey = 'dynamic_correct_'.$question->id;
+        $correctAnswer = $attemptMeta[$dynamicKey] ?? $question->correct_answer;
         $isCorrect = false;
         $pointsEarned = 0;
 
@@ -413,7 +420,9 @@ class CertificationController extends Controller
                 $answerMeta = $evaluation;
             } catch (\Exception $e) {
                 Log::error('Free form evaluation failed: '.$e->getMessage());
-                $pointsEarned = 0; $isCorrect = false; $answerMeta = ['error' => 'evaluation_failed'];
+                $pointsEarned = 0;
+                $isCorrect = false;
+                $answerMeta = ['error' => 'evaluation_failed'];
             }
         } else {
             $isCorrect = $this->checkAnswer($userAnswer, $correctAnswer, $question->type);
@@ -422,7 +431,7 @@ class CertificationController extends Controller
         }
 
         // Store the answer
-    CertificationAnswer::updateOrCreate(
+        CertificationAnswer::updateOrCreate(
             [
                 'certification_attempt_id' => $attempt->id,
                 'pm_question_id' => $question->id,
@@ -440,19 +449,19 @@ class CertificationController extends Controller
 
         // Get fresh data for the response
         $attempt = $attempt->fresh();
-        
+
         // Development bypass: if request has 'testing' parameter, auto-pass with full score
         if ($request->has('testing') && config('app.env') !== 'production') {
             $allQuestions = PMQuestion::where('is_active', true)->get();
             $totalPossibleScore = $allQuestions->sum('points');
-            
+
             $attempt->update([
                 'total_score' => $totalPossibleScore,
                 'max_possible_score' => $totalPossibleScore,
                 'percentage' => 100.0,
-                'current_step' => 16 // Beyond all questions
+                'current_step' => 16, // Beyond all questions
             ]);
-            
+
             // Mark all questions as answered correctly for completeness
             foreach ($allQuestions as $question) {
                 CertificationAnswer::updateOrCreate([
@@ -461,37 +470,68 @@ class CertificationController extends Controller
                 ], [
                     'selected_option' => $question->correct_answer,
                     'points_earned' => $question->points,
-                    'is_correct' => true
+                    'is_correct' => true,
                 ]);
             }
         }
-        
+
         // Check if PM concepts phase is complete (all 15 questions answered)
         $answeredCount = CertificationAnswer::where('certification_attempt_id', $attempt->id)->count();
-        
+
         if ($answeredCount >= 15 && $attempt->phase === 'pm_concepts') {
-            // Move to practical scenario phase
-            $attempt->update(['phase' => 'practical_scenario', 'current_step' => 1]);
+            // Calculate PM questions score
+            $totalTheoryScore = CertificationAnswer::where('certification_attempt_id', $attempt->id)
+                ->sum('points_earned');
+            $maxTheoryScore = CertificationAnswer::where('certification_attempt_id', $attempt->id)
+                ->with('pmQuestion')
+                ->get()
+                ->sum(function ($answer) {
+                    return $answer->pmQuestion ? $answer->pmQuestion->points : 0;
+                });
+            $theoryPercentage = $maxTheoryScore > 0 ? ($totalTheoryScore / $maxTheoryScore) * 100 : 0;
             
-            // Show results page with complete breakdown
-            return $this->showPhaseResults($attempt);
+            // Update attempt with theory results
+            $attempt->update([
+                'total_score' => $totalTheoryScore,
+                'max_possible_score' => $maxTheoryScore,
+                'percentage' => $theoryPercentage,
+            ]);
+            
+            // Check if theory score meets 80% threshold
+            if ($theoryPercentage >= 80) {
+                // Move to practical scenario phase
+                $attempt->update(['phase' => 'practical_scenario', 'current_step' => 1]);
+                return $this->showPhaseResults($attempt, 'theory_passed');
+            } else {
+                // Failed theory phase - do not allow progression to simulator
+                $attempt->update([
+                    'phase' => 'theory_failed',
+                    'passed' => false,
+                    'completed_at' => now()
+                ]);
+                return $this->showPhaseResults($attempt, 'theory_failed');
+            }
         }
-        
+
         $currentQuestion = $this->getCurrentQuestion($attempt);
         $totalQuestions = 15; // Fixed to 15 questions per attempt
 
         // Don't show feedback during assessment - just acknowledge submission
         // Recompute timer state
         $meta = $attempt->meta ?? [];
-        $remainingSeconds = null; $timeUp = false; $examDurationSeconds = 20*60;
+        $remainingSeconds = null;
+        $timeUp = false;
+        $examDurationSeconds = 20 * 60;
         if (isset($meta['pm_concepts_started_at'])) {
             $elapsed = now()->diffInSeconds(Carbon::parse($meta['pm_concepts_started_at']));
             $remainingSeconds = max(0, $examDurationSeconds - $elapsed);
-            if ($remainingSeconds === 0) { $timeUp = true; }
+            if ($remainingSeconds === 0) {
+                $timeUp = true;
+            }
         }
 
-    // Redirect after POST to avoid URL staying on /certification/answer (prevents GET 405 on refresh)
-    return redirect()->route('certification.index');
+        // Redirect after POST to avoid URL staying on /certification/answer (prevents GET 405 on refresh)
+        return redirect()->route('certification.index');
     }
 
     private function evaluateFreeForm(OpenAIService $openAI, PMQuestion $question, string $userAnswer): array
@@ -504,6 +544,7 @@ class CertificationController extends Controller
         // Normalize
         $score = isset($resp['score']) ? max(0, min(10, (int) $resp['score'])) : 0;
         $reason = $resp['reasoning'] ?? ($resp['reason'] ?? '');
+
         return ['score' => $score, 'reasoning' => $reason];
     }
 
@@ -516,10 +557,11 @@ class CertificationController extends Controller
         $meta = $attempt->meta ?? [];
         $meta['time_up'] = true;
         $attempt->update(['meta' => $meta]);
+
         return redirect()->route('certification.index');
     }
 
-    private function showPhaseResults($attempt)
+    private function showPhaseResults($attempt, $resultType = null)
     {
         // Get all answered questions with details
         $answeredQuestions = CertificationAnswer::where('certification_attempt_id', $attempt->id)
@@ -529,11 +571,13 @@ class CertificationController extends Controller
                 $question = $answer->pmQuestion;
                 // Normalize shapes for frontend expectations
                 $userAnswer = $answer->user_answer;
-                if (!is_array($userAnswer)) {
+                if (! is_array($userAnswer)) {
                     $userAnswer = $userAnswer !== null ? [$userAnswer] : [];
                 }
                 $correct = $question?->correct_answer ?? [];
-                if (!is_array($correct)) { $correct = [$correct]; }
+                if (! is_array($correct)) {
+                    $correct = [$correct];
+                }
 
                 return [
                     'id' => $question?->id,
@@ -555,7 +599,22 @@ class CertificationController extends Controller
         $totalScore = $attempt->total_score;
         $maxPossibleScore = $attempt->max_possible_score;
         $percentage = $attempt->percentage;
-        $passed = $percentage >= 70; // 70% pass rate
+        
+        // Different passing thresholds based on phase and result type
+        if ($resultType === 'theory_failed') {
+            $passed = false;
+            $message = 'PM Questions phase failed. You need 80% or higher to proceed to the simulator.';
+            $canProceed = false;
+        } elseif ($resultType === 'theory_passed') {
+            $passed = $percentage >= 80;
+            $message = $passed ? 'PM Questions phase passed! You can now proceed to the simulator.' : 'PM Questions phase failed.';
+            $canProceed = $passed;
+        } else {
+            // Standard phase completion
+            $passed = $percentage >= 70; // Default 70% pass rate
+            $canProceed = $passed;
+            $message = '';
+        }
 
         return Inertia::render('Certification/PhaseResults', [
             'attempt' => $attempt,
@@ -566,6 +625,9 @@ class CertificationController extends Controller
             'passed' => $passed,
             'phase' => $attempt->phase,
             'nextPhase' => $attempt->phase === 'pm_concepts' ? 'practical_scenario' : null,
+            'resultType' => $resultType,
+            'message' => $message,
+            'canProceed' => $canProceed,
         ]);
     }
 
@@ -590,29 +652,31 @@ class CertificationController extends Controller
             $answeredQuestionIds = CertificationAnswer::where('certification_attempt_id', $attempt->id)
                 ->pluck('pm_question_id')
                 ->toArray();
-            
+
             Log::info('Answered question IDs: ', $answeredQuestionIds);
-            
+
             // If this is a new attempt (no answered questions), select a mixed set (MC + Free Form)
             if (empty($answeredQuestionIds)) {
                 // Broad pool: include all categories (production data may have different category labels or NULL)
                 // Treat NULL is_active as active for legacy seeded rows.
-                $baseQuery = PMQuestion::where(function($q){
-                        $q->where('is_active', true)->orWhereNull('is_active');
-                    });
+                $baseQuery = PMQuestion::where(function ($q) {
+                    $q->where('is_active', true)->orWhereNull('is_active');
+                });
                 $totalAvailable = (clone $baseQuery)->count();
                 Log::info('Question pool total (all categories): '.$totalAvailable);
 
                 // Fetch by type
                 // Broaden selection: some seeds may store type variants like 'mc', 'multiple', etc.
                 $mcIds = (clone $baseQuery)
-                    ->whereIn('type',[ 'multiple_choice'])
+                    ->whereIn('type', ['multiple_choice'])
                     ->inRandomOrder()->limit(200)->pluck('id')->toArray();
                 $freeFormIds = (clone $baseQuery)
-                    ->whereIn('type',['free_form'])
+                    ->whereIn('type', ['free_form'])
                     ->inRandomOrder()->limit(100)->pluck('id')->toArray();
 
-                $targetTotal = 15; $targetMC = 10; $targetFree = 5; // fixed mix per requirements
+                $targetTotal = 15;
+                $targetMC = 10;
+                $targetFree = 5; // fixed mix per requirements
                 // Rebalance if insufficient counts
                 if (count($mcIds) < $targetMC) {
                     $deficit = $targetMC - count($mcIds);
@@ -643,12 +707,13 @@ class CertificationController extends Controller
                 if (empty($selected)) {
                     $allIds = PMQuestion::pluck('id')->toArray();
                     Log::error('Fallback level 2 engaged: still no questions. allIds count='.count($allIds));
-                    $selected = array_slice($allIds,0,15);
+                    $selected = array_slice($allIds, 0, 15);
                 }
 
                 // If STILL empty, return null (controller will interpret as no questions configured)
                 if (empty($selected)) {
                     Log::error('No project management questions available after all fallbacks.');
+
                     return null;
                 }
 
@@ -661,26 +726,28 @@ class CertificationController extends Controller
                 // Use the previously selected questions for this attempt
                 $selectedQuestionIds = json_decode($attempt->selected_question_ids, true) ?: [];
             }
-            
+
             Log::info('Selected question IDs: ', $selectedQuestionIds);
-            
+
             // Find the next unanswered question from the selected questions
             $unansweredQuestionIds = array_diff($selectedQuestionIds, $answeredQuestionIds);
-            
+
             Log::info('Unanswered question IDs: ', $unansweredQuestionIds);
-            
+
             if (empty($unansweredQuestionIds)) {
                 return null; // No more questions
             }
-            
+
             $currentQuestion = PMQuestion::whereIn('id', $unansweredQuestionIds)
                 ->orderBy('difficulty')
                 ->orderBy('id')
                 ->first();
-            
+
             Log::info('Current question found: ', $currentQuestion ? $currentQuestion->toArray() : null);
-            
-            if (!$currentQuestion) { return null; }
+
+            if (! $currentQuestion) {
+                return null;
+            }
 
             $options = is_array($currentQuestion->options) ? array_values($currentQuestion->options) : [];
             $correctRaw = $currentQuestion->correct_answer; // stored as array of original option strings (or indices)
@@ -689,7 +756,7 @@ class CertificationController extends Controller
             foreach ($options as $idx => $opt) {
                 $flagged[] = [
                     'text' => $opt,
-                    'is_correct_original' => in_array($opt, (array) $correctRaw, true)
+                    'is_correct_original' => in_array($opt, (array) $correctRaw, true),
                 ];
             }
             // Shuffle for random ordering per fetch
@@ -698,7 +765,9 @@ class CertificationController extends Controller
             // Determine new correct answers after shuffle (by value match)
             $newCorrect = [];
             foreach ($flagged as $i => $row) {
-                if ($row['is_correct_original']) { $newCorrect[] = $row['text']; }
+                if ($row['is_correct_original']) {
+                    $newCorrect[] = $row['text'];
+                }
             }
             // Persist per-attempt override mapping in attempt meta so grading uses dynamic ordering
             $meta = $attempt->meta ?? [];
@@ -715,8 +784,9 @@ class CertificationController extends Controller
                 'options' => $shuffledOptions,
             ];
         } catch (\Exception $e) {
-            Log::error('getCurrentQuestion error: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
+            Log::error('getCurrentQuestion error: '.$e->getMessage());
+            Log::error('Stack trace: '.$e->getTraceAsString());
+
             return null;
         }
     }
@@ -724,14 +794,14 @@ class CertificationController extends Controller
     private function updateAttemptScores($attempt)
     {
         $answers = $attempt->answers()->with('pmQuestion')->get();
-        
+
         $totalScore = $answers->sum('points_earned');
-        $maxPossibleScore = $answers->sum(function($answer) {
+        $maxPossibleScore = $answers->sum(function ($answer) {
             return $answer->pmQuestion->points;
         });
-        
+
         $percentage = $maxPossibleScore > 0 ? ($totalScore / $maxPossibleScore) * 100 : 0;
-        
+
         $attempt->update([
             'total_score' => $totalScore,
             'max_possible_score' => $maxPossibleScore,
@@ -744,7 +814,7 @@ class CertificationController extends Controller
     {
         // Implement sophisticated scoring logic for each challenge type
         // This could integrate with OpenAI for more nuanced evaluation
-        
+
         switch ($challengeType) {
             case 'requirements_definition':
                 return $this->scoreRequirementsDefinition($response);
@@ -765,14 +835,24 @@ class CertificationController extends Controller
     {
         $score = 0;
         $maxScore = 20;
-        
+
         // Check for SMART criteria application
-        if (isset($response['specific']) && !empty($response['specific'])) $score += 4;
-        if (isset($response['measurable']) && !empty($response['measurable'])) $score += 4;
-        if (isset($response['achievable']) && !empty($response['achievable'])) $score += 4;
-        if (isset($response['relevant']) && !empty($response['relevant'])) $score += 4;
-        if (isset($response['timebound']) && !empty($response['timebound'])) $score += 4;
-        
+        if (isset($response['specific']) && ! empty($response['specific'])) {
+            $score += 4;
+        }
+        if (isset($response['measurable']) && ! empty($response['measurable'])) {
+            $score += 4;
+        }
+        if (isset($response['achievable']) && ! empty($response['achievable'])) {
+            $score += 4;
+        }
+        if (isset($response['relevant']) && ! empty($response['relevant'])) {
+            $score += 4;
+        }
+        if (isset($response['timebound']) && ! empty($response['timebound'])) {
+            $score += 4;
+        }
+
         return min($score, $maxScore);
     }
 
@@ -809,7 +889,7 @@ class CertificationController extends Controller
             'resource_optimization' => 25,
             'ai_implementation' => 35,
         ];
-        
+
         return $maxScores[$challengeType] ?? 20;
     }
 
@@ -818,13 +898,13 @@ class CertificationController extends Controller
         // Return detailed feedback based on performance
         $maxScore = $this->getMaxScoreForChallenge($challengeType);
         $percentage = ($score / $maxScore) * 100;
-        
+
         if ($percentage >= 90) {
-            return "Excellent work! Your response demonstrates strong project management expertise.";
+            return 'Excellent work! Your response demonstrates strong project management expertise.';
         } elseif ($percentage >= 70) {
-            return "Good response with some areas for improvement. Consider refining your approach.";
+            return 'Good response with some areas for improvement. Consider refining your approach.';
         } else {
-            return "Your response needs significant improvement. Review the concepts and try again.";
+            return 'Your response needs significant improvement. Review the concepts and try again.';
         }
     }
 
@@ -836,9 +916,9 @@ class CertificationController extends Controller
         ]);
 
         $attempt = CertificationAttempt::where('user_id', $request->user()->id)->firstOrFail();
-        
+
         // Check if user can advance based on their performance
-        if (!$this->canAdvance($attempt, $request->phase, $request->step)) {
+        if (! $this->canAdvance($attempt, $request->phase, $request->step)) {
             return response()->json(['error' => 'You must achieve at least 90% to advance'], 422);
         }
 
@@ -856,18 +936,22 @@ class CertificationController extends Controller
         if ($phase === 'theory') {
             $categories = ['fundamentals', 'planning', 'execution', 'monitoring', 'ai_integration'];
             $currentCategory = $categories[$attempt->current_step - 1] ?? 'fundamentals';
-            
+
             $categoryQuestions = PMQuestion::where('category', $currentCategory)->pluck('id');
             $answers = $attempt->answers()->whereIn('pm_question_id', $categoryQuestions)->get();
-            
-            if ($answers->isEmpty()) return false;
-            
+
+            if ($answers->isEmpty()) {
+                return false;
+            }
+
             $totalPoints = $answers->sum('points_earned');
-            $maxPoints = $answers->sum(function($answer) { return $answer->question->points; });
-            
+            $maxPoints = $answers->sum(function ($answer) {
+                return $answer->question->points;
+            });
+
             return $maxPoints > 0 && (($totalPoints / $maxPoints) * 100) >= 90;
         }
-        
+
         // For practical phase, similar logic for practical challenges
         return true; // Placeholder
     }
@@ -878,7 +962,7 @@ class CertificationController extends Controller
         if ($attempt->percentage < 90) {
             return response()->json(['error' => 'Overall score must be at least 90% to receive certification'], 422);
         }
-        if (!$attempt->serial) {
+        if (! $attempt->serial) {
             $attempt->update([
                 'serial' => (string) Str::uuid(),
                 'phase' => 'certification_complete',
@@ -886,89 +970,90 @@ class CertificationController extends Controller
                 'passed' => true,
             ]);
         }
+
         return response()->json([
             'serial' => $attempt->serial,
             'score' => $attempt->total_score,
             'percentage' => $attempt->percentage,
-            'verification_url' => url('/verify/' . $attempt->serial),
+            'verification_url' => url('/verify/'.$attempt->serial),
         ]);
     }
 
     public function reset(Request $request)
     {
         $userId = $request->user()->id;
-        
+
         // Delete all certification answers for this user
-        CertificationAnswer::whereHas('certificationAttempt', function($query) use ($userId) {
+        CertificationAnswer::whereHas('certificationAttempt', function ($query) use ($userId) {
             $query->where('user_id', $userId);
         })->delete();
-        
+
         // Reset or delete the certification attempt
         CertificationAttempt::where('user_id', $userId)->delete();
-        
+
         return redirect()->route('certification.index')->with('success', 'Certification reset successfully. You can now start fresh!');
     }
 
     public function previousQuestion(Request $request)
     {
         $attempt = CertificationAttempt::where('user_id', $request->user()->id)->firstOrFail();
-        
+
         // Get the last answered question
         $lastAnswer = CertificationAnswer::where('certification_attempt_id', $attempt->id)
             ->orderBy('created_at', 'desc')
             ->first();
-        
+
         if ($lastAnswer) {
             // Delete the last answer to go back
             $lastAnswer->delete();
-            
+
             // Update attempt scores
             $remainingAnswers = CertificationAnswer::where('certification_attempt_id', $attempt->id)
                 ->with('pmQuestion')
                 ->get();
-            
+
             $newScore = $remainingAnswers->sum('points_earned');
-            $newMaxScore = $remainingAnswers->sum(function($answer) { 
-                return $answer->pmQuestion->points; 
+            $newMaxScore = $remainingAnswers->sum(function ($answer) {
+                return $answer->pmQuestion->points;
             });
-            
+
             $attempt->update([
                 'total_score' => $newScore,
                 'max_possible_score' => $newMaxScore,
-                'percentage' => $newMaxScore > 0 ? ($newScore / $newMaxScore * 100) : 0
+                'percentage' => $newMaxScore > 0 ? ($newScore / $newMaxScore * 100) : 0,
             ]);
-            
+
             return redirect()->route('certification.index')->with('success', 'Went back to previous question');
         }
-        
+
         return redirect()->route('certification.index')->with('info', 'No previous questions to go back to');
     }
 
     public function startPracticalScenario(Request $request)
     {
         $attempt = CertificationAttempt::where('user_id', $request->user()->id)->firstOrFail();
-        
+
         // Check if they passed theory phase
         $answeredQuestions = CertificationAnswer::where('certification_attempt_id', $attempt->id)
             ->with('pmQuestion')
             ->get();
-        
+
         $score = $answeredQuestions->sum('points_earned');
-        $maxScore = $answeredQuestions->sum(function($answer) { 
-            return $answer->pmQuestion->points; 
+        $maxScore = $answeredQuestions->sum(function ($answer) {
+            return $answer->pmQuestion->points;
         });
-        
+
         $percentage = $maxScore > 0 ? ($score / $maxScore * 100) : 0;
-        
+
         if ($percentage < 90) {
             return redirect()->route('certification.index')
                 ->with('error', 'You need at least 90% on theory questions to proceed to practical scenario.');
         }
-        
+
         // Update to practical scenario phase
         $attempt->update([
-            'phase' => 'practical_scenario', 
-            'current_step' => 1
+            'phase' => 'practical_scenario',
+            'current_step' => 1,
         ]);
 
         return $this->showPracticalScenario($attempt);
@@ -977,7 +1062,7 @@ class CertificationController extends Controller
     private function showPracticalScenario($attempt)
     {
         $scenario = $this->getPracticalScenario($attempt);
-        
+
         return Inertia::render('Certification/PracticalScenario', [
             'attempt' => $attempt,
             'scenario' => $scenario['scenario'],
@@ -994,7 +1079,7 @@ class CertificationController extends Controller
             'step' => 'required|integer|min:1|max:5',
         ]);
         $attempt = CertificationAttempt::where('user_id', $request->user()->id)->first();
-        if (!$attempt) {
+        if (! $attempt) {
             // Create a fresh attempt and send user back to index to start properly
             $attempt = CertificationAttempt::create([
                 'user_id' => $request->user()->id,
@@ -1005,6 +1090,7 @@ class CertificationController extends Controller
                 'percentage' => 0,
                 'passed' => 0,
             ]);
+
             return redirect()->route('certification.index')
                 ->with('error', 'Your session expired or was reset. Restarting certification.');
         }
@@ -1012,7 +1098,7 @@ class CertificationController extends Controller
             return redirect()->route('certification.index')
                 ->with('error', 'You must complete the theory phase before submitting practical responses.');
         }
-        
+
         // Score the practical response
         $challengeType = $this->getChallengeType($request->step);
         $score = $this->scorePracticalResponse($challengeType, $request->response);
@@ -1041,19 +1127,35 @@ class CertificationController extends Controller
             $totalPracticalScore = collect($practicalPerformance)->sum('score');
             $maxPracticalScore = collect($practicalPerformance)->sum('max_score');
             $practicalPercentage = $maxPracticalScore > 0 ? ($totalPracticalScore / $maxPracticalScore) * 100 : 0;
+
+            // Get theory score from previous phase
+            $theoryScore = $attempt->total_score;
+            $theoryMaxScore = $attempt->max_possible_score;
+            $theoryPercentage = $theoryMaxScore > 0 ? ($theoryScore / $theoryMaxScore) * 100 : 0;
             
-            // Calculate overall score (theory + practical)
-            $overallScore = $attempt->total_score + $totalPracticalScore;
-            $overallMaxScore = $attempt->max_possible_score + $maxPracticalScore;
+            // Check individual phase requirements
+            $theoryPassed = $theoryPercentage >= 80; // PM questions require 80%
+            $simulatorPassed = $practicalPercentage >= 70; // Simulator requires 70%
+            $overallPassed = $theoryPassed && $simulatorPassed;
+
+            // Calculate overall score for display
+            $overallScore = $theoryScore + $totalPracticalScore;
+            $overallMaxScore = $theoryMaxScore + $maxPracticalScore;
             $overallPercentage = $overallMaxScore > 0 ? ($overallScore / $overallMaxScore) * 100 : 0;
-            
+
             $attempt->update([
                 'phase' => 'certification_complete',
                 'total_score' => $overallScore,
                 'max_possible_score' => $overallMaxScore,
                 'percentage' => $overallPercentage,
-                'passed' => $overallPercentage >= 80, // 80% required to pass
+                'passed' => $overallPassed, // Must pass both theory (80%) AND simulation (70%)
                 'completed_at' => now(),
+                'practical_performance' => array_merge($practicalPerformance, [
+                    'theory_percentage' => $theoryPercentage,
+                    'simulation_percentage' => $practicalPercentage,
+                    'theory_passed' => $theoryPassed,
+                    'simulation_passed' => $simulatorPassed
+                ])
             ]);
 
             return $this->showFinalResults($attempt);
@@ -1067,10 +1169,10 @@ class CertificationController extends Controller
     {
         $challenges = [
             1 => 'requirements_definition',
-            2 => 'timeline_creation', 
+            2 => 'timeline_creation',
             3 => 'crisis_management',
             4 => 'resource_optimization',
-            5 => 'ai_implementation'
+            5 => 'ai_implementation',
         ];
 
         return $challenges[$step] ?? 'requirements_definition';
@@ -1079,7 +1181,7 @@ class CertificationController extends Controller
     private function showFinalResults($attempt)
     {
         // Auto-issue certificate & badge when user has passed but not yet finalized
-        if ($attempt->passed && !$attempt->completed_at) {
+        if ($attempt->passed && ! $attempt->completed_at) {
             $serial = (string) Str::uuid();
             $attempt->update([
                 'phase' => 'certification_complete',
@@ -1094,6 +1196,7 @@ class CertificationController extends Controller
             ->get()
             ->map(function ($answer) {
                 $q = $answer->pmQuestion;
+
                 return [
                     'id' => $q->id,
                     'question' => $q->question,
@@ -1120,7 +1223,7 @@ class CertificationController extends Controller
             'message' => 'Certification complete! Review your results below. Your certificate & badge are now issued.',
             'certificateUrl' => $attempt->serial ? url('/certification/certificate') : null,
             'badgeUrl' => $attempt->serial ? url('/certification/badge') : null,
-            'verificationUrl' => $attempt->serial ? url('/verify/' . $attempt->serial) : null,
+            'verificationUrl' => $attempt->serial ? url('/verify/'.$attempt->serial) : null,
         ]);
     }
 
@@ -1129,19 +1232,19 @@ class CertificationController extends Controller
     public function badge(Request $request)
     {
         $attempt = CertificationAttempt::where('user_id', $request->user()->id)
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->whereNotNull('completed_at')
-                      ->orWhere('phase', 'practical_scenario');
+                    ->orWhere('phase', 'practical_scenario');
             })
             ->first();
 
-        if (!$attempt) {
+        if (! $attempt) {
             return redirect()->route('certification.index')
                 ->with('error', 'Complete certification first to download badge.');
         }
 
         // Check if user has completed the practical scenario
-        if (!$attempt->completed_at) {
+        if (! $attempt->completed_at) {
             return redirect()->route('certification.index')
                 ->with('error', 'Complete the practical scenario first to download badge.');
         }
@@ -1149,7 +1252,7 @@ class CertificationController extends Controller
         $user = $request->user();
         $issued_date = $attempt->completed_at->format('F j, Y');
         $percentage = $attempt->percentage ?? 0;
-        
+
         // Return HTML view for digital badge (can be converted to image or PDF)
         return view('certificates.badge', [
             'user' => $user,
@@ -1165,28 +1268,30 @@ class CertificationController extends Controller
             ->whereNotNull('completed_at')
             ->orderByDesc('completed_at')
             ->first();
-        if (!$attempt) {
+        if (! $attempt) {
             return redirect()->route('certification.index')->with('error', 'Complete certification first.');
         }
         // Always redirect to public immutable certificate URL using serial
         if ($attempt->serial) {
-            return redirect('/certificates/' . $attempt->serial);
+            return redirect('/certificates/'.$attempt->serial);
         }
         // Fallback (should not happen if serial is generated elsewhere)
         $attempt->serial = (string) \Illuminate\Support\Str::uuid();
         $attempt->save();
-        return redirect('/certificates/' . $attempt->serial);
+
+        return redirect('/certificates/'.$attempt->serial);
     }
 
     public function verifyPublic($serial)
     {
         $attempt = CertificationAttempt::where('serial', $serial)->first();
-        if (!$attempt) {
+        if (! $attempt) {
             return response()->view('certificates.verify', [
                 'found' => false,
                 'serial' => $serial,
             ], 404);
         }
+
         return view('certificates.verify', [
             'found' => true,
             'attempt' => $attempt,
@@ -1199,50 +1304,54 @@ class CertificationController extends Controller
     public function publicCertificate($serial)
     {
         try {
-            $attempt = CertificationAttempt::with('user')->where('serial',$serial)->first();
-            if (!$attempt) {
-                \Log::warning('[CERT VIEW] Serial not found '.$serial);
+            $attempt = CertificationAttempt::with('user')->where('serial', $serial)->first();
+            if (! $attempt) {
+                Log::warning('[CERT VIEW] Serial not found '.$serial);
+
                 return response()->view('certificates.verify', [
                     'found' => false,
                     'serial' => $serial,
                 ], 404);
             }
-            if (!$attempt->user) {
-                \Log::error('[CERT VIEW] Attempt has no user relation serial='.$serial.' attempt_id='.$attempt->id);
-                return response('User missing',500);
+            if (! $attempt->user) {
+                Log::error('[CERT VIEW] Attempt has no user relation serial='.$serial.' attempt_id='.$attempt->id);
+
+                return response('User missing', 500);
             }
             $user = $attempt->user;
             $site = rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/');
-            $ogImageUrl = $site . '/certificates/' . $serial . '/download/og-image';
-            $percentage = round($attempt->percentage ?? 0,1);
+            $ogImageUrl = $site.'/certificates/'.$serial.'/download/og-image';
+            $percentage = round($attempt->percentage ?? 0, 1);
+
             return view('certificates.certificate', [
                 'user' => $user,
                 'attempt' => $attempt,
                 'issued_date' => optional($attempt->completed_at)->format('F j, Y'),
                 'percentage' => $percentage,
                 'ogImageUrl' => $ogImageUrl,
-                'site' => $site
+                'site' => $site,
             ]);
         } catch (\Throwable $e) {
-            \Log::error('[CERT VIEW] Render failed serial='.$serial.' error='.$e->getMessage());
-            return response('Certificate render error',500);
+            Log::error('[CERT VIEW] Render failed serial='.$serial.' error='.$e->getMessage());
+
+            return response('Certificate render error', 500);
         }
     }
 
     public function publicBadge($serial)
     {
-        $attempt = CertificationAttempt::where('serial',$serial)->firstOrFail();
+        $attempt = CertificationAttempt::where('serial', $serial)->firstOrFail();
         $user = $attempt->user;
         $site = rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/');
-        $ogImageUrl = $site . '/certificates/' . $serial . '/badge/download/og-image';
-        
+        $ogImageUrl = $site.'/certificates/'.$serial.'/badge/download/og-image';
+
         return view('certificates.badge', [
             'user' => $user,
             'attempt' => $attempt,
             'issued_date' => optional($attempt->completed_at)->format('F j, Y'),
-            'percentage' => round($attempt->percentage ?? 0,1),
+            'percentage' => round($attempt->percentage ?? 0, 1),
             'ogImageUrl' => $ogImageUrl,
-            'site' => $site
+            'site' => $site,
         ]);
     }
 
@@ -1252,41 +1361,49 @@ class CertificationController extends Controller
         // For now we convert using Intervention Image by loading an SVG template snapshot placeholder.
         if (class_exists('Intervention\\Image\\ImageManagerStatic')) {
             try {
-                $img = call_user_func(['Intervention\\Image\\ImageManagerStatic','canvas'], 1600, 1131, '#ffffff');
-                if (method_exists($img,'text')) {
-                    $img->text('TaskPilot Certificate (server JPEG draft). View live page for full design.', 80, 160, function($font){ if(method_exists($font,'size')) $font->size(38); });
+                $img = call_user_func(['Intervention\\Image\\ImageManagerStatic', 'canvas'], 1600, 1131, '#ffffff');
+                if (method_exists($img, 'text')) {
+                    $img->text('TaskPilot Certificate (server JPEG draft). View live page for full design.', 80, 160, function ($font) {
+                        if (method_exists($font, 'size')) {
+                            $font->size(38);
+                        }
+                    });
                 }
+
                 return $img->response('jpg', 92)->withHeaders(['Content-Disposition' => 'attachment; filename="'.$filename.'"']);
             } catch (\Throwable $e) {
                 // fall through to HTML fallback
             }
         }
-        return response($html)->header('Content-Type','text/html');
+
+        return response($html)->header('Content-Type', 'text/html');
     }
 
     public function downloadCertificateJpeg($serial)
     {
-        $attempt = CertificationAttempt::where('serial',$serial)->firstOrFail();
+        $attempt = CertificationAttempt::where('serial', $serial)->firstOrFail();
         $user = $attempt->user;
         $html = view('certificates.certificate', [
-            'user'=>$user,
-            'attempt'=>$attempt,
-            'issued_date'=>optional($attempt->completed_at)->format('F j, Y'),
-            'percentage'=>round($attempt->percentage ?? 0,1)
+            'user' => $user,
+            'attempt' => $attempt,
+            'issued_date' => optional($attempt->completed_at)->format('F j, Y'),
+            'percentage' => round($attempt->percentage ?? 0, 1),
         ])->render();
+
         return $this->renderHtmlToJpegResponse($html, 'taskpilot-certificate-'.$serial.'.jpg');
     }
 
     public function downloadBadgeJpeg($serial)
     {
-        $attempt = CertificationAttempt::where('serial',$serial)->firstOrFail();
+        $attempt = CertificationAttempt::where('serial', $serial)->firstOrFail();
         $user = $attempt->user;
         $html = view('certificates.badge', [
-            'user'=>$user,
-            'attempt'=>$attempt,
-            'issued_date'=>optional($attempt->completed_at)->format('F j, Y'),
-            'percentage'=>round($attempt->percentage ?? 0,1)
+            'user' => $user,
+            'attempt' => $attempt,
+            'issued_date' => optional($attempt->completed_at)->format('F j, Y'),
+            'percentage' => round($attempt->percentage ?? 0, 1),
         ])->render();
+
         return $this->renderHtmlToJpegResponse($html, 'taskpilot-badge-'.$serial.'.jpg');
     }
 
@@ -1295,7 +1412,7 @@ class CertificationController extends Controller
      */
     public function devForcePass(Request $request, SimpleSimulationGenerator $generator)
     {
-        if (!app()->environment('local')) {
+        if (! app()->environment('local')) {
             abort(404);
         }
         $user = $request->user();
@@ -1330,6 +1447,7 @@ class CertificationController extends Controller
         // Generate simulation immediately
         $data = $generator->generate($user);
         $request->session()->put('simulator_payload', $data);
+
         return redirect()->route('simulator.index')->with('message', 'Dev bypass: Certification passed and simulation initialized.');
     }
 
@@ -1338,12 +1456,13 @@ class CertificationController extends Controller
      */
     public function devWipeAttempts(Request $request)
     {
-        if (!app()->environment('local')) {
+        if (! app()->environment('local')) {
             abort(404);
         }
         $user = $request->user();
         CertificationAttempt::where('user_id', $user->id)->delete();
-        return redirect()->route('certification.index')->with('status','Certification attempts wiped for user.');
+
+        return redirect()->route('certification.index')->with('status', 'Certification attempts wiped for user.');
     }
 
     /** Start the theory exam (sets start timestamp) */
@@ -1354,7 +1473,7 @@ class CertificationController extends Controller
             ->where('phase', 'pm_concepts')
             ->first();
 
-        if ($existingAttempt && $existingAttempt->is_expired && !$existingAttempt->canStartNewAttempt()) {
+        if ($existingAttempt && $existingAttempt->is_expired && ! $existingAttempt->canStartNewAttempt()) {
             return redirect()->route('certification.index')
                 ->with('error', 'You must wait 24 hours before starting a new exam attempt.');
         }
@@ -1372,7 +1491,7 @@ class CertificationController extends Controller
         );
 
         // Set exam timing when starting for the first time
-        if (!$attempt->exam_started_at) {
+        if (! $attempt->exam_started_at) {
             $examDurationMinutes = 20; // 20 minutes for the theory exam
             $attempt->update([
                 'exam_started_at' => now(),
@@ -1401,6 +1520,7 @@ class CertificationController extends Controller
 
         if ($attempt && $attempt->canStartNewAttempt()) {
             $attempt->delete();
+
             return redirect()->route('certification.index')
                 ->with('success', 'Ready for your new exam attempt!');
         }
@@ -1415,68 +1535,73 @@ class CertificationController extends Controller
     public function certificateOgImage($serial)
     {
         try {
-            $attempt = CertificationAttempt::where('serial',$serial)->firstOrFail();
+            $attempt = CertificationAttempt::where('serial', $serial)->firstOrFail();
             $user = $attempt->user;
         } catch (\Throwable $e) {
-            \Log::error('[CERT OG] Attempt lookup failed: '.$e->getMessage());
-            return response('Not found',404);
+            Log::error('[CERT OG] Attempt lookup failed: '.$e->getMessage());
+
+            return response('Not found', 404);
         }
-        if (!function_exists('imagecreatetruecolor')) {
-            \Log::error('[CERT OG] GD not available on server.');
-            return response()->json(['error'=>'GD extension missing'],500);
+        if (! function_exists('imagecreatetruecolor')) {
+            Log::error('[CERT OG] GD not available on server.');
+
+            return response()->json(['error' => 'GD extension missing'], 500);
         }
         try {
             // Generate a simple OG image using GD or return a pre-made template
-            $width = 1200; $height = 630;
+            $width = 1200;
+            $height = 630;
             $image = imagecreatetruecolor($width, $height);
-        
-        // Colors
-        $white = imagecolorallocate($image, 255, 255, 255);
-        $gold = imagecolorallocate($image, 212, 175, 55);
-        $dark = imagecolorallocate($image, 26, 26, 26);
-        $blue = imagecolorallocate($image, 79, 70, 229);
-        
-        // Fill background
-        imagefill($image, 0, 0, $white);
-        
-        // Add border
-        imagerectangle($image, 20, 20, $width-21, $height-21, $gold);
-        imagerectangle($image, 25, 25, $width-26, $height-26, $gold);
-        
-        // Add text (if fonts available, otherwise basic text)
-        $title = "TaskPilot Certification";
-        $name = $user->name;
-        $score = round($attempt->percentage ?? 0, 1) . "%";
-        
-        // Try to use a font file, fallback to imagestring
-        $fontPath = public_path('fonts/arial.ttf');
-        if (file_exists($fontPath)) {
-            imagettftext($image, 32, 0, 60, 120, $dark, $fontPath, $title);
-            imagettftext($image, 24, 0, 60, 180, $blue, $fontPath, "Certificate of Achievement");
-            imagettftext($image, 28, 0, 60, 280, $dark, $fontPath, $name);
-            imagettftext($image, 20, 0, 60, 350, $dark, $fontPath, "Score: " . $score);
-            imagettftext($image, 16, 0, 60, 420, $dark, $fontPath, "Professional Project Management");
-        } else {
-            imagestring($image, 5, 60, 80, $title, $dark);
-            imagestring($image, 4, 60, 120, "Certificate of Achievement", $blue);
-            imagestring($image, 4, 60, 160, $name, $dark);
-            imagestring($image, 3, 60, 200, "Score: " . $score, $dark);
-            imagestring($image, 3, 60, 240, "Professional Project Management", $dark);
-        }
-        
-        // Add logo/seal placeholder
-        imagefilledellipse($image, $width-150, 150, 120, 120, $gold);
-        imagestring($image, 3, $width-180, 140, "TP", $white);
-        imagestring($image, 2, $width-190, 160, "CERT", $white);
-        
-        header('Content-Type: image/png');
-        header('Cache-Control: public, max-age=31536000');
+
+            // Colors
+            $white = imagecolorallocate($image, 255, 255, 255);
+            $gold = imagecolorallocate($image, 212, 175, 55);
+            $dark = imagecolorallocate($image, 26, 26, 26);
+            $blue = imagecolorallocate($image, 79, 70, 229);
+
+            // Fill background
+            imagefill($image, 0, 0, $white);
+
+            // Add border
+            imagerectangle($image, 20, 20, $width - 21, $height - 21, $gold);
+            imagerectangle($image, 25, 25, $width - 26, $height - 26, $gold);
+
+            // Add text (if fonts available, otherwise basic text)
+            $title = 'TaskPilot Certification';
+            $name = $user->name;
+            $score = round($attempt->percentage ?? 0, 1).'%';
+
+            // Try to use a font file, fallback to imagestring
+            $fontPath = public_path('fonts/arial.ttf');
+            if (file_exists($fontPath)) {
+                imagettftext($image, 32, 0, 60, 120, $dark, $fontPath, $title);
+                imagettftext($image, 24, 0, 60, 180, $blue, $fontPath, 'Certificate of Achievement');
+                imagettftext($image, 28, 0, 60, 280, $dark, $fontPath, $name);
+                imagettftext($image, 20, 0, 60, 350, $dark, $fontPath, 'Score: '.$score);
+                imagettftext($image, 16, 0, 60, 420, $dark, $fontPath, 'Professional Project Management');
+            } else {
+                imagestring($image, 5, 60, 80, $title, $dark);
+                imagestring($image, 4, 60, 120, 'Certificate of Achievement', $blue);
+                imagestring($image, 4, 60, 160, $name, $dark);
+                imagestring($image, 3, 60, 200, 'Score: '.$score, $dark);
+                imagestring($image, 3, 60, 240, 'Professional Project Management', $dark);
+            }
+
+            // Add logo/seal placeholder
+            imagefilledellipse($image, $width - 150, 150, 120, 120, $gold);
+            imagestring($image, 3, $width - 180, 140, 'TP', $white);
+            imagestring($image, 2, $width - 190, 160, 'CERT', $white);
+
+            header('Content-Type: image/png');
+            header('Cache-Control: public, max-age=31536000');
             imagepng($image);
             imagedestroy($image);
+
             return response()->noContent(); // already sent
         } catch (\Throwable $e) {
-            \Log::error('[CERT OG] Render failure: '.$e->getMessage());
-            return response()->json(['error'=>'OG generation failed'],500);
+            Log::error('[CERT OG] Render failure: '.$e->getMessage());
+
+            return response()->json(['error' => 'OG generation failed'], 500);
         }
     }
 
@@ -1486,64 +1611,146 @@ class CertificationController extends Controller
     public function badgeOgImage($serial)
     {
         try {
-            $attempt = CertificationAttempt::where('serial',$serial)->firstOrFail();
+            $attempt = CertificationAttempt::where('serial', $serial)->firstOrFail();
             $user = $attempt->user;
         } catch (\Throwable $e) {
-            \Log::error('[BADGE OG] Attempt lookup failed: '.$e->getMessage());
-            return response('Not found',404);
+            Log::error('[BADGE OG] Attempt lookup failed: '.$e->getMessage());
+
+            return response('Not found', 404);
         }
-        if (!function_exists('imagecreatetruecolor')) {
-            \Log::error('[BADGE OG] GD not available on server.');
-            return response()->json(['error'=>'GD extension missing'],500);
+        if (! function_exists('imagecreatetruecolor')) {
+            Log::error('[BADGE OG] GD not available on server.');
+
+            return response()->json(['error' => 'GD extension missing'], 500);
         }
-        
+
         try {
             // Generate a badge-style OG image
             $size = 630;
             $image = imagecreatetruecolor($size, $size);
-        
-        // Colors
-        $gold = imagecolorallocate($image, 212, 175, 55);
-        $darkGold = imagecolorallocate($image, 184, 134, 26);
-        $white = imagecolorallocate($image, 255, 255, 255);
-        $dark = imagecolorallocate($image, 26, 26, 26);
-        
-        // Fill with gold gradient effect
-        imagefill($image, 0, 0, $gold);
-        
-        // Draw circular badge
-        $centerX = $size / 2;
-        $centerY = $size / 2;
-        $radius = 280;
-        
-        imagefilledellipse($image, $centerX, $centerY, $radius * 2, $radius * 2, $darkGold);
-        imagefilledellipse($image, $centerX, $centerY, ($radius - 20) * 2, ($radius - 20) * 2, $gold);
-        
-        // Add text
-        $fontPath = public_path('fonts/arial.ttf');
-        $name = $user->name;
-        $score = round($attempt->percentage ?? 0, 1) . "%";
-        
-        if (file_exists($fontPath)) {
-            imagettftext($image, 24, 0, $centerX - 60, $centerY - 80, $dark, $fontPath, "TP CERT");
-            imagettftext($image, 18, 0, $centerX - strlen($name) * 5, $centerY - 20, $dark, $fontPath, $name);
-            imagettftext($image, 32, 0, $centerX - 40, $centerY + 40, $dark, $fontPath, $score);
-            imagettftext($image, 14, 0, $centerX - 80, $centerY + 80, $dark, $fontPath, "Project Management");
-        } else {
-            imagestring($image, 4, $centerX - 40, $centerY - 80, "TP CERT", $dark);
-            imagestring($image, 3, $centerX - strlen($name) * 3, $centerY - 20, $name, $dark);
-            imagestring($image, 5, $centerX - 30, $centerY + 20, $score, $dark);
-            imagestring($image, 2, $centerX - 60, $centerY + 60, "Project Management", $dark);
-        }
-        
-        header('Content-Type: image/png');
-        header('Cache-Control: public, max-age=31536000');
+
+            // Colors
+            $gold = imagecolorallocate($image, 212, 175, 55);
+            $darkGold = imagecolorallocate($image, 184, 134, 26);
+            $white = imagecolorallocate($image, 255, 255, 255);
+            $dark = imagecolorallocate($image, 26, 26, 26);
+
+            // Fill with gold gradient effect
+            imagefill($image, 0, 0, $gold);
+
+            // Draw circular badge
+            $centerX = $size / 2;
+            $centerY = $size / 2;
+            $radius = 280;
+
+            imagefilledellipse($image, $centerX, $centerY, $radius * 2, $radius * 2, $darkGold);
+            imagefilledellipse($image, $centerX, $centerY, ($radius - 20) * 2, ($radius - 20) * 2, $gold);
+
+            // Add text
+            $fontPath = public_path('fonts/arial.ttf');
+            $name = $user->name;
+            $score = round($attempt->percentage ?? 0, 1).'%';
+
+            if (file_exists($fontPath)) {
+                imagettftext($image, 24, 0, $centerX - 60, $centerY - 80, $dark, $fontPath, 'TP CERT');
+                imagettftext($image, 18, 0, $centerX - strlen($name) * 5, $centerY - 20, $dark, $fontPath, $name);
+                imagettftext($image, 32, 0, $centerX - 40, $centerY + 40, $dark, $fontPath, $score);
+                imagettftext($image, 14, 0, $centerX - 80, $centerY + 80, $dark, $fontPath, 'Project Management');
+            } else {
+                imagestring($image, 4, $centerX - 40, $centerY - 80, 'TP CERT', $dark);
+                imagestring($image, 3, $centerX - strlen($name) * 3, $centerY - 20, $name, $dark);
+                imagestring($image, 5, $centerX - 30, $centerY + 20, $score, $dark);
+                imagestring($image, 2, $centerX - 60, $centerY + 60, 'Project Management', $dark);
+            }
+
+            header('Content-Type: image/png');
+            header('Cache-Control: public, max-age=31536000');
             imagepng($image);
             imagedestroy($image);
+
             return response()->noContent();
         } catch (\Throwable $e) {
-            \Log::error('[BADGE OG] Render failure: '.$e->getMessage());
-            return response()->json(['error'=>'OG generation failed'],500);
+            Log::error('[BADGE OG] Render failure: '.$e->getMessage());
+
+            return response()->json(['error' => 'OG generation failed'],500);
         }
+    }
+    
+    /**
+     * Complete certification from simulator with proper scoring
+     */
+    public function completeFromSimulator(Request $request)
+    {
+        $request->validate([
+            'simulation_score' => 'required|numeric|min:0|max:100',
+            'simulation_data' => 'required|array'
+        ]);
+        
+        $user = $request->user();
+        $simulationScore = $request->simulation_score;
+        $simulationData = $request->simulation_data;
+        
+        // Find the user's current practical_scenario attempt
+        $attempt = CertificationAttempt::where('user_id', $user->id)
+            ->where('phase', 'practical_scenario')
+            ->orderByDesc('id')
+            ->first();
+            
+        if (!$attempt) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active certification attempt found.'
+            ], 400);
+        }
+        
+        // Verify they passed theory phase (80% requirement)
+        $theoryPercentage = $attempt->percentage ?? 0;
+        if ($theoryPercentage < 80) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Theory phase must be passed with 80% before completing certification.'
+            ], 403);
+        }
+        
+        // Check if simulation meets 70% threshold
+        $simulatorPassed = $simulationScore >= 70;
+        $theoryPassed = $theoryPercentage >= 80;
+        $overallPassed = $theoryPassed && $simulatorPassed;
+        
+        // Calculate weighted overall score (theory: 60%, simulation: 40%)
+        $overallPercentage = ($theoryPercentage * 0.6) + ($simulationScore * 0.4);
+        
+        // Store simulation performance
+        $simulationPerformance = [
+            'simulation_score' => $simulationScore,
+            'simulation_data' => $simulationData,
+            'simulation_passed' => $simulatorPassed,
+            'theory_percentage' => $theoryPercentage,
+            'theory_passed' => $theoryPassed,
+            'submitted_at' => now()
+        ];
+        
+        $attempt->update([
+            'phase' => 'certification_complete',
+            'percentage' => $overallPercentage,
+            'passed' => $overallPassed,
+            'completed_at' => now(),
+            'practical_performance' => $simulationPerformance,
+            'serial' => $attempt->serial ?? (string) \Illuminate\Support\Str::uuid()
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'passed' => $overallPassed,
+            'simulation_passed' => $simulatorPassed,
+            'theory_passed' => $theoryPassed,
+            'overall_percentage' => round($overallPercentage, 2),
+            'simulation_percentage' => $simulationScore,
+            'theory_percentage' => $theoryPercentage,
+            'message' => $overallPassed 
+                ? 'Congratulations! You have successfully completed the certification.'
+                : 'Certification not granted. Requirements: PM Questions ≥80%, Simulator ≥70%',
+            'certificate_url' => $overallPassed ? route('certification.certificate') : null
+        ]);
     }
 }

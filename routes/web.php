@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\CertificationController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ProfileController;
@@ -11,7 +12,6 @@ use App\Http\Controllers\ProjectAssistantController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TwilioController;
-use App\Http\Controllers\CertificationController;
 use App\Models\CertificationAttempt;
 use App\Models\Project;
 use App\Models\User;
@@ -33,6 +33,7 @@ Route::get('/', function () {
     if (Auth::check()) {
         return redirect()->route('dashboard');
     }
+
     return Inertia::render('Landing');
 })->name('landing');
 
@@ -231,7 +232,9 @@ Route::post('/email/verification-notification', function (Request $request) {
 Route::middleware(['auth'])->group(function () {
     Route::get('/certification', [CertificationController::class, 'index'])->name('certification.index');
     Route::post('/certification/answer', [CertificationController::class, 'submitAnswer'])->name('certification.answer');
-    Route::get('/certification/answer', function(){ return redirect()->route('certification.index'); });
+    Route::get('/certification/answer', function () {
+        return redirect()->route('certification.index');
+    });
     Route::post('/certification/previous', [CertificationController::class, 'previousQuestion'])->name('certification.previous');
     Route::post('/certification/start-practical', [CertificationController::class, 'startPracticalScenario'])->name('certification.start-practical');
     Route::post('/certification/begin', [CertificationController::class, 'begin'])->name('certification.begin');
@@ -243,33 +246,69 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/certification/reset', [CertificationController::class, 'reset'])->name('certification.reset');
     Route::get('/certification/reset', [CertificationController::class, 'reset'])->name('certification.reset.get');
     Route::post('/certification/complete', [CertificationController::class, 'complete'])->name('certification.complete');
+    Route::post('/certification/complete-from-simulator', [CertificationController::class, 'completeFromSimulator'])->name('certification.complete-from-simulator');
     Route::get('/certification/certificate', [CertificationController::class, 'certificate'])->name('certification.certificate');
     Route::get('/certification/badge', [CertificationController::class, 'badge'])->name('certification.badge');
     Route::post('/certification/time-up', [CertificationController::class, 'timeUp'])->name('certification.timeup');
-    
+
     // Project Management Simulator
     Route::get('/simulator', function (\Illuminate\Http\Request $request) {
+        // Check if user has passed PM questions phase (80% requirement)
+        $latestAttempt = CertificationAttempt::where('user_id', $request->user()->id)
+            ->whereIn('phase', ['practical_scenario', 'certification_complete'])
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $latestAttempt) {
+            // User hasn't completed PM questions or didn't pass
+            return redirect()->route('certification.index')
+                ->with('error', 'You must complete and pass the PM questions (80% required) before accessing the simulator.');
+        }
+
+        // Additional check: verify they actually passed theory with 80%
+        if ($latestAttempt->phase === 'practical_scenario') {
+            $theoryPercentage = $latestAttempt->percentage ?? 0;
+            if ($theoryPercentage < 80) {
+                return redirect()->route('certification.index')
+                    ->with('error', 'You must score 80% or higher on PM questions to access the simulator.');
+            }
+        }
+
         $payload = $request->session()->get('simulator_payload');
+
         return Inertia::render('Simulator/Index', [
             'simulation' => $payload,
+            'certificationAttempt' => $latestAttempt, // Pass attempt for final scoring
         ]);
     })->name('simulator.index');
-    
+
+    // Simulator API endpoints
+    Route::post('/simulator/evaluate-action', [App\Http\Controllers\SimulatorController::class, 'evaluateAction'])
+        ->name('simulator.evaluate-action');
+    Route::post('/simulator/evaluate-task-action', [App\Http\Controllers\SimulatorController::class, 'evaluateTaskAction'])
+        ->name('simulator.evaluate-task-action');
+    Route::post('/simulator/analytics', [App\Http\Controllers\SimulatorController::class, 'getAnalytics'])
+        ->name('simulator.analytics');
+
+    // Complete certification from simulator
+    Route::post('/simulator/complete-certification', [CertificationController::class, 'completeFromSimulator'])
+        ->name('simulator.complete-certification');
+
     // Testing bypass route for development
-    Route::get('/certification/bypass-to-practical', function(Request $request) {
+    Route::get('/certification/bypass-to-practical', function (Request $request) {
         $attempt = \App\Models\CertificationAttempt::firstOrCreate(
             ['user_id' => $request->user()->id],
             ['phase' => 'pm_concepts', 'current_step' => 1, 'total_score' => 0, 'max_possible_score' => 0]
         );
-        
+
         // Force the attempt to have a high score for testing
         $attempt->update([
-            'phase' => 'practical_scenario', 
-            'total_score' => 100, 
-            'max_possible_score' => 100, 
-            'percentage' => 100.0
+            'phase' => 'practical_scenario',
+            'total_score' => 100,
+            'max_possible_score' => 100,
+            'percentage' => 100.0,
         ]);
-        
+
         return redirect()->route('certification.practical-scenario')
             ->with('certification_mode', true)
             ->with('certification_attempt_id', $attempt->id)
@@ -280,12 +319,12 @@ Route::middleware(['auth'])->group(function () {
     if (app()->environment('local')) {
         Route::get('/certification/dev-force-pass', [CertificationController::class, 'devForcePass'])->name('certification.dev.force');
         // Dev helper: wipe attempts (GET added for convenience in local env)
-        Route::match(['get','delete'],'/certification/dev-wipe', [CertificationController::class, 'devWipeAttempts'])->name('certification.dev.wipe');
+        Route::match(['get', 'delete'], '/certification/dev-wipe', [CertificationController::class, 'devWipeAttempts'])->name('certification.dev.wipe');
     }
-    
+
     // Removed Virtual Project Simulation Routes - no longer needed
     // All virtual project related routes have been removed as the feature is deprecated
-    
+
     // Add new practical scenario route for certification
 });
 
@@ -293,21 +332,25 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/verify/{serial}', [CertificationController::class, 'verifyPublic'])->name('certification.verify.public');
 
 // DEBUG: Minimal certificate test
-Route::get('/certificates/{serial}/debug', function($serial) {
+Route::get('/certificates/{serial}/debug', function ($serial) {
     try {
         $attempt = \App\Models\CertificationAttempt::where('serial', $serial)->first();
-        if (!$attempt) return response('Serial not found', 404);
-        
+        if (! $attempt) {
+            return response('Serial not found', 404);
+        }
+
         $user = $attempt->user;
-        if (!$user) return response('User missing', 500);
-        
+        if (! $user) {
+            return response('User missing', 500);
+        }
+
         return response()->json([
             'serial' => $serial,
             'user_id' => $user->id,
             'user_name' => $user->name,
             'percentage' => $attempt->percentage,
             'completed_at' => $attempt->completed_at,
-            'debug' => 'OK'
+            'debug' => 'OK',
         ]);
     } catch (\Throwable $e) {
         return response()->json(['error' => $e->getMessage(), 'line' => $e->getLine()], 500);
@@ -409,7 +452,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/openai-requests', [AdminController::class, 'openaiRequests'])->name('openai-requests');
     Route::get('/billing', [AdminController::class, 'billing'])->name('billing');
     Route::get('/cancellations', [AdminController::class, 'cancellations'])->name('cancellations');
-    
+
     // SMS tracking routes
     Route::get('/sms-messages', [AdminController::class, 'smsMessages'])->name('sms-messages');
     Route::get('/sms-messages/{smsMessage}', [AdminController::class, 'smsMessageShow'])->name('sms-message-show');
@@ -418,7 +461,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/plans', [AdminController::class, 'plans'])->name('plans');
     Route::post('/plans/sync-stripe', [AdminController::class, 'syncPlansFromStripe'])->name('plans.sync');
     Route::post('/plans/update-price', [AdminController::class, 'updateStripePrice'])->name('plans.price.update');
-    
+
     // Refund management routes
     Route::get('/refunds', [AdminController::class, 'refunds'])->name('refunds');
     Route::post('/refunds/process', [AdminController::class, 'processRefund'])->name('refunds.process');
@@ -428,7 +471,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     // Broadcast Email
     Route::get('/broadcast-email', [AdminController::class, 'broadcastEmailForm'])->name('broadcast-email.form');
     Route::post('/broadcast-email', [AdminController::class, 'sendBroadcastEmail'])->name('broadcast-email.send');
-    
+
     // Twilio Testing
     Route::get('/twilio-test', [AdminController::class, 'twilioTest'])->name('twilio-test');
     Route::post('/twilio/test-sms', [TwilioController::class, 'testSMS'])->name('twilio.test-sms');
@@ -454,7 +497,7 @@ Route::middleware('auth')->group(function () {
     /* Email Statistics API */
     Route::get('/api/email-stats', [\App\Http\Controllers\EmailStatsController::class, 'getStats'])->name('api.email-stats');
     Route::get('/api/email-logs', [\App\Http\Controllers\EmailStatsController::class, 'getRecentLogs'])->name('api.email-logs');
-    
+
     /* Usage Summary API */
     Route::get('/api/usage-summary', [\App\Http\Controllers\Api\UsageController::class, 'summary'])->name('api.usage-summary');
 
@@ -485,7 +528,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/invite', [App\Http\Controllers\ProjectMemberController::class, 'invite'])->middleware('subscription:members')->name('projects.members.invite');
         Route::delete('/remove', [App\Http\Controllers\ProjectMemberController::class, 'remove'])->middleware('subscription:members')->name('projects.members.remove');
         Route::patch('/cancel-invitation', [App\Http\Controllers\ProjectMemberController::class, 'cancelInvitation'])->middleware('subscription:members')->name('projects.members.cancel-invitation');
-    Route::post('/leave', [App\Http\Controllers\ProjectMemberController::class, 'leave'])->name('projects.members.leave');
+        Route::post('/leave', [App\Http\Controllers\ProjectMemberController::class, 'leave'])->name('projects.members.leave');
     });
 
     /* Nested project-scoped routes */
@@ -514,12 +557,12 @@ Route::middleware('auth')->group(function () {
         Route::patch('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
         Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
-    // Task attachments (images)
-    Route::post('/tasks/{task}/attachments', [\App\Http\Controllers\TaskAttachmentController::class, 'store'])->name('tasks.attachments.store');
-    Route::delete('/tasks/{task}/attachments/{attachment}', [\App\Http\Controllers\TaskAttachmentController::class, 'destroy'])->name('tasks.attachments.destroy');
+        // Task attachments (images)
+        Route::post('/tasks/{task}/attachments', [\App\Http\Controllers\TaskAttachmentController::class, 'store'])->name('tasks.attachments.store');
+        Route::delete('/tasks/{task}/attachments/{attachment}', [\App\Http\Controllers\TaskAttachmentController::class, 'destroy'])->name('tasks.attachments.destroy');
 
         /* COMMENTS */
-    Route::post('/tasks/{task}/comments', [CommentController::class, 'store'])->name('comments.store');
+        Route::post('/tasks/{task}/comments', [CommentController::class, 'store'])->name('comments.store');
         Route::patch('/tasks/{task}/comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
         Route::delete('/tasks/{task}/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 
@@ -527,8 +570,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/timeline', [TaskController::class, 'timeline'])->name('tasks.timeline');
 
         /* AUTOMATIONS (premium feature - automation) */
-    // Allow all authenticated users to view automations index (overlay handles upsell)
-    Route::get('/automations', [AutomationController::class, 'index'])->name('automations.index');
+        // Allow all authenticated users to view automations index (overlay handles upsell)
+        Route::get('/automations', [AutomationController::class, 'index'])->name('automations.index');
         Route::post('/automations', [AutomationController::class, 'store'])->middleware('subscription:automation')->name('automations.store');
         Route::patch('/automations/{automation}', [AutomationController::class, 'update'])->middleware('subscription:automation')->name('automations.update');
         Route::delete('/automations/{automation}', [AutomationController::class, 'destroy'])->middleware('subscription:automation')->name('automations.destroy');
@@ -620,11 +663,11 @@ if (app()->environment('local')) {
 }
 
 // Debug route
-Route::get('/debug/controller-check', function() {
+Route::get('/debug/controller-check', function () {
     $file = file_get_contents(app_path('Http/Controllers/CertificationController.php'));
     $hasIntroGate = strpos($file, 'If no attempt exists, show intro page') !== false;
     $hasOldLogic = strpos($file, 'getCurrentQuestion') !== false;
-    
+
     return response()->json([
         'has_intro_gate' => $hasIntroGate,
         'has_old_logic' => $hasOldLogic,

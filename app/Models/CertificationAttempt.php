@@ -10,10 +10,10 @@ class CertificationAttempt extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'phase', 'current_step', 'total_score', 'max_possible_score', 
-        'percentage', 'passed', 'serial', 'completed_at', 'theory_answers', 
+        'user_id', 'phase', 'current_step', 'total_score', 'max_possible_score',
+        'percentage', 'passed', 'serial', 'completed_at', 'theory_answers',
         'practical_performance', 'meta', 'selected_question_ids', 'exam_started_at',
-        'exam_expires_at', 'is_expired', 'next_attempt_allowed_at'
+        'exam_expires_at', 'is_expired', 'next_attempt_allowed_at',
     ];
 
     protected $casts = [
@@ -45,9 +45,10 @@ class CertificationAttempt extends Model
      */
     public function isTimeExpired()
     {
-        if (!$this->exam_expires_at) {
+        if (! $this->exam_expires_at) {
             return false;
         }
+
         return now()->isAfter($this->exam_expires_at);
     }
 
@@ -56,10 +57,11 @@ class CertificationAttempt extends Model
      */
     public function getRemainingTimeSeconds()
     {
-        if (!$this->exam_expires_at) {
+        if (! $this->exam_expires_at) {
             return null;
         }
         $remaining = $this->exam_expires_at->diffInSeconds(now(), false);
+
         return max(0, -$remaining);
     }
 
@@ -68,9 +70,10 @@ class CertificationAttempt extends Model
      */
     public function canStartNewAttempt()
     {
-        if (!$this->next_attempt_allowed_at) {
+        if (! $this->next_attempt_allowed_at) {
             return true;
         }
+
         return now()->isAfter($this->next_attempt_allowed_at);
     }
 
@@ -79,9 +82,10 @@ class CertificationAttempt extends Model
      */
     public function getHoursUntilNextAttempt()
     {
-        if (!$this->next_attempt_allowed_at) {
+        if (! $this->next_attempt_allowed_at) {
             return 0;
         }
+
         return max(0, now()->diffInHours($this->next_attempt_allowed_at));
     }
 
