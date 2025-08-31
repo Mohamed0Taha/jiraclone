@@ -65,7 +65,7 @@ export default function CertificationIndex({
     timeUp,
 }) {
     // Add localRemaining state early so effects can use it
-    const [localRemaining, setLocalRemaining] = useState(remainingSeconds ?? null);
+    const [localRemaining, setLocalRemaining] = useState(remainingSeconds ?? 20 * 60);
     const [selectedAnswers, setSelectedAnswers] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showFeedback, setShowFeedback] = useState(false);
@@ -260,17 +260,24 @@ export default function CertificationIndex({
             );
         }
 
-    // Timer calculations (use localRemaining for smooth countdown)
-    const totalSeconds = 20 * 60;
-    const remainRaw = typeof localRemaining === 'number' ? localRemaining : (remainingSeconds ?? 0);
-    const remaining = Math.max(0, Math.min(totalSeconds, remainRaw));
-    const elapsed = totalSeconds - remaining;
-    const progressFrac = elapsed / totalSeconds; // 0..1
-    const circumference = 2 * Math.PI * 42; // r=42
-    const strokeDashoffset = (1 - progressFrac) * circumference;
-    const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
-    const ss = String(remaining % 60).padStart(2, '0');
-    return (
+        // Timer calculations (use localRemaining for smooth countdown)
+        const totalSeconds = 20 * 60;
+        const remainRaw =
+            typeof localRemaining === 'number'
+                ? localRemaining
+                : (remainingSeconds ?? totalSeconds);
+        
+        // Debug: Log the values to understand where large number comes from
+        console.log('Timer Debug - remainingSeconds:', remainingSeconds, 'localRemaining:', localRemaining, 'remainRaw:', remainRaw);
+        
+        const remaining = Math.max(0, Math.min(totalSeconds, Math.floor(remainRaw)));
+        const elapsed = totalSeconds - remaining;
+        const progressFrac = elapsed / totalSeconds; // 0..1
+        const circumference = 2 * Math.PI * 42; // r=42
+        const strokeDashoffset = (1 - progressFrac) * circumference;
+        const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
+        const ss = String(remaining % 60).padStart(2, '0');
+        return (
             <Box sx={{ maxWidth: 800, mx: 'auto' }}>
                 {renderProgressBar()}
                 {renderScoreDisplay()}
@@ -294,9 +301,16 @@ export default function CertificationIndex({
                                 </Typography>
                             </Box>
 
-                            <Typography variant="h6" className="exam-question" style={{userSelect:'none'}}>{currentQuestion.question}</Typography>
+                            <Typography
+                                variant="h6"
+                                className="exam-question"
+                                style={{ userSelect: 'none' }}
+                            >
+                                {currentQuestion.question}
+                            </Typography>
 
-                            {Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 ? (
+                            {Array.isArray(currentQuestion.options) &&
+                            currentQuestion.options.length > 0 ? (
                                 <RadioGroup
                                     value={selectedAnswers[currentQuestion.id] || ''}
                                     onChange={(e) =>
@@ -320,17 +334,31 @@ export default function CertificationIndex({
                                 </RadioGroup>
                             ) : (
                                 <Box>
-                                    <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                                    <Typography
+                                        variant="body2"
+                                        color="textSecondary"
+                                        sx={{ mb: 1 }}
+                                    >
                                         Provide your answer:
                                     </Typography>
                                     <textarea
-                                        style={{ width: '100%', minHeight: 160, padding: 12, fontSize: '0.95rem', borderRadius: 8, border: '1px solid #ccc', resize: 'vertical' }}
+                                        style={{
+                                            width: '100%',
+                                            minHeight: 160,
+                                            padding: 12,
+                                            fontSize: '0.95rem',
+                                            borderRadius: 8,
+                                            border: '1px solid #ccc',
+                                            resize: 'vertical',
+                                        }}
                                         value={selectedAnswers[currentQuestion.id] || ''}
-                                        onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                                        onChange={(e) =>
+                                            handleAnswerChange(currentQuestion.id, e.target.value)
+                                        }
                                         placeholder="Type your response here..."
-                                        onCopy={(e)=> e.preventDefault()}
-                                        onCut={(e)=> e.preventDefault()}
-                                        onPaste={(e)=> e.preventDefault()}
+                                        onCopy={(e) => e.preventDefault()}
+                                        onCut={(e) => e.preventDefault()}
+                                        onPaste={(e) => e.preventDefault()}
                                     />
                                 </Box>
                             )}
@@ -378,37 +406,67 @@ export default function CertificationIndex({
                     </CardContent>
                 </Card>
                 {/* Timer + Anti-cheat notice */}
-                                {phase === 'pm_concepts' && !timeUp && (
-                                    <>
-                                        <Box sx={{ position: 'fixed', bottom: 24, left: 24, zIndex: 2000 }}>
-                                            <Box sx={{ position: 'relative', width: 100, height: 100 }}>
-                                                <svg width={100} height={100} role="img" aria-label={`Time remaining ${mm}:${ss}`}> 
-                                                    <circle cx={50} cy={50} r={42} stroke="#e0e0e0" strokeWidth={6} fill="none" />
-                                                    <circle
-                                                        cx={50}
-                                                        cy={50}
-                                                        r={42}
-                                                        stroke={remaining < 60 ? '#d32f2f' : '#1976d2'}
-                                                        strokeWidth={6}
-                                                        fill="none"
-                                                        strokeDasharray={circumference}
-                                                        strokeDashoffset={strokeDashoffset}
-                                                        strokeLinecap="round"
-                                                        style={{ transition: 'stroke-dashoffset 1s linear', transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
-                                                    />
-                                                    <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="16" fontFamily="monospace" fill={remaining < 60 ? '#d32f2f' : '#1976d2'}>
-                                                        {mm}:{ss}
-                                                    </text>
-                                                </svg>
-                                            </Box>
-                                        </Box>
-                                        <Typography variant="caption" color="textSecondary" sx={{ position: 'fixed', bottom: 8, left: 24, zIndex: 2001 }}>
-                                            Time Remaining
-                                        </Typography>
-                                    </>
-                                )}
+                {phase === 'pm_concepts' && !timeUp && (
+                    <>
+                        <Box sx={{ position: 'fixed', bottom: 24, left: 24, zIndex: 2000 }}>
+                            <Box sx={{ position: 'relative', width: 100, height: 100 }}>
+                                <svg
+                                    width={100}
+                                    height={100}
+                                    role="img"
+                                    aria-label={`Time remaining ${mm}:${ss}`}
+                                >
+                                    <circle
+                                        cx={50}
+                                        cy={50}
+                                        r={42}
+                                        stroke="#e0e0e0"
+                                        strokeWidth={6}
+                                        fill="none"
+                                    />
+                                    <circle
+                                        cx={50}
+                                        cy={50}
+                                        r={42}
+                                        stroke={remaining < 60 ? '#d32f2f' : '#1976d2'}
+                                        strokeWidth={6}
+                                        fill="none"
+                                        strokeDasharray={circumference}
+                                        strokeDashoffset={strokeDashoffset}
+                                        strokeLinecap="round"
+                                        style={{
+                                            transition: 'stroke-dashoffset 1s linear',
+                                            transform: 'rotate(-90deg)',
+                                            transformOrigin: '50% 50%',
+                                        }}
+                                    />
+                                    <text
+                                        x="50%"
+                                        y="50%"
+                                        dominantBaseline="middle"
+                                        textAnchor="middle"
+                                        fontSize="16"
+                                        fontFamily="monospace"
+                                        fill={remaining < 60 ? '#d32f2f' : '#1976d2'}
+                                    >
+                                        {mm}:{ss}
+                                    </text>
+                                </svg>
+                            </Box>
+                        </Box>
+                        <Typography
+                            variant="caption"
+                            color="textSecondary"
+                            sx={{ position: 'fixed', bottom: 8, left: 24, zIndex: 2001 }}
+                        >
+                            Time Remaining
+                        </Typography>
+                    </>
+                )}
                 {timeUp && (
-                    <Alert severity="warning" sx={{mt:2}}>Time is up. No further answers accepted.</Alert>
+                    <Alert severity="warning" sx={{ mt: 2 }}>
+                        Time is up. No further answers accepted.
+                    </Alert>
                 )}
             </Box>
         );
@@ -462,24 +520,26 @@ export default function CertificationIndex({
     };
 
     /* Enhanced countdown: continuous timer with automatic expiration handling */
-    useEffect(()=>{ setLocalRemaining(remainingSeconds ?? null); },[remainingSeconds]);
+    useEffect(() => {
+        setLocalRemaining(remainingSeconds ?? 20 * 60);
+    }, [remainingSeconds]);
 
-    useEffect(()=>{
-        if (phase !== 'pm_concepts') return; 
+    useEffect(() => {
+        if (phase !== 'pm_concepts') return;
         if (typeof remainingSeconds !== 'number') return;
-        
+
         // If already time up, don't start timer
         if (timeUp || remainingSeconds <= 0) {
             setLocalRemaining(0);
             return;
         }
-        
+
         const tick = () => {
-            setLocalRemaining(prev => {
+            setLocalRemaining((prev) => {
                 // initialize
-                if (prev === null || prev === undefined) return remainingSeconds;
+                if (prev === null || prev === undefined) return remainingSeconds ?? 20 * 60;
                 const newValue = prev - 1;
-                
+
                 // When timer hits 0, automatically redirect to cooldown page
                 if (newValue <= 0) {
                     setTimeout(() => {
@@ -490,21 +550,21 @@ export default function CertificationIndex({
                 return newValue;
             });
         };
-        
-        const interval = setInterval(tick, 1000);
-        return ()=> clearInterval(interval);
-    },[phase, remainingSeconds, timeUp]);
 
-    useEffect(()=>{
+        const interval = setInterval(tick, 1000);
+        return () => clearInterval(interval);
+    }, [phase, remainingSeconds, timeUp]);
+
+    useEffect(() => {
         // periodic server sync (30s) to correct drift and check expiration
-        if (phase !== 'pm_concepts') return; 
+        if (phase !== 'pm_concepts') return;
         if (!remainingSeconds || timeUp) return;
-        
-        const sync = setInterval(()=>{
-            router.reload({ only: ['remainingSeconds','timeUp']});
-        },30000);
-        return ()=> clearInterval(sync);
-    },[phase, timeUp, remainingSeconds]);
+
+        const sync = setInterval(() => {
+            router.reload({ only: ['remainingSeconds', 'timeUp'] });
+        }, 30000);
+        return () => clearInterval(sync);
+    }, [phase, timeUp, remainingSeconds]);
 
     return (
         <AuthenticatedLayout
