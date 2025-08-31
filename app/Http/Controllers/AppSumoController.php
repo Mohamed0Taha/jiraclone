@@ -17,9 +17,11 @@ class AppSumoController extends Controller
     /**
      * Show the redemption page
      */
-    public function redeemPage()
+    public function redeemPage(Request $request, $code = null)
     {
-        return Inertia::render('AppSumo/Redeem');
+        return Inertia::render('AppSumo/Redeem', [
+            'prefilledCode' => $code // Pre-fill the code if provided in URL
+        ]);
     }
 
     /**
@@ -27,9 +29,23 @@ class AppSumoController extends Controller
      */
     public function processRedemption(Request $request)
     {
-        $request->validate([
+        // Dynamic validation based on email type
+        $validationRules = [
             'code' => 'required|string|max:200',
-        ]);
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255',
+        ];
+
+        $isGmailAccount = str_contains(strtolower($request->email), '@gmail.com');
+        
+        // Require password for non-Gmail accounts
+        if (!$isGmailAccount) {
+            $validationRules['password'] = 'required|string|min:8|confirmed';
+            $validationRules['password_confirmation'] = 'required|string|min:8';
+        }
+
+        $request->validate($validationRules);
 
         $code = AppSumoCode::where('code', $request->code)->first();
 
@@ -45,43 +61,49 @@ class AppSumoController extends Controller
             ]);
         }
 
-        // If just validating the code (step 1), return success
-        if (!$request->has('name') && !$request->has('email')) {
-            return back()->with([
-                'codeValid' => true,
-                'message' => 'Code is valid! Please enter your account details.',
-            ]);
-        }
-
-        // Step 2: Create account and redeem
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-        ]);
-
         DB::beginTransaction();
 
         try {
-            // Create the user account
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make(str()->random(32)), // Random password
-                'email_verified_at' => now(), // Auto-verify AppSumo users
-                'subscription_plan' => 'lifetime', // Lifetime access
-                'subscription_status' => 'active',
-                'subscription_ends_at' => null, // Never expires
-                'trial_ends_at' => null,
-                'is_trial' => false,
-            ]);
+            // Check if user already exists
+            $existingUser = User::where('email', $request->email)->first();
+            
+            if ($existingUser) {
+                // Upgrade existing user to lifetime access
+                $this->createAppSumoSubscription($existingUser);
+                $user = $existingUser;
+                $isNewUser = false;
+            } else {
+                // Create new user account
+                $fullName = trim($request->first_name . ' ' . $request->last_name);
+                
+                // Determine password based on account type
+                $password = $isGmailAccount 
+                    ? Hash::make(str()->random(32)) // Random password for Gmail users (they'll use OAuth)
+                    : Hash::make($request->password); // Use provided password for non-Gmail users
+                
+                $user = User::create([
+                    'name' => $fullName,
+                    'email' => $request->email,
+                    'password' => $password,
+                    'email_verified_at' => now(), // Auto-verify AppSumo users
+                ]);
+                
+                // Create AppSumo lifetime subscription
+                $this->createAppSumoSubscription($user);
+                
+                $isNewUser = true;
+            }
 
             // Mark the code as redeemed
             $code->markAsRedeemed($user, [
-                'name' => $request->name,
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
                 'email' => $request->email,
                 'redeemed_via' => 'appsumo',
+                'account_type' => $isGmailAccount ? 'gmail' : 'standard',
                 'user_agent' => $request->userAgent(),
                 'ip' => $request->ip(),
+                'is_new_user' => $isNewUser,
             ]);
 
             // Log the user in
@@ -89,13 +111,19 @@ class AppSumoController extends Controller
 
             DB::commit();
 
-            return redirect()->route('appsumo.success');
+            $welcomeMessage = $isNewUser 
+                ? "🎉 Welcome to TaskPilot! Your lifetime subscription is now active. Thank you for your AppSumo purchase!"
+                : "🎉 Your account has been upgraded to lifetime access! Thank you for your AppSumo purchase!";
+
+            return redirect()->route('dashboard')
+                ->with('appsumo_welcome', true)
+                ->with('message', $welcomeMessage);
 
         } catch (\Exception $e) {
             DB::rollBack();
             
             return back()->withErrors([
-                'email' => 'An error occurred while creating your account. Please try again.',
+                'email' => 'An error occurred while processing your redemption. Please try again.',
             ]);
         }
     }
@@ -208,5 +236,40 @@ class AppSumoController extends Controller
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="appsumo-codes-' . date('Y-m-d') . '.csv"',
         ]);
+    }
+
+    /**
+     * Create AppSumo lifetime subscription for user
+     */
+    private function createAppSumoSubscription(User $user)
+    {
+        // Cancel any existing subscriptions first
+        foreach ($user->subscriptions as $subscription) {
+            if ($subscription->stripe_status === 'active') {
+                $subscription->update(['stripe_status' => 'canceled', 'ends_at' => now()]);
+            }
+        }
+
+        // Get Pro plan price ID from config (AppSumo users get Pro features)
+        $plans = config('subscriptions.plans');
+        $stripePriceId = $plans['pro']['price_id'] ?? 'price_manual_appsumo_pro';
+
+        // Create fake Stripe customer ID for AppSumo users if user doesn't have one
+        if (!$user->stripe_id) {
+            $user->update(['stripe_id' => 'cus_appsumo_' . $user->id]);
+        }
+
+        // Create AppSumo lifetime subscription record
+        $subscription = $user->subscriptions()->create([
+            'type' => 'default',
+            'stripe_id' => 'sub_appsumo_' . $user->id . '_' . time(),
+            'stripe_status' => 'active',
+            'stripe_price' => $stripePriceId,
+            'quantity' => 1,
+            'trial_ends_at' => null,
+            'ends_at' => null, // Never expires - lifetime access
+        ]);
+
+        return $subscription;
     }
 }

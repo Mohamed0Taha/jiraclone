@@ -60,6 +60,10 @@
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.openai-requests') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
                                 🤖 AI Logs
                             </a>
+                            <a href="{{ route('admin.appsumo.dashboard') }}" 
+                               class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.appsumo*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
+                                🎁 AppSumo
+                            </a>
                         </div>
                     </div>
                     

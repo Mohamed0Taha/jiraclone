@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppSumoCode;
 use App\Models\EmailLog;
 use App\Models\OpenAiRequest;
 use App\Models\Project;
@@ -71,7 +72,7 @@ class AdminController extends Controller
         }
 
         $users = $query->withCount(['projects', 'tasks'])
-            ->with('subscriptions')
+            ->with(['subscriptions', 'appSumoCode'])
             ->latest()
             ->paginate(20);
 
@@ -672,6 +673,11 @@ class AdminController extends Controller
         return view('admin.email-logs', compact('emails', 'emailTypes'));
     }
 
+    public function emailLogDetail(Request $request, EmailLog $emailLog)
+    {
+        return view('admin.email-log-detail', compact('emailLog'));
+    }
+
     public function openaiRequests(Request $request)
     {
         $query = OpenAiRequest::with('user');
@@ -976,6 +982,18 @@ class AdminController extends Controller
         $user->update(['is_admin' => false]);
 
         return redirect()->back()->with('success', $user->name.' admin privileges have been removed.');
+    }
+
+    public function verifyUser(Request $request, User $user)
+    {
+        if ($user->hasVerifiedEmail()) {
+            return redirect()->back()->with('info', $user->name.' is already verified.');
+        }
+
+        $user->markEmailAsVerified();
+        event(new \Illuminate\Auth\Events\Verified($user));
+
+        return redirect()->back()->with('success', $user->name.' has been manually verified.');
     }
 
     private function getRecentEmails()
@@ -1527,7 +1545,7 @@ class AdminController extends Controller
                 // Refresh the model to get updated data
                 $smsMessage = $smsMessage->fresh();
             } catch (\Exception $e) {
-                \Log::warning('Failed to sync SMS status in detail view', [
+                Log::warning('Failed to sync SMS status in detail view', [
                     'sms_id' => $id,
                     'error' => $e->getMessage(),
                 ]);
@@ -1661,5 +1679,124 @@ class AdminController extends Controller
 
             return redirect()->back()->with('error', 'Failed to sync SMS statuses: '.$e->getMessage());
         }
+    }
+
+    /**
+     * AppSumo dashboard - show codes and stats
+     */
+    public function appSumoDashboard()
+    {
+        $codes = AppSumoCode::with('redeemedByUser')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $stats = [
+            'total' => $codes->count(),
+            'active' => $codes->where('status', 'active')->count(),
+            'redeemed' => $codes->where('status', 'redeemed')->count(),
+            'expired' => $codes->where('status', 'expired')->count(),
+        ];
+
+        return view('admin.appsumo.dashboard', compact('codes', 'stats'));
+    }
+
+    /**
+     * Generate bulk AppSumo codes
+     */
+    public function generateAppSumoCodes(Request $request)
+    {
+        $request->validate([
+            'count' => 'required|integer|min:1|max:10000',
+        ]);
+
+        $count = $request->input('count');
+        $codes = [];
+
+        try {
+            for ($i = 0; $i < $count; $i++) {
+                $code = $this->generateUniqueAppSumoCode();
+                
+                $codeRecord = AppSumoCode::create([
+                    'code' => $code,
+                    'status' => 'active',
+                    'campaign' => 'appsumo_2025',
+                ]);
+
+                $codes[] = $codeRecord;
+            }
+
+            return redirect()
+                ->route('admin.appsumo.dashboard')
+                ->with('message', "Successfully generated {$count} new AppSumo codes!");
+
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.appsumo.dashboard')
+                ->with('error', 'Failed to generate codes: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Export AppSumo codes as CSV
+     */
+    public function exportAppSumoCodes()
+    {
+        $codes = AppSumoCode::with('redeemedByUser')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $filename = 'appsumo_codes_' . date('Y_m_d_H_i_s') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($codes) {
+            $file = fopen('php://output', 'w');
+            
+            // CSV headers
+            fputcsv($file, [
+                'Code',
+                'Status', 
+                'Campaign',
+                'Created At',
+                'Redeemed At',
+                'Redeemed By Email',
+                'Redeemed By Name',
+                'Direct Redemption Link'
+            ]);
+
+            // CSV data
+            foreach ($codes as $code) {
+                fputcsv($file, [
+                    $code->code,
+                    $code->status,
+                    $code->campaign,
+                    $code->created_at->format('Y-m-d H:i:s'),
+                    $code->redeemed_at ? $code->redeemed_at->format('Y-m-d H:i:s') : '',
+                    $code->redeemedByUser?->email ?? '',
+                    $code->redeemedByUser?->name ?? '',
+                    url('/appsumo/redeem/' . $code->code)
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Generate a unique AppSumo code
+     */
+    private function generateUniqueAppSumoCode()
+    {
+        do {
+            // Generate format: AS + 8 random alphanumeric characters (uppercase)
+            $code = 'AS' . strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 8));
+        } while (AppSumoCode::where('code', $code)->exists());
+
+        return $code;
     }
 }

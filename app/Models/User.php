@@ -93,6 +93,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Task::class, 'assignee_id');
     }
 
+    public function appSumoCode()
+    {
+        return $this->hasOne(AppSumoCode::class, 'redeemed_by_user_id');
+    }
+
     public function onPro(): bool
     {
         return $this->subscribed('default') || $this->onTrial('default');
@@ -173,6 +178,30 @@ class User extends Authenticatable implements MustVerifyEmail
             default:
                 return true;
         }
+    }
+
+    /**
+     * Check if user has AppSumo lifetime access
+     */
+    public function hasAppSumoAccess(): bool
+    {
+        return $this->appSumoCode && $this->appSumoCode->isRedeemed();
+    }
+
+    /**
+     * Get user type for admin display
+     */
+    public function getUserType(): string
+    {
+        if ($this->hasAppSumoAccess()) {
+            return 'AppSumo';
+        }
+        
+        if ($this->hasActiveSubscription()) {
+            return 'Stripe';
+        }
+        
+        return 'Free';
     }
 
     /**
@@ -603,6 +632,11 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     private function getPlanFromPriceId(string $priceId): string
     {
+        // Check for AppSumo lifetime subscriptions first
+        if (str_contains($priceId, 'appsumo')) {
+            return 'pro'; // AppSumo users get Pro features
+        }
+
         // First check current configured price IDs (from env vars)
         $plans = config('subscriptions.plans');
         foreach ($plans as $key => $plan) {

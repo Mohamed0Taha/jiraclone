@@ -412,7 +412,11 @@ Route::get('/dashboard', function (Request $request) {
         ];
     });
 
-    return Inertia::render('Dashboard', ['projects' => $projects]);
+    return Inertia::render('Dashboard', [
+        'projects' => $projects,
+        'appsumo_welcome' => session('appsumo_welcome'),
+        'message' => session('message'),
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 /*
@@ -446,9 +450,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.delete');
     Route::post('/users/{user}/upgrade', [AdminController::class, 'upgradeUser'])->name('users.upgrade');
+    Route::post('/users/{user}/verify', [AdminController::class, 'verifyUser'])->name('users.verify');
 
     // Analytics routes
     Route::get('/email-logs', [AdminController::class, 'emailLogs'])->name('email-logs');
+    Route::get('/email-logs/{emailLog}', [AdminController::class, 'emailLogDetail'])->name('email-logs.detail');
     Route::get('/openai-requests', [AdminController::class, 'openaiRequests'])->name('openai-requests');
     Route::get('/billing', [AdminController::class, 'billing'])->name('billing');
     Route::get('/cancellations', [AdminController::class, 'cancellations'])->name('cancellations');
@@ -477,6 +483,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::post('/twilio/test-sms', [TwilioController::class, 'testSMS'])->name('twilio.test-sms');
     Route::post('/twilio/test-whatsapp', [TwilioController::class, 'testWhatsApp'])->name('twilio.test-whatsapp');
     Route::post('/twilio/check-status', [TwilioController::class, 'checkMessageStatus'])->name('twilio.check-status');
+
+    // AppSumo Management
+    Route::get('/appsumo', [AdminController::class, 'appSumoDashboard'])->name('appsumo.dashboard');
+    Route::post('/appsumo/generate', [AdminController::class, 'generateAppSumoCodes'])->name('appsumo.generate');
+    Route::get('/appsumo/export', [AdminController::class, 'exportAppSumoCodes'])->name('appsumo.export');
 });
 
 /*
@@ -600,18 +611,15 @@ Route::middleware('auth')->group(function () {
 */
 // Public redemption page (no auth required)
 Route::get('/appsumo/redeem', [App\Http\Controllers\AppSumoController::class, 'redeemPage'])->name('appsumo.redeem');
+Route::get('/appsumo/redeem/{code}', [App\Http\Controllers\AppSumoController::class, 'redeemPage'])->name('appsumo.redeem.code');
 Route::post('/appsumo/redeem', [App\Http\Controllers\AppSumoController::class, 'processRedemption'])->name('appsumo.redeem.process');
 Route::get('/appsumo/success', [App\Http\Controllers\AppSumoController::class, 'successPage'])->name('appsumo.success');
 
 // Dynamic AppSumo link (configurable for AppSumo dashboard)
 Route::get('/appsumo', [App\Http\Controllers\AppSumoController::class, 'dynamicRedirect'])->name('appsumo.dynamic');
 
-// Admin routes for AppSumo code management
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->group(function () {
-    Route::get('/appsumo', [App\Http\Controllers\AppSumoController::class, 'adminDashboard'])->name('appsumo.dashboard');
-    Route::post('/appsumo/generate-codes', [App\Http\Controllers\AppSumoController::class, 'generateCodes'])->name('appsumo.generate');
-    Route::get('/appsumo/export', [App\Http\Controllers\AppSumoController::class, 'exportCodes'])->name('appsumo.export');
-});
+// AppSumo admin functionality moved to regular admin dashboard
+// Codes can be managed through direct database queries or Artisan commands if needed
 
 require __DIR__.'/auth.php';
 if (app()->environment('local')) {

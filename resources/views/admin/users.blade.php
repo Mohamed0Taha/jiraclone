@@ -32,6 +32,7 @@
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User Type</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -51,6 +52,21 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $user->is_admin ? 'bg-red-100 text-red-800' : ($user->email_verified_at ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800') }}">
                                         {{ $user->is_admin ? 'Admin' : ($user->email_verified_at ? 'Verified' : 'Unverified') }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @php
+                                        $userType = $user->getUserType();
+                                    @endphp
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                                        {{ $userType === 'AppSumo' ? 'bg-orange-100 text-orange-800' : 
+                                           ($userType === 'Stripe' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800') }}">
+                                        {{ $userType }}
+                                        @if($userType === 'AppSumo')
+                                            <span class="ml-1">🏷️</span>
+                                        @elseif($userType === 'Stripe')
+                                            <span class="ml-1">💳</span>
+                                        @endif
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -92,6 +108,17 @@
                                            class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm font-semibold hover:bg-blue-200 border border-blue-300">
                                             ✏️ Edit
                                         </a>
+                                        
+                                        <!-- Manual Verification (only show if not verified) -->
+                                        @if(!$user->email_verified_at)
+                                            <form method="POST" action="{{ route('admin.users.verify', $user) }}" class="inline">
+                                                @csrf
+                                                <button type="submit" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded text-sm font-semibold hover:bg-emerald-200 border border-emerald-300"
+                                                        onclick="return confirm('Manually verify {{ $user->name }}? This will mark their email as verified.')">
+                                                    ✅ Verify
+                                                </button>
+                                            </form>
+                                        @endif
                                         
                                         <!-- Upgrade User (dropdown) -->
                                         @php
