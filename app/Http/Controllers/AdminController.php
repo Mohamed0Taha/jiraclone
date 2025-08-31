@@ -1737,11 +1737,11 @@ class AdminController extends Controller
     }
 
     /**
-     * Export AppSumo codes as CSV
+     * Export AppSumo codes as CSV - AppSumo format (codes only, no headers)
      */
     public function exportAppSumoCodes()
     {
-        $codes = AppSumoCode::with('redeemedByUser')
+        $codes = AppSumoCode::where('status', 'active')
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -1755,30 +1755,10 @@ class AdminController extends Controller
         $callback = function() use ($codes) {
             $file = fopen('php://output', 'w');
             
-            // CSV headers
-            fputcsv($file, [
-                'Code',
-                'Status', 
-                'Campaign',
-                'Created At',
-                'Redeemed At',
-                'Redeemed By Email',
-                'Redeemed By Name',
-                'Direct Redemption Link'
-            ]);
-
-            // CSV data
+            // NO HEADERS - AppSumo requirement
+            // Only output the codes, one per row, no additional information
             foreach ($codes as $code) {
-                fputcsv($file, [
-                    $code->code,
-                    $code->status,
-                    $code->campaign,
-                    $code->created_at->format('Y-m-d H:i:s'),
-                    $code->redeemed_at ? $code->redeemed_at->format('Y-m-d H:i:s') : '',
-                    $code->redeemedByUser?->email ?? '',
-                    $code->redeemedByUser?->name ?? '',
-                    url('/appsumo/redeem/' . $code->code)
-                ]);
+                fputcsv($file, [$code->code]);
             }
 
             fclose($file);
