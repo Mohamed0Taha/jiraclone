@@ -1600,7 +1600,6 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                                 variant="body2"
                                 sx={{
                                     color: 'text.secondary',
-                                    display: 'block',
                                     mt: 1,
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
