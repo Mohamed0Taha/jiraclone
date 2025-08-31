@@ -1,27 +1,33 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { 
-    Container, 
-    Paper, 
-    Typography, 
-    Box, 
-    Button, 
-    Card, 
+import {
+    Container,
+    Paper,
+    Typography,
+    Box,
+    Button,
+    Card,
     CardContent,
     Chip,
     Stack,
     Divider,
-    Alert
+    Alert,
 } from '@mui/material';
-import { 
+import {
     EmojiEvents as TrophyIcon,
     School as CertificateIcon,
     Refresh as RetakeIcon,
-    Verified as VerifiedIcon
+    Verified as VerifiedIcon,
 } from '@mui/icons-material';
 
-export default function CertificateChoice({ auth, existingCertificate, certificateUrl, badgeUrl, canRetake }) {
+export default function CertificateChoice({
+    auth,
+    existingCertificate,
+    certificateUrl,
+    badgeUrl,
+    canRetake,
+}) {
     const getScoreColor = (score) => {
         if (score >= 90) return 'success';
         if (score >= 80) return 'info';
@@ -52,7 +58,11 @@ export default function CertificateChoice({ auth, existingCertificate, certifica
     return (
         <AuthenticatedLayout
             user={auth.user}
-            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Project Management Certification</h2>}
+            header={
+                <h2 className="font-semibold text-xl text-gray-800 leading-tight">
+                    Project Management Certification
+                </h2>
+            }
         >
             <Head title="Certification Status" />
 
@@ -73,14 +83,21 @@ export default function CertificateChoice({ auth, existingCertificate, certifica
                             <Stack direction="row" spacing={2} alignItems="center" mb={2}>
                                 <VerifiedIcon color="success" />
                                 <Typography variant="h6">Current Certification</Typography>
-                                <Chip 
-                                    label={getScoreLabel(existingCertificate.score)} 
+                                <Chip
+                                    label={getScoreLabel(existingCertificate.score)}
                                     color={getScoreColor(existingCertificate.score)}
                                     size="small"
                                 />
                             </Stack>
-                            
-                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 3 }}>
+
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                    gap: 2,
+                                    mb: 3,
+                                }}
+                            >
                                 <Box>
                                     <Typography variant="caption" color="text.secondary">
                                         Final Score
@@ -111,8 +128,13 @@ export default function CertificateChoice({ auth, existingCertificate, certifica
                             </Box>
 
                             <Alert severity="info" sx={{ mb: 2 }}>
-                                Your certificate is {existingCertificate.days_ago > 30 ? 'eligible for renewal' : 'still valid'}.
-                                {existingCertificate.days_ago > 30 && ' You can retake the certification to potentially improve your score.'}
+                                Your certificate is{' '}
+                                {existingCertificate.days_ago > 30
+                                    ? 'eligible for renewal'
+                                    : 'still valid'}
+                                .
+                                {existingCertificate.days_ago > 30 &&
+                                    ' You can retake the certification to potentially improve your score.'}
                             </Alert>
                         </CardContent>
                     </Card>
@@ -157,17 +179,22 @@ export default function CertificateChoice({ auth, existingCertificate, certifica
                                     size="large"
                                     startIcon={<RetakeIcon />}
                                     onClick={handleRetake}
-                                    sx={{ 
+                                    sx={{
                                         minWidth: 300,
                                         bgcolor: 'warning.main',
                                         '&:hover': {
-                                            bgcolor: 'warning.dark'
-                                        }
+                                            bgcolor: 'warning.dark',
+                                        },
                                     }}
                                 >
                                     Retake Certification
                                 </Button>
-                                <Typography variant="caption" display="block" color="text.secondary" mt={1}>
+                                <Typography
+                                    variant="caption"
+                                    display="block"
+                                    color="text.secondary"
+                                    mt={1}
+                                >
                                     Start a new certification to potentially improve your score
                                 </Typography>
                             </Box>
@@ -175,8 +202,14 @@ export default function CertificateChoice({ auth, existingCertificate, certifica
                     </Stack>
 
                     <Box mt={4} p={2} bgcolor="grey.50" borderRadius={1}>
-                        <Typography variant="caption" color="text.secondary" textAlign="center" display="block">
-                            Your current certificate is publicly verifiable and shareable on professional networks like LinkedIn.
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            textAlign="center"
+                            display="block"
+                        >
+                            Your current certificate is publicly verifiable and shareable on
+                            professional networks like LinkedIn.
                         </Typography>
                     </Box>
                 </Paper>

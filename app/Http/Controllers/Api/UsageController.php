@@ -10,6 +10,7 @@ class UsageController extends Controller
     public function summary()
     {
         $user = Auth::user();
+
         return response()->json($user->getUsageSummary());
     }
 }

@@ -63,9 +63,9 @@ class AutomationController extends Controller
     public function store(Request $request, Project $project)
     {
         $user = Auth::user();
-        
+
         // Check automation quota
-        if (!$user->canCreateAutomations()) {
+        if (! $user->canCreateAutomations()) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
@@ -77,7 +77,7 @@ class AutomationController extends Controller
                     'upgrade_url' => route('billing.show'),
                 ], 403);
             }
-            
+
             return redirect()
                 ->back()
                 ->with('error', 'You have reached your automation limit. Upgrade your plan to create more automations.');

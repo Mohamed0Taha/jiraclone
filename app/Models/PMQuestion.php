@@ -19,14 +19,14 @@ class PMQuestion extends Model
         'type',
         'explanation',
         'meta',
-        'is_active'
+        'is_active',
     ];
 
     protected $casts = [
         'options' => 'array',
         'correct_answer' => 'array',
         'meta' => 'array',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
     ];
 
     public function certificationAnswers(): HasMany

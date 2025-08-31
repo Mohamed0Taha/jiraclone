@@ -431,7 +431,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $limit = $this->getAutomationLimit();
         $used = $this->getAutomationsCount();
-        
+
         return max(0, $limit - $used);
     }
 
@@ -549,7 +549,7 @@ class User extends Authenticatable implements MustVerifyEmail
         // If we've passed the reset date, reset usage counters
         if ($now->isAfter($resetDate)) {
             $nextResetDate = $this->calculateNextResetDate();
-            
+
             $this->update([
                 'usage_reset_date' => $nextResetDate->startOfDay(),
                 'ai_tasks_used' => 0,
@@ -579,12 +579,12 @@ class User extends Authenticatable implements MustVerifyEmail
     private function calculateNextResetDate(): Carbon
     {
         $subscription = $this->subscription('default');
-        
+
         if ($subscription && $subscription->created_at) {
             // Use subscription billing cycle - reset on the same day of month as subscription started
             $billingDay = $subscription->created_at->day;
             $now = now();
-            
+
             // If we're past the billing day this month, next reset is next month's billing day
             if ($now->day >= $billingDay) {
                 return $now->addMonth()->startOfMonth()->addDays($billingDay - 1);

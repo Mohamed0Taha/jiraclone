@@ -11,14 +11,14 @@ if (isset($_GET['skip'])) {
 // Clear ALL cookies immediately
 if (isset($_SERVER['HTTP_COOKIE'])) {
     $cookies = explode(';', $_SERVER['HTTP_COOKIE']);
-    foreach($cookies as $cookie) {
+    foreach ($cookies as $cookie) {
         $parts = explode('=', $cookie);
         $name = trim($parts[0]);
-        if($name) {
+        if ($name) {
             // Clear with all possible combinations
             setcookie($name, '', time() - 3600, '/');
             setcookie($name, '', time() - 3600, '/', $_SERVER['HTTP_HOST'] ?? '');
-            setcookie($name, '', time() - 3600, '/', '.' . ($_SERVER['HTTP_HOST'] ?? ''));
+            setcookie($name, '', time() - 3600, '/', '.'.($_SERVER['HTTP_HOST'] ?? ''));
         }
     }
 }
@@ -26,16 +26,16 @@ if (isset($_SERVER['HTTP_COOKIE'])) {
 // Force clear common problematic cookies
 $problematic = [
     'laravel_session',
-    'XSRF-TOKEN', 
+    'XSRF-TOKEN',
     'remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d',
     'filament_theme',
-    'sidebar_collapsed'
+    'sidebar_collapsed',
 ];
 
-foreach($problematic as $name) {
+foreach ($problematic as $name) {
     setcookie($name, '', time() - 3600, '/');
     setcookie($name, '', time() - 3600, '/', $_SERVER['HTTP_HOST'] ?? '');
-    setcookie($name, '', time() - 3600, '/', '.' . ($_SERVER['HTTP_HOST'] ?? ''));
+    setcookie($name, '', time() - 3600, '/', '.'.($_SERVER['HTTP_HOST'] ?? ''));
 }
 
 // Set sentinel so we don't loop again after cleaning

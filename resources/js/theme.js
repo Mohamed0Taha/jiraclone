@@ -32,6 +32,14 @@ const theme = createTheme({
         warning: { main: commonColors.warning },
         error: { main: commonColors.error },
         info: { main: commonColors.info },
+        simulation: {
+            standup: '#2563EB', // blue
+            teamEvent: '#7C3AED', // violet
+            attrition: '#DC2626', // red
+            conflict: '#F97316', // orange
+            opportunity: '#059669', // emerald
+            funding: '#0D9488', // teal
+        },
         text: { primary: commonColors.textPrimary, secondary: commonColors.textSecondary },
         divider: 'rgba(30, 41, 59, 0.08)',
         background: { default: commonColors.background, paper: commonColors.paper },

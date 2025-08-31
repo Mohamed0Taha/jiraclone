@@ -116,9 +116,9 @@ class ProjectController extends Controller
 
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Check if user can extract documents
-        if (!$user->canExtractDocuments()) {
+        if (! $user->canExtractDocuments()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Document extraction quota exceeded. Upgrade your plan to extract more documents.',
@@ -133,7 +133,7 @@ class ProjectController extends Controller
         try {
             $file = $request->file('document');
             $extractedData = $analysisService->analyzeDocument($file);
-            
+
             // Increment usage after successful extraction
             $user->incrementDocumentExtractionUsage();
 
@@ -430,8 +430,8 @@ class ProjectController extends Controller
         // Explicit subscription check to avoid vague 404 produced by middleware masking
         $result = $reports->generate($project);
 
-    /** @var User $user */
-    $user = Auth::user();
+        /** @var User $user */
+        $user = Auth::user();
         // Increment usage (guard inside model ensures monthly reset)
         $user->incrementReportsUsage();
 

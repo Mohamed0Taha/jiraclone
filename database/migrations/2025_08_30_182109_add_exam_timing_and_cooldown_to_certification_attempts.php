@@ -27,9 +27,9 @@ return new class extends Migration
         Schema::table('certification_attempts', function (Blueprint $table) {
             $table->dropColumn([
                 'exam_started_at',
-                'exam_expires_at', 
+                'exam_expires_at',
                 'is_expired',
-                'next_attempt_allowed_at'
+                'next_attempt_allowed_at',
             ]);
         });
     }

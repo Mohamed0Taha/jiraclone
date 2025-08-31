@@ -1,93 +1,195 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Box, Typography, Card, CardContent, Chip, Stack, IconButton, Tooltip } from '@mui/material';
+import { Box, Typography, Card, CardContent, Chip, Stack, IconButton, Tooltip, Collapse, Button, Divider } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-// All event actions now executed ONLY through global controls (standup, team event, praise, remove)
 
-const MOCK_EVENTS = [
-	{ id: 1, title: 'Simulation Ready', type: 'Info', date: new Date().toISOString().slice(0,10), desc: 'Generated placeholder' },
-];
+// Fallback when no events provided - removed to avoid showing placeholders
+const FALLBACK_EVENTS = [];
 
-const typeColor = (t) => ({ Milestone: 'success', Meeting: 'info', Review: 'warning' }[t] || 'default');
+const typeColor = (t) => ({
+	'Milestone': 'success',
+	'Meeting': 'info',
+	'Review': 'warning',
+	'Capacity Crisis': 'error',
+	'Resource Crisis': 'error',
+	'Budget Crisis': 'warning',
+	'Technical Crisis': 'error',
+	'Quality Risk': 'warning',
+	'Dependency Crisis': 'warning',
+	'Information': 'info'
+}[t] || 'default');
 
-export default function Events({ events, week, onSelect, highlightColorMap = {}, selectedEventId, resolvedEventIds = [], onResolve }) {
+const actionTypeStyle = (actionType) => {
+	switch(actionType){
+		case 'standup': return { chipLabel: 'Standup', color: 'info', tone: 'rgba(37,99,235,0.08)' };
+		case 'team_event': return { chipLabel: 'Team Event', color: 'secondary', tone: 'rgba(124,58,237,0.10)' };
+		case 'attrition': return { chipLabel: 'Attrition', color: 'error', tone: 'rgba(220,38,38,0.10)' };
+		case 'team_conflict': return { chipLabel: 'Conflict', color: 'warning', tone: 'rgba(249,115,22,0.12)' };
+		case 'budget_request': return { chipLabel: 'Budget Req', color: 'warning', tone: 'rgba(245,158,11,0.10)' };
+		case 'funding_injection': return { chipLabel: 'Funding', color: 'success', tone: 'rgba(5,150,105,0.12)' };
+		case 'scope_creep': return { chipLabel: 'Scope', color: 'warning', tone: 'rgba(245,158,11,0.10)' };
+		case 'quality_issue': return { chipLabel: 'Quality', color: 'default', tone: 'rgba(107,114,128,0.12)' };
+		case 'vendor_delay': return { chipLabel: 'Vendor', color: 'error', tone: 'rgba(220,38,38,0.10)' };
+		case 'morale_slump': return { chipLabel: 'Morale', color: 'secondary', tone: 'rgba(99,102,241,0.12)' };
+		case 'technical_debt': return { chipLabel: 'Tech Debt', color: 'error', tone: 'rgba(185,28,28,0.12)' };
+		default: return null;
+	}
+};
+
+function EventsComponent({
+	events,
+	week,
+	onSelect,
+	highlightColorMap = {},
+	selectedEventId,
+	resolvedEventIds = [],
+	onResolve,
+	onResolveOption
+}) {
 	const [dismissed, setDismissed] = useState([]);
-	const data = useMemo(() => {
-		const base = (events && events.length) ? events : MOCK_EVENTS;
-		// show newest (higher trigger_week or id) first
-		return [...base]
+
+	const visibleEvents = useMemo(() => {
+		const list = (events && events.length) ? events : FALLBACK_EVENTS;
+		return list
 			.filter(e => !dismissed.includes(e.id) && !resolvedEventIds.includes(e.id))
-			.sort((a,b) => (b.trigger_week || 0) - (a.trigger_week || 0) || b.id - a.id);
+			.sort((a,b) => (b.trigger_week || 0) - (a.trigger_week || 0) || (b.id > a.id ? 1 : -1));
 	}, [events, dismissed, resolvedEventIds]);
 
 	const handleDismiss = useCallback((id) => {
 		setDismissed(prev => prev.includes(id) ? prev : [...prev, id]);
 	}, []);
+
+	const handleSelect = useCallback((e) => {
+		onSelect && onSelect(e);
+	}, [onSelect]);
+
+	const handleResolve = async (event, optionKey) => {
+		if (!onResolveOption) return;
+		const res = await onResolveOption(event, optionKey);
+		if (res?.success) {
+			onResolve && onResolve(event.id);
+		}
+	};
+
 	return (
-		<Box p={1.5} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-			<Stack direction="row" alignItems="center" mb={1.25}>
-				<Typography variant="h6" fontWeight={700}>Events</Typography>
+		<Box>
+			<Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+				<Typography variant="h6">Events</Typography>
+				{visibleEvents.some(e => (e.requiresAction || e.effects?.resolution_requires_action || e.resolution_requires_action)) && (
+					<Chip label="Action Required" color="warning" size="small" />
+				)}
+				{visibleEvents.some(e => e.severity === 'high') && (
+					<Chip label="High Impact" color="error" size="small" />
+				)}
 			</Stack>
-			<Stack spacing={1.25} sx={{ overflowY: 'auto', pr: 0.5 }}>
-				{data.map(e => {
-					const occurred = (e.trigger_week || 0) <= week;
-					// derive a representative color if tasks share highlight colors
-					let eventHighlightColor = undefined;
-					if (e.task_ids && e.task_ids.length) {
-						const colors = e.task_ids.map(tid => highlightColorMap[tid]).filter(Boolean);
-						if (colors.length === 1) eventHighlightColor = colors[0];
-					}
-					// No inline actions; user must use global controls. For update_task, clicking selects to highlight tasks.
+
+			{visibleEvents.length === 0 && (
+				<Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+					No current events
+				</Typography>
+			)}
+
+			<Stack spacing={1.25}>
+				{visibleEvents.map(e => {
+					const occurred = (e.trigger_week ?? 0) <= (week ?? 0);
+					const actionable = e.requiresAction === true || e.effects?.resolution_requires_action === true || e.resolution_requires_action === true;
+					const selected = selectedEventId === e.id;
+					const highlight = highlightColorMap[e.id];
+
 					return (
-						<Card 
-							key={e.id} 
-							variant="outlined" 
-							onClick={() => onSelect && onSelect(e)}
-							sx={{ 
-	                                borderLeft: 4, 
-								opacity: occurred ? 1 : 0.65, 
-	                                borderLeftColor: eventHighlightColor || typeColor(e.type)+'.main', 
-				position: 'relative', 
-				cursor: 'pointer',
-				'&:hover': { boxShadow: 3 },
-		                                boxShadow: selectedEventId === e.id ? '0 0 0 2px #1976d2' : undefined,
-										animation: (e.trigger_week === week) ? 'fadeInSlide 0.5s ease both' : undefined,
-								// Distinct background tint for Events cards
-								background: 'linear-gradient(145deg,#eef4ff,#e3ebff)',
-								// Slightly stronger border color to separate from other card types
-								borderColor: 'rgba(100,130,255,0.35)',
-				// Prevent vertical squeezing when many events accumulate
-				minHeight: 86,
-				display: 'flex',
-				flexDirection: 'column',
-				justifyContent: 'flex-start',
-				flexShrink: 0
+						<Card
+							key={e.id}
+							variant={actionable ? 'outlined' : 'elevation'}
+							onClick={() => handleSelect(e)}
+							sx={{
+								cursor: 'pointer',
+								position: 'relative',
+								borderColor: actionable ? 'warning.light' : undefined,
+											background: (() => {
+												const style = actionTypeStyle(e.action_type);
+												if (selected) return 'rgba(25,118,210,0.08)';
+												if (actionable && style) return style.tone;
+												if (actionable) return 'linear-gradient(90deg, rgba(255,165,0,0.15), transparent)';
+												return 'transparent';
+											})(),
+								'&:hover': { backgroundColor: actionable ? 'rgba(255,165,0,0.2)' : 'action.hover' },
+								overflow: 'hidden'
 							}}
 						>
-							<CardContent sx={{ pb: 1.1, pt: 1.1, '&:last-child': { pb: 1.2 }, display: 'flex', flexDirection: 'column', height: '100%' }}>
-								<Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={0.75}>
-									<Box sx={{ pr: 2, flex: 1, minWidth: 0 }}>
-										<Typography variant="subtitle2" fontWeight={600} lineHeight={1.2}>{e.title}</Typography>
-										<Typography variant="caption" color="text.secondary">W{e.trigger_week ?? '—'}</Typography>
+							{highlight && (
+								<Box sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, bgcolor: highlight, borderTopLeftRadius: 4, borderBottomLeftRadius: 4 }} />
+							)}
+							<CardContent sx={{ py: 1.1, '&:last-child': { pb: 1.1 } }}>
+								<Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+									<Box sx={{ flex: 1, minWidth: 0 }}>
+										<Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.25 }}>
+											<Typography variant="subtitle2" fontWeight={600} lineHeight={1.2} sx={{ pr: 1, wordBreak: 'break-word' }}>
+												{e.title || e.name}
+											</Typography>
+											{e.severity && (
+												<Chip
+													size="small"
+													label={e.severity.toUpperCase()}
+													color={e.severity === 'high' ? 'error' : e.severity === 'medium' ? 'warning' : 'default'}
+												/>
+											)}
+											{actionable && (
+												<Chip size="small" label="Resolve via Task Card" color="warning" />
+											)}
+										</Stack>
+										<Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.25 }}>
+											W{e.trigger_week ?? '—'}{occurred ? '' : ' (upcoming)'}
+										</Typography>
+										<Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
+											{e.description || e.desc}
+										</Typography>
+										{(e.member_ids?.length || e.task_ids?.length) && (
+											<Box mt={0.5}>
+												{e.member_ids?.length > 0 && (
+													<Typography variant="caption" color="text.secondary" display="block">
+														Members: {e.member_ids.join(', ')}
+													</Typography>
+												)}
+												{e.task_ids?.length > 0 && (
+													<Typography variant="caption" color="text.secondary" display="block">
+														Tasks: {e.task_ids.join(', ')}
+													</Typography>
+												)}
+											</Box>
+										)}
 									</Box>
 									<Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" useFlexGap>
-										<Chip size="small" label={e.type} color={typeColor(e.type)} variant="outlined" />
-										{occurred ? <Chip size="small" label="Occurred" color="success" /> : <Chip size="small" label="Upcoming" color="warning" />}
-										<Tooltip title="Dismiss">
-											<IconButton size="small" onClick={() => handleDismiss(e.id)} aria-label="dismiss event">
-												<CloseIcon fontSize="inherit" />
-											</IconButton>
-										</Tooltip>
+										{e.type && <Chip size="small" label={e.type} color={typeColor(e.type)} variant="outlined" />}
+										{e.action_type && (()=>{ const st = actionTypeStyle(e.action_type); return st ? <Chip size="small" label={st.chipLabel} color={st.color} variant="filled" /> : null; })()}
+										{occurred && <Chip size="small" label="Occurred" color="success" />}
+										{!occurred && <Chip size="small" label="Upcoming" color="default" />}
+										{actionable && <Chip size="small" label="Action" color="warning" variant="outlined" />}
+										{!actionable && (
+											<Tooltip title="Dismiss informational event">
+												<span>
+													<IconButton
+														size="small"
+														onClick={(evt) => { evt.stopPropagation(); handleDismiss(e.id); }}
+														aria-label="dismiss event"
+													>
+														<CloseIcon fontSize="inherit" />
+													</IconButton>
+												</span>
+											</Tooltip>
+										)}
 									</Stack>
 								</Stack>
-								<Typography variant="body2" color="text.secondary" mb={0.5} sx={{ flexGrow: 1 }}>{e.desc}</Typography>
-								{e.impact && <Typography variant="caption" color="text.secondary" display="block">Impact: {e.impact}</Typography>}
-								{(e.member_ids?.length || e.task_ids?.length) && (
-									<Box mt={0.5}>
-										{e.member_ids?.length > 0 && <Typography variant="caption" color="text.secondary" display="block">Members: {e.member_ids.join(', ')}</Typography>}
-										{e.task_ids?.length > 0 && <Typography variant="caption" color="text.secondary" display="block">Tasks: {e.task_ids.join(', ')}</Typography>}
-									</Box>
-								)}
-								{/* Inline action buttons removed intentionally */}
+								<Collapse in={selected && actionable && (e.resolution_options?.length>0)} unmountOnExit>
+									<Divider sx={{ my: 1 }} />
+									<Stack spacing={1}>
+										{(e.resolution_options || []).map(opt => (
+											<Box key={opt.key||opt.id} sx={{ p:0.75, border:'1px solid', borderColor:'divider', borderRadius:1, background:'rgba(0,0,0,0.02)' }}>
+												<Typography variant="subtitle2" fontWeight={600}>{opt.title}</Typography>
+												<Typography variant="caption" color="text.secondary" sx={{ whiteSpace:'pre-line' }}>{opt.description}</Typography>
+												<Button size="small" variant="contained" sx={{ mt:0.5 }} onClick={(evt)=>{ evt.stopPropagation(); handleResolve(e, opt.key||opt.id); }}>Apply</Button>
+											</Box>
+										))}
+									</Stack>
+								</Collapse>
 							</CardContent>
 						</Card>
 					);
@@ -96,4 +198,13 @@ export default function Events({ events, week, onSelect, highlightColorMap = {},
 		</Box>
 	);
 }
+
+const Events = React.memo(EventsComponent, (prev, next) => (
+	prev.events === next.events &&
+	prev.week === next.week &&
+	prev.selectedEventId === next.selectedEventId &&
+	prev.resolvedEventIds === next.resolvedEventIds
+));
+
+export default Events;
 

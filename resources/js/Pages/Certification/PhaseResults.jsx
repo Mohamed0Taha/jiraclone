@@ -133,83 +133,97 @@ export default function PhaseResults({
                     {Array.isArray(answeredQuestions) && answeredQuestions.length > 0 ? (
                         <List>
                             {answeredQuestions.map((answer, index) => {
-                                const questionText = answer.question || answer.question_text || 'Question text not available';
-                                const userAnsRaw = answer.user_answer !== undefined ? answer.user_answer : answer.selected_answer;
-                                const userAns = Array.isArray(userAnsRaw) ? userAnsRaw.join(', ') : (userAnsRaw || '—');
+                                const questionText =
+                                    answer.question ||
+                                    answer.question_text ||
+                                    'Question text not available';
+                                const userAnsRaw =
+                                    answer.user_answer !== undefined
+                                        ? answer.user_answer
+                                        : answer.selected_answer;
+                                const userAns = Array.isArray(userAnsRaw)
+                                    ? userAnsRaw.join(', ')
+                                    : userAnsRaw || '—';
                                 const correctRaw = answer.correct_answer;
-                                const correctAns = Array.isArray(correctRaw) ? correctRaw.join(', ') : (correctRaw || 'Not available');
-                                const difficulty = answer.difficulty || answer.question?.difficulty || 0;
+                                const correctAns = Array.isArray(correctRaw)
+                                    ? correctRaw.join(', ')
+                                    : correctRaw || 'Not available';
+                                const difficulty =
+                                    answer.difficulty || answer.question?.difficulty || 0;
                                 const maxPts = answer.max_points || answer.question?.points || 0;
                                 const ptsEarned = answer.points_earned || 0;
                                 return (
-                                <ListItem
-                                    key={index}
-                                    divider
-                                    sx={{
-                                        flexDirection: 'column',
-                                        alignItems: 'flex-start',
-                                        py: 2,
-                                    }}
-                                >
-                                    <Stack
-                                        direction="row"
-                                        spacing={2}
-                                        alignItems="center"
-                                        sx={{ width: '100%', mb: 1 }}
+                                    <ListItem
+                                        key={index}
+                                        divider
+                                        sx={{
+                                            flexDirection: 'column',
+                                            alignItems: 'flex-start',
+                                            py: 2,
+                                        }}
                                     >
-                                        {answer.is_correct ? (
-                                            <CheckIcon color="success" />
-                                        ) : (
-                                            <WrongIcon color="error" />
-                                        )}
+                                        <Stack
+                                            direction="row"
+                                            spacing={2}
+                                            alignItems="center"
+                                            sx={{ width: '100%', mb: 1 }}
+                                        >
+                                            {answer.is_correct ? (
+                                                <CheckIcon color="success" />
+                                            ) : (
+                                                <WrongIcon color="error" />
+                                            )}
 
-                                        <Box sx={{ flexGrow: 1 }}>
-                                            <Typography variant="body1" fontWeight={600}>
-                                                Question {index + 1}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {questionText}
-                                            </Typography>
-                                        </Box>
+                                            <Box sx={{ flexGrow: 1 }}>
+                                                <Typography variant="body1" fontWeight={600}>
+                                                    Question {index + 1}
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {questionText}
+                                                </Typography>
+                                            </Box>
 
-                                        <Stack spacing={1} alignItems="flex-end">
-                                            <Chip
-                                                label={getDifficultyLabel(difficulty)}
-                                                size="small"
-                                                color="primary"
-                                                variant="outlined"
-                                            />
-                                            <Typography variant="caption" color="text.secondary">
-                                                {ptsEarned}/{maxPts} pts
-                                            </Typography>
+                                            <Stack spacing={1} alignItems="flex-end">
+                                                <Chip
+                                                    label={getDifficultyLabel(difficulty)}
+                                                    size="small"
+                                                    color="primary"
+                                                    variant="outlined"
+                                                />
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                >
+                                                    {ptsEarned}/{maxPts} pts
+                                                </Typography>
+                                            </Stack>
                                         </Stack>
-                                    </Stack>
 
-                                    <Grid container spacing={2} sx={{ mt: 1 }}>
-                                        <Grid item xs={12} md={6}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                <strong>Your Answer:</strong>{' '}
-                                                {userAns}
-                                            </Typography>
-                                        </Grid>
-                                        <Grid item xs={12} md={6}>
-                                            <Typography variant="body2" color="success.main">
-                                                <strong>Correct Answer:</strong>{' '}
-                                                {correctAns}
-                                            </Typography>
-                                        </Grid>
-                                        {(answer.explanation || answer.question?.explanation) && (
-                                            <Grid item xs={12}>
-                                                <Alert severity="info" sx={{ mt: 1 }}>
-                                                    <Typography variant="body2">
-                                                        <strong>Explanation:</strong>{' '}
-                                                        {answer.explanation || answer.question?.explanation}
-                                                    </Typography>
-                                                </Alert>
+                                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                                            <Grid item xs={12} md={6}>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    <strong>Your Answer:</strong> {userAns}
+                                                </Typography>
                                             </Grid>
-                                        )}
-                                    </Grid>
-                                </ListItem>
+                                            <Grid item xs={12} md={6}>
+                                                <Typography variant="body2" color="success.main">
+                                                    <strong>Correct Answer:</strong> {correctAns}
+                                                </Typography>
+                                            </Grid>
+                                            {(answer.explanation ||
+                                                answer.question?.explanation) && (
+                                                <Grid item xs={12}>
+                                                    <Alert severity="info" sx={{ mt: 1 }}>
+                                                        <Typography variant="body2">
+                                                            <strong>Explanation:</strong>{' '}
+                                                            {answer.explanation ||
+                                                                answer.question?.explanation}
+                                                        </Typography>
+                                                    </Alert>
+                                                </Grid>
+                                            )}
+                                        </Grid>
+                                    </ListItem>
                                 );
                             })}
                         </List>

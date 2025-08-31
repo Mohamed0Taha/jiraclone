@@ -140,7 +140,7 @@ class ProjectMemberController extends Controller
             ]);
         }
 
-    // Create invitation for non-existing user (re-check not necessary unless race conditions)
+        // Create invitation for non-existing user (re-check not necessary unless race conditions)
         $invitation = $project->invitations()->create([
             'invited_by' => Auth::id(),
             'email' => $email,
@@ -218,14 +218,14 @@ class ProjectMemberController extends Controller
         // Cannot leave if you're the owner
         if ($project->user_id === $user->id) {
             return response()->json([
-                'error' => 'Project owners cannot leave their own project. Transfer ownership or delete the project.'
+                'error' => 'Project owners cannot leave their own project. Transfer ownership or delete the project.',
             ], 422);
         }
         // Detach membership if exists
         $project->members()->detach($user->id);
 
         return response()->json([
-            'message' => 'You have left the project successfully.'
+            'message' => 'You have left the project successfully.',
         ]);
     }
 

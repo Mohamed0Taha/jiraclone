@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withProviders([
         \App\Providers\ImageKitServiceProvider::class,
-    \App\Providers\SessionHealthServiceProvider::class,
+        \App\Providers\SessionHealthServiceProvider::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         // Trust Heroku proxy headers EXCEPT X_FORWARDED_HOST to avoid signed URL mismatches.

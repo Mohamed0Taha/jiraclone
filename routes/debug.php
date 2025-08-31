@@ -2,11 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/debug/controller-check', function() {
+Route::get('/debug/controller-check', function () {
     $file = file_get_contents(app_path('Http/Controllers/CertificationController.php'));
     $hasIntroGate = strpos($file, 'If no attempt exists, show intro page') !== false;
     $hasOldLogic = strpos($file, 'getCurrentQuestion') !== false;
-    
+
     return response()->json([
         'has_intro_gate' => $hasIntroGate,
         'has_old_logic' => $hasOldLogic,

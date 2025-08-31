@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\ServiceProvider;
 
 class SessionHealthServiceProvider extends ServiceProvider
 {
@@ -15,7 +15,7 @@ class SessionHealthServiceProvider extends ServiceProvider
         $driver = config('session.driver');
         if (app()->environment('production') && $driver === 'cookie') {
             Log::warning('Overriding cookie session driver to database to prevent oversized Cookie headers');
-            config([ 'session.driver' => 'database' ]);
+            config(['session.driver' => 'database']);
         }
 
         // Enforce short session cookie name to minimize header size.

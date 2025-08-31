@@ -593,6 +593,26 @@ Route::middleware('auth')->group(function () {
 | Breeze / Auth scaffolding
 |--------------------------------------------------------------------------
 */
+/*
+|--------------------------------------------------------------------------
+| AppSumo Integration
+|--------------------------------------------------------------------------
+*/
+// Public redemption page (no auth required)
+Route::get('/appsumo/redeem', [App\Http\Controllers\AppSumoController::class, 'redeemPage'])->name('appsumo.redeem');
+Route::post('/appsumo/redeem', [App\Http\Controllers\AppSumoController::class, 'processRedemption'])->name('appsumo.redeem.process');
+Route::get('/appsumo/success', [App\Http\Controllers\AppSumoController::class, 'successPage'])->name('appsumo.success');
+
+// Dynamic AppSumo link (configurable for AppSumo dashboard)
+Route::get('/appsumo', [App\Http\Controllers\AppSumoController::class, 'dynamicRedirect'])->name('appsumo.dynamic');
+
+// Admin routes for AppSumo code management
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->group(function () {
+    Route::get('/appsumo', [App\Http\Controllers\AppSumoController::class, 'adminDashboard'])->name('appsumo.dashboard');
+    Route::post('/appsumo/generate-codes', [App\Http\Controllers\AppSumoController::class, 'generateCodes'])->name('appsumo.generate');
+    Route::get('/appsumo/export', [App\Http\Controllers\AppSumoController::class, 'exportCodes'])->name('appsumo.export');
+});
+
 require __DIR__.'/auth.php';
 if (app()->environment('local')) {
     Route::get('/test-email-production', function () {
