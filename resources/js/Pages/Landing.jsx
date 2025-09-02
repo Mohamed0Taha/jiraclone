@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import {
     Box,
@@ -48,6 +48,25 @@ import {
 
 export default function Landing({ errors }) {
     const theme = useTheme();
+
+    // Initialize analytics tracking
+    useEffect(() => {
+        // Load analytics script dynamically
+        const loadAnalytics = async () => {
+            try {
+                const { default: TaskPilotAnalytics } = await import('../utils/Analytics.js');
+                // Analytics will initialize automatically
+            } catch (error) {
+                console.debug('Analytics loading failed:', error);
+            }
+        };
+
+        // Only load analytics if not a bot and in browser environment
+        if (typeof window !== 'undefined' && 
+            !navigator.userAgent.match(/bot|crawler|spider|crawling/i)) {
+            loadAnalytics();
+        }
+    }, []);
 
     // Add CSS keyframes for animations
     React.useEffect(() => {

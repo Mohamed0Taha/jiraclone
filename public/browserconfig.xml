@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<browserconfig>
+    <msapplication>
+        <tile>
+            <square70x70logo src="/favicon.svg"/>
+            <square150x150logo src="/favicon.svg"/>
+            <square310x310logo src="/favicon.svg"/>
+            <TileColor>#3B82F6</TileColor>
+        </tile>
+        <badge>
+            <polling-uri src="https://taskpilot.us/api/notifications"/>
+            <frequency>30</frequency>
+        </badge>
+    </msapplication>
+</browserconfig>

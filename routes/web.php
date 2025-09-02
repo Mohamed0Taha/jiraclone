@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BillingController;
@@ -36,6 +37,13 @@ Route::get('/', function () {
 
     return Inertia::render('Landing');
 })->name('landing');
+
+/*
+|--------------------------------------------------------------------------
+| Analytics Tracking (Public API)
+|--------------------------------------------------------------------------
+*/
+Route::post('/api/analytics/track', [AnalyticsController::class, 'trackVisit'])->name('analytics.track');
 
 /* Project Invitation Acceptance (public) */
 Route::get('/invitation/{token}', [App\Http\Controllers\ProjectMemberController::class, 'acceptInvitation'])->name('projects.invitation.accept');
@@ -453,6 +461,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::post('/users/{user}/verify', [AdminController::class, 'verifyUser'])->name('users.verify');
 
     // Analytics routes
+    Route::get('/analytics', [AnalyticsController::class, 'dashboard'])->name('analytics');
     Route::get('/email-logs', [AdminController::class, 'emailLogs'])->name('email-logs');
     Route::get('/email-logs/{emailLog}', [AdminController::class, 'emailLogDetail'])->name('email-logs.detail');
     Route::get('/openai-requests', [AdminController::class, 'openaiRequests'])->name('openai-requests');
