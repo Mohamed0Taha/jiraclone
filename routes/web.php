@@ -705,3 +705,37 @@ Route::get('/debug/controller-check', function () {
         'git_commit' => trim(shell_exec('git rev-parse HEAD')),
     ]);
 });
+
+// SEO Sitemap Route
+Route::get('/sitemap.xml', function () {
+    $sitemap = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+    $sitemap .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+    
+    // Main pages
+    $pages = [
+        ['url' => '', 'priority' => '1.0', 'changefreq' => 'daily'],
+        ['url' => 'features', 'priority' => '0.9', 'changefreq' => 'weekly'],
+        ['url' => 'pricing', 'priority' => '0.9', 'changefreq' => 'weekly'],
+        ['url' => 'about', 'priority' => '0.8', 'changefreq' => 'monthly'],
+        ['url' => 'contact', 'priority' => '0.8', 'changefreq' => 'monthly'],
+        ['url' => 'privacy', 'priority' => '0.6', 'changefreq' => 'yearly'],
+        ['url' => 'terms', 'priority' => '0.6', 'changefreq' => 'yearly'],
+        ['url' => 'security', 'priority' => '0.7', 'changefreq' => 'monthly'],
+        ['url' => 'help', 'priority' => '0.7', 'changefreq' => 'weekly'],
+    ];
+    
+    foreach ($pages as $page) {
+        $url = $page['url'] ? 'https://taskpilot.us/' . $page['url'] : 'https://taskpilot.us/';
+        $sitemap .= '  <url>' . "\n";
+        $sitemap .= '    <loc>' . $url . '</loc>' . "\n";
+        $sitemap .= '    <lastmod>' . now()->toDateString() . '</lastmod>' . "\n";
+        $sitemap .= '    <changefreq>' . $page['changefreq'] . '</changefreq>' . "\n";
+        $sitemap .= '    <priority>' . $page['priority'] . '</priority>' . "\n";
+        $sitemap .= '  </url>' . "\n";
+    }
+    
+    $sitemap .= '</urlset>';
+    
+    return response($sitemap, 200)
+        ->header('Content-Type', 'application/xml');
+})->name('sitemap');

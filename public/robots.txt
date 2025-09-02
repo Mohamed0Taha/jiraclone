@@ -1,2 +1,45 @@
+# TaskPilot - AI-Powered Project Management Platform
+# https://taskpilot.us
+
 User-agent: *
-Disallow:
+Allow: /
+
+# Priority pages for crawling
+Allow: /
+Allow: /features
+Allow: /pricing  
+Allow: /about
+Allow: /contact
+Allow: /blog
+Allow: /help
+Allow: /security
+Allow: /privacy
+Allow: /terms
+
+# Disallow admin and internal pages
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /user/
+Disallow: /api/
+Disallow: /storage/
+Disallow: /vendor/
+Disallow: /debug/
+Disallow: /test/
+Disallow: /*.json$
+Disallow: /*.xml$
+Disallow: /appsumo/
+
+# Allow important assets
+Allow: /css/
+Allow: /js/
+Allow: /images/
+Allow: /fonts/
+Allow: /favicon.ico
+Allow: /favicon.svg
+Allow: /manifest.json
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://taskpilot.us/sitemap.xml
