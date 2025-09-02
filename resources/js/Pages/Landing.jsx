@@ -422,6 +422,400 @@ export default function Landing({ errors }) {
                     </Container>
                 </Box>
 
+                {/* Product Demo Video Section */}
+                <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: '#F8F9FA' }}>
+                    <Container maxWidth="lg">
+                        <Box sx={{ textAlign: 'center', mb: 8 }}>
+                            <Typography
+                                variant="h2"
+                                sx={{
+                                    fontSize: { xs: '2rem', md: '3rem' },
+                                    fontWeight: 700,
+                                    mb: 3,
+                                    color: '#1a1a1a',
+                                }}
+                            >
+                                See TaskPilot in Action
+                            </Typography>
+                            <Typography
+                                variant="h6"
+                                sx={{
+                                    color: 'grey.700',
+                                    fontWeight: 400,
+                                    maxWidth: 600,
+                                    mx: 'auto',
+                                    mb: 6,
+                                }}
+                            >
+                                Watch how TaskPilot transforms the way teams collaborate and manage projects
+                            </Typography>
+                        </Box>
+
+                        <Box
+                            sx={{
+                                position: 'relative',
+                                maxWidth: 900,
+                                mx: 'auto',
+                                borderRadius: 4,
+                                overflow: 'hidden',
+                                boxShadow: '0 25px 50px rgba(0, 0, 0, 0.15)',
+                                background: 'linear-gradient(135deg, #FF6B6B, #4ECDC4)',
+                                p: 3,
+                                mb: 8,
+                            }}
+                        >
+                            <video
+                                controls
+                                style={{
+                                    width: '100%',
+                                    height: 'auto',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.2)',
+                                }}
+                                poster="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDgwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI4MDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjRjhGOUZBIi8+Cjx0ZXh0IHg9IjQwMCIgeT0iMjI1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjI0Ij5UYXNrUGlsb3QgSW50cm88L3RleHQ+Cjwvc3ZnPgo="
+                            >
+                                <source src="/videos/intro.mp4" type="video/mp4" />
+                                Your browser does not support the video tag.
+                            </video>
+                        </Box>
+                    </Container>
+                </Box>
+
+                {/* Core Widgets Showcase */}
+                <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'white' }}>
+                    <Container maxWidth="lg">
+                        <Box sx={{ textAlign: 'center', mb: 10 }}>
+                            <Typography
+                                variant="h2"
+                                sx={{
+                                    fontSize: { xs: '2rem', md: '3rem' },
+                                    fontWeight: 700,
+                                    mb: 3,
+                                    color: '#1a1a1a',
+                                }}
+                            >
+                                Core Widgets & Features
+                            </Typography>
+                            <Typography
+                                variant="h6"
+                                sx={{
+                                    color: 'grey.700',
+                                    fontWeight: 400,
+                                    maxWidth: 600,
+                                    mx: 'auto',
+                                    mb: 8,
+                                }}
+                            >
+                                Powerful tools designed for modern teams
+                            </Typography>
+                        </Box>
+
+                        {/* Task Board Widget */}
+                        <Grid container spacing={6} sx={{ mb: 8 }}>
+                            <Grid item xs={12} md={6}>
+                                <Box
+                                    sx={{
+                                        p: 4,
+                                        borderRadius: 3,
+                                        border: '2px solid #E3F2FD',
+                                        background: 'linear-gradient(135deg, #E3F2FD 0%, #F8F9FA 100%)',
+                                        height: 350,
+                                        position: 'relative',
+                                        overflow: 'hidden',
+                                    }}
+                                >
+                                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#1976D2' }}>
+                                        📋 Kanban Board
+                                    </Typography>
+                                    
+                                    {/* Mock Kanban Columns */}
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={4}>
+                                            <Box sx={{ p: 2, bgcolor: '#FFF3E0', borderRadius: 2, minHeight: 200 }}>
+                                                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: '#E65100' }}>
+                                                    To Do
+                                                </Typography>
+                                                <Box sx={{ mb: 2, p: 1.5, bgcolor: 'white', borderRadius: 1, fontSize: '0.75rem' }}>
+                                                    Create user stories
+                                                </Box>
+                                                <Box sx={{ mb: 2, p: 1.5, bgcolor: 'white', borderRadius: 1, fontSize: '0.75rem' }}>
+                                                    Design wireframes
+                                                </Box>
+                                                <Box sx={{ p: 1.5, bgcolor: 'white', borderRadius: 1, fontSize: '0.75rem' }}>
+                                                    Setup database
+                                                </Box>
+                                            </Box>
+                                        </Grid>
+                                        <Grid item xs={4}>
+                                            <Box sx={{ p: 2, bgcolor: '#FFF9C4', borderRadius: 2, minHeight: 200 }}>
+                                                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: '#F57F17' }}>
+                                                    In Progress
+                                                </Typography>
+                                                <Box sx={{ mb: 2, p: 1.5, bgcolor: 'white', borderRadius: 1, fontSize: '0.75rem' }}>
+                                                    Build API endpoints
+                                                </Box>
+                                                <Box sx={{ p: 1.5, bgcolor: 'white', borderRadius: 1, fontSize: '0.75rem' }}>
+                                                    Frontend components
+                                                </Box>
+                                            </Box>
+                                        </Grid>
+                                        <Grid item xs={4}>
+                                            <Box sx={{ p: 2, bgcolor: '#E8F5E8', borderRadius: 2, minHeight: 200 }}>
+                                                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: '#2E7D32' }}>
+                                                    Done
+                                                </Typography>
+                                                <Box sx={{ mb: 2, p: 1.5, bgcolor: 'white', borderRadius: 1, fontSize: '0.75rem' }}>
+                                                    Project setup ✓
+                                                </Box>
+                                                <Box sx={{ p: 1.5, bgcolor: 'white', borderRadius: 1, fontSize: '0.75rem' }}>
+                                                    Team onboarding ✓
+                                                </Box>
+                                            </Box>
+                                        </Grid>
+                                    </Grid>
+                                </Box>
+                            </Grid>
+                            
+                            <Grid item xs={12} md={6}>
+                                <Box
+                                    sx={{
+                                        p: 4,
+                                        borderRadius: 3,
+                                        border: '2px solid #F3E5F5',
+                                        background: 'linear-gradient(135deg, #F3E5F5 0%, #F8F9FA 100%)',
+                                        height: 350,
+                                    }}
+                                >
+                                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#7B1FA2' }}>
+                                        📊 Analytics Dashboard
+                                    </Typography>
+                                    
+                                    {/* Mock Chart */}
+                                    <Box sx={{ mb: 3, p: 2, bgcolor: 'white', borderRadius: 2, height: 120 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'end', height: '100%', gap: 1 }}>
+                                            {[40, 65, 45, 80, 55, 70, 85].map((height, i) => (
+                                                <Box
+                                                    key={i}
+                                                    sx={{
+                                                        flex: 1,
+                                                        height: `${height}%`,
+                                                        bgcolor: '#7B1FA2',
+                                                        borderRadius: '2px 2px 0 0',
+                                                        opacity: 0.8,
+                                                    }}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                    
+                                    {/* Stats Grid */}
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={6}>
+                                            <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2, textAlign: 'center' }}>
+                                                <Typography variant="h6" sx={{ color: '#7B1FA2', fontWeight: 600 }}>
+                                                    85%
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Completion Rate
+                                                </Typography>
+                                            </Box>
+                                        </Grid>
+                                        <Grid item xs={6}>
+                                            <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2, textAlign: 'center' }}>
+                                                <Typography variant="h6" sx={{ color: '#7B1FA2', fontWeight: 600 }}>
+                                                    24
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Active Tasks
+                                                </Typography>
+                                            </Box>
+                                        </Grid>
+                                    </Grid>
+                                </Box>
+                            </Grid>
+                        </Grid>
+
+                        {/* Workflow Widget */}
+                        <Grid container spacing={6} sx={{ mb: 8 }}>
+                            <Grid item xs={12} md={6}>
+                                <Box
+                                    sx={{
+                                        p: 4,
+                                        borderRadius: 3,
+                                        border: '2px solid #E8F5E8',
+                                        background: 'linear-gradient(135deg, #E8F5E8 0%, #F8F9FA 100%)',
+                                        height: 350,
+                                    }}
+                                >
+                                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#2E7D32' }}>
+                                        🔄 Workflow Automation
+                                    </Typography>
+                                    
+                                    {/* Workflow Steps */}
+                                    <Box sx={{ position: 'relative' }}>
+                                        {[
+                                            { step: 1, title: 'Task Created', desc: 'New task assigned' },
+                                            { step: 2, title: 'Auto-Assign', desc: 'Based on workload' },
+                                            { step: 3, title: 'Status Update', desc: 'Progress tracked' },
+                                            { step: 4, title: 'Completion', desc: 'Auto-notification' },
+                                        ].map((item, i) => (
+                                            <Box key={i} sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                                                <Box
+                                                    sx={{
+                                                        width: 32,
+                                                        height: 32,
+                                                        borderRadius: '50%',
+                                                        bgcolor: '#2E7D32',
+                                                        color: 'white',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '0.875rem',
+                                                        fontWeight: 600,
+                                                        mr: 2,
+                                                    }}
+                                                >
+                                                    {item.step}
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                                        {item.title}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {item.desc}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        ))}
+                                        
+                                        {/* Connecting Line */}
+                                        <Box
+                                            sx={{
+                                                position: 'absolute',
+                                                left: 15,
+                                                top: 40,
+                                                bottom: 60,
+                                                width: 2,
+                                                bgcolor: '#2E7D32',
+                                                opacity: 0.3,
+                                            }}
+                                        />
+                                    </Box>
+                                </Box>
+                            </Grid>
+
+                            <Grid item xs={12} md={6}>
+                                <Box
+                                    sx={{
+                                        p: 4,
+                                        borderRadius: 3,
+                                        border: '2px solid #FFF3E0',
+                                        background: 'linear-gradient(135deg, #FFF3E0 0%, #F8F9FA 100%)',
+                                        height: 350,
+                                    }}
+                                >
+                                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#E65100' }}>
+                                        👥 Team Collaboration
+                                    </Typography>
+                                    
+                                    {/* Team Members */}
+                                    <Box sx={{ mb: 3 }}>
+                                        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+                                            Team Members
+                                        </Typography>
+                                        <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
+                                            {[
+                                                { name: 'Alex', color: '#FF6B6B' },
+                                                { name: 'Sam', color: '#4ECDC4' },
+                                                { name: 'Jordan', color: '#45B7D1' },
+                                                { name: 'Casey', color: '#96CEB4' },
+                                            ].map((member, i) => (
+                                                <Avatar
+                                                    key={i}
+                                                    sx={{
+                                                        bgcolor: member.color,
+                                                        width: 36,
+                                                        height: 36,
+                                                        fontSize: '0.875rem',
+                                                    }}
+                                                >
+                                                    {member.name[0]}
+                                                </Avatar>
+                                            ))}
+                                        </Stack>
+                                    </Box>
+                                    
+                                    {/* Recent Activity */}
+                                    <Box>
+                                        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+                                            Recent Activity
+                                        </Typography>
+                                        <Stack spacing={1.5}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem' }}>
+                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#FF6B6B', mr: 1 }} />
+                                                Alex completed "User Authentication"
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem' }}>
+                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#4ECDC4', mr: 1 }} />
+                                                Sam added new comment
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem' }}>
+                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#45B7D1', mr: 1 }} />
+                                                Jordan updated task priority
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem' }}>
+                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#96CEB4', mr: 1 }} />
+                                                Casey created milestone
+                                            </Box>
+                                        </Stack>
+                                    </Box>
+                                </Box>
+                            </Grid>
+                        </Grid>
+
+                        {/* AI Assistant Widget */}
+                        <Box
+                            sx={{
+                                p: 4,
+                                borderRadius: 3,
+                                border: '2px solid #E1F5FE',
+                                background: 'linear-gradient(135deg, #E1F5FE 0%, #F8F9FA 100%)',
+                                textAlign: 'center',
+                                mb: 6,
+                            }}
+                        >
+                            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#0277BD' }}>
+                                🤖 AI-Powered Assistant
+                            </Typography>
+                            
+                            <Box
+                                sx={{
+                                    maxWidth: 600,
+                                    mx: 'auto',
+                                    p: 3,
+                                    bgcolor: 'white',
+                                    borderRadius: 2,
+                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                                }}
+                            >
+                                <Typography variant="body2" sx={{ mb: 2, textAlign: 'left', color: 'grey.600' }}>
+                                    💬 "Can you help me organize this project timeline?"
+                                </Typography>
+                                
+                                <Divider sx={{ my: 2 }} />
+                                
+                                <Typography variant="body2" sx={{ textAlign: 'left', color: '#0277BD' }}>
+                                    🤖 "I'll analyze your project requirements and create an optimized timeline with milestones. Here's what I suggest:
+                                    <br />• Phase 1: Planning & Design (2 weeks)
+                                    <br />• Phase 2: Development Sprint (4 weeks)  
+                                    <br />• Phase 3: Testing & Deployment (1 week)
+                                    <br />Would you like me to create tasks for each phase?"
+                                </Typography>
+                            </Box>
+                        </Box>
+                    </Container>
+                </Box>
+
                 {/* Features Section */}
                 <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: '#FAFBFC' }}>
                     <Container maxWidth="lg">
