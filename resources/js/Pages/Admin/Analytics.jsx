@@ -1,5 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
     Box,
     Container,
@@ -45,7 +46,13 @@ export default function Analytics({ visitors = [], stats = {} }) {
     ];
 
     return (
-        <>
+        <AuthenticatedLayout
+            header={
+                <h2 className="font-semibold text-xl text-gray-800 leading-tight">
+                    Analytics Dashboard
+                </h2>
+            }
+        >
             <Head title="Analytics - TaskPilot Admin" />
             
             <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', py: 4 }}>
@@ -212,6 +219,6 @@ export default function Analytics({ visitors = [], stats = {} }) {
                     </Card>
                 </Container>
             </Box>
-        </>
+        </AuthenticatedLayout>
     );
 }

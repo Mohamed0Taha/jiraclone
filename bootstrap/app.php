@@ -40,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\HandleInvitationAfterRegistration::class,
+            \App\Http\Middleware\TrackVisitor::class,
         ]);
 
         // Register premium features middleware alias
