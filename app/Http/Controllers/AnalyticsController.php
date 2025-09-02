@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\Log;
 
 class AnalyticsController extends Controller
 {
@@ -22,7 +22,7 @@ class AnalyticsController extends Controller
         // Get unique visitors with location data
         $visitors = $this->getVisitorsWithLocation();
 
-        return Inertia::render('Admin/Analytics', [
+        return view('admin.analytics', [
             'stats' => $stats,
             'visitors' => $visitors,
         ]);
@@ -98,6 +98,7 @@ class AnalyticsController extends Controller
                 'country' => $visitor->country ?? 'Unknown',
                 'country_flag' => $this->getCountryFlag($visitor->country_code ?? 'US'),
                 'last_visit' => $visitor->last_visit,
+                'page_views' => $visitor->page_views ?? 1,
                 'is_unique' => true, // You can implement logic to determine if visitor is new
             ];
         })->toArray();
@@ -175,7 +176,7 @@ class AnalyticsController extends Controller
                 ];
             }
         } catch (\Exception $e) {
-            \Log::warning("Failed to get location data for IP: {$ip}", ['error' => $e->getMessage()]);
+            Log::warning("Failed to get location data for IP: {$ip}", ['error' => $e->getMessage()]);
         }
 
         return [];

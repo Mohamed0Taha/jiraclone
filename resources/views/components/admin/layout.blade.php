@@ -52,10 +52,6 @@
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.email-logs') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
                                 📧 Email Logs
                             </a>
-                            <a href="{{ route('admin.analytics') }}" 
-                               class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.analytics') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
-                                📊 Analytics
-                            </a>
                             <a href="{{ route('admin.sms-messages') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.sms-messages*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
                                 📱 SMS Messages
@@ -63,6 +59,10 @@
                             <a href="{{ route('admin.openai-requests') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.openai-requests') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
                                 🤖 AI Logs
+                            </a>
+                            <a href="{{ route('admin.analytics') }}" 
+                               class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.analytics') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
+                                📈 Analytics
                             </a>
                             <a href="{{ route('admin.appsumo.dashboard') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.appsumo*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
