@@ -1,6 +1,25 @@
 <x-admin.layout title="TaskPilot Admin - Analytics" page-title="Analytics Dashboard">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    
     <div class="p-6">
         <h2 class="text-2xl font-bold text-gray-800 mb-6">Analytics Dashboard</h2>
+
+        <!-- Traffic Growth Chart -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Visitor Traffic Growth</h3>
+                <div class="flex space-x-2">
+                    <button onclick="updateChart('7d')" class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors chart-period-btn active" data-period="7d">7D</button>
+                    <button onclick="updateChart('30d')" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors chart-period-btn" data-period="30d">30D</button>
+                    <button onclick="updateChart('90d')" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors chart-period-btn" data-period="90d">90D</button>
+                </div>
+            </div>
+            <div class="relative h-80">
+                <canvas id="trafficChart"></canvas>
+            </div>
+        </div>
 
         <!-- Dashboard Tiles -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -122,4 +141,128 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Chart data from backend
+        const chartData = @json($chartData ?? []);
+        
+        let trafficChart;
+        
+        function initChart() {
+            const ctx = document.getElementById('trafficChart').getContext('2d');
+            
+            trafficChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData['7d']?.labels || [],
+                    datasets: [{
+                        label: 'Daily Visitors',
+                        data: chartData['7d']?.data || [],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#3b82f6',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label;
+                                },
+                                label: function(context) {
+                                    return `${context.parsed.y} visitors`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                drawBorder: false,
+                            },
+                            ticks: {
+                                color: '#6b7280',
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                drawBorder: false,
+                            },
+                            ticks: {
+                                color: '#6b7280',
+                                font: {
+                                    size: 12
+                                },
+                                callback: function(value) {
+                                    return Math.floor(value);
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    },
+                    elements: {
+                        point: {
+                            hoverBackgroundColor: '#3b82f6',
+                            hoverBorderColor: '#ffffff',
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateChart(period) {
+            // Update active button
+            document.querySelectorAll('.chart-period-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-blue-100', 'text-blue-700');
+                btn.classList.add('bg-gray-100', 'text-gray-700');
+            });
+            
+            const activeBtn = document.querySelector(`[data-period="${period}"]`);
+            activeBtn.classList.remove('bg-gray-100', 'text-gray-700');
+            activeBtn.classList.add('active', 'bg-blue-100', 'text-blue-700');
+            
+            // Update chart data
+            const data = chartData[period] || { labels: [], data: [] };
+            trafficChart.data.labels = data.labels;
+            trafficChart.data.datasets[0].data = data.data;
+            trafficChart.update('active');
+        }
+        
+        // Initialize chart when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+        });
+    </script>
 </x-admin.layout>
