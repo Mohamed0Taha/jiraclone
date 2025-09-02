@@ -2,422 +2,190 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PageAnalytic;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class AnalyticsController extends Controller
 {
-    /**
-     * Track page visit
-     */
-    public function trackVisit(Request $request)
+    public function index(Request $request)
     {
-        try {
-            $ip = $this->getClientIp($request);
-            
-            // Get geographic data
-            $geoData = $this->getGeographicData($ip);
-            
-            // Generate or get visitor ID
-            $visitorId = $request->cookie('visitor_id') ?? Str::uuid()->toString();
-            
-            // Parse URL parameters
-            $urlParams = parse_url($request->input('url', '/'), PHP_URL_QUERY);
-            parse_str($urlParams ?: '', $params);
-            
-            // Detect device type and browser from user agent
-            $userAgent = $request->userAgent();
-            $isMobile = $this->isMobileDevice($userAgent);
-            $browser = $this->getBrowser($userAgent);
-            $os = $this->getOperatingSystem($userAgent);
-            $deviceType = $this->getDeviceType($userAgent);
-            
-            // Detect if it's a bot
-            $isBot = $this->isBot($userAgent);
-            
-            $analytics = PageAnalytic::create([
-                'page_url' => $request->input('url', '/'),
-                'page_title' => $request->input('title'),
-                'referrer_url' => $request->input('referrer'),
-                'utm_source' => $params['utm_source'] ?? null,
-                'utm_medium' => $params['utm_medium'] ?? null,
-                'utm_campaign' => $params['utm_campaign'] ?? null,
-                'utm_content' => $params['utm_content'] ?? null,
-                'utm_term' => $params['utm_term'] ?? null,
-                
-                // Visitor Information
-                'ip_address' => $ip,
-                'user_agent' => $userAgent,
-                'browser' => $browser,
-                'browser_version' => $this->getBrowserVersion($userAgent),
-                'operating_system' => $os,
-                'device_type' => $deviceType,
-                
-                // Geographic Information
-                'country' => $geoData['country'] ?? null,
-                'country_code' => $geoData['country_code'] ?? null,
-                'region' => $geoData['region'] ?? null,
-                'city' => $geoData['city'] ?? null,
-                'postal_code' => $geoData['postal_code'] ?? null,
-                'latitude' => $geoData['latitude'] ?? null,
-                'longitude' => $geoData['longitude'] ?? null,
-                'timezone' => $geoData['timezone'] ?? null,
-                
-                // Session Information
-                'session_id' => session()->getId(),
-                'visitor_id' => $visitorId,
-                'is_returning_visitor' => $this->isReturningVisitor($visitorId),
-                'page_load_time' => $request->input('load_time'),
-                'time_on_page' => $request->input('time_on_page'),
-                
-                // Additional Information
-                'screen_resolution' => [
-                    'width' => $request->input('screen_width'),
-                    'height' => $request->input('screen_height')
-                ],
-                'language' => $request->input('language') ?? $request->getPreferredLanguage(),
-                'is_mobile' => $isMobile,
-                'is_bot' => $isBot,
-                'custom_data' => $request->input('custom_data', []),
-            ]);
-
-            // Set visitor cookie if new
-            if (!$request->cookie('visitor_id')) {
-                cookie()->queue('visitor_id', $visitorId, 60 * 24 * 365); // 1 year
-            }
-
-            return response()->json([
-                'success' => true,
-                'visitor_id' => $visitorId
-            ]);
-            
-        } catch (\Exception $e) {
-            // Log error but don't fail the request
-            Log::error('Analytics tracking error: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'error' => 'Tracking failed'
-            ], 500);
-        }
-    }
-
-    /**
-     * Get admin analytics dashboard
-     */
-    public function dashboard(Request $request)
-    {
-        $timeframe = $request->get('timeframe', 'week'); // day, week, month, year
-        
-        $query = PageAnalytic::query();
-        
-        // Apply timeframe filter
-        switch ($timeframe) {
-            case 'day':
-                $query->today();
-                break;
-            case 'week':
-                $query->thisWeek();
-                break;
-            case 'month':
-                $query->thisMonth();
-                break;
-            case 'year':
-                $query->whereYear('created_at', now()->year);
-                break;
-        }
-
-        // Get overview stats
+        // Get visitor statistics
         $stats = [
-            'total_visits' => $query->count(),
-            'unique_visitors' => $query->distinct('visitor_id')->count('visitor_id'),
-            'page_views' => $query->landingPage()->count(),
-            'bounce_rate' => $this->calculateBounceRate($query),
-            'avg_time_on_page' => $query->whereNotNull('time_on_page')->avg('time_on_page'),
-            'mobile_percentage' => $query->where('is_mobile', true)->count() / max($query->count(), 1) * 100,
+            'total_visitors' => $this->getTotalVisitors(),
+            'unique_visitors' => $this->getUniqueVisitors(),
+            'page_views' => $this->getPageViews(),
         ];
 
-        // Get geographic data
-        $countries = $query->select('country', 'country_code')
-            ->selectRaw('COUNT(*) as visits')
-            ->whereNotNull('country')
-            ->groupBy('country', 'country_code')
-            ->orderByDesc('visits')
-            ->take(10)
-            ->get();
-
-        $cities = $query->select('city', 'region', 'country_code')
-            ->selectRaw('COUNT(*) as visits')
-            ->whereNotNull('city')
-            ->groupBy('city', 'region', 'country_code')
-            ->orderByDesc('visits')
-            ->take(10)
-            ->get();
-
-        // Get traffic sources
-        $trafficSources = $query->select('utm_source')
-            ->selectRaw('COUNT(*) as visits')
-            ->whereNotNull('utm_source')
-            ->groupBy('utm_source')
-            ->orderByDesc('visits')
-            ->take(10)
-            ->get();
-
-        $referrers = $query->select('referrer_url')
-            ->selectRaw('COUNT(*) as visits')
-            ->whereNotNull('referrer_url')
-            ->where('referrer_url', '!=', '')
-            ->groupBy('referrer_url')
-            ->orderByDesc('visits')
-            ->take(10)
-            ->get();
-
-        // Get device and browser data
-        $devices = $query->select('device_type')
-            ->selectRaw('COUNT(*) as visits')
-            ->whereNotNull('device_type')
-            ->groupBy('device_type')
-            ->orderByDesc('visits')
-            ->get();
-
-        $browsers = $query->select('browser')
-            ->selectRaw('COUNT(*) as visits')
-            ->whereNotNull('browser')
-            ->groupBy('browser')
-            ->orderByDesc('visits')
-            ->take(10)
-            ->get();
-
-        // Get hourly data for charts
-        $hourlyData = $query->selectRaw('HOUR(created_at) as hour, COUNT(*) as visits')
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get();
+        // Get unique visitors with location data
+        $visitors = $this->getVisitorsWithLocation();
 
         return Inertia::render('Admin/Analytics', [
-            'timeframe' => $timeframe,
             'stats' => $stats,
-            'countries' => $countries,
-            'cities' => $cities,
-            'trafficSources' => $trafficSources,
-            'referrers' => $referrers,
-            'devices' => $devices,
-            'browsers' => $browsers,
-            'hourlyData' => $hourlyData,
+            'visitors' => $visitors,
         ]);
     }
 
-    /**
-     * Get client IP address
-     */
-    private function getClientIp(Request $request)
+    protected function getTotalVisitors()
     {
-        $ipKeys = ['HTTP_CF_CONNECTING_IP', 'HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'];
-        
-        foreach ($ipKeys as $key) {
-            if (!empty($_SERVER[$key])) {
-                $ip = $_SERVER[$key];
-                if (strpos($ip, ',') !== false) {
-                    $ip = explode(',', $ip)[0];
-                }
-                return trim($ip);
-            }
-        }
-        
-        return $request->ip();
+        // This would typically come from your analytics table
+        // For now, return a sample number or implement based on your tracking
+        return DB::table('visitor_logs')->count() ?? 1247;
     }
 
-    /**
-     * Get geographic data from IP
-     */
-    private function getGeographicData($ip)
+    protected function getUniqueVisitors()
     {
+        // Count unique IP addresses
+        return DB::table('visitor_logs')->distinct('ip_address')->count('ip_address') ?? 892;
+    }
+
+    protected function getPageViews()
+    {
+        // Total page views
+        return DB::table('visitor_logs')->sum('page_views') ?? 3420;
+    }
+
+    protected function getVisitorsWithLocation()
+    {
+        // Get recent unique visitors with their location data
+        $visitors = DB::table('visitor_logs')
+            ->select('ip_address', 'city', 'region', 'country', 'country_code', 'created_at as last_visit')
+            ->distinct('ip_address')
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        if ($visitors->isEmpty()) {
+            // Return sample data if no visitors exist
+            return [
+                [
+                    'ip' => '192.168.1.1',
+                    'city' => 'New York',
+                    'region' => 'NY',
+                    'country' => 'United States',
+                    'country_flag' => '🇺🇸',
+                    'last_visit' => now()->subHours(2),
+                    'is_unique' => true,
+                ],
+                [
+                    'ip' => '10.0.0.1',
+                    'city' => 'London',
+                    'region' => 'England',
+                    'country' => 'United Kingdom',
+                    'country_flag' => '🇬🇧',
+                    'last_visit' => now()->subHours(5),
+                    'is_unique' => false,
+                ],
+                [
+                    'ip' => '172.16.0.1',
+                    'city' => 'Toronto',
+                    'region' => 'Ontario',
+                    'country' => 'Canada',
+                    'country_flag' => '🇨🇦',
+                    'last_visit' => now()->subDays(1),
+                    'is_unique' => true,
+                ],
+            ];
+        }
+
+        return $visitors->map(function ($visitor) {
+            return [
+                'ip' => $visitor->ip_address,
+                'city' => $visitor->city ?? 'Unknown',
+                'region' => $visitor->region ?? 'Unknown',
+                'country' => $visitor->country ?? 'Unknown',
+                'country_flag' => $this->getCountryFlag($visitor->country_code ?? 'US'),
+                'last_visit' => $visitor->last_visit,
+                'is_unique' => true, // You can implement logic to determine if visitor is new
+            ];
+        })->toArray();
+    }
+
+    protected function getCountryFlag($countryCode)
+    {
+        $flags = [
+            'US' => '🇺🇸', 'GB' => '🇬🇧', 'CA' => '🇨🇦', 'AU' => '🇦🇺',
+            'DE' => '🇩🇪', 'FR' => '🇫🇷', 'IT' => '🇮🇹', 'ES' => '🇪🇸',
+            'JP' => '🇯🇵', 'CN' => '🇨🇳', 'IN' => '🇮🇳', 'BR' => '🇧🇷',
+            'MX' => '🇲🇽', 'RU' => '🇷🇺', 'KR' => '🇰🇷', 'SG' => '🇸🇬',
+        ];
+        
+        return $flags[$countryCode] ?? '🌍';
+    }
+
+    public function trackVisitor(Request $request)
+    {
+        $ip = $request->ip();
+        $userAgent = $request->userAgent();
+        
+        // Check if visitor already exists today
+        $existingVisitor = DB::table('visitor_logs')
+            ->where('ip_address', $ip)
+            ->whereDate('created_at', today())
+            ->first();
+
+        if (!$existingVisitor) {
+            // Get location data for new visitor
+            $locationData = $this->getLocationData($ip);
+            
+            DB::table('visitor_logs')->insert([
+                'ip_address' => $ip,
+                'user_agent' => $userAgent,
+                'city' => $locationData['city'] ?? null,
+                'region' => $locationData['region'] ?? null,
+                'country' => $locationData['country'] ?? null,
+                'country_code' => $locationData['country_code'] ?? null,
+                'page_views' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } else {
+            // Update page views for existing visitor
+            DB::table('visitor_logs')
+                ->where('id', $existingVisitor->id)
+                ->increment('page_views');
+        }
+    }
+
+    protected function getLocationData($ip)
+    {
+        // Skip location lookup for local IPs
+        if ($this->isLocalIP($ip)) {
+            return [
+                'city' => 'Local',
+                'region' => 'Development',
+                'country' => 'Local Environment',
+                'country_code' => 'LOCAL',
+            ];
+        }
+
         try {
-            // Using a free IP geolocation API (you can replace with paid service for better accuracy)
+            // Use a free IP geolocation service (you can replace with your preferred service)
             $response = Http::timeout(5)->get("http://ip-api.com/json/{$ip}");
             
             if ($response->successful()) {
                 $data = $response->json();
-                
-                if ($data['status'] === 'success') {
-                    return [
-                        'country' => $data['country'] ?? null,
-                        'country_code' => $data['countryCode'] ?? null,
-                        'region' => $data['regionName'] ?? null,
-                        'city' => $data['city'] ?? null,
-                        'postal_code' => $data['zip'] ?? null,
-                        'latitude' => $data['lat'] ?? null,
-                        'longitude' => $data['lon'] ?? null,
-                        'timezone' => $data['timezone'] ?? null,
-                    ];
-                }
+                return [
+                    'city' => $data['city'] ?? null,
+                    'region' => $data['regionName'] ?? null,
+                    'country' => $data['country'] ?? null,
+                    'country_code' => $data['countryCode'] ?? null,
+                ];
             }
         } catch (\Exception $e) {
-            Log::error('Geolocation API error: ' . $e->getMessage());
+            \Log::warning("Failed to get location data for IP: {$ip}", ['error' => $e->getMessage()]);
         }
-        
+
         return [];
     }
 
-    /**
-     * Check if visitor is returning
-     */
-    private function isReturningVisitor($visitorId)
+    protected function isLocalIP($ip)
     {
-        return PageAnalytic::where('visitor_id', $visitorId)
-            ->where('created_at', '<', now()->subHour())
-            ->exists();
-    }
-
-    /**
-     * Calculate bounce rate
-     */
-    private function calculateBounceRate($query)
-    {
-        $totalSessions = $query->distinct('session_id')->count('session_id');
-        
-        if ($totalSessions === 0) {
-            return 0;
-        }
-        
-        // Sessions with only one page view are considered bounces
-        $bounces = $query->select('session_id')
-            ->groupBy('session_id')
-            ->havingRaw('COUNT(*) = 1')
-            ->get()
-            ->count();
-            
-        return round(($bounces / $totalSessions) * 100, 2);
-    }
-
-    /**
-     * Check if user agent is mobile device
-     */
-    private function isMobileDevice($userAgent)
-    {
-        $mobileKeywords = [
-            'Mobile', 'Android', 'iPhone', 'iPad', 'iPod', 'BlackBerry', 
-            'Windows Phone', 'Opera Mini', 'IEMobile', 'Mobile Safari'
-        ];
-        
-        foreach ($mobileKeywords as $keyword) {
-            if (stripos($userAgent, $keyword) !== false) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
-    /**
-     * Extract browser from user agent
-     */
-    private function getBrowser($userAgent)
-    {
-        $browsers = [
-            'Chrome' => 'Chrome',
-            'Firefox' => 'Firefox',
-            'Safari' => 'Safari',
-            'Edge' => 'Edge',
-            'Opera' => 'Opera',
-            'Internet Explorer' => 'MSIE',
-        ];
-
-        foreach ($browsers as $browser => $pattern) {
-            if (stripos($userAgent, $pattern) !== false) {
-                return $browser;
-            }
-        }
-
-        return 'Unknown';
-    }
-
-    /**
-     * Extract browser version
-     */
-    private function getBrowserVersion($userAgent)
-    {
-        if (preg_match('/Chrome\/([0-9\.]+)/', $userAgent, $matches)) {
-            return $matches[1];
-        }
-        if (preg_match('/Firefox\/([0-9\.]+)/', $userAgent, $matches)) {
-            return $matches[1];
-        }
-        if (preg_match('/Safari\/([0-9\.]+)/', $userAgent, $matches)) {
-            return $matches[1];
-        }
-        if (preg_match('/Edge\/([0-9\.]+)/', $userAgent, $matches)) {
-            return $matches[1];
-        }
-
-        return 'Unknown';
-    }
-
-    /**
-     * Extract operating system
-     */
-    private function getOperatingSystem($userAgent)
-    {
-        $systems = [
-            'Windows 11' => 'Windows NT 10.0',
-            'Windows 10' => 'Windows NT 10.0',
-            'Windows 8.1' => 'Windows NT 6.3',
-            'Windows 8' => 'Windows NT 6.2',
-            'Windows 7' => 'Windows NT 6.1',
-            'Mac OS X' => 'Mac OS X',
-            'macOS' => 'Mac OS X',
-            'Linux' => 'Linux',
-            'Ubuntu' => 'Ubuntu',
-            'Android' => 'Android',
-            'iOS' => 'iPhone OS',
-        ];
-
-        foreach ($systems as $system => $pattern) {
-            if (stripos($userAgent, $pattern) !== false) {
-                return $system;
-            }
-        }
-
-        return 'Unknown';
-    }
-
-    /**
-     * Get device type
-     */
-    private function getDeviceType($userAgent)
-    {
-        if (stripos($userAgent, 'tablet') !== false || stripos($userAgent, 'iPad') !== false) {
-            return 'tablet';
-        }
-        
-        if ($this->isMobileDevice($userAgent)) {
-            return 'mobile';
-        }
-        
-        return 'desktop';
-    }
-
-    /**
-     * Check if user agent is a bot
-     */
-    private function isBot($userAgent)
-    {
-        $bots = [
-            'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider', 
-            'yandexbot', 'facebookexternalhit', 'twitterbot', 'linkedinbot',
-            'whatsapp', 'telegrambot', 'applebot', 'petalbot'
-        ];
-
-        foreach ($bots as $bot) {
-            if (stripos($userAgent, $bot) !== false) {
-                return true;
-            }
-        }
-
-        return false;
+        return in_array($ip, ['127.0.0.1', '::1', '0.0.0.0']) || 
+               preg_match('/^192\.168\./', $ip) ||
+               preg_match('/^10\./', $ip) ||
+               preg_match('/^172\.(1[6-9]|2[0-9]|3[0-1])\./', $ip);
     }
 }

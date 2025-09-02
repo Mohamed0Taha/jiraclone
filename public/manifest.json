@@ -1,7 +1,7 @@
 {
   "name": "TaskPilot",
   "short_name": "TaskPilot",
-  "description": "AI-Powered Project Management Platform",
+  "description": "The modern project workspace where productivity meets simplicity",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

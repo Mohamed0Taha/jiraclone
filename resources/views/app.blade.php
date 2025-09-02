@@ -15,25 +15,11 @@
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="/icon-48.svg">
     
-    <!-- TaskPilot Branding & SEO -->
-    <meta name="theme-color" content="#3B82F6">
+    <!-- TaskPilot Branding -->
+    <meta name="theme-color" content="#6366F1">
     <meta name="application-name" content="TaskPilot">
     <meta name="apple-mobile-web-app-title" content="TaskPilot">
-    <meta name="description" content="TaskPilot - The #1 AI-Powered Project Management Platform trusted by 50,000+ teams worldwide. Boost productivity by 40% with intelligent task management and workflow automation.">
-    <meta name="author" content="TaskPilot Inc.">
-    <meta name="publisher" content="TaskPilot Inc.">
-    <meta name="robots" content="index, follow">
-    <meta name="googlebot" content="index, follow">
-    <meta name="language" content="English">
-    <meta name="geo.region" content="US">
-    <meta name="format-detection" content="telephone=no">
-    
-    <!-- Mobile Optimization -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="msapplication-TileColor" content="#3B82F6">
-    <meta name="msapplication-config" content="/browserconfig.xml">
+    <meta name="description" content="TaskPilot - The modern project workspace where productivity meets simplicity"
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
