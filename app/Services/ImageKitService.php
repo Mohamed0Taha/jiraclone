@@ -91,6 +91,62 @@ class ImageKitService
         ];
     }
 
+    /**
+     * Upload image from URL (useful for AI-generated images)
+     */
+    public function uploadFromUrl(string $imageUrl, ?string $folder = null, ?string $fileName = null): array
+    {
+        $folder = $folder ?: config('services.imagekit.default_folder', 'tasks');
+        $fileName = $fileName ?: 'ai-generated-' . time() . '.png';
+
+        try {
+            // Download the image from the URL
+            $imageContent = file_get_contents($imageUrl);
+            if ($imageContent === false) {
+                throw new Exception('Failed to download image from URL');
+            }
+
+            // Create a temporary file
+            $tempFile = tempnam(sys_get_temp_dir(), 'imagekit_upload');
+            file_put_contents($tempFile, $imageContent);
+
+            // Upload to ImageKit
+            $uploadResult = $this->imageKit->upload([
+                'file' => fopen($tempFile, 'r'),
+                'fileName' => $fileName,
+                'folder' => $folder,
+            ]);
+
+            // Clean up temp file
+            unlink($tempFile);
+
+            if (!empty($uploadResult->error)) {
+                Log::error('ImageKit upload from URL failed', [
+                    'error' => $uploadResult->error,
+                    'url' => $imageUrl,
+                ]);
+                throw new Exception('ImageKit upload failed: ' . json_encode($uploadResult->error));
+            }
+
+            $result = $uploadResult->result ?? $uploadResult;
+
+            return [
+                'file_id' => $result->fileId ?? null,
+                'url' => $result->url ?? null,
+                'thumbnail_url' => $result->thumbnailUrl ?? null,
+                'width' => $result->width ?? null,
+                'height' => $result->height ?? null,
+            ];
+
+        } catch (\Throwable $e) {
+            Log::error('ImageKit upload from URL exception', [
+                'error' => $e->getMessage(),
+                'url' => $imageUrl,
+            ]);
+            throw $e;
+        }
+    }
+
     public function delete(string $fileId): bool
     {
         try {

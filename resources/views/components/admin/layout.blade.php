@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'TaskPilot Admin' }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Suppress Tailwind CDN warning in development
+        tailwind.config = {
+            // This suppresses the CDN warning
+        };
+    </script>
     @if(isset($extraHead))
         {!! $extraHead !!}
     @endif
@@ -19,8 +25,6 @@
                     <!-- Left Side - Title and Main Navigation -->
                     <div class="flex items-center space-x-6">
                         <div class="flex items-center">
-                            <span class="text-2xl mr-2">🚀</span>
-                            <h1 class="text-xl font-bold whitespace-nowrap">TaskPilot Admin</h1>
                             @if(!empty($pageTitle))
                                 <span class="sr-only">{{ $pageTitle }}</span>
                             @endif
@@ -30,43 +34,47 @@
                         <div class="hidden md:flex items-center space-x-4">
                             <a href="{{ route('admin.dashboard') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.dashboard') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
-                                📊 Dashboard
+                                Dashboard
                             </a>
                             <a href="{{ route('admin.users') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.users*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
-                                👥 Users
+                                Users
+                            </a>
+                            <a href="{{ route('admin.blogs.index') }}" 
+                               class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.blogs*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
+                                Blog
                             </a>
                             <a href="{{ route('admin.refunds') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.refunds*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
-                                💰 Refunds
+                                Refunds
                             </a>
                             <a href="{{ route('admin.billing') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.billing') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
-                                💳 Billing
+                                Billing
                             </a>
                             <a href="{{ route('admin.plans') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.plans') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
-                                🏷️ Plans
+                                Plans
                             </a>
                             <a href="{{ route('admin.email-logs') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.email-logs') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
-                                📧 Email Logs
+                                Email Logs
                             </a>
                             <a href="{{ route('admin.sms-messages') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.sms-messages*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
-                                📱 SMS Messages
+                                SMS Messages
                             </a>
                             <a href="{{ route('admin.openai-requests') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.openai-requests') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
-                                🤖 AI Logs
+                                AI Logs
                             </a>
                             <a href="{{ route('admin.analytics') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.analytics') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
-                                📈 Analytics
+                                Analytics
                             </a>
                             <a href="{{ route('admin.appsumo.dashboard') }}" 
                                class="px-3 py-2 rounded-md text-sm font-medium transition-colors {{ request()->routeIs('admin.appsumo*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500 hover:text-white' }}">
-                                🎁 AppSumo
+                                AppSumo
                             </a>
                         </div>
                     </div>
@@ -87,7 +95,7 @@
                         
                         <!-- Main App Link -->
                         <a href="{{ url('/dashboard') }}" 
-                           class="bg-green-500 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 transition-colors">
+                           class="inline-flex items-center justify-center bg-green-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600 transition-colors whitespace-nowrap h-10 min-w-[120px]">
                             ← Main App
                         </a>
                         
@@ -95,7 +103,7 @@
                         <form method="POST" action="{{ route('logout') }}" class="inline">
                             @csrf
                             <button type="submit" 
-                                    class="bg-red-500 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-red-600 transition-colors">
+                                    class="inline-flex items-center justify-center bg-red-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-600 transition-colors whitespace-nowrap h-10 min-w-[120px]">
                                 Logout
                             </button>
                         </form>
@@ -105,14 +113,15 @@
                 <!-- Mobile Navigation Menu (Hidden by default) -->
                 <div class="md:hidden border-t border-blue-500 pt-2 pb-3">
                     <div class="flex flex-col space-y-1">
-                        <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.dashboard') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">📊 Dashboard</a>
-                        <a href="{{ route('admin.users') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.users*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">👥 Users</a>
-                        <a href="{{ route('admin.refunds') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.refunds*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">💰 Refunds</a>
-                        <a href="{{ route('admin.billing') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.billing') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">💳 Billing</a>
-                        <a href="{{ route('admin.plans') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.plans') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">🏷️ Plans</a>
-                        <a href="{{ route('admin.email-logs') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.email-logs') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">📧 Email Logs</a>
-                        <a href="{{ route('admin.sms-messages') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.sms-messages*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">📱 SMS Messages</a>
-                        <a href="{{ route('admin.openai-requests') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.openai-requests') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">🤖 AI Logs</a>
+                        <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.dashboard') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">Dashboard</a>
+                        <a href="{{ route('admin.users') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.users*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">Users</a>
+                        <a href="{{ route('admin.blogs.index') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.blogs*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">Blog</a>
+                        <a href="{{ route('admin.refunds') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.refunds*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">Refunds</a>
+                        <a href="{{ route('admin.billing') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.billing') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">Billing</a>
+                        <a href="{{ route('admin.plans') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.plans') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">Plans</a>
+                        <a href="{{ route('admin.email-logs') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.email-logs') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">Email Logs</a>
+                        <a href="{{ route('admin.sms-messages') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.sms-messages*') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">SMS Messages</a>
+                        <a href="{{ route('admin.openai-requests') }}" class="block px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('admin.openai-requests') ? 'bg-blue-800 text-white' : 'text-blue-100 hover:bg-blue-500' }}">AI Logs</a>
                     </div>
                 </div>
             </div>

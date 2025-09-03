@@ -98,6 +98,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(AppSumoCode::class, 'redeemed_by_user_id');
     }
 
+    public function blogs()
+    {
+        return $this->hasMany(Blog::class, 'author_id');
+    }
+
     public function onPro(): bool
     {
         return $this->subscribed('default') || $this->onTrial('default');

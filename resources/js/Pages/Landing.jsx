@@ -49,6 +49,26 @@ import {
 export default function Landing({ errors }) {
     const theme = useTheme();
 
+    // Video autoplay handling – try to start with sound; if blocked, fallback to muted
+    const videoRef = React.useRef(null);
+    const [muted, setMuted] = React.useState(false); // request sound first
+    React.useEffect(() => {
+        const v = videoRef.current;
+        if (!v) return;
+        v.muted = false;
+        v.volume = 1.0;
+        const attempt = v.play();
+        if (attempt && attempt.catch) {
+            attempt.catch(() => {
+                // Browser blocked autoplay with sound – fallback to muted autoplay
+                v.muted = true;
+                setMuted(true);
+                const retry = v.play();
+                if (retry && retry.catch) retry.catch(() => {});
+            });
+        }
+    }, []);
+
     // Add CSS keyframes for animations
     React.useEffect(() => {
         const style = document.createElement('style');
@@ -290,8 +310,76 @@ export default function Landing({ errors }) {
                     </Container>
                 </Box>
 
+                {/* Product Demo Video Section (moved to top) */}
+                <Box sx={{ pt: { xs: 4, md: 6 }, pb: { xs: 2, md: 4 }, bgcolor: '#F8F9FA' }}>
+                    <Container maxWidth="lg">
+
+                        <Box
+                            sx={{
+                                position: 'relative',
+                                maxWidth: 960,
+                                mx: 'auto',
+                                borderRadius: 4,
+                                overflow: 'hidden',
+                                boxShadow: '0 25px 50px rgba(0, 0, 0, 0.15)',
+                                background: 'linear-gradient(135deg, #FF6B6B, #4ECDC4)',
+                                p: { xs: 1.5, sm: 2.5, md: 3 },
+                                mb: 4,
+                            }}
+                        >
+                            <Box sx={{ position: 'relative' }}>
+                                <video
+                                    ref={videoRef}
+                                    controls
+                                    autoPlay
+                                    muted={muted}
+                                    playsInline
+                                    // loop
+                                    style={{
+                                        width: '100%',
+                                        height: 'auto',
+                                        borderRadius: '12px',
+                                        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.2)',
+                                    }}
+                                >
+                                    <source src="/videos/intro.mp4" type="video/mp4" />
+                                    Your browser does not support the video tag.
+                                </video>
+                                {muted && (
+                                    <Button
+                                        variant="contained"
+                                        size="small"
+                                        onClick={() => {
+                                            if (videoRef.current) {
+                                                videoRef.current.muted = false;
+                                                videoRef.current.volume = 1.0;
+                                                const p = videoRef.current.play();
+                                                if (p && p.catch) p.catch(() => {});
+                                                setMuted(false);
+                                            }
+                                        }}
+                                        sx={{
+                                            position: 'absolute',
+                                            bottom: 12,
+                                            right: 12,
+                                            textTransform: 'none',
+                                            background: 'linear-gradient(135deg, #FF6B6B, #45B7D1)',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                                            '&:hover': {
+                                                background: 'linear-gradient(135deg, #45B7D1, #FF6B6B)'
+                                            }
+                                        }}
+                                    >
+                                        Unmute
+                                    </Button>
+                                )}
+                            </Box>
+                        </Box>
+                    </Container>
+                </Box>
+
                 {/* Hero Section */}
-                <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'white' }}>
+                <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: 'white' }}>
                     <Container maxWidth="lg">
                         <Box sx={{ textAlign: 'center', mb: 8 }}>
                             <Typography
@@ -422,115 +510,73 @@ export default function Landing({ errors }) {
                     </Container>
                 </Box>
 
-                {/* Product Demo Video Section */}
-                <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: '#F8F9FA' }}>
-                    <Container maxWidth="lg">
-                        <Box sx={{ textAlign: 'center', mb: 8 }}>
-                            <Typography
-                                variant="h2"
-                                sx={{
-                                    fontSize: { xs: '2rem', md: '3rem' },
-                                    fontWeight: 700,
-                                    mb: 3,
-                                    color: '#1a1a1a',
-                                }}
-                            >
-                                See TaskPilot in Action
-                            </Typography>
-                            <Typography
-                                variant="h6"
-                                sx={{
-                                    color: 'grey.700',
-                                    fontWeight: 400,
-                                    maxWidth: 600,
-                                    mx: 'auto',
-                                    mb: 6,
-                                }}
-                            >
-                                Watch how TaskPilot transforms the way teams collaborate and manage projects
-                            </Typography>
-                        </Box>
-
-                        <Box
-                            sx={{
-                                position: 'relative',
-                                maxWidth: 900,
-                                mx: 'auto',
-                                borderRadius: 4,
-                                overflow: 'hidden',
-                                boxShadow: '0 25px 50px rgba(0, 0, 0, 0.15)',
-                                background: 'linear-gradient(135deg, #FF6B6B, #4ECDC4)',
-                                p: 3,
-                                mb: 8,
-                            }}
-                        >
-                            <video
-                                controls
-                                style={{
-                                    width: '100%',
-                                    height: 'auto',
-                                    borderRadius: '12px',
-                                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.2)',
-                                }}
-                                poster="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDgwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI4MDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjRjhGOUZBIi8+Cjx0ZXh0IHg9IjQwMCIgeT0iMjI1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjI0Ij5UYXNrUGlsb3QgSW50cm88L3RleHQ+Cjwvc3ZnPgo="
-                            >
-                                <source src="/videos/intro.mp4" type="video/mp4" />
-                                Your browser does not support the video tag.
-                            </video>
-                        </Box>
-                    </Container>
-                </Box>
+                {/* (Video section moved above) */}
 
                 {/* Core Widgets Showcase */}
-                <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'white' }}>
-                    <Container maxWidth="lg">
-                        <Box sx={{ textAlign: 'center', mb: 10 }}>
+                <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'white' }}>
+                    <Container maxWidth="xl">
+                        <Box sx={{ textAlign: 'center', mb: 12 }}>
                             <Typography
                                 variant="h2"
                                 sx={{
-                                    fontSize: { xs: '2rem', md: '3rem' },
+                                    fontSize: { xs: '2.5rem', md: '3.5rem' },
                                     fontWeight: 700,
-                                    mb: 3,
+                                    mb: 4,
                                     color: '#1a1a1a',
                                 }}
                             >
                                 Core Widgets & Features
                             </Typography>
                             <Typography
-                                variant="h6"
+                                variant="h5"
                                 sx={{
                                     color: 'grey.700',
                                     fontWeight: 400,
-                                    maxWidth: 600,
+                                    maxWidth: 700,
                                     mx: 'auto',
-                                    mb: 8,
+                                    mb: 10,
+                                    lineHeight: 1.5,
                                 }}
                             >
-                                Powerful tools designed for modern teams
+                                Powerful tools designed for modern teams that work the way you do
                             </Typography>
                         </Box>
 
                         {/* Real App Widgets Showcase */}
-                        <Grid container spacing={6} sx={{ mb: 8 }}>
-                            {/* Task Board Widget - Using actual TaskCard styling */}
-                            <Grid item xs={12} md={6}>
-                                <Box
+                        <Box sx={{
+                            mb: 10,
+                            display: 'grid',
+                            gap: { xs: 4, sm: 6 },
+                            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0,1fr))' },
+                            alignItems: 'stretch'
+                        }}>
+                            {/* Task Board Widget */}
+                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                <Box
                                     sx={{
-                                        p: 4,
-                                        borderRadius: 3,
-                                        border: '2px solid #E3F2FD',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        flex: 1,
+                    p: 3, // reduced from 4 to tighten outer padding
+                                        borderRadius: 4,
+                                        border: '1px solid #D9E8F7',
                                         background: 'linear-gradient(135deg, #F7FAFF 0%, #F2F6FE 55%, #EDF2FA 100%)',
-                                        height: 400,
                                         position: 'relative',
                                         overflow: 'hidden',
+                                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)',
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        '&:hover': {
+                                            transform: 'translateY(-6px)',
+                                            boxShadow: '0 10px 32px rgba(0, 0, 0, 0.12)',
+                                        },
                                     }}
                                 >
-                                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#4F46E5' }}>
+                                    <Typography variant="h5" sx={{ mb: 4, fontWeight: 700, color: '#4F46E5', fontSize: '1.3rem' }}>
                                         📋 Kanban Board
                                     </Typography>
                                     
                                     {/* Real Kanban Columns */}
-                                    <Grid container spacing={2}>
+                                    <Grid container spacing={3}>
                                         {[
                                             { 
                                                 key: 'todo', 
@@ -560,42 +606,45 @@ export default function Landing({ errors }) {
                                         ].map((column, colIndex) => (
                                             <Grid item xs={4} key={column.key}>
                                                 <Box sx={{ 
-                                                    p: 2, 
-                                                    borderRadius: 2,
+                                                    p: 2, // reduced from 3
+                                                    borderRadius: 3,
                                                     background: `linear-gradient(135deg, ${alpha(column.accent, 0.08)} 0%, ${alpha(column.accent, 0.04)} 100%)`,
                                                     border: `1px solid ${alpha(column.accent, 0.18)}`,
-                                                    minHeight: 280 
+                                                    minHeight: 350,
+                                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
                                                 }}>
                                                     {/* Column Header */}
                                                     <Box sx={{ 
                                                         display: 'flex', 
                                                         alignItems: 'center', 
-                                                        mb: 2,
-                                                        p: 1,
-                                                        borderRadius: 1,
-                                                        background: 'rgba(255,255,255,0.6)',
+                                                        mb: 2.5,
+                                                        p: 1.5, // reduced from 2
+                                                        borderRadius: 2,
+                                                        background: 'rgba(255,255,255,0.8)',
+                                                        backdropFilter: 'blur(8px)',
                                                     }}>
                                                         <Box
                                                             sx={{
-                                                                width: 18,
-                                                                height: 18,
+                                                                width: 20,
+                                                                height: 20,
                                                                 borderRadius: '50%',
                                                                 background: `linear-gradient(145deg, ${column.accent}, ${alpha(column.accent, 0.8)})`,
-                                                                mr: 1,
+                                                                mr: 2,
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
                                                                 color: 'white',
-                                                                fontSize: '10px',
-                                                                fontWeight: 'bold'
+                                                                fontSize: '0.8rem',
+                                                                fontWeight: 'bold',
+                                                                boxShadow: `0 2px 8px ${alpha(column.accent, 0.3)}`,
                                                             }}
                                                         >
                                                             {column.tasks.length}
                                                         </Box>
-                                                        <Typography variant="subtitle2" sx={{ 
+                                                        <Typography variant="subtitle1" sx={{ 
                                                             fontWeight: 700, 
                                                             color: column.accent,
-                                                            fontSize: '0.75rem',
+                                                            fontSize: '0.9rem',
                                                             textTransform: 'uppercase',
                                                             letterSpacing: 0.5
                                                         }}>
@@ -604,28 +653,30 @@ export default function Landing({ errors }) {
                                                     </Box>
                                                     
                                                     {/* Task Cards */}
-                                                    <Stack spacing={1.5}>
+                                                    <Stack spacing={2}>
                                                         {column.tasks.map((task) => (
                                                             <Box
                                                                 key={task.id}
                                                                 sx={{
-                                                                    p: 2,
+                                                                    p: 2.5,
                                                                     bgcolor: 'white',
-                                                                    borderRadius: 2,
+                                                                    borderRadius: 3,
                                                                     borderLeft: `4px solid ${column.accent}`,
-                                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                                                                     transition: 'all 0.2s ease',
                                                                     cursor: 'pointer',
+                                                                    backdropFilter: 'blur(8px)',
                                                                     '&:hover': {
-                                                                        transform: 'translateY(-2px)',
-                                                                        boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                                                                        transform: 'translateY(-3px)',
+                                                                        boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
                                                                     }
                                                                 }}
                                                             >
-                                                                <Typography variant="body2" sx={{ 
-                                                                    fontWeight: 500, 
-                                                                    mb: 1,
-                                                                    fontSize: '0.8rem'
+                                                                <Typography variant="body1" sx={{ 
+                                                                    fontWeight: 600, 
+                                                                    mb: 1.5,
+                                                                    fontSize: '0.9rem',
+                                                                    lineHeight: 1.4,
                                                                 }}>
                                                                     {task.title}
                                                                 </Typography>
@@ -633,8 +684,9 @@ export default function Landing({ errors }) {
                                                                     label={task.priority}
                                                                     size="small"
                                                                     sx={{
-                                                                        fontSize: '0.7rem',
-                                                                        height: 20,
+                                                                        fontSize: '0.75rem',
+                                                                        height: 24,
+                                                                        fontWeight: 600,
                                                                         bgcolor: task.priority === 'urgent' ? '#ffebee' : 
                                                                                 task.priority === 'high' ? '#fff3e0' :
                                                                                 task.priority === 'medium' ? '#e3f2fd' : '#e8f5e8',
@@ -651,25 +703,33 @@ export default function Landing({ errors }) {
                                         ))}
                                     </Grid>
                                 </Box>
-                            </Grid>
-                            
-                            {/* Project Analytics Widget - Real stats styling */}
-                            <Grid item xs={12} md={6}>
+                                </Box> {/* Close Task Board wrapper */}
+                            {/* Removed stray Grid closing tag */}
+                            {/* Project Analytics Widget */}
+                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                                 <Box
                                     sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        flex: 1,
                                         p: 4,
-                                        borderRadius: 3,
-                                        border: '2px solid #F3E5F5',
+                                        borderRadius: 4,
+                                        border: '1px solid #E5D5EF',
                                         background: 'linear-gradient(135deg, #F9F3FF 0%, #E3D2FF 100%)',
-                                        height: 400,
+                                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)',
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        '&:hover': {
+                                            transform: 'translateY(-6px)',
+                                            boxShadow: '0 10px 32px rgba(0, 0, 0, 0.12)',
+                                        },
                                     }}
                                 >
-                                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#7B1FA2' }}>
+                                    <Typography variant="h5" sx={{ mb: 4, fontWeight: 700, color: '#7B1FA2', fontSize: '1.3rem' }}>
                                         📊 Project Analytics
                                     </Typography>
                                     
                                     {/* Stats Cards */}
-                                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                                    <Grid container spacing={3} sx={{ mb: 4 }}>
                                         {[
                                             { label: 'Total Tasks', value: '24', color: '#FF6B6B', icon: '📋' },
                                             { label: 'Completed', value: '18', color: '#4ECDC4', icon: '✅' },
@@ -678,28 +738,30 @@ export default function Landing({ errors }) {
                                         ].map((stat, i) => (
                                             <Grid item xs={6} key={i}>
                                                 <Box sx={{ 
-                                                    p: 2, 
+                                                    p: 3, 
                                                     bgcolor: 'white', 
-                                                    borderRadius: 2, 
+                                                    borderRadius: 3, 
                                                     textAlign: 'center',
                                                     border: `1px solid ${alpha(stat.color, 0.2)}`,
                                                     transition: 'all 0.2s ease',
+                                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
                                                     '&:hover': {
-                                                        transform: 'translateY(-2px)',
-                                                        boxShadow: `0 4px 12px ${alpha(stat.color, 0.2)}`,
+                                                        transform: 'translateY(-4px)',
+                                                        boxShadow: `0 8px 20px ${alpha(stat.color, 0.2)}`,
                                                     }
                                                 }}>
-                                                    <Typography variant="body2" sx={{ 
-                                                        fontSize: '0.75rem', 
+                                                    <Typography variant="body1" sx={{ 
+                                                        fontSize: '0.85rem', 
                                                         color: 'grey.600', 
-                                                        mb: 0.5 
+                                                        mb: 1,
+                                                        fontWeight: 600,
                                                     }}>
                                                         {stat.icon} {stat.label}
                                                     </Typography>
-                                                    <Typography variant="h6" sx={{ 
+                                                    <Typography variant="h4" sx={{ 
                                                         color: stat.color, 
                                                         fontWeight: 700,
-                                                        fontSize: '1.25rem'
+                                                        fontSize: '1.8rem'
                                                     }}>
                                                         {stat.value}
                                                     </Typography>
@@ -709,11 +771,11 @@ export default function Landing({ errors }) {
                                     </Grid>
                                     
                                     {/* Progress Chart */}
-                                    <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2, mb: 2 }}>
-                                        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+                                    <Box sx={{ p: 3, bgcolor: 'white', borderRadius: 3, mb: 3, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)', flexGrow: 1 }}>
+                                        <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 700, fontSize: '1rem' }}>
                                             Completion Progress
                                         </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'end', height: 80, gap: 1 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'end', height: 100, gap: 2 }}>
                                             {[40, 65, 45, 80, 55, 70, 85].map((height, i) => (
                                                 <Box
                                                     key={i}
@@ -721,9 +783,10 @@ export default function Landing({ errors }) {
                                                         flex: 1,
                                                         height: `${height}%`,
                                                         bgcolor: i < 5 ? '#7B1FA2' : '#4CAF50',
-                                                        borderRadius: '2px 2px 0 0',
+                                                        borderRadius: '4px 4px 0 0',
                                                         opacity: 0.8,
                                                         transition: 'all 0.3s ease',
+                                                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
                                                         '&:hover': {
                                                             opacity: 1,
                                                             transform: 'scaleY(1.1)',
@@ -735,40 +798,54 @@ export default function Landing({ errors }) {
                                     </Box>
                                     
                                     {/* Team Performance */}
-                                    <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2 }}>
-                                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                                    <Box sx={{ p: 3, bgcolor: 'white', borderRadius: 3, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
+                                        <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700, fontSize: '1rem' }}>
                                             Team Velocity
                                         </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                             <Box sx={{ 
-                                                width: 20, 
-                                                height: 4, 
-                                                bgcolor: '#4CAF50', 
-                                                borderRadius: 2,
-                                                flex: 0.75 
-                                            }} />
-                                            <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'grey.600' }}>
+                                                width: 60, 
+                                                height: 8, 
+                                                bgcolor: '#E0E0E0', 
+                                                borderRadius: 4,
+                                                overflow: 'hidden'
+                                            }}>
+                                                <Box sx={{ 
+                                                    width: '75%', 
+                                                    height: '100%', 
+                                                    bgcolor: '#4CAF50',
+                                                    borderRadius: 4,
+                                                    transition: 'width 0.3s ease'
+                                                }} />
+                                            </Box>
+                                            <Typography variant="body1" sx={{ fontSize: '0.9rem', color: 'grey.700', fontWeight: 600 }}>
                                                 75% efficiency
                                             </Typography>
                                         </Box>
-                                    </Box>
-                                </Box>
-                            </Grid>
-                        </Grid>
+                                    </Box> {/* End inner analytics content box */}
+                                </Box> {/* End analytics wrapper column */}
+                            </Box> {/* End Real App Widgets Showcase grid */}
+                        </Box>
 
                         {/* Workflow Automation Widget - Real workflow styling */}
-                        <Grid container spacing={6} sx={{ mb: 8 }}>
-                            <Grid item xs={12} md={6}>
+                        <Grid container spacing={8} sx={{ mb: 10 }}>
+                            <Grid item xs={12} lg={6}>
                                 <Box
                                     sx={{
-                                        p: 4,
-                                        borderRadius: 3,
+                                        p: 5,
+                                        borderRadius: 4,
                                         border: '2px solid #E8F5E8',
                                         background: 'linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 55%, #E7F5EE 100%)',
-                                        height: 350,
+                                        minHeight: 450,
+                                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        '&:hover': {
+                                            transform: 'translateY(-8px)',
+                                            boxShadow: '0 16px 48px rgba(0, 0, 0, 0.12)',
+                                        },
                                     }}
                                 >
-                                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#22B36B' }}>
+                                    <Typography variant="h5" sx={{ mb: 4, fontWeight: 700, color: '#22B36B', fontSize: '1.3rem' }}>
                                         🔄 Workflow Automation
                                     </Typography>
                                     
@@ -800,29 +877,33 @@ export default function Landing({ errors }) {
                                                 color: '#A97CFF'
                                             },
                                         ].map((item, i) => (
-                                            <Box key={i} sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                                            <Box key={i} sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
                                                 <Box
                                                     sx={{
-                                                        width: 40,
-                                                        height: 40,
+                                                        width: 50,
+                                                        height: 50,
                                                         borderRadius: '50%',
                                                         background: `linear-gradient(145deg, ${item.color}, ${alpha(item.color, 0.8)})`,
                                                         color: 'white',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
-                                                        fontSize: '1.2rem',
-                                                        mr: 2,
-                                                        boxShadow: `0 4px 12px ${alpha(item.color, 0.3)}`,
+                                                        fontSize: '1.4rem',
+                                                        mr: 3,
+                                                        boxShadow: `0 6px 16px ${alpha(item.color, 0.3)}`,
+                                                        transition: 'all 0.2s ease',
+                                                        '&:hover': {
+                                                            transform: 'scale(1.1)',
+                                                        }
                                                     }}
                                                 >
                                                     {item.step}
                                                 </Box>
                                                 <Box>
-                                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                                                    <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: '1rem', mb: 0.5 }}>
                                                         {item.title}
                                                     </Typography>
-                                                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                                                    <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.9rem', lineHeight: 1.4 }}>
                                                         {item.desc}
                                                     </Typography>
                                                 </Box>
@@ -833,13 +914,13 @@ export default function Landing({ errors }) {
                                         <Box
                                             sx={{
                                                 position: 'absolute',
-                                                left: 19,
-                                                top: 50,
-                                                bottom: 60,
-                                                width: 2,
+                                                left: 24,
+                                                top: 65,
+                                                bottom: 80,
+                                                width: 3,
                                                 background: 'linear-gradient(180deg, #25D3B3, #4D9FFF, #FFB961, #A97CFF)',
-                                                opacity: 0.3,
-                                                borderRadius: 1,
+                                                opacity: 0.4,
+                                                borderRadius: 2,
                                             }}
                                         />
                                     </Box>
@@ -847,60 +928,70 @@ export default function Landing({ errors }) {
                             </Grid>
 
                             {/* AI Assistant Widget - Real chat styling */}
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} lg={6}>
                                 <Box
                                     sx={{
-                                        p: 4,
-                                        borderRadius: 3,
+                                        p: 5,
+                                        borderRadius: 4,
                                         border: '2px solid #FFF3E0',
                                         background: 'linear-gradient(135deg, #FFF8EC 0%, #FFE2BC 100%)',
-                                        height: 350,
+                                        minHeight: 450,
+                                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        '&:hover': {
+                                            transform: 'translateY(-8px)',
+                                            boxShadow: '0 16px 48px rgba(0, 0, 0, 0.12)',
+                                        },
                                     }}
                                 >
-                                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#E65100' }}>
+                                    <Typography variant="h5" sx={{ mb: 4, fontWeight: 700, color: '#E65100', fontSize: '1.3rem' }}>
                                         🤖 AI Project Assistant
                                     </Typography>
                                     
                                     {/* Chat Messages */}
-                                    <Stack spacing={2} sx={{ mb: 3, maxHeight: 220, overflow: 'hidden' }}>
+                                    <Stack spacing={3} sx={{ mb: 4, maxHeight: 300, overflow: 'hidden' }}>
                                         {/* User Message */}
                                         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                                             <Box sx={{
-                                                maxWidth: '80%',
-                                                p: 2,
+                                                maxWidth: '85%',
+                                                p: 3,
                                                 bgcolor: '#E3F2FD',
-                                                borderRadius: '18px 18px 4px 18px',
-                                                fontSize: '0.85rem'
+                                                borderRadius: '20px 20px 6px 20px',
+                                                fontSize: '0.95rem',
+                                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                                                fontWeight: 500,
                                             }}>
                                                 "Can you help me optimize this project timeline?"
                                             </Box>
                                         </Box>
                                         
                                         {/* AI Response */}
-                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                                             <Box
                                                 sx={{
-                                                    width: 32,
-                                                    height: 32,
+                                                    width: 40,
+                                                    height: 40,
                                                     borderRadius: '50%',
                                                     background: 'linear-gradient(145deg, #FF6B6B, #4ECDC4)',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     color: 'white',
-                                                    fontSize: '1rem',
+                                                    fontSize: '1.2rem',
                                                     flexShrink: 0,
+                                                    boxShadow: '0 4px 12px rgba(255, 107, 107, 0.3)',
                                                 }}
                                             >
                                                 🤖
                                             </Box>
                                             <Box sx={{
-                                                maxWidth: '80%',
-                                                p: 2,
+                                                maxWidth: '85%',
+                                                p: 3,
                                                 bgcolor: 'white',
-                                                borderRadius: '4px 18px 18px 18px',
-                                                fontSize: '0.85rem',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                                                borderRadius: '6px 20px 20px 20px',
+                                                fontSize: '0.95rem',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                                lineHeight: 1.5,
                                             }}>
                                                 "I've analyzed your project and can reduce the timeline by 15% by optimizing task dependencies. Here's what I suggest:
                                                 <br/>• Parallel execution of UI/API work
@@ -910,39 +1001,40 @@ export default function Landing({ errors }) {
                                         </Box>
                                         
                                         {/* Typing Indicator */}
-                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                                             <Box
                                                 sx={{
-                                                    width: 32,
-                                                    height: 32,
+                                                    width: 40,
+                                                    height: 40,
                                                     borderRadius: '50%',
                                                     background: 'linear-gradient(145deg, #FF6B6B, #4ECDC4)',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     color: 'white',
-                                                    fontSize: '1rem',
+                                                    fontSize: '1.2rem',
+                                                    boxShadow: '0 4px 12px rgba(255, 107, 107, 0.3)',
                                                 }}
                                             >
                                                 🤖
                                             </Box>
                                             <Box sx={{
-                                                p: 2,
+                                                p: 3,
                                                 bgcolor: 'white',
-                                                borderRadius: '4px 18px 18px 18px',
-                                                fontSize: '0.85rem',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                                                borderRadius: '6px 20px 20px 20px',
+                                                fontSize: '0.95rem',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: 0.5,
+                                                gap: 1,
                                             }}>
-                                                <Box sx={{ fontSize: '0.7rem', color: 'grey.500' }}>AI is thinking</Box>
+                                                <Box sx={{ fontSize: '0.85rem', color: 'grey.500', fontWeight: 500 }}>AI is thinking</Box>
                                                 {[0, 1, 2].map((i) => (
                                                     <Box
                                                         key={i}
                                                         sx={{
-                                                            width: 4,
-                                                            height: 4,
+                                                            width: 6,
+                                                            height: 6,
                                                             borderRadius: '50%',
                                                             bgcolor: 'grey.400',
                                                             animation: `bounce 1.4s ease-in-out ${i * 0.16}s infinite both`,
@@ -963,136 +1055,144 @@ export default function Landing({ errors }) {
                         {/* Team Collaboration & Project Management */}
                         <Box
                             sx={{
-                                p: 4,
-                                borderRadius: 3,
+                                p: 6,
+                                borderRadius: 4,
                                 border: '2px solid #E1F5FE',
                                 background: 'linear-gradient(135deg, #E1F5FE 0%, #F8F9FA 100%)',
                                 textAlign: 'center',
-                                mb: 6,
+                                mb: 8,
+                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
                             }}
                         >
-                            <Typography variant="h6" sx={{ mb: 4, fontWeight: 600, color: '#0277BD' }}>
+                            <Typography variant="h5" sx={{ mb: 5, fontWeight: 700, color: '#0277BD', fontSize: '1.3rem' }}>
                                 👥 Project Management Dashboard
                             </Typography>
                             
-                            <Grid container spacing={4}>
-                                {/* Project Overview */}
-                                <Grid item xs={12} md={4}>
-                                    <Box sx={{ p: 3, bgcolor: 'white', borderRadius: 2, height: 200 }}>
-                                        <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#0277BD' }}>
-                                            Project Overview
-                                        </Typography>
-                                        
-                                        {/* Project Card */}
+                            <Grid container spacing={5} sx={{
+                                '--card-radius': '20px',
+                                '--card-border': '1px solid rgba(2,119,189,0.12)',
+                            }}>
+                                {/* Shared card style helper */}
+                                {[
+                                    {
+                                        key: 'overview',
+                                        title: 'Project Overview',
+                                        content: (
+                                            <Box>
+                                                <Box sx={{
+                                                    p: 2.5,
+                                                    border: '1px solid #E3F2FD',
+                                                    borderRadius: 3,
+                                                    borderLeft: '4px solid #FF6B6B',
+                                                    mb: 2.5,
+                                                    transition: 'border-color .25s ease'
+                                                }}>
+                                                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+                                                        E-Commerce Platform
+                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
+                                                        <Chip label="Web App" size="small" sx={{ fontSize: '0.65rem', height: 22, fontWeight: 600 }} />
+                                                        <Chip label="React" size="small" sx={{ fontSize: '0.65rem', height: 22, fontWeight: 600 }} />
+                                                    </Box>
+                                                    <Box sx={{ position: 'relative', height: 10, bgcolor: 'grey.100', borderRadius: 5, overflow: 'hidden', mb: 1.5 }}>
+                                                        <Box sx={{ position: 'absolute', inset: 0, width: '75%', bgcolor: '#4CAF50', borderRadius: 5, transition: 'width .4s ease' }} />
+                                                    </Box>
+                                                    <Typography variant="caption" sx={{ fontWeight: 600, letterSpacing: .3 }}>
+                                                        75% Complete
+                                                    </Typography>
+                                                </Box>
+                                                <Stack direction="row" spacing={2}>
+                                                    {[
+                                                        { label: 'Tasks', value: 24 },
+                                                        { label: 'Members', value: 3 },
+                                                        { label: 'Active Sprint', value: 'Week 5' },
+                                                    ].map(i => (
+                                                        <Box key={i.label} sx={{ flex: 1, p: 1.5, borderRadius: 2, bgcolor: 'grey.50' }}>
+                                                            <Typography variant="caption" sx={{ textTransform: 'uppercase', fontWeight: 600, color: 'grey.600', letterSpacing: .5 }}>{i.label}</Typography>
+                                                            <Typography variant="body1" sx={{ fontWeight: 700 }}>{i.value}</Typography>
+                                                        </Box>
+                                                    ))}
+                                                </Stack>
+                                            </Box>
+                                        )
+                                    },
+                                    {
+                                        key: 'team',
+                                        title: 'Team Members',
+                                        content: (
+                                            <Stack spacing={2}>
+                                                {[
+                                                    { name: 'Alex Chen', role: 'Lead Dev', color: '#FF6B6B', workload: 85 },
+                                                    { name: 'Sam Rodriguez', role: 'Designer', color: '#4ECDC4', workload: 70 },
+                                                    { name: 'Jordan Kim', role: 'QA Engineer', color: '#45B7D1', workload: 60 },
+                                                ].map(member => (
+                                                    <Box key={member.name} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                        <Avatar sx={{ bgcolor: member.color, width: 38, height: 38, fontSize: '0.85rem', fontWeight: 700 }}>{member.name.split(' ').map(n=>n[0]).join('')}</Avatar>
+                                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                            <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{member.name}</Typography>
+                                                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>{member.role} • {member.workload}% capacity</Typography>
+                                                        </Box>
+                                                        <Box sx={{ width: 46, height: 6, bgcolor: 'grey.200', borderRadius: 3, overflow: 'hidden' }}>
+                                                            <Box sx={{ width: `${member.workload}%`, height: '100%', bgcolor: member.color, opacity: .65 }} />
+                                                        </Box>
+                                                    </Box>
+                                                ))}
+                                            </Stack>
+                                        )
+                                    },
+                                    {
+                                        key: 'activity',
+                                        title: 'Recent Activity',
+                                        content: (
+                                            <Stack spacing={1.75} sx={{ maxHeight: 210, overflowY: 'auto', pr: .5, '&::-webkit-scrollbar': { width: 6 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'grey.300', borderRadius: 3 } }}>
+                                                {[
+                                                    { action: 'Task completed', user: 'Alex', time: '2 min ago', color: '#4CAF50' },
+                                                    { action: 'Comment added', user: 'Sam', time: '5 min ago', color: '#2196F3' },
+                                                    { action: 'Priority updated', user: 'Jordan', time: '12 min ago', color: '#FF9800' },
+                                                    { action: 'New milestone', user: 'Alex', time: '1 hour ago', color: '#9C27B0' },
+                                                    { action: 'Sprint planning', user: 'Sam', time: '2 hours ago', color: '#607D8B' },
+                                                ].map(a => (
+                                                    <Box key={a.user + a.time} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                                                        <Box sx={{ width: 8, height: 8, mt: '6px', borderRadius: '50%', bgcolor: a.color, flexShrink: 0 }} />
+                                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                            <Typography variant="body2" sx={{ lineHeight: 1.25 }}><Box component="span" sx={{ fontWeight: 700 }}>{a.user}</Box> {a.action}</Typography>
+                                                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>{a.time}</Typography>
+                                                        </Box>
+                                                    </Box>
+                                                ))}
+                                            </Stack>
+                                        )
+                                    }
+                                ].map(card => (
+                                    <Grid key={card.key} item xs={12} sm={6} md={4}>
                                         <Box sx={{
-                                            p: 2,
-                                            border: '2px solid #E3F2FD',
-                                            borderRadius: 2,
-                                            borderLeft: '4px solid #FF6B6B',
-                                            mb: 2,
+                                            position: 'relative',
+                                            height: '100%',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: 2.5,
+                                            p: 3.5,
+                                            bgcolor: 'white',
+                                            borderRadius: 'var(--card-radius)',
+                                            border: 'var(--card-border)',
+                                            boxShadow: '0 4px 14px rgba(0,0,0,0.05)',
+                                            transition: 'box-shadow .25s ease, transform .25s ease',
+                                            overflow: 'hidden',
+                                            '&:hover': {
+                                                boxShadow: '0 10px 28px rgba(0,0,0,0.10)',
+                                                transform: 'translateY(-4px)'
+                                            }
                                         }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                                                E-Commerce Platform
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0277BD', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                {card.key === 'overview' && '📁'}
+                                                {card.key === 'team' && '👥'}
+                                                {card.key === 'activity' && '🕒'}
+                                                {card.title}
                                             </Typography>
-                                            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                                                <Chip label="Web App" size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
-                                                <Chip label="React" size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
-                                            </Box>
-                                            <Box sx={{ 
-                                                width: '100%', 
-                                                height: 6, 
-                                                bgcolor: '#E0E0E0', 
-                                                borderRadius: 3,
-                                                overflow: 'hidden'
-                                            }}>
-                                                <Box sx={{ 
-                                                    width: '75%', 
-                                                    height: '100%', 
-                                                    bgcolor: '#4CAF50',
-                                                    transition: 'width 0.3s ease'
-                                                }} />
-                                            </Box>
-                                            <Typography variant="caption" sx={{ color: 'grey.600', fontSize: '0.7rem' }}>
-                                                75% Complete
-                                            </Typography>
+                                            {card.content}
                                         </Box>
-                                    </Box>
-                                </Grid>
-                                
-                                {/* Team Members */}
-                                <Grid item xs={12} md={4}>
-                                    <Box sx={{ p: 3, bgcolor: 'white', borderRadius: 2, height: 200 }}>
-                                        <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#0277BD' }}>
-                                            Team Members
-                                        </Typography>
-                                        
-                                        <Stack spacing={1.5}>
-                                            {[
-                                                { name: 'Alex Chen', role: 'Lead Dev', color: '#FF6B6B', workload: 85 },
-                                                { name: 'Sam Rodriguez', role: 'Designer', color: '#4ECDC4', workload: 70 },
-                                                { name: 'Jordan Kim', role: 'QA Engineer', color: '#45B7D1', workload: 60 },
-                                            ].map((member, i) => (
-                                                <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <Avatar
-                                                        sx={{
-                                                            bgcolor: member.color,
-                                                            width: 32,
-                                                            height: 32,
-                                                            fontSize: '0.875rem',
-                                                        }}
-                                                    >
-                                                        {member.name.split(' ').map(n => n[0]).join('')}
-                                                    </Avatar>
-                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                                                            {member.name}
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                                            {member.role} • {member.workload}% capacity
-                                                        </Typography>
-                                                    </Box>
-                                                </Box>
-                                            ))}
-                                        </Stack>
-                                    </Box>
-                                </Grid>
-                                
-                                {/* Recent Activity */}
-                                <Grid item xs={12} md={4}>
-                                    <Box sx={{ p: 3, bgcolor: 'white', borderRadius: 2, height: 200 }}>
-                                        <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#0277BD' }}>
-                                            Recent Activity
-                                        </Typography>
-                                        
-                                        <Stack spacing={1.5}>
-                                            {[
-                                                { action: 'Task completed', user: 'Alex', time: '2 min ago', color: '#4CAF50' },
-                                                { action: 'Comment added', user: 'Sam', time: '5 min ago', color: '#2196F3' },
-                                                { action: 'Priority updated', user: 'Jordan', time: '12 min ago', color: '#FF9800' },
-                                                { action: 'New milestone', user: 'Alex', time: '1 hour ago', color: '#9C27B0' },
-                                            ].map((activity, i) => (
-                                                <Box key={i} sx={{ display: 'flex', alignItems: 'center', fontSize: '0.8rem' }}>
-                                                    <Box sx={{ 
-                                                        width: 6, 
-                                                        height: 6, 
-                                                        borderRadius: '50%', 
-                                                        bgcolor: activity.color, 
-                                                        mr: 1.5,
-                                                        flexShrink: 0
-                                                    }} />
-                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                                                            <strong>{activity.user}</strong> {activity.action}
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                                            {activity.time}
-                                                        </Typography>
-                                                    </Box>
-                                                </Box>
-                                            ))}
-                                        </Stack>
-                                    </Box>
-                                </Grid>
+                                    </Grid>
+                                ))}
                             </Grid>
                         </Box>
                     </Container>
@@ -1127,7 +1227,7 @@ export default function Landing({ errors }) {
                             </Typography>
                         </Box>
 
-                        <Grid container spacing={6}>
+                        <Grid container spacing={6} justifyContent="center" sx={{ maxWidth: 1200, mx: 'auto' }}>
                             {features.map((feature, index) => (
                                 <Grid item xs={12} md={6} lg={4} key={index}>
                                     <Box
@@ -1406,6 +1506,16 @@ export default function Landing({ errors }) {
                             </Box>
 
                             <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                <Link
+                                    href="/blog"
+                                    sx={{
+                                        color: 'grey.600',
+                                        textDecoration: 'none',
+                                        '&:hover': { color: '#7C6AE8' },
+                                    }}
+                                >
+                                    Blog
+                                </Link>
                                 <Link
                                     href="#"
                                     sx={{

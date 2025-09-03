@@ -492,6 +492,121 @@ class OpenAIService
         return $this->chatJson($messages, $temperature);
     }
 
+    /**
+     * Generate an image using DALL-E
+     */
+    public function generateImage(string $prompt, string $size = '1024x1024', string $quality = 'standard'): array
+    {
+        $apiKey = $this->apiKey();
+        if ($apiKey === '') {
+            throw new Exception('OpenAI API key missing');
+        }
+
+        $userId = Auth::id();
+        $startTime = microtime(true);
+
+        try {
+            $res = Http::timeout(120)->withHeaders([
+                'Authorization' => 'Bearer '.$apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($this->baseUri().'/images/generations', [
+                'model' => 'dall-e-3',
+                'prompt' => $prompt,
+                'size' => $size,
+                'quality' => $quality,
+                'n' => 1,
+            ]);
+
+            if (! $res->ok()) {
+                Log::error('OpenAI Image generation failed', ['status' => $res->status(), 'body' => $res->body()]);
+
+                // Log failed request
+                if ($userId) {
+                    OpenAiRequest::logRequest(
+                        userId: $userId,
+                        type: 'image_generation',
+                        tokens: 0,
+                        cost: 0,
+                        model: 'dall-e-3',
+                        prompt: $prompt,
+                        response: null,
+                        successful: false,
+                        error: 'HTTP '.$res->status().': '.$res->body()
+                    );
+                }
+
+                throw new Exception('OpenAI image generation failed');
+            }
+
+            $payload = $res->json();
+            $imageUrl = $payload['data'][0]['url'] ?? null;
+            $revisedPrompt = $payload['data'][0]['revised_prompt'] ?? $prompt;
+
+            if (!$imageUrl) {
+                throw new Exception('No image URL returned from OpenAI');
+            }
+
+            // Calculate cost for DALL-E 3 (as of 2025: ~$0.04 per image for 1024x1024 standard quality)
+            $cost = match($size) {
+                '1024x1024' => $quality === 'hd' ? 0.08 : 0.04,
+                '1792x1024', '1024x1792' => $quality === 'hd' ? 0.12 : 0.08,
+                default => 0.04,
+            };
+
+            // Log successful request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'image_generation',
+                    tokens: 0, // DALL-E doesn't use tokens
+                    cost: $cost,
+                    model: 'dall-e-3',
+                    prompt: $prompt,
+                    response: $imageUrl,
+                    successful: true
+                );
+            }
+
+            $duration = microtime(true) - $startTime;
+            Log::info('OpenAI Image generation successful', [
+                'cost' => $cost,
+                'duration' => $duration,
+                'size' => $size,
+                'quality' => $quality,
+                'user_id' => $userId,
+            ]);
+
+            return [
+                'url' => $imageUrl,
+                'revised_prompt' => $revisedPrompt,
+                'cost' => $cost,
+            ];
+
+        } catch (Exception $e) {
+            // Log failed request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'image_generation',
+                    tokens: 0,
+                    cost: 0.0,
+                    model: 'dall-e-3',
+                    prompt: $prompt,
+                    response: $e->getMessage(),
+                    successful: false,
+                    error: $e->getMessage()
+                );
+            }
+
+            Log::error('OpenAI Image generation error', [
+                'error' => $e->getMessage(),
+                'user_id' => $userId,
+            ]);
+
+            throw $e;
+        }
+    }
+
     private function calculateCost(string $model, int $tokens): float
     {
         // Rough cost calculation based on current OpenAI pricing (as of 2025)

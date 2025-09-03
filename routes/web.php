@@ -5,6 +5,7 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CertificationController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ContactController;
@@ -37,6 +38,10 @@ Route::get('/', function () {
 
     return Inertia::render('Landing');
 })->name('landing');
+
+// Blog routes (public)
+Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show');
 
 /* Project Invitation Acceptance (public) */
 Route::get('/invitation/{token}', [App\Http\Controllers\ProjectMemberController::class, 'acceptInvitation'])->name('projects.invitation.accept');
@@ -443,6 +448,19 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::post('/users/{user}/make-admin', [AdminController::class, 'makeAdmin'])->name('make-admin');
     Route::post('/users/{user}/demote-admin', [AdminController::class, 'demoteAdmin'])->name('demote-admin');
+
+    // Blog management routes
+    Route::resource('blogs', \App\Http\Controllers\Admin\BlogController::class);
+    
+    // Blog AI routes
+    Route::post('/blogs/generate', [\App\Http\Controllers\Admin\BlogController::class, 'generate'])->name('blogs.generate');
+    Route::post('/blogs/ideas', [\App\Http\Controllers\Admin\BlogController::class, 'ideas'])->name('blogs.ideas');
+    Route::post('/blogs/optimize', [\App\Http\Controllers\Admin\BlogController::class, 'optimize'])->name('blogs.optimize');
+    Route::post('/blogs/generate-image', [\App\Http\Controllers\Admin\BlogController::class, 'generateImage'])->name('blogs.generate-image');
+    
+    // Blog publish/unpublish routes
+    Route::post('/blogs/{blog}/publish', [\App\Http\Controllers\Admin\BlogController::class, 'publish'])->name('blogs.publish');
+    Route::post('/blogs/{blog}/unpublish', [\App\Http\Controllers\Admin\BlogController::class, 'unpublish'])->name('blogs.unpublish');
 
     // User management routes
     Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
