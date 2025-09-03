@@ -16,6 +16,11 @@ class AdminOnly
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Allow OPTIONS requests to pass through for CORS preflight
+        if ($request->getMethod() === 'OPTIONS') {
+            return $next($request);
+        }
+
         if (! Auth::check()) {
             return redirect()->route('login');
         }
