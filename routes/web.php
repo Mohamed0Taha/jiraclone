@@ -50,6 +50,11 @@ Route::middleware([])->group(function () {
     Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show')->where('blog', '[a-zA-Z0-9\-_]+');
 });
 
+// DEBUG: Test public route (remove after testing)
+Route::get('/test-public', function() {
+    return response()->json(['message' => 'Public route works', 'user' => auth()->check() ? auth()->user()->email : 'Not authenticated']);
+});
+
 // Public Simulator (no authentication required) - renamed to /practice to avoid auth conflict
 Route::middleware([])->group(function () {
     Route::get('/practice', [\App\Http\Controllers\PublicSimulatorController::class, 'index'])->name('public-simulator.index');

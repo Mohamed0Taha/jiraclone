@@ -16,6 +16,12 @@ class PublicSimulatorController extends Controller
 
     public function index()
     {
+        \Log::info('PublicSimulatorController@index accessed', [
+            'user_authenticated' => auth()->check(),
+            'user_id' => auth()->id(),
+            'url' => request()->fullUrl(),
+        ]);
+        
         return Inertia::render('PublicSimulator/Index', [
             'title' => 'Project Management Simulator - Practice for Free',
             'description' => 'Practice project management skills with realistic scenarios. No signup required.',
