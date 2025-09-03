@@ -32,21 +32,19 @@ class AddCorsHeaders
 
         $response = $next($request);
 
-        // Add CORS headers for static assets and API endpoints
-        if ($request->getPathInfo() && (
-            str_starts_with($request->getPathInfo(), '/build/') ||
-            str_starts_with($request->getPathInfo(), '/assets/') ||
-            str_starts_with($request->getPathInfo(), '/api/')
-        )) {
-            $allowedOrigins = [
-                'https://taskpilot.us',
-                'https://laravel-react-automation-app-27e3cf659873.herokuapp.com',
-                'http://localhost:3000',
-                'http://localhost:8000',
-                'http://localhost:5173'
-            ];
+        // Add CORS headers for all requests when cross-origin
+        $allowedOrigins = [
+            'https://taskpilot.us',
+            'https://laravel-react-automation-app-27e3cf659873.herokuapp.com',
+            'http://localhost:3000',
+            'http://localhost:8000',
+            'http://localhost:5173'
+        ];
 
-            $origin = $request->headers->get('Origin');
+        $origin = $request->headers->get('Origin');
+        
+        // Only add CORS headers if there's an Origin header (cross-origin request)
+        if ($origin) {
             if (in_array($origin, $allowedOrigins)) {
                 $response->headers->set('Access-Control-Allow-Origin', $origin);
             } else {
