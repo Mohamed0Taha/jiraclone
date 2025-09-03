@@ -41,7 +41,7 @@ Route::get('/', function () {
 
 // Blog routes (public)
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
-Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show');
+Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show')->where('blog', '[a-zA-Z0-9\-_]+');
 
 /* Project Invitation Acceptance (public) */
 Route::get('/invitation/{token}', [App\Http\Controllers\ProjectMemberController::class, 'acceptInvitation'])->name('projects.invitation.accept');
