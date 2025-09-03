@@ -59,14 +59,29 @@ Route::get('/test-public', function() {
 Route::middleware([])->group(function () {
     Route::get('/practice', function() {
         \Log::info('Practice route accessed directly');
-        return \Inertia\Inertia::render('PublicSimulator/Index', [
-            'title' => 'Project Management Simulator - Practice for Free',
-            'description' => 'Practice project management skills with realistic scenarios. No signup required.',
+        
+        // Generate simulation immediately like in certification flow
+        $mockUser = new \App\Models\User([
+            'name' => 'Practice User',
+            'email' => 'practice@simulator.local'
+        ]);
+        
+        $simulationGenerator = app(\App\Services\SimpleSimulationGenerator::class);
+        $simulation = $simulationGenerator->generate($mockUser);
+        
+        // Store in session for the simulator
+        request()->session()->put('simulator_payload', $simulation);
+        
+        // Use the EXACT same component as certification
+        return \Inertia\Inertia::render('Simulator/Index', [
+            'simulation' => $simulation,
+            'certificationAttempt' => null, // No certification for public access
         ]);
     })->name('public-simulator.index');
-    Route::post('/practice/generate', [\App\Http\Controllers\PublicSimulatorController::class, 'generate'])->name('public-simulator.generate');
-    Route::post('/practice/evaluate-action', [\App\Http\Controllers\PublicSimulatorController::class, 'evaluateAction'])->name('public-simulator.evaluate-action');
-    Route::post('/practice/evaluate-task-action', [\App\Http\Controllers\PublicSimulatorController::class, 'evaluateTaskAction'])->name('public-simulator.evaluate-task-action');
+    
+    // Use existing simulator endpoints (they work with the main simulator component)
+    Route::post('/practice/evaluate-action', [App\Http\Controllers\SimulatorController::class, 'evaluateAction'])->name('public-simulator.evaluate-action');
+    Route::post('/practice/evaluate-task-action', [App\Http\Controllers\SimulatorController::class, 'evaluateTaskAction'])->name('public-simulator.evaluate-task-action');
 });
 
 // (Temporary) Remove broad catch-all that could steal valid 404s (was interfering). If needed, re-add with tighter pattern.
