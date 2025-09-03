@@ -48,10 +48,9 @@
 
     # Add CORS headers for build assets
     <FilesMatch "\.(js|css|map|json|woff|woff2|ttf|eot|svg|png|jpg|jpeg|gif)$">
-        Header always set Access-Control-Allow-Origin "https://taskpilot.us"
+        Header always set Access-Control-Allow-Origin "*"
         Header always set Access-Control-Allow-Methods "GET, OPTIONS"
         Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
-        Header always set Access-Control-Allow-Credentials "true"
     </FilesMatch>
 
     # Redirect Trailing Slashes If Not A Folder...

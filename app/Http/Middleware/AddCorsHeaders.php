@@ -14,6 +14,7 @@ class AddCorsHeaders
             $allowedOrigins = [
                 'https://taskpilot.us',
                 'https://laravel-react-automation-app-27e3cf659873.herokuapp.com',
+                'https://laravel-react-automation-app-c44cbffeacff.herokuapp.com',
                 'http://localhost:3000',
                 'http://localhost:8000',
                 'http://localhost:5173'
@@ -36,6 +37,7 @@ class AddCorsHeaders
         $allowedOrigins = [
             'https://taskpilot.us',
             'https://laravel-react-automation-app-27e3cf659873.herokuapp.com',
+            'https://laravel-react-automation-app-c44cbffeacff.herokuapp.com',
             'http://localhost:3000',
             'http://localhost:8000',
             'http://localhost:5173'
