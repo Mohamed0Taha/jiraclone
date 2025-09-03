@@ -457,6 +457,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::post('/blogs/ideas', [\App\Http\Controllers\Admin\BlogController::class, 'ideas'])->name('blogs.ideas');
     Route::post('/blogs/optimize', [\App\Http\Controllers\Admin\BlogController::class, 'optimize'])->name('blogs.optimize');
     Route::post('/blogs/generate-image', [\App\Http\Controllers\Admin\BlogController::class, 'generateImage'])->name('blogs.generate-image');
+    Route::get('/blogs/{blog}/status', [\App\Http\Controllers\Admin\BlogController::class, 'status'])->name('blogs.status');
     
     // Blog publish/unpublish routes
     Route::post('/blogs/{blog}/publish', [\App\Http\Controllers\Admin\BlogController::class, 'publish'])->name('blogs.publish');

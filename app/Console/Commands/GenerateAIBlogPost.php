@@ -6,6 +6,7 @@ use App\Models\Blog;
 use App\Models\User;
 use App\Services\BlogAIService;
 use Illuminate\Console\Command;
+use App\Jobs\GenerateBlogFeaturedImage;
 
 class GenerateAIBlogPost extends Command
 {
@@ -49,7 +50,7 @@ class GenerateAIBlogPost extends Command
             // Create blog post
             $blog = Blog::create([
                 'title' => $blogData['title'],
-                'slug' => $blogData['slug'],
+                'slug' => $blogData['slug'] ?? \Illuminate\Support\Str::slug($blogData['title']) . '-' . substr(sha1(uniqid()), 0, 6),
                 'excerpt' => $blogData['excerpt'],
                 'content' => $blogData['content'],
                 'meta_title' => $blogData['meta_title'],
@@ -58,6 +59,13 @@ class GenerateAIBlogPost extends Command
                 'published_at' => $publish ? now() : null,
                 'author_id' => $admin->id
             ]);
+
+            if (empty($blog->featured_image) && (!empty($blogData['image_skipped']) || !empty($blogData['image_error']))) {
+                $this->info('⏳ Featured image queued for background generation...');
+                GenerateBlogFeaturedImage::dispatch($blog->id);
+            } elseif ($blog->featured_image) {
+                $this->info('🖼  Featured image already attached.');
+            }
 
             $this->newLine();
             $this->info('✅ Blog post created successfully!');

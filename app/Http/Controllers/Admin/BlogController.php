@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Jobs\GenerateBlogFeaturedImage;
 
 class BlogController extends Controller
 {
@@ -149,10 +150,43 @@ class BlogController extends Controller
                 $request->topic,
                 $request->target_audience ?? 'project managers and teams'
             );
+            // Persist as draft immediately so async image job can attach later
+            $authorId = Auth::id();
+            $slug = Str::slug($blogData['title'] ?? ('blog-' . Str::random(6)));
+            // Ensure unique slug (basic loop – low volume acceptable). If collision, append random.
+            if (\App\Models\Blog::where('slug', $slug)->exists()) {
+                $slug .= '-' . Str::lower(Str::random(4));
+            }
+
+            $blog = \App\Models\Blog::create([
+                'title' => $blogData['title'] ?? 'Untitled Blog Post',
+                'slug' => $slug,
+                'excerpt' => $blogData['excerpt'] ?? null,
+                'content' => $blogData['content'] ?? '',
+                'meta_title' => $blogData['meta_title'] ?? null,
+                'meta_description' => $blogData['meta_description'] ?? null,
+                'featured_image' => $blogData['featured_image'] ?? null,
+                'is_published' => false,
+                'published_at' => null,
+                'author_id' => $authorId,
+            ]);
+
+            $imageJobDispatched = false;
+            if (empty($blog->featured_image) && (!empty($blogData['image_skipped']) || !empty($blogData['image_error']))) {
+                // Queue background generation
+                GenerateBlogFeaturedImage::dispatch($blog->id);
+                $imageJobDispatched = true;
+            }
 
             return response()->json([
                 'success' => true,
-                'blog' => $blogData
+                'blog' => array_merge($blogData, [
+                    'id' => $blog->id,
+                    'slug' => $blog->slug,
+                    'featured_image' => $blog->featured_image,
+                ]),
+                'draft_saved' => true,
+                'image_job_dispatched' => $imageJobDispatched,
             ]);
         } catch (\Exception $e) {
             Log::error('Blog generation failed', [
@@ -315,5 +349,18 @@ class BlogController extends Controller
         return redirect()
             ->route('admin.blogs.index')
             ->with('success', 'Blog post moved to draft successfully!');
+    }
+
+    /**
+     * Lightweight status endpoint for polling featured image availability
+     */
+    public function status(Blog $blog)
+    {
+        return response()->json([
+            'success' => true,
+            'blog_id' => $blog->id,
+            'featured_image' => $blog->featured_image,
+            'image_pending' => empty($blog->featured_image),
+        ]);
     }
 }
