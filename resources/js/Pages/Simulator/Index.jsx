@@ -2161,9 +2161,13 @@ export default function Index({ auth, simulation, certificationAttempt }) {
     const dashboardAccent = '#764ba2';
     const dashboardPrimary = '#667eea';
     const dashboardTextShadow = '0 0 14px rgba(255,255,255,0.6), 0 0 38px rgba(120,160,255,0.35)';
-    const uiScale = 0.72;
+    
+    // Disable scaling for public users to prevent layout issues
+    const isPublicUser = !auth?.user;
+    const uiScale = isPublicUser ? 1.0 : 0.72;
+    
     // Font scaling factor
-    const fontScale = 1.6;
+    const fontScale = isPublicUser ? 1.0 : 1.6;
     const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
     // Prevent manual zoom (Ctrl + / - / 0 and pinch zoom)
     useEffect(() => {
@@ -2225,19 +2229,19 @@ export default function Index({ auth, simulation, certificationAttempt }) {
             <div ref={wrapperRef} style={ isFirefox ? {
                 transform: `scale(${uiScale})`,
                 transformOrigin: 'top left',
-                height: `calc((100vh - 5vh) / ${uiScale})`,
+                height: isPublicUser ? '100vh' : `calc((100vh - 5vh) / ${uiScale})`,
                 width: `${100 / uiScale}%`,
                 display:'flex',
                 flexDirection:'column',
-                background: dashboardGradient,
+                background: isPublicUser ? '#f8fafc' : dashboardGradient,
                 fontSize: `${fontScale}em`
             } : {
                 zoom: uiScale,
-                height: `calc((100vh - 5vh) / ${uiScale})`,
+                height: isPublicUser ? '100vh' : `calc((100vh - 5vh) / ${uiScale})`,
                 width: '100%',
                 display:'flex',
                 flexDirection:'column',
-                background: dashboardGradient,
+                background: isPublicUser ? '#f8fafc' : dashboardGradient,
                 fontSize: `${fontScale}em`
             }}>
             
