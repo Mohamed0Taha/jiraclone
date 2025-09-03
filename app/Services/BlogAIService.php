@@ -24,6 +24,7 @@ class BlogAIService
     public function generateBlogPost($topic, $targetAudience = 'project managers and teams', $tone = 'professional and engaging')
     {
         try {
+            $overallStart = microtime(true);
             // Generate the blog content
             $prompt = $this->buildBlogPrompt($topic, $targetAudience, $tone);
             $messages = [
@@ -38,37 +39,39 @@ class BlogAIService
 
             $parsedResponse = $this->parseBlogResponse($response);
             
-            // Temporarily disable image generation to speed up response
-            // TODO: Re-enable once we optimize the image generation process
-            /*
-            // Generate featured image (with timeout protection)
-            $featuredImageUrl = null;
-            $imageError = null;
-            
-            if (!empty($parsedResponse['title'])) {
-                try {
-                    $featuredImageUrl = $this->generateFeaturedImage(
-                        $parsedResponse['title'], 
-                        $parsedResponse['excerpt'] ?? '', 
-                        $topic
-                    );
-                } catch (\Exception $e) {
-                    // Log image generation error but don't fail the entire process
-                    Log::warning('Featured image generation failed', [
-                        'error' => $e->getMessage(),
-                        'title' => $parsedResponse['title']
-                    ]);
-                    $imageError = $e->getMessage();
+            // Conditional, time‑boxed image generation to avoid Heroku 30s timeout
+            $autoImage = (bool) config('blog_ai.auto_image');
+            if ($autoImage && !empty($parsedResponse['title'])) {
+                $maxSync = (int) config('blog_ai.max_sync_seconds', 23);
+                $elapsed = microtime(true) - $overallStart;
+                if ($elapsed < $maxSync - 3) { // leave buffer for response serialization
+                    $imageStart = microtime(true);
+                    try {
+                        $size = config('blog_ai.image_size', '1024x1024');
+                        $quality = config('blog_ai.image_quality', 'standard');
+                        $featuredImageUrl = $this->generateFeaturedImage(
+                            $parsedResponse['title'],
+                            $parsedResponse['excerpt'] ?? '',
+                            $topic
+                        );
+                        if ($featuredImageUrl) {
+                            $parsedResponse['featured_image'] = $featuredImageUrl;
+                        }
+                        $parsedResponse['image_generation_ms'] = (int) ((microtime(true) - $imageStart) * 1000);
+                    } catch (\Throwable $e) {
+                        Log::warning('Featured image generation failed (non-fatal)', [
+                            'error' => $e->getMessage(),
+                            'title' => $parsedResponse['title'] ?? null,
+                        ]);
+                        $parsedResponse['image_error'] = $e->getMessage();
+                    }
+                } else {
+                    $parsedResponse['image_skipped'] = true;
+                    $parsedResponse['image_error'] = 'Skipped due to time budget';
                 }
+            } else {
+                $parsedResponse['image_skipped'] = true;
             }
-
-            // Add the featured image URL to the response
-            if ($featuredImageUrl) {
-                $parsedResponse['featured_image'] = $featuredImageUrl;
-            } else if ($imageError) {
-                $parsedResponse['image_error'] = $imageError;
-            }
-            */
 
             return $parsedResponse;
 
