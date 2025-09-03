@@ -261,33 +261,58 @@ Make this a comprehensive, actionable guide that positions TaskPilot as the esse
     public function generateFeaturedImage($title, $excerpt = '', $topic = '')
     {
         $imagePrompt = $this->buildImagePrompt($topic ?: $title, $title, $excerpt);
-        
-        try {
-            // Generate image with DALL-E
-            $imageData = $this->openAIService->generateImage($imagePrompt, '1792x1024', 'hd');
-            
-            if (!$imageData || !isset($imageData['url'])) {
-                throw new \Exception('Failed to generate image with DALL-E');
+        $primarySize = config('blog_ai.image_size', '1024x1024');
+        $primaryQuality = config('blog_ai.image_quality', 'standard');
+        $fallbackSize = config('blog_ai.fallback_image_size', '512x512');
+        $fallbackQuality = config('blog_ai.fallback_image_quality', 'standard');
+
+        $attempts = [
+            ['size' => $primarySize, 'quality' => $primaryQuality],
+            ['size' => $fallbackSize, 'quality' => $fallbackQuality],
+        ];
+
+        foreach ($attempts as $idx => $opts) {
+            try {
+                $imageData = $this->openAIService->generateImage($imagePrompt, $opts['size'], $opts['quality']);
+                if (!$imageData || !isset($imageData['url'])) {
+                    throw new \Exception('OpenAI returned no URL');
+                }
+                $fileName = 'blog-' . Str::slug($title) . '-' . time() . ($idx === 0 ? '' : '-fb') . '.png';
+                $imageKitResponse = $this->imageKitService->uploadFromUrl(
+                    $imageData['url'],
+                    '',
+                    $fileName
+                );
+                if (!$imageKitResponse || !isset($imageKitResponse['url'])) {
+                    throw new \Exception('ImageKit upload failed');
+                }
+                Log::info('BlogAIService: featured image generated', [
+                    'attempt' => $idx + 1,
+                    'size' => $opts['size'],
+                    'quality' => $opts['quality'],
+                ]);
+                return $imageKitResponse['url'];
+            } catch (\Throwable $e) {
+                Log::warning('BlogAIService: image attempt failed', [
+                    'attempt' => $idx + 1,
+                    'size' => $opts['size'],
+                    'quality' => $opts['quality'],
+                    'error' => $e->getMessage(),
+                ]);
+                // continue to next attempt
             }
-
-            // Upload to ImageKit for permanent storage
-            $fileName = 'blog-' . Str::slug($title) . '-' . time() . '.png';
-            $imageKitResponse = $this->imageKitService->uploadFromUrl(
-                $imageData['url'],
-                '', // Empty string for root folder
-                $fileName
-            );
-
-            if (!$imageKitResponse || !isset($imageKitResponse['url'])) {
-                throw new \Exception('Failed to upload image to ImageKit');
-            }
-
-            return $imageKitResponse['url'];
-
-        } catch (\Exception $e) {
-            Log::error('BlogAIService generateFeaturedImage error: ' . $e->getMessage());
-            throw $e;
         }
+
+        // Final placeholder fallback
+        if (config('blog_ai.use_placeholder_on_fail')) {
+            $query = Str::slug($topic ?: $title) ?: 'project-management';
+            $placeholderBase = rtrim(config('blog_ai.placeholder_base', 'https://source.unsplash.com/featured/?'), '/?');
+            $url = $placeholderBase . '/' . $query;
+            Log::notice('BlogAIService: using placeholder image', [ 'url' => $url ]);
+            return $url; // Not uploaded to ImageKit; external link
+        }
+
+        throw new \Exception('All image generation attempts failed');
     }
 
     /**
