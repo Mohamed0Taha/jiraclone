@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TaskPilot Blog - Project Management Tips & Insights</title>
     <meta name="description" content="Discover productivity tips, project management best practices, and insights to help your team work smarter with TaskPilot.">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -57,9 +57,9 @@
                         
                         <div class="p-6">
                             <div class="flex items-center text-sm text-gray-500 mb-3">
-                                <span>{{ $blog->published_at->format('M j, Y') }}</span>
+                                <span>{{ $blog->published_at?->format('M j, Y') ?? 'Draft' }}</span>
                                 <span class="mx-2">•</span>
-                                <span>By {{ $blog->author->name }}</span>
+                                <span>By {{ optional($blog->author)->name ?? 'TaskPilot Team' }}</span>
                             </div>
                             
                             <h2 class="text-xl font-semibold text-gray-900 mb-3 line-clamp-2">

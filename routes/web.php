@@ -39,15 +39,18 @@ Route::get('/', function () {
     return Inertia::render('Landing');
 })->name('landing');
 
-// Blog routes (public)
-Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
-Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show')->where('blog', '[a-zA-Z0-9\-_]+');
+// Blog routes (public, unauthenticated)
+Route::middleware([])->group(function () {
+    // Canonical singular path
+    Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+    // Backwards compatibility: redirect legacy /blogs and /blogs/{slug}
+    Route::redirect('/blogs', '/blog', 301);
+    Route::get('/blogs/{slug}', function($slug){ return redirect()->route('blog.show', $slug); })->where('slug', '[a-zA-Z0-9\-_]+');
+    // Public show route
+    Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show')->where('blog', '[a-zA-Z0-9\-_]+');
+});
 
-// Catch-all for debugging blog routes
-Route::get('/blog/{any}', function($any) {
-    \Log::error('Blog route fallback hit', ['slug' => $any]);
-    return response()->json(['error' => 'Blog not found', 'slug' => $any], 404);
-})->where('any', '.*');
+// (Temporary) Remove broad catch-all that could steal valid 404s (was interfering). If needed, re-add with tighter pattern.
 
 /* Project Invitation Acceptance (public) */
 Route::get('/invitation/{token}', [App\Http\Controllers\ProjectMemberController::class, 'acceptInvitation'])->name('projects.invitation.accept');
