@@ -57,7 +57,13 @@ Route::get('/test-public', function() {
 
 // Public Simulator (no authentication required) - renamed to /practice to avoid auth conflict
 Route::middleware([])->group(function () {
-    Route::get('/practice', [\App\Http\Controllers\PublicSimulatorController::class, 'index'])->name('public-simulator.index');
+    Route::get('/practice', function() {
+        \Log::info('Practice route accessed directly');
+        return \Inertia\Inertia::render('PublicSimulator/Index', [
+            'title' => 'Project Management Simulator - Practice for Free',
+            'description' => 'Practice project management skills with realistic scenarios. No signup required.',
+        ]);
+    })->name('public-simulator.index');
     Route::post('/practice/generate', [\App\Http\Controllers\PublicSimulatorController::class, 'generate'])->name('public-simulator.generate');
     Route::post('/practice/evaluate-action', [\App\Http\Controllers\PublicSimulatorController::class, 'evaluateAction'])->name('public-simulator.evaluate-action');
     Route::post('/practice/evaluate-task-action', [\App\Http\Controllers\PublicSimulatorController::class, 'evaluateTaskAction'])->name('public-simulator.evaluate-task-action');
