@@ -276,7 +276,7 @@ Make this a comprehensive, actionable guide that positions TaskPilot as the esse
 
         foreach ($attempts as $idx => $opts) {
             try {
-                $provider = env('BLOG_AI_IMAGE_PROVIDER', 'openai');
+                $provider = config('blog_ai.provider', 'openai');
                 if ($provider === 'wavespeed') {
                     $wave = app(WaveSpeedImageService::class);
                     $imageData = $wave->generate($imagePrompt, $opts['size']);
@@ -284,7 +284,7 @@ Make this a comprehensive, actionable guide that positions TaskPilot as the esse
                     $imageData = $this->openAIService->generateImage($imagePrompt, $opts['size'], $opts['quality']);
                 }
                 if (!$imageData || !isset($imageData['url'])) {
-                    throw new \Exception('OpenAI returned no URL');
+                    throw new \Exception('Image provider returned no URL');
                 }
                 $fileName = 'blog-' . Str::slug($title) . '-' . time() . ($idx === 0 ? '' : '-fb') . '.png';
                 $imageKitResponse = $this->imageKitService->uploadFromUrl(

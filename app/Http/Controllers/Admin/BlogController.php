@@ -152,10 +152,19 @@ class BlogController extends Controller
             );
             // Persist as draft immediately so async image job can attach later
             $authorId = Auth::id();
-            $slug = Str::slug($blogData['title'] ?? ('blog-' . Str::random(6)));
-            // Ensure unique slug (basic loop – low volume acceptable). If collision, append random.
-            if (\App\Models\Blog::where('slug', $slug)->exists()) {
-                $slug .= '-' . Str::lower(Str::random(4));
+            $baseSlug = Str::slug($blogData['title'] ?? ('blog-' . Str::random(6)));
+            $slug = $baseSlug;
+            
+            // Ensure unique slug with incremental suffix
+            $counter = 1;
+            while (\App\Models\Blog::where('slug', $slug)->exists()) {
+                $slug = $baseSlug . '-' . $counter;
+                $counter++;
+                // Safety break after 100 attempts
+                if ($counter > 100) {
+                    $slug = $baseSlug . '-' . Str::lower(Str::random(6));
+                    break;
+                }
             }
 
             $blog = \App\Models\Blog::create([
