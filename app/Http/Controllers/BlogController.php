@@ -21,10 +21,13 @@ class BlogController extends Controller
         if (!$blog->is_published || ($blog->published_at && $blog->published_at->isFuture())) {
             abort(404);
         }
+        // Ensure required relations are loaded (avoid lazy-loading exception in prod)
+        $blog->loadMissing('author');
 
-        // Related posts
+        // Related posts (eager load author for potential future use)
         $relatedPosts = Blog::published()
             ->where('id', '!=', $blog->id)
+            ->with('author')
             ->inRandomOrder()
             ->limit(3)
             ->get();
