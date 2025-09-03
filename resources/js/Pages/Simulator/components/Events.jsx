@@ -118,13 +118,19 @@ function EventsComponent({
 							{highlight && (
 								<Box sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, bgcolor: highlight, borderTopLeftRadius: 4, borderBottomLeftRadius: 4 }} />
 							)}
-							<CardContent sx={{ py: 1.1, '&:last-child': { pb: 1.1 } }}>
-								<Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
-									<Box sx={{ flex: 1, minWidth: 0 }}>
-										<Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.25 }}>
-											<Typography variant="subtitle2" fontWeight={600} lineHeight={1.2} sx={{ pr: 1, wordBreak: 'break-word' }}>
-												{e.title || e.name}
-											</Typography>
+								<CardContent sx={{ py: 1.1, '&:last-child': { pb: 1.1 } }}>
+									<Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+										{/* Left content: enforce a reasonable min width so long chip groups don't collapse the title */}
+										<Box sx={{ flex: 1, minWidth: 190, pr: 0.5 }}>
+											<Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.25, flexWrap: 'wrap' }}>
+												<Typography
+													variant="subtitle2"
+													fontWeight={600}
+													lineHeight={1.2}
+													sx={{ pr: 1, overflowWrap: 'break-word', wordBreak: 'normal' }}
+												>
+													{e.title || e.name}
+												</Typography>
 											{e.severity && (
 												<Chip
 													size="small"
@@ -142,6 +148,12 @@ function EventsComponent({
 										<Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
 											{e.description || e.desc}
 										</Typography>
+										{/* Defensive: avoid pathological vertical letter stacking if container shrinks */}
+										<style>{`
+											@media (max-width: 640px) {
+												.sim-event-card-title { word-break: normal !important; }
+											}
+										`}</style>
 										{(e.member_ids?.length || e.task_ids?.length) && (
 											<Box mt={0.5}>
 												{e.member_ids?.length > 0 && (
@@ -157,7 +169,14 @@ function EventsComponent({
 											</Box>
 										)}
 									</Box>
-									<Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" useFlexGap>
+									<Stack
+										direction="row"
+										spacing={0.5}
+										alignItems="center"
+										flexWrap="wrap"
+										useFlexGap
+										sx={{ maxWidth: 220, justifyContent: 'flex-end' }}
+									>
 										{e.type && <Chip size="small" label={e.type} color={typeColor(e.type)} variant="outlined" />}
 										{e.action_type && (()=>{ const st = actionTypeStyle(e.action_type); return st ? <Chip size="small" label={st.chipLabel} color={st.color} variant="filled" /> : null; })()}
 										{occurred && <Chip size="small" label="Occurred" color="success" />}
