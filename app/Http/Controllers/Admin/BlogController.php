@@ -34,7 +34,8 @@ class BlogController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:blogs,slug',
+            // We'll enforce uniqueness manually to permit auto-suffixing
+            'slug' => 'nullable|string|max:255',
             'excerpt' => 'nullable|string|max:500',
             'content' => 'required|string',
             'featured_image_file' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp|max:5120',
@@ -43,9 +44,22 @@ class BlogController extends Controller
             'meta_description' => 'nullable|string|max:160',
         ]);
 
-        if (empty($validated['slug'])) {
-            $validated['slug'] = Str::slug($validated['title']);
+        // Generate desired slug (could be empty or duplicates)
+        $baseSlug = Str::slug($validated['slug'] ?: $validated['title']);
+        if ($baseSlug === '') {
+            $baseSlug = 'blog-'.Str::random(6);
         }
+        $slug = $baseSlug;
+        $counter = 1;
+        while (\App\Models\Blog::where('slug', $slug)->exists()) {
+            $slug = $baseSlug.'-'.$counter;
+            $counter++;
+            if ($counter > 100) { // safety break
+                $slug = $baseSlug.'-'.Str::lower(Str::random(6));
+                break;
+            }
+        }
+        $validated['slug'] = $slug;
 
         // Handle publication status safely
         // All new blog posts are created as unpublished by default
@@ -85,7 +99,8 @@ class BlogController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'slug' => ['nullable', 'string', 'max:255', Rule::unique('blogs', 'slug')->ignore($blog->id)],
+            // Custom uniqueness handling below
+            'slug' => ['nullable', 'string', 'max:255'],
             'excerpt' => 'nullable|string|max:500',
             'content' => 'required|string',
             'featured_image_file' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp|max:5120',
@@ -96,8 +111,25 @@ class BlogController extends Controller
             'published_at' => 'nullable|date',
         ]);
 
-        if (empty($validated['slug'])) {
-            $validated['slug'] = Str::slug($validated['title']);
+        $incomingSlug = Str::slug($validated['slug'] ?: $validated['title']);
+        if ($incomingSlug === '') {
+            $incomingSlug = 'blog-'.Str::random(6);
+        }
+        if ($incomingSlug !== $blog->slug) {
+            $baseSlug = $incomingSlug;
+            $uniqueSlug = $baseSlug;
+            $counter = 1;
+            while (\App\Models\Blog::where('slug', $uniqueSlug)->where('id', '!=', $blog->id)->exists()) {
+                $uniqueSlug = $baseSlug.'-'.$counter;
+                $counter++;
+                if ($counter > 100) {
+                    $uniqueSlug = $baseSlug.'-'.Str::lower(Str::random(6));
+                    break;
+                }
+            }
+            $validated['slug'] = $uniqueSlug;
+        } else {
+            $validated['slug'] = $blog->slug; // unchanged
         }
 
         // Handle publication status safely
