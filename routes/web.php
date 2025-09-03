@@ -43,6 +43,12 @@ Route::get('/', function () {
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show')->where('blog', '[a-zA-Z0-9\-_]+');
 
+// Catch-all for debugging blog routes
+Route::get('/blog/{any}', function($any) {
+    \Log::error('Blog route fallback hit', ['slug' => $any]);
+    return response()->json(['error' => 'Blog not found', 'slug' => $any], 404);
+})->where('any', '.*');
+
 /* Project Invitation Acceptance (public) */
 Route::get('/invitation/{token}', [App\Http\Controllers\ProjectMemberController::class, 'acceptInvitation'])->name('projects.invitation.accept');
 
