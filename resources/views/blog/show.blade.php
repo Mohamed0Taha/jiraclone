@@ -7,14 +7,16 @@
     <meta name="description" content="{{ $blog->meta_description ?: $blog->excerpt }}">
     <meta property="og:title" content="{{ $blog->meta_title ?: $blog->title }}">
     <meta property="og:description" content="{{ $blog->meta_description ?: $blog->excerpt }}">
-    @if($blog->featured_image)
+    @if(!empty($blog->featured_image))
         <meta property="og:image" content="{{ $blog->featured_image }}">
     @endif
     <meta property="og:type" content="article">
-    <meta property="article:published_time" content="{{ $blog->published_at->toISOString() }}">
-    <meta property="article:author" content="{{ $blog->author->name }}">
+    @if($blog->published_at)
+        <meta property="article:published_time" content="{{ $blog->published_at->toISOString() }}">
+    @endif
+    <meta property="article:author" content="{{ optional($blog->author)->name ?? 'TaskPilot Team' }}">
     
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -72,11 +74,11 @@
             <!-- Article Header -->
             <header class="mb-8">
                 <div class="flex items-center text-sm text-gray-500 mb-4">
-                    <time datetime="{{ $blog->published_at->toISOString() }}">
-                        {{ $blog->published_at->format('F j, Y') }}
+                    <time datetime="{{ $blog->published_at?->toISOString() }}">
+                        {{ $blog->published_at?->format('F j, Y') ?? 'Draft' }}
                     </time>
                     <span class="mx-2">•</span>
-                    <span>By {{ $blog->author->name }}</span>
+                    <span>By {{ optional($blog->author)->name ?? 'TaskPilot Team' }}</span>
                 </div>
                 
                 <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
@@ -97,17 +99,18 @@
 
             <!-- Article Content -->
             <article class="prose prose-lg max-w-none">
-                                {!! $blog->formatted_content !!}
+                {!! $blog->formatted_content ?? e($blog->content) !!}
             </article>
 
             <!-- Author Bio -->
             <div class="mt-12 p-6 bg-white rounded-lg shadow-sm border">
                 <div class="flex items-center">
+                    @php($authorName = optional($blog->author)->name ?? 'TaskPilot Team')
                     <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-lg">
-                        {{ substr($blog->author->name, 0, 1) }}
+                        {{ strtoupper(substr($authorName, 0, 1)) }}
                     </div>
                     <div class="ml-4">
-                        <h3 class="font-semibold text-gray-900">{{ $blog->author->name }}</h3>
+                        <h3 class="font-semibold text-gray-900">{{ $authorName }}</h3>
                         <p class="text-gray-600">Author at TaskPilot</p>
                     </div>
                 </div>
