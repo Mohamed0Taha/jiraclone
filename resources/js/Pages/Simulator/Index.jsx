@@ -2154,29 +2154,62 @@ export default function Index({ auth, simulation, certificationAttempt }) {
         }
     }, [currentWeek, projectWeeks, resultsOpen, computeResults, simulationCompleted, results, certificationAttempt]);
 
-    // ===== Fixed Default Zoom (60%) with Firefox transform fallback =====
+    // ===== Fixed Default Zoom with Firefox transform fallback =====
+    // Different zoom levels for public vs authenticated users
+    // Public users: 70% zoom (better fit for smaller screens)
+    // Authenticated users: 72% zoom (certification experience)
+    const isPublicUser = !auth?.user;
+    
     // Theme colors from Dashboard
     const dashboardGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
     const dashboardCardGradient = 'linear-gradient(145deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)';
     const dashboardAccent = '#764ba2';
     const dashboardPrimary = '#667eea';
     const dashboardTextShadow = '0 0 14px rgba(255,255,255,0.6), 0 0 38px rgba(120,160,255,0.35)';
-    
-    // Disable scaling for public users to prevent layout issues
-    const isPublicUser = !auth?.user;
-    const uiScale = isPublicUser ? 1.0 : 0.72;
-    
+    const uiScale = isPublicUser ? 0.70 : 0.72;
     // Font scaling factor
-    const fontScale = isPublicUser ? 1.0 : 1.6;
+    const fontScale = 1.6;
     const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
     // Prevent manual zoom (Ctrl + / - / 0 and pinch zoom)
+    // Enhanced prevention for public users
     useEffect(() => {
         const keyBlock = (e) => { if (e.ctrlKey && ['+', '=', '-', '0'].includes(e.key)) { e.preventDefault(); } };
         const wheelBlock = (e) => { if (e.ctrlKey) { e.preventDefault(); } };
-        window.addEventListener('keydown', keyBlock, { passive:false });
-        window.addEventListener('wheel', wheelBlock, { passive:false });
-        return () => { window.removeEventListener('keydown', keyBlock); window.removeEventListener('wheel', wheelBlock); };
-    }, []);
+        
+        // Enhanced zoom prevention for public users (mobile pinch-to-zoom)
+        let touchStartDistance = 0;
+        const touchStart = (e) => {
+            if (isPublicUser && e.touches.length >= 2) {
+                touchStartDistance = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+            }
+        };
+        
+        const touchMove = (e) => {
+            if (isPublicUser && e.touches.length >= 2) {
+                e.preventDefault(); // Prevent pinch zoom on mobile
+            }
+        };
+        
+        window.addEventListener('keydown', keyBlock, { passive: false });
+        window.addEventListener('wheel', wheelBlock, { passive: false });
+        
+        if (isPublicUser) {
+            window.addEventListener('touchstart', touchStart, { passive: false });
+            window.addEventListener('touchmove', touchMove, { passive: false });
+        }
+        
+        return () => { 
+            window.removeEventListener('keydown', keyBlock); 
+            window.removeEventListener('wheel', wheelBlock);
+            if (isPublicUser) {
+                window.removeEventListener('touchstart', touchStart);
+                window.removeEventListener('touchmove', touchMove);
+            }
+        };
+    }, [isPublicUser]);
 
     // Hide horizontal scroll introduced by scaled container
     useEffect(() => { const prev = document.body.style.overflowX; document.body.style.overflowX = 'hidden'; return ()=>{ document.body.style.overflowX = prev; }; }, []);
@@ -2196,6 +2229,30 @@ export default function Index({ auth, simulation, certificationAttempt }) {
         window.addEventListener('resize', updateOverflow);
         return () => window.removeEventListener('resize', updateOverflow);
     }, []);
+
+    // Enhanced viewport control for public users (disable zoom completely on mobile)
+    useEffect(() => {
+        if (isPublicUser) {
+            const viewport = document.querySelector('meta[name=viewport]');
+            let originalContent = null;
+            
+            if (viewport) {
+                originalContent = viewport.content;
+                viewport.content = 'width=device-width, initial-scale=0.7, maximum-scale=0.7, minimum-scale=0.7, user-scalable=no';
+            } else {
+                const newViewport = document.createElement('meta');
+                newViewport.name = 'viewport';
+                newViewport.content = 'width=device-width, initial-scale=0.7, maximum-scale=0.7, minimum-scale=0.7, user-scalable=no';
+                document.head.appendChild(newViewport);
+            }
+            
+            return () => {
+                if (viewport && originalContent) {
+                    viewport.content = originalContent;
+                }
+            };
+        }
+    }, [isPublicUser]);
 
     // Simple flex approach (header + progress bar; panels flex to fill)
 
@@ -2229,19 +2286,19 @@ export default function Index({ auth, simulation, certificationAttempt }) {
             <div ref={wrapperRef} style={ isFirefox ? {
                 transform: `scale(${uiScale})`,
                 transformOrigin: 'top left',
-                height: isPublicUser ? '100vh' : `calc((100vh - 5vh) / ${uiScale})`,
+                height: `calc((100vh - 5vh) / ${uiScale})`,
                 width: `${100 / uiScale}%`,
                 display:'flex',
                 flexDirection:'column',
-                background: isPublicUser ? '#f8fafc' : dashboardGradient,
+                background: dashboardGradient,
                 fontSize: `${fontScale}em`
             } : {
                 zoom: uiScale,
-                height: isPublicUser ? '100vh' : `calc((100vh - 5vh) / ${uiScale})`,
+                height: `calc((100vh - 5vh) / ${uiScale})`,
                 width: '100%',
                 display:'flex',
                 flexDirection:'column',
-                background: isPublicUser ? '#f8fafc' : dashboardGradient,
+                background: dashboardGradient,
                 fontSize: `${fontScale}em`
             }}>
             
