@@ -47,6 +47,11 @@ class BlogAIService
                 if ($elapsed < $maxSync - 3) { // leave buffer for response serialization
                     $imageStart = microtime(true);
                     try {
+                        Log::info('BlogAIService: starting image generation', [
+                            'elapsed_before_image' => $elapsed,
+                            'max_sync' => $maxSync,
+                            'title' => $parsedResponse['title'] ?? null,
+                        ]);
                         $size = config('blog_ai.image_size', '1024x1024');
                         $quality = config('blog_ai.image_quality', 'standard');
                         $featuredImageUrl = $this->generateFeaturedImage(
@@ -58,6 +63,9 @@ class BlogAIService
                             $parsedResponse['featured_image'] = $featuredImageUrl;
                         }
                         $parsedResponse['image_generation_ms'] = (int) ((microtime(true) - $imageStart) * 1000);
+                        Log::info('BlogAIService: image generation finished', [
+                            'image_generation_ms' => $parsedResponse['image_generation_ms'] ?? null,
+                        ]);
                     } catch (\Throwable $e) {
                         Log::warning('Featured image generation failed (non-fatal)', [
                             'error' => $e->getMessage(),
@@ -66,6 +74,10 @@ class BlogAIService
                         $parsedResponse['image_error'] = $e->getMessage();
                     }
                 } else {
+                    Log::info('BlogAIService: skipping image due to time budget', [
+                        'elapsed' => $elapsed,
+                        'max_sync' => $maxSync,
+                    ]);
                     $parsedResponse['image_skipped'] = true;
                     $parsedResponse['image_error'] = 'Skipped due to time budget';
                 }
