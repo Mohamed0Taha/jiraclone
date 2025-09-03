@@ -40,23 +40,16 @@ class BlogController extends Controller
             'featured_image' => 'nullable|url',
             'meta_title' => 'nullable|string|max:60',
             'meta_description' => 'nullable|string|max:160',
-            'is_published' => 'nullable|boolean',
-            'published_at' => 'nullable|date',
         ]);
 
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['title']);
         }
 
-        // Handle publication status safely - always default to unpublished for new blogs
-        $isPublished = $request->boolean('is_published', false);
-        if ($isPublished && empty($validated['published_at'])) {
-            $validated['published_at'] = now();
-        } else {
-            // Ensure draft blogs don't have a published_at date
-            $validated['published_at'] = null;
-        }
-        $validated['is_published'] = $isPublished;
+        // Handle publication status safely
+        // All new blog posts are created as unpublished by default
+        $validated['is_published'] = false;
+        $validated['published_at'] = null;
 
         // Handle image upload
         if ($request->hasFile('featured_image_file')) {
@@ -74,7 +67,7 @@ class BlogController extends Controller
 
         return redirect()
             ->route('admin.blogs.index')
-            ->with('success', 'Blog post created successfully!');
+            ->with('success', 'Blog post created as draft! You can publish it when ready.');
     }
 
     public function show(Blog $blog)

@@ -137,26 +137,9 @@
 
                 <!-- Sidebar -->
                 <div class="space-y-6">
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h3 class="font-medium text-gray-900 mb-4">Publishing</h3>
-                        
-                        <div class="space-y-4">
-                            <div>
-                                <label class="flex items-center">
-                                    <input type="checkbox" name="is_published" id="is_published" value="1" {{ old('is_published') ? 'checked' : '' }}
-                                           class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                                    <span class="ml-2 text-sm text-gray-700">Publish immediately</span>
-                                </label>
-                                <p class="text-xs text-gray-500 mt-1">Leave unchecked to save as draft</p>
-                            </div>
-
-                            <div>
-                                <label for="published_at" class="block text-sm font-medium text-gray-700 mb-2">Publish Date</label>
-                                <input type="datetime-local" name="published_at" id="published_at" 
-                                       value="{{ old('published_at') }}"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-                        </div>
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <h3 class="font-medium text-blue-900 mb-2">📝 Draft Status</h3>
+                        <p class="text-sm text-blue-700">New blog posts are created as unpublished drafts. You can publish them later from the blog list.</p>
                     </div>
 
                     <div class="bg-gray-50 p-4 rounded-lg">
@@ -345,25 +328,13 @@
                         clearImagePreview();
                     }
                     
-                    // Keep as draft by default - don't auto-publish
-                    const isPublishedCheckbox = document.getElementById('is_published');
-                    if (isPublishedCheckbox) {
-                        isPublishedCheckbox.checked = false;
-                    }
-                    
-                    // Clear publish date since it's a draft
-                    const publishedAtInput = document.getElementById('published_at');
-                    if (publishedAtInput) {
-                        publishedAtInput.value = '';
-                    }
-                    
-                    let message = 'Blog post generated successfully and saved as draft!';
+                    let message = 'Blog post generated successfully!';
                     if (data.blog.featured_image) {
                         message += ' Featured image also generated!';
                     } else if (data.blog.image_error) {
                         message += ' (Note: Image generation failed - you can upload one manually)';
                     }
-                    message += ' Review and publish when ready.';
+                    message += ' Created as draft - you can publish it later.';
                     
                     await showConfirmDialog(message, 'success');
                 } else {
