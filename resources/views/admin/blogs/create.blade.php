@@ -294,7 +294,7 @@
                 
                 const data = await response.json();
                 
-                if (data.success) {
+                    if (data.success) {
                     // Fill form fields with generated content (with null checks)
                     const titleInput = document.getElementById('title');
                     if (titleInput) titleInput.value = data.blog.title || '';
@@ -328,13 +328,13 @@
                         clearImagePreview();
                     }
                     
-                    let message = 'Blog post generated successfully!';
+                    let message = 'Blog post content generated (not yet saved).';
                     if (data.blog.featured_image) {
-                        message += ' Featured image also generated!';
+                        message += ' Featured image suggestion added.';
+                        showGeneratedImagePreview(data.blog.featured_image);
                     } else if (data.blog.image_error) {
-                        message += ' (Note: Image generation failed - you can upload one manually)';
+                        message += ' (Image generation failed - you can try again.)';
                     }
-                    message += ' Created as draft - you can publish it later.';
                     
                     await showConfirmDialog(message, 'success');
                 } else {
@@ -471,14 +471,11 @@
                 const data = await response.json();
                 
                 if (data.success && data.image_url) {
-                    // Set the featured image URL (now from ImageKit)
                     document.getElementById('featured_image').value = data.image_url;
-                    
-                    // Clear any uploaded file
                     document.getElementById('featured_image_file').value = '';
                     clearImagePreview();
-                    
-                    await showConfirmDialog('Featured image generated and saved successfully!', 'success');
+                    showGeneratedImagePreview(data.image_url);
+                    await showConfirmDialog('Featured image generated! Remember to submit the form to save.', 'success');
                 } else {
                     await showConfirmDialog('Error generating image: ' + (data.message || data.error || 'Unknown error'), 'error');
                 }
@@ -563,6 +560,15 @@
                 reader.readAsDataURL(file);
             }
         });
+
+        // Show generated image preview (from AI)
+        function showGeneratedImagePreview(url) {
+            if (!url) return;
+            const preview = document.getElementById('image_preview');
+            const img = document.getElementById('preview_img');
+            img.src = url;
+            preview.classList.remove('hidden');
+        }
 
         // Clear image preview
         function clearImagePreview() {

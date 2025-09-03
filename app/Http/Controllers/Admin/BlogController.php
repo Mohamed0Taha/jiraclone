@@ -177,43 +177,28 @@ class BlogController extends Controller
 
         try {
             $blogAI = new BlogAIService($openAI, $imageKit);
-            
+
             $blogData = $blogAI->generateBlogPost(
                 $request->topic,
                 $request->target_audience ?? 'project managers and teams'
             );
-            // Persist as draft immediately so async image job can attach later
-            $authorId = Auth::id();
 
-            $blog = \App\Models\Blog::create([
-                'title' => $blogData['title'] ?? 'Untitled Blog Post',
-                'slug' => null, // Let the model handle unique slug generation
-                'excerpt' => $blogData['excerpt'] ?? null,
-                'content' => $blogData['content'] ?? '',
-                'meta_title' => $blogData['meta_title'] ?? null,
-                'meta_description' => $blogData['meta_description'] ?? null,
-                'featured_image' => $blogData['featured_image'] ?? null,
-                'is_published' => false,
-                'published_at' => null,
-                'author_id' => $authorId,
-            ]);
-
-            $imageJobDispatched = false;
-            if (empty($blog->featured_image) && (!empty($blogData['image_skipped']) || !empty($blogData['image_error']))) {
-                // Queue background generation
-                GenerateBlogFeaturedImage::dispatch($blog->id);
-                $imageJobDispatched = true;
+            // Do NOT persist here to avoid duplicate drafts. User will save via the create form.
+            // Provide a suggested slug so front-end can show it.
+            $suggestedSlug = Str::slug($blogData['title'] ?? 'untitled-blog-post');
+            if ($suggestedSlug === '') {
+                $suggestedSlug = 'blog-'.Str::lower(Str::random(6));
             }
 
             return response()->json([
                 'success' => true,
                 'blog' => array_merge($blogData, [
-                    'id' => $blog->id,
-                    'slug' => $blog->slug,
-                    'featured_image' => $blog->featured_image,
+                    'id' => null,
+                    'slug' => $suggestedSlug,
                 ]),
-                'draft_saved' => true,
-                'image_job_dispatched' => $imageJobDispatched,
+                'draft_saved' => false,
+                'image_job_dispatched' => false,
+                'note' => 'Content generated only; not yet saved.'
             ]);
         } catch (\Exception $e) {
             Log::error('Blog generation failed', [

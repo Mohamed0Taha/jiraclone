@@ -262,7 +262,7 @@
         }
 
         // AI Generation Functions
-        async function generateBlogPost() {
+    async function generateBlogPost() {
             const topic = document.getElementById('ai_topic').value;
             if (!topic) {
                 await showConfirmDialog('Please enter a blog topic first', 'warning');
@@ -293,6 +293,10 @@
                     document.getElementById('content').value = data.blog.content || '';
                     document.getElementById('meta_title').value = data.blog.meta_title || '';
                     document.getElementById('meta_description').value = data.blog.meta_description || '';
+                    if (data.blog.featured_image) {
+                        document.getElementById('featured_image').value = data.blog.featured_image;
+                        showGeneratedImagePreview(data.blog.featured_image);
+                    }
                     
                     // Set as published by default
                     const isPublishedCheckbox = document.getElementById('is_published');
@@ -300,7 +304,7 @@
                         isPublishedCheckbox.checked = true;
                     }
                     
-                    await showConfirmDialog('🎉 AI blog post generated! Review and publish when ready.', 'success');
+                    await showConfirmDialog('🎉 AI content generated (not saved yet). Submit form to save draft.', 'success');
                 } else {
                     await showConfirmDialog('Error: ' + (data.message || 'Failed to generate blog post'), 'error');
                 }
@@ -309,6 +313,19 @@
             } finally {
                 document.getElementById('ai_loading').classList.add('hidden');
             }
+        }
+
+        function showGeneratedImagePreview(url) {
+            // Basic inline preview injection (lightweight)
+            let existing = document.getElementById('generated_image_preview');
+            if (!existing) {
+                existing = document.createElement('div');
+                existing.id = 'generated_image_preview';
+                existing.className = 'mt-4';
+                const target = document.getElementById('featured_image');
+                target.parentElement.appendChild(existing);
+            }
+            existing.innerHTML = `<p class='text-sm text-gray-600 mb-1'>Generated Image Preview:</p><img src='${url}' class='max-w-xs rounded border' alt='Generated preview'>`;
         }
         
         async function generateIdeas() {
