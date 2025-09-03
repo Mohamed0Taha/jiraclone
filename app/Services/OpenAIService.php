@@ -54,15 +54,16 @@ class OpenAIService
         $startTime = microtime(true);
 
         try {
-            $res = Http::withHeaders([
-                'Authorization' => 'Bearer '.$apiKey,
-                'Content-Type' => 'application/json',
-            ])->post($this->baseUri().'/chat/completions', [
-                'model' => $model,
-                'temperature' => $temperature,
-                'response_format' => ['type' => 'json_object'],
-                'messages' => $messages,
-            ]);
+            $res = Http::timeout(25) // Set 25-second timeout for Heroku compatibility
+                ->withHeaders([
+                    'Authorization' => 'Bearer '.$apiKey,
+                    'Content-Type' => 'application/json',
+                ])->post($this->baseUri().'/chat/completions', [
+                    'model' => $model,
+                    'temperature' => $temperature,
+                    'response_format' => ['type' => 'json_object'],
+                    'messages' => $messages,
+                ]);
 
             if (! $res->ok()) {
                 Log::error('OpenAI JSON request failed', ['status' => $res->status(), 'body' => $res->body()]);
@@ -506,16 +507,17 @@ class OpenAIService
         $startTime = microtime(true);
 
         try {
-            $res = Http::timeout(120)->withHeaders([
-                'Authorization' => 'Bearer '.$apiKey,
-                'Content-Type' => 'application/json',
-            ])->post($this->baseUri().'/images/generations', [
-                'model' => 'dall-e-3',
-                'prompt' => $prompt,
-                'size' => $size,
-                'quality' => $quality,
-                'n' => 1,
-            ]);
+            $res = Http::timeout(20) // Reduced timeout for Heroku compatibility
+                ->withHeaders([
+                    'Authorization' => 'Bearer '.$apiKey,
+                    'Content-Type' => 'application/json',
+                ])->post($this->baseUri().'/images/generations', [
+                    'model' => 'dall-e-3',
+                    'prompt' => $prompt,
+                    'size' => $size,
+                    'quality' => $quality,
+                    'n' => 1,
+                ]);
 
             if (! $res->ok()) {
                 Log::error('OpenAI Image generation failed', ['status' => $res->status(), 'body' => $res->body()]);

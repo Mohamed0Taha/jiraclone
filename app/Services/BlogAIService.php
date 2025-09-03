@@ -38,14 +38,23 @@ class BlogAIService
 
             $parsedResponse = $this->parseBlogResponse($response);
             
-            // Generate featured image
+            // Generate featured image with timeout protection
             $featuredImageUrl = null;
             if (!empty($parsedResponse['title'])) {
-                $featuredImageUrl = $this->generateFeaturedImage(
-                    $parsedResponse['title'], 
-                    $parsedResponse['excerpt'] ?? '', 
-                    $topic
-                );
+                try {
+                    $featuredImageUrl = $this->generateFeaturedImage(
+                        $parsedResponse['title'], 
+                        $parsedResponse['excerpt'] ?? '', 
+                        $topic
+                    );
+                } catch (\Exception $imageError) {
+                    // Log image error but don't fail the entire blog generation
+                    Log::warning('Image generation failed, continuing with blog content', [
+                        'error' => $imageError->getMessage(),
+                        'title' => $parsedResponse['title']
+                    ]);
+                    $parsedResponse['image_error'] = 'Image generation timed out or failed';
+                }
             }
 
             // Add the featured image URL to the response
@@ -161,64 +170,38 @@ Return as JSON with these keys:
      */
     protected function buildBlogPrompt($topic, $targetAudience, $tone)
     {
-        $taskPilotContext = $this->getTaskPilotFeatureContext();
-        
-        return "You are an expert SEO content marketer writing for TaskPilot, creating high-quality, SEO-optimized, how-to style blog posts similar to WikiHow and HubSpot. 
+        return "Create a TaskPilot SEO blog post about: {$topic}
 
-Create a comprehensive, step-by-step guide about: {$topic}
+Target: {$targetAudience} | Tone: {$tone}
 
-Target Audience: {$targetAudience}
-Tone: {$tone}
+REQUIREMENTS:
+- WikiHow/HubSpot style with step-by-step instructions
+- Include TaskPilot features and benefits naturally
+- Use **bold** and *italic* formatting (NO color codes)
+- Include backlinks to taskpilot.us naturally in content
+- 1500-2000 words, SEO optimized
 
-TASKPILOT PLATFORM OVERVIEW:
-{$taskPilotContext}
+TASKPILOT LINKS TO INCLUDE:
+- [TaskPilot platform](https://taskpilot.us)
+- [TaskPilot features](https://taskpilot.us/features)
+- [Start free trial](https://taskpilot.us/register)
 
-SEO OPTIMIZATION REQUIREMENTS:
-1. **Primary Keyword Strategy**: Include primary keyword in title, first paragraph, and naturally throughout content
-2. **Content Structure for SEO**: Use secondary keywords in H2 and H3 headings, maintain 1-2% keyword density
-3. **Internal Linking Strategy**: Include 5-8 strategic backlinks to TaskPilot throughout content
-
-CONTENT STYLE REQUIREMENTS:
-1. **WikiHow/HubSpot Style Structure**: Clear step-by-step instructions, detailed explanations, actionable tips
-2. **Rich Content Formatting**: Use **bold text** for important points, *italic text* for emphasis, numbered steps, bullet points
-3. **NO COLOR FORMATTING**: Do not use any color codes, HTML color tags, or CSS color styling in the content
-4. **Specific TaskPilot Integration**: Reference exact TaskPilot features by name, provide step-by-step instructions
-5. **Content Requirements**: 2000-2500 words of detailed, valuable content
-
-TASKPILOT BACKLINK STRATEGY (MUST INCLUDE):
-Include these links naturally in content:
-- [TaskPilot project management platform](https://taskpilot.us)
-- [TaskPilot's AI-powered features](https://taskpilot.us/features)
-- [TaskPilot pricing plans](https://taskpilot.us/pricing)
-- [Start your free TaskPilot trial](https://taskpilot.us/register)
-- [TaskPilot's AI task generation](https://taskpilot.us/features/ai-task-generation)
-- [TaskPilot automation features](https://taskpilot.us/features/automation)
-
-ARTICLE STRUCTURE:
-**Introduction**: Hook with primary keyword, problem statement, TaskPilot solution preview
-**Step-by-Step Guide**: 5-7 detailed steps with TaskPilot feature integration
-**Advanced Tips**: Power user techniques with TaskPilot automation
-**Troubleshooting**: Common problems and TaskPilot-specific solutions
-**Conclusion**: Recap benefits, strong call-to-action
-
-TASKPILOT FEATURE MENTIONS (Include at least 8):
-- AI Task Generation, Project Dashboard, Automation Rules, Template Library
-- Real-time Collaboration, Progress Tracking, Resource Management
-- Include exact button names, menu locations, navigation paths
+STRUCTURE:
+1. Introduction with problem/solution
+2. Step-by-step guide (5-7 steps)
+3. Advanced tips
+4. Conclusion with CTA
 
 Return as JSON with these keys:
-- title: SEO-optimized how-to title (60 chars max, include primary keyword)
-- excerpt: Compelling summary focusing on the solution (150-160 chars, include keyword)
-- content: Full step-by-step guide (formatted text with markdown-style formatting and internal links)
-- meta_title: SEO title optimized for search engines (MUST be 60 characters or less)
-- meta_description: SEO meta description with primary keyword and CTA (150-160 chars max)
-- target_keywords: Array of primary and secondary SEO keywords
-- primary_keyword: Main keyword to optimize for
-- lsi_keywords: Array of LSI and semantic keywords used
-- internal_links_used: Array of TaskPilot links included in content
-- schema_data: Suggested schema markup elements
-- cta_text: Call-to-action button text (action-oriented)
-- cta_url: Call-to-action URL (/register or /free-trial)
+- title: SEO title (60 chars max)
+- excerpt: Summary (150-160 chars) 
+- content: Full formatted content
+- meta_title: SEO meta title (60 chars max)
+- meta_description: Meta description (150-160 chars)
+- target_keywords: Array of SEO keywords
+- primary_keyword: Main keyword
+- cta_text: CTA button text
+- cta_url: CTA URL (/register or /free-trial)
 
 Make this a comprehensive, actionable guide that positions TaskPilot as the essential tool for implementing these strategies successfully.";
     }
@@ -263,41 +246,14 @@ Make this a comprehensive, actionable guide that positions TaskPilot as the esse
      */
     protected function buildImagePrompt($topic, $title, $excerpt)
     {
-        return "Create a high-quality, photorealistic image for a blog post about: {$topic}
+        return "Create a professional business stock photo for: {$title}
 
-Title: {$title}
-Description: {$excerpt}
+Style: High-quality professional stock photography
+Setting: Modern office environment with business professionals
+Elements: Real people, authentic workspace, natural lighting
+Quality: Commercial-grade, realistic, suitable for business blog
 
-STOCK PHOTOGRAPHY REQUIREMENTS:
-- **Style Reference**: Image should be indistinguishable from premium Shutterstock, Getty Images, or Unsplash business photography
-- **Human Authenticity**: Real-looking people with natural features, diverse ethnicities, genuine facial expressions
-- **Professional Environment**: Authentic modern office spaces, coworking areas, or business settings with realistic wear and details
-- **Natural Photography**: Shot with professional DSLR camera, natural depth of field, realistic lighting conditions
-
-COMPOSITION ELEMENTS:
-- Business professionals in natural work scenarios (meetings, collaboration, individual focus work)
-- Realistic office environments with lived-in details (papers, coffee, personal items)
-- Authentic technology interaction (natural hand positions on laptops, realistic screen angles)
-- Genuine human expressions and body language during work activities
-- Modern but not sterile workspace with natural lighting
-
-TECHNICAL SPECIFICATIONS:
-- Resolution: High definition (1792x1024)
-- Photography style: Commercial stock photo quality with realistic imperfections
-- Lighting: Natural office lighting with some shadows and depth
-- Color palette: Realistic business environment colors, not overly saturated
-- Composition: Professional but candid, showing real work in progress
-- Quality: Publishable stock photography standard
-
-AUTHENTICITY REQUIREMENTS:
-- Natural skin textures and realistic facial features
-- Clothing with natural wrinkles and realistic fit
-- Environmental authenticity (real office supplies, natural desk organization)
-- Realistic technology usage and screen positioning
-- Genuine work scenarios that businesses can relate to
-- Diverse representation reflecting real workplace demographics
-
-The final image must look like premium stock photography that could be licensed for commercial use, showing real people in authentic business scenarios.";
+Professional business scene related to project management and productivity.";
     }
 
     /**
