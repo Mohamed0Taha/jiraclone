@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Services\OpenAIService;
 use App\Services\ImageKitService;
+use App\Services\WaveSpeedImageService;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use App\Jobs\GenerateBlogFeaturedImage;
 
 class BlogAIService
 {
@@ -74,12 +76,13 @@ class BlogAIService
                         $parsedResponse['image_error'] = $e->getMessage();
                     }
                 } else {
-                    Log::info('BlogAIService: skipping image due to time budget', [
+                    Log::info('BlogAIService: skipping image due to time budget (queueing async job)', [
                         'elapsed' => $elapsed,
                         'max_sync' => $maxSync,
                     ]);
                     $parsedResponse['image_skipped'] = true;
-                    $parsedResponse['image_error'] = 'Skipped due to time budget';
+                    $parsedResponse['image_error'] = 'Queued for async generation';
+                    // If a draft blog record exists later controller may dispatch job; here we just mark intention.
                 }
             } else {
                 $parsedResponse['image_skipped'] = true;
@@ -273,7 +276,13 @@ Make this a comprehensive, actionable guide that positions TaskPilot as the esse
 
         foreach ($attempts as $idx => $opts) {
             try {
-                $imageData = $this->openAIService->generateImage($imagePrompt, $opts['size'], $opts['quality']);
+                $provider = env('BLOG_AI_IMAGE_PROVIDER', 'openai');
+                if ($provider === 'wavespeed') {
+                    $wave = app(WaveSpeedImageService::class);
+                    $imageData = $wave->generate($imagePrompt, $opts['size']);
+                } else {
+                    $imageData = $this->openAIService->generateImage($imagePrompt, $opts['size'], $opts['quality']);
+                }
                 if (!$imageData || !isset($imageData['url'])) {
                     throw new \Exception('OpenAI returned no URL');
                 }

@@ -21,4 +21,7 @@ return [
     // Maximum seconds we allow the synchronous request to spend on image generation
     // (Heroku hard limit is 30s; keep this comfortably below).
     'max_sync_seconds' => (int) env('BLOG_AI_MAX_SYNC_SECONDS', 23),
+
+    // Image provider selection: 'openai' (default) or 'wavespeed'
+    'provider' => env('BLOG_AI_IMAGE_PROVIDER', 'openai'),
 ];
