@@ -9,9 +9,9 @@ export default function PublicSimulator({ title, description }) {
         setIsStarting(true);
         
         router.post('/practice/start', {}, {
-            onSuccess: (response) => {
-                // Navigate to the simulator
-                router.get('/practice/simulator');
+            onSuccess: () => {
+                // Router will automatically handle the redirect
+                setIsStarting(false);
             },
             onError: (errors) => {
                 setIsStarting(false);

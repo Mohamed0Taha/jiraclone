@@ -82,11 +82,8 @@ Route::middleware([])->group(function () {
         // Store in session for the simulator
         $request->session()->put('simulator_payload', $simulation);
         
-        // Return simulation data to start immediately
-        return response()->json([
-            'success' => true,
-            'simulation' => $simulation,
-        ]);
+        // Redirect to simulator instead of JSON response
+        return redirect()->route('public-simulator.simulator');
     })->name('public-simulator.start');
     
     // Simulator view (accessed after generation)
