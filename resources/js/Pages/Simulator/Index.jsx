@@ -8,6 +8,7 @@ import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import HandshakeIcon from '@mui/icons-material/Handshake';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PublicLayout from '@/Layouts/PublicLayout';
 import Team from './components/Team';
 import Tasks from './components/Tasks';
 import Events from './components/Events';
@@ -2213,8 +2214,12 @@ export default function Index({ auth, simulation, certificationAttempt }) {
         requestAnimationFrame(step);
     }, [remainingBudget]);
 
+    // Choose layout based on whether user is logged in (public vs authenticated)
+    const Layout = auth?.user ? AuthenticatedLayout : PublicLayout;
+    const layoutProps = auth?.user ? { user: auth.user } : {};
+
     return (
-        <AuthenticatedLayout user={auth.user}>
+        <Layout {...layoutProps}>
             <Head title="Project Management Simulator" />
             {/* Scaled UI wrapper fills full viewport (after scale) without horizontal scroll */}
             <div ref={wrapperRef} style={ isFirefox ? {
@@ -2846,7 +2851,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                 <MUIButton variant="contained" onClick={handleCreateTask} disabled={!newTaskTitle.trim() || !newTaskPriority || !newTaskEst}>Create Task</MUIButton>
             </MuiDialogActions>
         </MuiDialog>
-        </AuthenticatedLayout>
+        </Layout>
     );
 }
 

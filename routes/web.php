@@ -57,10 +57,20 @@ Route::get('/test-public', function() {
 
 // Public Simulator (no authentication required) - renamed to /practice to avoid auth conflict
 Route::middleware([])->group(function () {
+    // Landing page for practice simulator
     Route::get('/practice', function() {
-        \Log::info('Practice route accessed directly');
+        \Log::info('Practice landing page accessed');
+        return \Inertia\Inertia::render('PublicSimulator/Index', [
+            'title' => 'Project Management Simulator - Practice for Free',
+            'description' => 'Practice project management skills with realistic scenarios. No signup required.',
+        ]);
+    })->name('public-simulator.index');
+    
+    // Generate and start simulation
+    Route::post('/practice/start', function(\Illuminate\Http\Request $request) {
+        \Log::info('Practice simulation started');
         
-        // Generate simulation immediately like in certification flow
+        // Generate simulation like in certification flow
         $mockUser = new \App\Models\User([
             'name' => 'Practice User',
             'email' => 'practice@simulator.local'
@@ -70,14 +80,30 @@ Route::middleware([])->group(function () {
         $simulation = $simulationGenerator->generate($mockUser);
         
         // Store in session for the simulator
-        request()->session()->put('simulator_payload', $simulation);
+        $request->session()->put('simulator_payload', $simulation);
         
-        // Use the EXACT same component as certification
+        // Return simulation data to start immediately
+        return response()->json([
+            'success' => true,
+            'simulation' => $simulation,
+        ]);
+    })->name('public-simulator.start');
+    
+    // Simulator view (accessed after generation)
+    Route::get('/practice/simulator', function(\Illuminate\Http\Request $request) {
+        $simulation = $request->session()->get('simulator_payload');
+        
+        if (!$simulation) {
+            return redirect()->route('public-simulator.index')->with('error', 'Please start a new simulation.');
+        }
+        
+        // Use the EXACT same component as certification but with no auth context
         return \Inertia\Inertia::render('Simulator/Index', [
             'simulation' => $simulation,
             'certificationAttempt' => null, // No certification for public access
+            'auth' => ['user' => null], // Override auth to show no user
         ]);
-    })->name('public-simulator.index');
+    })->name('public-simulator.simulator');
     
     // Use existing simulator endpoints (they work with the main simulator component)
     Route::post('/practice/evaluate-action', [App\Http\Controllers\SimulatorController::class, 'evaluateAction'])->name('public-simulator.evaluate-action');
