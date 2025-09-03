@@ -50,12 +50,12 @@ Route::middleware([])->group(function () {
     Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show')->where('blog', '[a-zA-Z0-9\-_]+');
 });
 
-// Public Simulator (no authentication required)
+// Public Simulator (no authentication required) - renamed to /practice to avoid auth conflict
 Route::middleware([])->group(function () {
-    Route::get('/simulator', [\App\Http\Controllers\PublicSimulatorController::class, 'index'])->name('public-simulator.index');
-    Route::post('/simulator/generate', [\App\Http\Controllers\PublicSimulatorController::class, 'generate'])->name('public-simulator.generate');
-    Route::post('/simulator/evaluate-action', [\App\Http\Controllers\PublicSimulatorController::class, 'evaluateAction'])->name('public-simulator.evaluate-action');
-    Route::post('/simulator/evaluate-task-action', [\App\Http\Controllers\PublicSimulatorController::class, 'evaluateTaskAction'])->name('public-simulator.evaluate-task-action');
+    Route::get('/practice', [\App\Http\Controllers\PublicSimulatorController::class, 'index'])->name('public-simulator.index');
+    Route::post('/practice/generate', [\App\Http\Controllers\PublicSimulatorController::class, 'generate'])->name('public-simulator.generate');
+    Route::post('/practice/evaluate-action', [\App\Http\Controllers\PublicSimulatorController::class, 'evaluateAction'])->name('public-simulator.evaluate-action');
+    Route::post('/practice/evaluate-task-action', [\App\Http\Controllers\PublicSimulatorController::class, 'evaluateTaskAction'])->name('public-simulator.evaluate-task-action');
 });
 
 // (Temporary) Remove broad catch-all that could steal valid 404s (was interfering). If needed, re-add with tighter pattern.

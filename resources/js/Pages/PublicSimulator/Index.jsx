@@ -49,7 +49,7 @@ export default function Index({ title, description }) {
         setError(null);
         
         try {
-            const response = await fetch('/simulator/generate', {
+            const response = await fetch('/practice/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -123,7 +123,7 @@ export default function Index({ title, description }) {
         if (!sessionId) return;
         
         try {
-            const response = await fetch('/simulator/evaluate-action', {
+            const response = await fetch('/practice/evaluate-action', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -159,7 +159,7 @@ export default function Index({ title, description }) {
         if (!sessionId) return;
         
         try {
-            const response = await fetch('/simulator/evaluate-task-action', {
+            const response = await fetch('/practice/evaluate-task-action', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
