@@ -100,7 +100,22 @@ class Blog extends Model
         
         static::creating(function ($blog) {
             if (empty($blog->slug)) {
-                $blog->slug = Str::slug($blog->title);
+                $baseSlug = Str::slug($blog->title ?: 'blog-' . Str::random(6));
+                $slug = $baseSlug;
+                
+                // Ensure unique slug with incremental suffix
+                $counter = 1;
+                while (static::where('slug', $slug)->exists()) {
+                    $slug = $baseSlug . '-' . $counter;
+                    $counter++;
+                    // Safety break after 100 attempts
+                    if ($counter > 100) {
+                        $slug = $baseSlug . '-' . Str::lower(Str::random(6));
+                        break;
+                    }
+                }
+                
+                $blog->slug = $slug;
             }
             if (empty($blog->author_id) && Auth::check()) {
                 $blog->author_id = Auth::id();
