@@ -34,6 +34,9 @@ class BlogAIService
             ];
 
             $response = $this->openAIService->chatJson($messages, 0.6);
+            if (!is_array($response)) {
+                throw new \Exception('Unexpected AI response format');
+            }
             
             if (!$response) {
                 throw new \Exception('Failed to generate blog content');

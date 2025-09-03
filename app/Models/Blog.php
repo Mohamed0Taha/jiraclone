@@ -134,8 +134,17 @@ class Blog extends Model
      */
     public function getFormattedContentAttribute()
     {
-        $blogAIService = app(\App\Services\BlogAIService::class);
-        return $blogAIService->formatBlogContent($this->content);
+        try {
+            $blogAIService = app(\App\Services\BlogAIService::class);
+            return $blogAIService->formatBlogContent($this->content);
+        } catch (\Throwable $e) {
+            \Log::warning('Blog formatted content fallback due to service error', [
+                'error' => $e->getMessage(),
+                'blog_id' => $this->id ?? null,
+            ]);
+            // Fallback: return raw content so page still renders
+            return $this->content;
+        }
     }
 
     public function author()
