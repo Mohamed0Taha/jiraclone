@@ -21,6 +21,7 @@ use App\Notifications\CustomVerifyEmail;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
@@ -53,8 +54,11 @@ Route::get('/test-email-logs', function () {
 });
 
 Route::get('/', function () {
-    // Temporary bypass of Inertia for testing
-    return view('simple-landing');
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return Inertia::render('Landing');
 })->name('landing');
 
 // Blog routes (public, unauthenticated)
@@ -79,15 +83,15 @@ Route::get('/terms_of_service', function () {
 
 // DEBUG: Test public route (remove after testing)
 Route::get('/test-public', function() {
-    return response()->json(['message' => 'Public route works', 'user' => auth()->check() ? auth()->user()->email : 'Not authenticated']);
+    return response()->json(['message' => 'Public route works', 'user' => Auth::check() ? Auth::user()->email : 'Not authenticated']);
 });
 
 // Public Simulator (no authentication required) - renamed to /practice to avoid auth conflict
 Route::middleware([])->group(function () {
     // Landing page for practice simulator
     Route::get('/practice', function() {
-        \Log::info('Practice landing page accessed');
-        return \Inertia\Inertia::render('PublicSimulator/Index', [
+        Log::info('Practice landing page accessed');
+        return Inertia::render('PublicSimulator/Index', [
             'title' => 'Project Management Simulator - Practice for Free',
             'description' => 'Practice project management skills with realistic scenarios. No signup required.',
         ]);
@@ -95,7 +99,7 @@ Route::middleware([])->group(function () {
     
     // Generate and start simulation
     Route::post('/practice/start', function(\Illuminate\Http\Request $request) {
-        \Log::info('Practice simulation started');
+        Log::info('Practice simulation started');
         
         // Generate simulation like in certification flow
         $mockUser = new \App\Models\User([
