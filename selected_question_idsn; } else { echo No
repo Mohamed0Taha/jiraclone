@@ -1,1 +1,0 @@
-/bin/bash: line 1: php artisan tinker --execute='=App\Models\CertificationAttempt::first(); if(){ echo Attempt: command not found

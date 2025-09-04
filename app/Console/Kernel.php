@@ -9,7 +9,11 @@ class Kernel extends ConsoleKernel
 {
     protected function schedule(Schedule $schedule): void
     {
-        // Define scheduled commands here
+        // Fetch and forward support emails every 5 minutes
+        $schedule->command('email:fetch-support --mark-read')
+                 ->everyFiveMinutes()
+                 ->withoutOverlapping()
+                 ->runInBackground();
     }
 
     protected function commands(): void
