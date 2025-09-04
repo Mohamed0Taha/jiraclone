@@ -1,10 +1,9 @@
-import GuestLayout from '@/Layouts/GuestLayout';
+
 import { Head } from '@inertiajs/react';
 
 export default function PrivacyPolicy() {
     return (
-        <GuestLayout>
-            <Head title="Privacy Policy - TaskPilot" />
+        <><Head title="Privacy Policy - TaskPilot" />
 
             <div className="min-h-screen bg-gray-50 py-12">
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -157,7 +156,8 @@ export default function PrivacyPolicy() {
                         </div>
                     </div>
                 </div>
-            </div>
-        </GuestLayout>
+            </div></>
+            
+      
     );
 }
