@@ -46,22 +46,29 @@ export default function AuthenticatedLayout({ header, children }) {
                         {/* Left section */}
                         <div className="flex items-center gap-5">
                             {/* Brand (static text now, not another dashboard link) */}
-                            <div
-                                className="
-                  font-bold tracking-wide text-lg sm:text-xl
-                  bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600
-                  bg-clip-text text-transparent select-none
-                  font-['Inter','system-ui','Segoe_UI','Roboto','Helvetica_Neue','Arial','sans-serif']
-                  drop-shadow-sm
-                "
-                                aria-label="TaskPilot"
-                                style={{
-                                    fontFamily:
-                                        '"Inter", "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", sans-serif',
-                                    letterSpacing: '0.02em',
-                                }}
-                            >
-                                TaskPilot
+                            <div className="flex items-center gap-2">
+                                <img 
+                                    src="/taskpilot-logo.png" 
+                                    alt="TaskPilot Logo" 
+                                    className="w-8 h-8 rounded-full shadow-sm"
+                                />
+                                <div
+                                    className="
+                      font-bold tracking-wide text-lg sm:text-xl
+                      bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600
+                      bg-clip-text text-transparent select-none
+                      font-['Inter','system-ui','Segoe_UI','Roboto','Helvetica_Neue','Arial','sans-serif']
+                      drop-shadow-sm
+                    "
+                                    aria-label="TaskPilot"
+                                    style={{
+                                        fontFamily:
+                                            '"Inter", "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", sans-serif',
+                                        letterSpacing: '0.02em',
+                                    }}
+                                >
+                                    TaskPilot
+                                </div>
                             </div>
 
                             {/* Single Dashboard button */}

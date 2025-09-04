@@ -23,8 +23,15 @@
         <nav class="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg">
             <div class="container mx-auto px-4">
                 <div class="flex justify-between items-center h-16">
-                    <!-- Left Side - Title and Main Navigation -->
+                    <!-- Left Side - Logo and Main Navigation -->
                     <div class="flex items-center space-x-6">
+                        <!-- TaskPilot Logo and Branding -->
+                        <div class="flex items-center space-x-3">
+                            <img src="/taskpilot-logo.png" alt="TaskPilot Logo" class="w-8 h-8 rounded-full shadow-sm">
+                            <span class="text-xl font-bold text-white">TaskPilot</span>
+                            <span class="text-sm text-blue-200 hidden md:inline">Admin</span>
+                        </div>
+                        
                         <div class="flex items-center">
                             @if(!empty($pageTitle))
                                 <span class="sr-only">{{ $pageTitle }}</span>

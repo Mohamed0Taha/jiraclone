@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, Link as InertiaLink } from '@inertiajs/react';
 import {
     Box,
     Button,
@@ -253,9 +253,22 @@ export default function Landing({ errors }) {
                                 justifyContent: 'space-between',
                             }}
                         >
-                            <Typography variant="h5" sx={{ fontWeight: 700, color: '#7C6AE8' }}>
-                                TaskPilot
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Box
+                                    component="img"
+                                    src="/taskpilot-logo.png"
+                                    alt="TaskPilot Logo"
+                                    sx={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: '50%',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                    }}
+                                />
+                                <Typography variant="h5" sx={{ fontWeight: 700, color: '#7C6AE8' }}>
+                                    TaskPilot
+                                </Typography>
+                            </Box>
                             <Box sx={{ display: 'flex', gap: 2 }}>
                                 <Button
                                     variant="outlined"
@@ -1516,36 +1529,17 @@ export default function Landing({ errors }) {
                                 >
                                     Blog
                                 </Link>
-                                <Link
-                                    href="#"
-                                    sx={{
-                                        color: 'grey.600',
+                                <InertiaLink
+                                    href="/privacy_policy"
+                                    style={{
+                                        color: '#6B7280',
                                         textDecoration: 'none',
-                                        '&:hover': { color: '#7C6AE8' },
                                     }}
-                                >
-                                    Security
-                                </Link>
-                                <Link
-                                    href="#"
-                                    sx={{
-                                        color: 'grey.600',
-                                        textDecoration: 'none',
-                                        '&:hover': { color: '#7C6AE8' },
-                                    }}
+                                    onMouseEnter={(e) => e.target.style.color = '#7C6AE8'}
+                                    onMouseLeave={(e) => e.target.style.color = '#6B7280'}
                                 >
                                     Privacy
-                                </Link>
-                                <Link
-                                    href="#"
-                                    sx={{
-                                        color: 'grey.600',
-                                        textDecoration: 'none',
-                                        '&:hover': { color: '#7C6AE8' },
-                                    }}
-                                >
-                                    Terms
-                                </Link>
+                                </InertiaLink>
                             </Box>
                         </Box>
 

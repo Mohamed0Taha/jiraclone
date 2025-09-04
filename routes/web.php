@@ -50,6 +50,15 @@ Route::middleware([])->group(function () {
     Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show')->where('blog', '[a-zA-Z0-9\-_]+');
 });
 
+// Legal pages (public, unauthenticated)
+Route::get('/privacy_policy', function () {
+    return Inertia::render('Legal/PrivacyPolicy');
+})->name('privacy.policy');
+
+Route::get('/terms', function () {
+    return Inertia::render('Legal/TermsOfService');
+})->name('terms.service');
+
 // DEBUG: Test public route (remove after testing)
 Route::get('/test-public', function() {
     return response()->json(['message' => 'Public route works', 'user' => auth()->check() ? auth()->user()->email : 'Not authenticated']);

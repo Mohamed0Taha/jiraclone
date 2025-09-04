@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Stripe\StripeClient;
 
@@ -145,10 +146,31 @@ class BillingController extends Controller
             ]);
         }
 
-        $checkout = $subscriptionBuilder->checkout([
+        // Check for Product Hunt promo code - apply automatically if user came from Product Hunt
+        $checkoutOptions = [
             'success_url' => route('billing.show').'?checkout=success',
             'cancel_url' => route('billing.show').'?checkout=cancel',
-        ]);
+        ];
+
+        // Check if user came from Product Hunt (UTM source or referrer)
+        $isProductHuntUser = $this->isProductHuntUser($request);
+        
+        if ($isProductHuntUser) {
+            // Apply Product Hunt coupon - replace 'PRODUCTHUNT30' with your actual Stripe coupon ID
+            $checkoutOptions['discounts'] = [
+                ['coupon' => env('PRODUCT_HUNT_COUPON_ID', 'PRODUCTHUNT30')]
+            ];
+            
+            // Log Product Hunt conversion for analytics
+            \Log::info('Product Hunt user starting checkout', [
+                'user_id' => $user->id,
+                'plan' => $planKey,
+                'utm_source' => $request->session()->get('utm_source'),
+                'referrer' => $request->session()->get('original_referrer')
+            ]);
+        }
+
+        $checkout = $subscriptionBuilder->checkout($checkoutOptions);
 
         // Redirect to Stripe-hosted checkout
         return Inertia::location($checkout->url);

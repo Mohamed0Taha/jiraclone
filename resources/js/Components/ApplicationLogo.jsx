@@ -3,14 +3,18 @@ export default function ApplicationLogo(props) {
         <svg {...props} viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
             {/* Background circle with gradient */}
             <defs>
-                <linearGradient id="taskPilotGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#4F46E5" />
-                    <stop offset="50%" stopColor="#7C3AED" />
-                    <stop offset="100%" stopColor="#EC4899" />
+                <linearGradient id="taskPilotBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#87CEEB" />
+                    <stop offset="50%" stopColor="#5DADE2" />
+                    <stop offset="100%" stopColor="#3498DB" />
                 </linearGradient>
-                <linearGradient id="arrowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FFFFFF" />
-                    <stop offset="100%" stopColor="#F3F4F6" />
+                <linearGradient id="helmetGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#34495E" />
+                    <stop offset="100%" stopColor="#2C3E50" />
+                </linearGradient>
+                <linearGradient id="visorGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#5D6D7E" />
+                    <stop offset="100%" stopColor="#34495E" />
                 </linearGradient>
             </defs>
 
@@ -19,159 +23,96 @@ export default function ApplicationLogo(props) {
                 cx="100"
                 cy="100"
                 r="95"
-                fill="url(#taskPilotGradient)"
-                stroke="#FFFFFF"
+                fill="url(#taskPilotBg)"
+                stroke="#2C3E50"
+                strokeWidth="3"
+            />
+
+            {/* Pilot Character */}
+            {/* Helmet base */}
+            <ellipse
+                cx="100"
+                cy="85"
+                rx="65"
+                ry="50"
+                fill="url(#helmetGradient)"
+                stroke="#1B2631"
                 strokeWidth="2"
             />
 
-            {/* Navigation compass rose */}
-            <g transform="translate(100,100)">
-                {/* Main compass points */}
-                <line
-                    x1="0"
-                    y1="-70"
-                    x2="0"
-                    y2="-50"
-                    stroke="#FFFFFF"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                />
-                <line
-                    x1="70"
-                    y1="0"
-                    x2="50"
-                    y2="0"
-                    stroke="#FFFFFF"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                />
-                <line
-                    x1="0"
-                    y1="70"
-                    x2="0"
-                    y2="50"
-                    stroke="#FFFFFF"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                />
-                <line
-                    x1="-70"
-                    y1="0"
-                    x2="-50"
-                    y2="0"
-                    stroke="#FFFFFF"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                />
+            {/* Helmet side straps */}
+            <path
+                d="M45 105 Q65 115 85 110 Q100 108 115 110 Q135 115 155 105"
+                stroke="#1B2631"
+                strokeWidth="4"
+                fill="none"
+                strokeLinecap="round"
+            />
 
-                {/* Diagonal compass points */}
-                <line
-                    x1="50"
-                    y1="-50"
-                    x2="35"
-                    y2="-35"
-                    stroke="#FFFFFF"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                />
-                <line
-                    x1="50"
-                    y1="50"
-                    x2="35"
-                    y2="35"
-                    stroke="#FFFFFF"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                />
-                <line
-                    x1="-50"
-                    y1="50"
-                    x2="-35"
-                    y2="35"
-                    stroke="#FFFFFF"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                />
-                <line
-                    x1="-50"
-                    y1="-50"
-                    x2="-35"
-                    y2="-35"
-                    stroke="#FFFFFF"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                />
-            </g>
+            {/* Visor/Goggles */}
+            <ellipse
+                cx="100"
+                cy="75"
+                rx="55"
+                ry="18"
+                fill="url(#visorGradient)"
+                stroke="#1B2631"
+                strokeWidth="2"
+            />
 
-            {/* Task checkmarks in a circular pattern */}
-            <g transform="translate(100,100)">
-                {/* Checkmark 1 - top right */}
-                <g transform="translate(30,-30) scale(0.8)">
-                    <circle r="12" fill="#FFFFFF" fillOpacity="0.9" />
-                    <path
-                        d="M-4,0 L-1,3 L4,-3"
-                        stroke="#4F46E5"
-                        strokeWidth="2"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                </g>
+            {/* Goggle frames */}
+            <circle cx="75" cy="75" r="20" fill="none" stroke="#1B2631" strokeWidth="3"/>
+            <circle cx="125" cy="75" r="20" fill="none" stroke="#1B2631" strokeWidth="3"/>
 
-                {/* Checkmark 2 - right */}
-                <g transform="translate(45,10) scale(0.8)">
-                    <circle r="12" fill="#FFFFFF" fillOpacity="0.9" />
-                    <path
-                        d="M-4,0 L-1,3 L4,-3"
-                        stroke="#4F46E5"
-                        strokeWidth="2"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                </g>
+            {/* Face/Beak area */}
+            <ellipse
+                cx="100"
+                cy="125"
+                rx="35"
+                ry="25"
+                fill="#ECF0F1"
+                stroke="#BDC3C7"
+                strokeWidth="2"
+            />
 
-                {/* Checkmark 3 - bottom */}
-                <g transform="translate(10,45) scale(0.8)">
-                    <circle r="12" fill="#FFFFFF" fillOpacity="0.9" />
-                    <path
-                        d="M-4,0 L-1,3 L4,-3"
-                        stroke="#4F46E5"
-                        strokeWidth="2"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                </g>
+            {/* Duck beak */}
+            <ellipse
+                cx="85"
+                cy="125"
+                rx="12"
+                ry="6"
+                fill="#F39C12"
+                stroke="#E67E22"
+                strokeWidth="1"
+            />
 
-                {/* Checkmark 4 - left */}
-                <g transform="translate(-40,5) scale(0.8)">
-                    <circle r="12" fill="#FFFFFF" fillOpacity="0.8" />
-                    <path
-                        d="M-4,0 L-1,3 L4,-3"
-                        stroke="#4F46E5"
-                        strokeWidth="2"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                </g>
-            </g>
+            {/* Eye */}
+            <circle cx="110" cy="120" r="4" fill="#2C3E50"/>
+            <circle cx="111" cy="119" r="1" fill="#FFFFFF"/>
 
-            {/* Central navigation arrow pointing northeast (suggesting progress/direction) */}
-            <g transform="translate(100,100) rotate(45)">
-                <path
-                    d="M-15,5 L15,5 L10,10 M15,5 L10,0 M-15,5 L-15,-15 L15,-15"
-                    stroke="url(#arrowGradient)"
-                    strokeWidth="3"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                />
-            </g>
+            {/* TaskPilot badge on helmet */}
+            <circle cx="100" cy="55" r="15" fill="#E74C3C" stroke="#C0392B" strokeWidth="2"/>
+            <text 
+                x="100" 
+                y="62" 
+                fontFamily="system-ui, -apple-system, sans-serif" 
+                fontSize="12" 
+                fontWeight="800" 
+                textAnchor="middle" 
+                fill="white"
+            >
+                TP
+            </text>
 
-            {/* Central dot */}
-            <circle cx="100" cy="100" r="4" fill="#FFFFFF" />
+            {/* Helmet shine/highlight */}
+            <ellipse
+                cx="80"
+                cy="65"
+                rx="15"
+                ry="8"
+                fill="#FFFFFF"
+                opacity="0.3"
+            />
         </svg>
     );
 }

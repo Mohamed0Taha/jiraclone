@@ -26,18 +26,17 @@ export default function GuestLayout({ children }) {
                             gap={2}
                             mb={2}
                         >
-                            <Avatar
+                            <Box
+                                component="img"
+                                src="/taskpilot-logo.png"
+                                alt="TaskPilot Logo"
                                 sx={{
                                     width: 48,
                                     height: 48,
-                                    bgcolor: 'primary.main',
-                                    fontSize: 20,
-                                    fontWeight: 700,
-                                    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.25)',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 4px 14px rgba(52, 152, 219, 0.25)',
                                 }}
-                            >
-                                {(import.meta.env.VITE_APP_NAME || 'TaskPilot').slice(0, 1)}
-                            </Avatar>
+                            />
                             <Typography variant="h5" fontWeight={700} color="primary.main">
                                 {import.meta.env.VITE_APP_NAME || 'TaskPilot'}
                             </Typography>

@@ -1,11 +1,11 @@
 {
   "name": "TaskPilot",
   "short_name": "TaskPilot",
-  "description": "The modern project workspace where productivity meets simplicity",
+  "description": "The modern project workspace where productivity meets simplicity - Your AI-powered pilot for navigating projects",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#6366F1",
+  "background_color": "#87CEEB",
+  "theme_color": "#3498DB",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -18,6 +18,12 @@
       "src": "/icon-48.svg", 
       "sizes": "48x48",
       "type": "image/svg+xml"
+    },
+    {
+      "src": "/taskpilot-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

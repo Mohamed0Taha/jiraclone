@@ -10,19 +10,22 @@
     <title inertia>{{ config('app.name', 'TaskPilot') }}</title>
 
     <!-- TaskPilot Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="icon" type="image/png" sizes="48x48" href="/icon-48.svg">
-    <link rel="shortcut icon" href="/favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="/icon-48.svg">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
+    <link rel="icon" type="image/png" sizes="48x48" href="/icon-48.svg?v=2">
+    <link rel="shortcut icon" href="/favicon.ico?v=2">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-48.svg?v=2">
     
     <!-- TaskPilot Branding -->
-    <meta name="theme-color" content="#6366F1">
+    <meta name="theme-color" content="#3498DB">
     <meta name="application-name" content="TaskPilot">
     <meta name="apple-mobile-web-app-title" content="TaskPilot">
     <meta name="description" content="TaskPilot - The modern project workspace where productivity meets simplicity"
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
+
+    <!-- GDPR Cookie Consent -->
+    <script type="text/javascript" charset="UTF-8" src="//cdn.cookie-script.com/s/b9ca5ac0de6429cd35cedc328b8808e7.js"></script>
 
     @php
         $page ??= [
