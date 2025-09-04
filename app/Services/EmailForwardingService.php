@@ -70,6 +70,65 @@ class EmailForwardingService
     }
 
     /**
+     * Send a test email (used by Heroku scheduler)
+     */
+    public function sendEmail(
+        string $to,
+        string $subject,
+        string $plainContent,
+        string $htmlContent = null,
+        string $fromEmail = 'support@taskpilot.us'
+    ): bool {
+        try {
+            Log::info('Sending test email via scheduler', [
+                'to' => $to,
+                'subject' => $subject,
+                'from' => $fromEmail
+            ]);
+
+            Mail::raw($plainContent, function ($message) use ($to, $subject, $fromEmail) {
+                $message->to($to)
+                        ->subject($subject)
+                        ->from(config('mail.from.address'), config('mail.from.name'));
+            });
+
+            Log::info('Test email sent successfully', [
+                'to' => $to,
+                'subject' => $subject
+            ]);
+
+            // Log to database
+            \App\Models\EmailLog::create([
+                'to_email' => $to,
+                'subject' => $subject,
+                'type' => 'test',
+                'sent_successfully' => true,
+                'user_id' => null,
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send test email', [
+                'to' => $to,
+                'subject' => $subject,
+                'error' => $e->getMessage()
+            ]);
+
+            // Log failed attempt
+            \App\Models\EmailLog::create([
+                'to_email' => $to,
+                'subject' => $subject,
+                'type' => 'test',
+                'sent_successfully' => false,
+                'user_id' => null,
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
      * Check if an email should be forwarded
      */
     public static function shouldForward(string $toEmail): bool

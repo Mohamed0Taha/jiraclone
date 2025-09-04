@@ -53,11 +53,8 @@ Route::get('/test-email-logs', function () {
 });
 
 Route::get('/', function () {
-    if (Auth::check()) {
-        return redirect()->route('dashboard');
-    }
-
-    return Inertia::render('Landing');
+    // Temporary bypass of Inertia for testing
+    return view('simple-landing');
 })->name('landing');
 
 // Blog routes (public, unauthenticated)
