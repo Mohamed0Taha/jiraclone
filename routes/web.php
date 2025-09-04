@@ -31,6 +31,12 @@ use Inertia\Inertia;
 | Public Landing
 |--------------------------------------------------------------------------
 */
+
+// Simple test route
+Route::get('/test', function () {
+    return 'Laravel is working!';
+});
+
 Route::get('/', function () {
     if (Auth::check()) {
         return redirect()->route('dashboard');
