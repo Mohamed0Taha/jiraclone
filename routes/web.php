@@ -37,6 +37,21 @@ Route::get('/test', function () {
     return 'Laravel is working!';
 });
 
+// Test admin route (bypass Inertia)
+Route::get('/admin-test', function () {
+    return 'Admin system is working!';
+});
+
+// Test email logs route
+Route::get('/test-email-logs', function () {
+    try {
+        $emails = \App\Models\EmailLog::take(5)->get();
+        return 'Email logs working! Found ' . $emails->count() . ' email logs.';
+    } catch (\Exception $e) {
+        return 'Email logs error: ' . $e->getMessage();
+    }
+});
+
 Route::get('/', function () {
     if (Auth::check()) {
         return redirect()->route('dashboard');
