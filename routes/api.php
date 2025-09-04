@@ -19,6 +19,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+// Email webhook routes
+Route::post('/email-webhook', [EmailWebhookController::class, 'handleWebhook']);
+Route::get('/test-email-forward', [EmailWebhookController::class, 'testForward']);
+
 // Email Forwarding Webhook Routes
 Route::post('/email/webhook', [EmailWebhookController::class, 'handleIncomingEmail'])
     ->name('email.webhook');
