@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'TaskPilot Admin' }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.jsx'])
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Suppress Tailwind CDN warning in development

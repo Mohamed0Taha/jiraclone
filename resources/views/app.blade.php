@@ -19,7 +19,7 @@
     <meta name="theme-color" content="#3498DB">
     <meta name="application-name" content="TaskPilot">
     <meta name="apple-mobile-web-app-title" content="TaskPilot">
-    <meta name="description" content="TaskPilot - The modern project workspace where productivity meets simplicity"
+    <meta name="description" content="TaskPilot - The modern project workspace where productivity meets simplicity">
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
