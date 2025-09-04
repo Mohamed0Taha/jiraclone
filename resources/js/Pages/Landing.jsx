@@ -1540,6 +1540,17 @@ export default function Landing({ errors }) {
                                 >
                                     Privacy
                                 </InertiaLink>
+                                <InertiaLink
+                                    href="/terms_of_service"
+                                    style={{
+                                        color: '#6B7280',
+                                        textDecoration: 'none',
+                                    }}
+                                    onMouseEnter={(e) => e.target.style.color = '#7C6AE8'}
+                                    onMouseLeave={(e) => e.target.style.color = '#6B7280'}
+                                >
+                                    Terms
+                                </InertiaLink>
                             </Box>
                         </Box>
 

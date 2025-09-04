@@ -34,18 +34,19 @@
 
     <!-- Email Logs Table -->
     <div class="bg-white shadow rounded-lg overflow-hidden">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recipient</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sent At</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                        </tr>
-                    </thead>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-max divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[200px]">Recipient</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[250px]">Subject</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[100px]">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[100px]">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[150px]">Sent At</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[120px]">User</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[150px]">Actions</th>
+                    </tr>
+                </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         @forelse($emails as $email)
                             <tr class="hover:bg-gray-50">
@@ -86,7 +87,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     <a href="{{ route('admin.email-logs.detail', $email) }}" 
-                                       class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-semibold hover:bg-blue-200 border border-blue-300">
+                                       class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-semibold hover:bg-blue-200 border border-blue-300 inline-block min-w-max">
                                         📧 View Content
                                     </a>
                                 </td>
@@ -100,6 +101,7 @@
                         @endforelse
                     </tbody>
                 </table>
+            </div>
         </div>
 
         <!-- Pagination -->

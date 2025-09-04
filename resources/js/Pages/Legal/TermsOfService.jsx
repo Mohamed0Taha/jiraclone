@@ -1,137 +1,254 @@
-import GuestLayout from '@/Layouts/GuestLayout';
 import { Head } from '@inertiajs/react';
+import { Paper } from '@mui/material';
 
 export default function TermsOfService() {
     return (
-        <GuestLayout>
+        <>
             <Head title="Terms of Service - TaskPilot" />
+            <div style={{ 
+                minHeight: '100vh', 
+                backgroundColor: '#9333EA', 
+                padding: '40px 20px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'flex-start'
+            }}>
+                <Paper 
+                    elevation={3} 
+                    sx={{ 
+                        backgroundColor: 'white',
+                        padding: { xs: 3, md: 6, lg: 8 },
+                        maxWidth: '1200px',
+                        width: '100%',
+                        borderRadius: 2
+                    }}
+                >
+                    <div style={{ width: '100%' }}>
+                        <header style={{ marginBottom: '48px' }}>
+                            <h1 style={{ 
+                                fontSize: '3rem', 
+                                fontWeight: 'bold', 
+                                letterSpacing: '-0.025em',
+                                color: '#111827',
+                                marginBottom: '12px',
+                                lineHeight: '1.1'
+                            }}>
+                                Terms of Service
+                            </h1>
+                            <p style={{ color: '#6B7280', fontSize: '1.125rem' }}>
+                                Last updated: September 4, 2025
+                            </p>
+                        </header>
 
-            <div className="min-h-screen bg-gray-50 py-12">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="bg-white shadow-lg rounded-lg p-8">
-                        <div className="text-center mb-8">
-                            <h1 className="text-3xl font-bold text-gray-900 mb-2">Terms of Service</h1>
-                            <p className="text-gray-600">Last updated: September 4, 2025</p>
-                        </div>
-
-                        <div className="prose prose-lg max-w-none">
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Acceptance of Terms</h2>
-                                <p className="text-gray-700 mb-4">
-                                    By accessing and using TaskPilot ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
-                                </p>
+                        <div style={{ 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: '56px',
+                            color: '#374151',
+                            lineHeight: '1.7',
+                            fontSize: '17px'
+                        }}>
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    1. Acceptance of Terms
+                                </h2>
+                                <p>By accessing and using TaskPilot ("the Service"), you accept and agree to be bound by these Terms. If you do not agree to abide by them, do not use the Service.</p>
                             </section>
 
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Description of Service</h2>
-                                <p className="text-gray-700 mb-4">
-                                    TaskPilot is a project management platform that helps individuals and teams organize, track, and complete their projects and tasks. The Service includes web-based tools for project planning, task management, team collaboration, and productivity enhancement.
-                                </p>
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    2. Description of Service
+                                </h2>
+                                <p>TaskPilot is a project management platform that helps individuals and teams organize, track, and complete projects and tasks. The Service includes tools for planning, collaboration, automation, and productivity.</p>
                             </section>
 
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">3. User Accounts</h2>
-                                <p className="text-gray-700 mb-4">
-                                    To use certain features of the Service, you must register for an account. You agree to:
-                                </p>
-                                <ul className="list-disc list-inside text-gray-700 space-y-2">
-                                    <li>Provide accurate and complete information during registration</li>
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    3. User Accounts
+                                </h2>
+                                <p style={{ marginBottom: '12px' }}>To use certain features, you must register for an account. You agree to:</p>
+                                <ul style={{ 
+                                    listStyleType: 'disc', 
+                                    paddingLeft: '24px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '4px'
+                                }}>
+                                    <li>Provide accurate and complete information</li>
                                     <li>Maintain the security of your password and account</li>
-                                    <li>Notify us immediately of any unauthorized use of your account</li>
-                                    <li>Be responsible for all activities that occur under your account</li>
+                                    <li>Notify us of any unauthorized use</li>
+                                    <li>Be responsible for all activities under your account</li>
                                 </ul>
                             </section>
 
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">4. Acceptable Use</h2>
-                                <p className="text-gray-700 mb-4">
-                                    You agree not to use the Service to:
-                                </p>
-                                <ul className="list-disc list-inside text-gray-700 space-y-2">
-                                    <li>Violate any applicable laws or regulations</li>
-                                    <li>Infringe upon the rights of others</li>
-                                    <li>Upload harmful, offensive, or inappropriate content</li>
-                                    <li>Attempt to gain unauthorized access to our systems</li>
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    4. Acceptable Use
+                                </h2>
+                                <p style={{ marginBottom: '12px' }}>You agree not to use the Service to:</p>
+                                <ul style={{ 
+                                    listStyleType: 'disc', 
+                                    paddingLeft: '24px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '4px'
+                                }}>
+                                    <li>Violate laws or regulations</li>
+                                    <li>Infringe intellectual property or privacy rights</li>
+                                    <li>Upload harmful, abusive, or illegal content</li>
+                                    <li>Attempt unauthorized access to systems</li>
                                     <li>Interfere with or disrupt the Service</li>
-                                    <li>Use the Service for any illegal or unauthorized purpose</li>
+                                    <li>Use the Service for unlawful purposes</li>
                                 </ul>
                             </section>
 
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">5. Subscription and Payment</h2>
-                                <p className="text-gray-700 mb-4">
-                                    Some features of the Service require a paid subscription. By subscribing, you agree to:
-                                </p>
-                                <ul className="list-disc list-inside text-gray-700 space-y-2">
-                                    <li>Pay all applicable fees and taxes</li>
-                                    <li>Automatic renewal unless cancelled</li>
-                                    <li>Our refund policy as stated separately</li>
-                                    <li>Price changes with 30 days notice</li>
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    5. Subscription and Payment
+                                </h2>
+                                <p style={{ marginBottom: '12px' }}>Some features require a paid subscription. By subscribing you agree to:</p>
+                                <ul style={{ 
+                                    listStyleType: 'disc', 
+                                    paddingLeft: '24px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '4px'
+                                }}>
+                                    <li>Pay applicable fees and taxes</li>
+                                    <li>Automatic renewal unless you cancel</li>
+                                    <li>Our refund policy (where applicable)</li>
+                                    <li>Potential price changes with notice</li>
                                 </ul>
                             </section>
 
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">6. Intellectual Property</h2>
-                                <p className="text-gray-700 mb-4">
-                                    The Service and its original content, features, and functionality are owned by TaskPilot and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
-                                </p>
-                                <p className="text-gray-700 mb-4">
-                                    You retain ownership of any content you create using the Service, but grant us a limited license to use, store, and process your content to provide the Service.
-                                </p>
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    6. Intellectual Property
+                                </h2>
+                                <p style={{ marginBottom: '12px' }}>The Service and its original content, features, and functionality are owned by TaskPilot and protected by intellectual property laws.</p>
+                                <p>You retain ownership of content you create, granting us a limited license to store and process it to provide the Service.</p>
                             </section>
 
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Privacy</h2>
-                                <p className="text-gray-700 mb-4">
-                                    Your privacy is important to us. Please review our Privacy Policy, which also governs your use of the Service, to understand our practices.
-                                </p>
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    7. Privacy
+                                </h2>
+                                <p>Your privacy is important to us. Your use of the Service is also governed by our Privacy Policy.</p>
                             </section>
 
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">8. Termination</h2>
-                                <p className="text-gray-700 mb-4">
-                                    We may terminate or suspend your account and access to the Service at our sole discretion, without prior notice, for conduct that we believe violates these Terms or is harmful to other users, us, or third parties, or for any other reason.
-                                </p>
-                                <p className="text-gray-700 mb-4">
-                                    You may terminate your account at any time by contacting us or using the account deletion feature in your profile settings.
-                                </p>
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    8. Termination
+                                </h2>
+                                <p style={{ marginBottom: '12px' }}>We may suspend or terminate your access for violation of these Terms or harmful conduct.</p>
+                                <p>You may terminate your account at any time via settings or by contacting support.</p>
                             </section>
 
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">9. Disclaimers</h2>
-                                <p className="text-gray-700 mb-4">
-                                    The Service is provided "as is" and "as available" without any warranties of any kind. We disclaim all warranties, express or implied, including but not limited to implied warranties of merchantability, fitness for a particular purpose, and non-infringement.
-                                </p>
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    9. Disclaimers
+                                </h2>
+                                <p>The Service is provided "as is" without warranties of any kind, express or implied.</p>
                             </section>
 
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Limitation of Liability</h2>
-                                <p className="text-gray-700 mb-4">
-                                    In no event shall TaskPilot be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your use of the Service.
-                                </p>
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    10. Limitation of Liability
+                                </h2>
+                                <p>TaskPilot shall not be liable for indirect, incidental, special, consequential, or punitive damages, or loss of profits, data, or goodwill.</p>
                             </section>
 
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Governing Law</h2>
-                                <p className="text-gray-700 mb-4">
-                                    These Terms shall be interpreted and governed by the laws of the jurisdiction in which TaskPilot operates, without regard to conflict of law provisions.
-                                </p>
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    11. Governing Law
+                                </h2>
+                                <p>These Terms are governed by the laws applicable in our primary operating jurisdiction, without regard to conflict of law principles.</p>
                             </section>
 
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">12. Changes to Terms</h2>
-                                <p className="text-gray-700 mb-4">
-                                    We reserve the right to modify these Terms at any time. We will notify users of any material changes by posting the new Terms on this page and updating the "Last updated" date. Your continued use of the Service after such modifications constitutes acceptance of the updated Terms.
-                                </p>
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    12. Changes to Terms
+                                </h2>
+                                <p>We may update these Terms. Material changes will be communicated, and continued use constitutes acceptance.</p>
                             </section>
 
-                            <section className="mb-8">
-                                <h2 className="text-2xl font-semibold text-gray-900 mb-4">13. Contact Information</h2>
-                                <p className="text-gray-700 mb-4">
-                                    If you have any questions about these Terms, please contact us:
-                                </p>
-                                <div className="bg-gray-50 p-4 rounded-lg">
-                                    <p className="text-gray-700">
+                            <section>
+                                <h2 style={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: '600', 
+                                    color: '#111827', 
+                                    marginBottom: '16px' 
+                                }}>
+                                    13. Contact
+                                </h2>
+                                <p style={{ marginBottom: '12px' }}>Questions about these Terms?</p>
+                                <div style={{ 
+                                    backgroundColor: '#F9FAFB', 
+                                    border: '1px solid #E5E7EB', 
+                                    borderRadius: '6px', 
+                                    padding: '16px' 
+                                }}>
+                                    <p>
                                         <strong>Email:</strong> support@taskpilot.us<br />
                                         <strong>Website:</strong> https://taskpilot.us
                                     </p>
@@ -139,17 +256,35 @@ export default function TermsOfService() {
                             </section>
                         </div>
 
-                        <div className="text-center mt-8 pt-8 border-t border-gray-200">
+                        <footer style={{ 
+                            marginTop: '64px', 
+                            paddingTop: '32px', 
+                            borderTop: '1px solid #E5E7EB', 
+                            fontSize: '0.875rem', 
+                            color: '#6B7280',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '16px'
+                        }}>
+                            <span>© {new Date().getFullYear()} TaskPilot. All rights reserved.</span>
                             <a 
                                 href="/" 
-                                className="text-blue-600 hover:text-blue-700 font-medium"
+                                style={{ 
+                                    color: '#2563EB', 
+                                    fontWeight: '500',
+                                    textDecoration: 'none'
+                                }}
+                                onMouseOver={(e) => e.target.style.color = '#1D4ED8'}
+                                onMouseOut={(e) => e.target.style.color = '#2563EB'}
                             >
                                 ← Back to TaskPilot
                             </a>
-                        </div>
+                        </footer>
                     </div>
-                </div>
+                </Paper>
             </div>
-        </GuestLayout>
+        </>
     );
 }

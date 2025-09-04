@@ -55,7 +55,7 @@ Route::get('/privacy_policy', function () {
     return Inertia::render('Legal/PrivacyPolicy');
 })->name('privacy.policy');
 
-Route::get('/terms', function () {
+Route::get('/terms_of_service', function () {
     return Inertia::render('Legal/TermsOfService');
 })->name('terms.service');
 
