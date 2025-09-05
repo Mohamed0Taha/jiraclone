@@ -47,6 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'subscription' => \App\Http\Middleware\CheckSubscription::class,
             'admin.only' => \App\Http\Middleware\AdminOnly::class,
+            'owner.only' => \App\Http\Middleware\OwnerOnly::class,
         ]);
     })
     ->withExceptions(function ($exceptions) {})

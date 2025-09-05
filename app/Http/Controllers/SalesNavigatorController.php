@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\View;
 
 class SalesNavigatorController extends Controller
 {
@@ -18,10 +18,15 @@ class SalesNavigatorController extends Controller
         $user = $request->user();
         $leads = Lead::where('user_id', $user->id)->latest()->limit(100)->get();
         $batches = LeadMessageBatch::where('user_id', $user->id)->latest()->limit(10)->get();
-        return Inertia::render('Admin/SalesNavigator', [
-            'leads' => $leads,
-            'batches' => $batches,
-        ]);
+
+        if ($request->boolean('partial')) {
+            return response()->json([
+                'leads' => $leads,
+                'batches' => $batches,
+            ]);
+        }
+
+        return view('admin.sales_navigator', compact('leads', 'batches'));
     }
 
     /**
