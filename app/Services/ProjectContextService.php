@@ -432,17 +432,29 @@ class ProjectContextService
 
             return ($user && $this->userIsProjectMember($project, $user)) ? $user->id : null;
         }
-
+        $needle = mb_strtolower($hint);
+        $tokens = array_values(array_filter(preg_split('/\s+/', $needle)));
         $candidates = $this->getProjectMembers($project)->push($this->getProjectOwner($project))->filter()->unique('id');
-        $match = $candidates->first(fn ($u) => mb_strtolower($u->name) === mb_strtolower($hint));
-        if ($match) {
-            return (int) $match->id;
+
+        // Exact full-name match
+        $exact = $candidates->first(fn($u)=> mb_strtolower($u->name) === $needle);
+        if ($exact) return (int)$exact->id;
+
+        // Match if all tokens appear somewhere in candidate name (order agnostic)
+        if (!empty($tokens)) {
+            $multi = $candidates->first(function($u) use ($tokens) {
+                $ln = mb_strtolower($u->name);
+                foreach ($tokens as $t) {
+                    if (!str_contains($ln, $t)) return false;
+                }
+                return true;
+            });
+            if ($multi) return (int)$multi->id;
         }
 
-        $match = $candidates->first(fn ($u) => Str::contains(mb_strtolower($u->name), mb_strtolower($hint)));
-        if ($match) {
-            return (int) $match->id;
-        }
+        // Partial contains fallback (single token or substring)
+        $partial = $candidates->first(fn($u)=> str_contains(mb_strtolower($u->name), $needle));
+        if ($partial) return (int)$partial->id;
 
         return null;
     }

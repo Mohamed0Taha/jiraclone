@@ -34,6 +34,23 @@ class CommandProcessingService
     {
         $plan = [];
 
+        $mLow = strtolower(trim($message));
+        // Direct weekly progress shortcut: treat as informational (no mutation) and delegate to Q&A service
+        if (preg_match('/\b(weekly|week)\b.*\b(progress|report|summary)\b/', $mLow) || str_contains($mLow, 'weekly progress')) {
+            try {
+                if (class_exists(QuestionAnsweringService::class)) {
+                    $qas = app(QuestionAnsweringService::class);
+                    $report = $qas->answer($project, 'Weekly progress report', [], null);
+                    return [
+                        'preview_message' => $report,
+                        'command_data' => null, // informational only
+                    ];
+                }
+            } catch (\Throwable $e) {
+                // fall through to normal planning if something goes wrong
+            }
+        }
+
         if (! empty($llmPlan['type'])) {
             $normalizedPlan = $this->normalizeLLMPlan($project, $llmPlan);
             if ($this->validatePlan($project, $normalizedPlan)['_ok']) {
@@ -123,9 +140,11 @@ class CommandProcessingService
         $updates = $this->parseBulkUpdates($project, $m);
 
         if (! empty($updates)) {
+            Log::debug('[CommandProcessingService] bulk updates parsed', ['updates' => $updates, 'filters_before' => $filters]);
             if (empty($filters)) {
                 $filters = ['all' => true];
             }
+            Log::debug('[CommandProcessingService] returning bulk_update plan', ['filters_after' => $filters]);
             if ($ordinal) {
                 $filters = array_merge($filters, $ordinal);
             }
@@ -142,8 +161,49 @@ class CommandProcessingService
             return $plan;
         }
 
+        // Pronoun / implicit reference handling for assignment
+        if (preg_match('/\bassign\b.*\b(all\s+of\s+)?(them|these|those)\b.*\bto\s+(me|myself|owner)\b/i', $mLow) ||
+            preg_match('/\bassign\b.*\b(to\s+me|to\s+myself|to\s+owner)\b/i', $mLow)) {
+            $assignee = (str_contains($mLow, 'owner')) ? '__OWNER__' : '__ME__';
+            return [
+                'type' => 'bulk_assign',
+                'filters' => ['all' => true],
+                'assignee' => $assignee,
+            ];
+        }
+
+        // Pronoun based bulk status change e.g. "move them to done" or "mark all of them as in progress"
+        if (preg_match('/\b(move|set|mark)\b.*\b(all\s+of\s+)?(them|these|those)\b.*\b(to|as)\s+([a-z\- ]{3,20})/i', $mLow, $pm)) {
+            if ($status = $this->resolveStatusToken($project, $pm[5])) {
+                return $this->createBulkUpdatePlan(['all' => true], ['status' => $status]);
+            }
+        }
+
         // If no basic patterns matched, try enhanced LLM synthesis
         return $this->enhancedLLMSynthesis($project, $message, $history);
+    }
+
+    /**
+     * Determine if the recent assistant response contained an explicit list of tasks (IDs or bullet list)
+     */
+    private function historyRecentlyListedTasks(array $history, ?Project $project = null): bool
+    {
+        $recent = array_slice($history, -8); // look a little further back
+        foreach ($recent as $h) {
+            $c = strtolower($h['content'] ?? '');
+            // Look for our deterministic listing markers
+            if (str_contains($c, 'task #') || preg_match('/#\d+/', $c)) {
+                return true;
+            }
+            if (str_contains($c, 'task assignments') || (preg_match('/found\s+\d+\s+tasks?/i', $c))) {
+                return true;
+            }
+        }
+        // Fallback: if there are tasks in the project we can still treat pronoun commands as global scope
+        if ($project && Task::where('project_id', $project->id)->exists()) {
+            return true;
+        }
+        return false;
     }
 
     private function parseTaskUpdates(Project $project, string $message, int $taskId): array
@@ -214,6 +274,14 @@ class CommandProcessingService
             }
         }
 
+        // Bulk due date updates e.g. "update due date for medium priority to next Friday"
+        if (preg_match('/\b(update|set|change)\b.*\b(due|end|deadline)(?:\s+date)?\b.*\bto\s+([^\.]+)$/i', $message, $dm)) {
+            $rawDate = trim($dm[3]);
+            if ($date = $this->parseRelativeDate($rawDate)) {
+                $updates['end_date'] = $date->toDateString();
+            }
+        }
+
         return $updates;
     }
 
@@ -225,11 +293,20 @@ class CommandProcessingService
         if (preg_match_all('/#(\d+)/', $message, $matches)) {
             $filters['ids'] = array_map('intval', $matches[1]);
         }
-        if (preg_match('/\b(low|medium|high|urgent)\s+priority\b/i', $m, $matches)) {
+    if (preg_match('/\b(low|medium|high|urgent)\s+priority\b/i', $m, $matches) || preg_match('/\bfor\s+(low|medium|high|urgent)\s+priority\b/i', $m, $matches)) {
             $filters['priority'] = $this->resolvePriorityToken($matches[1]);
         }
+        // Also catch patterns like 'urgent tasks', 'high task', etc.
+        elseif (preg_match('/\b(low|medium|high|urgent)\b\s+tasks?/i', $m, $matches)) {
+            $filters['priority'] = $this->resolvePriorityToken($matches[1]);
+        }
+        // Explicit 'status is X'
         if (preg_match('/\bstatus\s+(?:is\s+)?([a-z\- ]+)/i', $m, $matches)) {
             $filters['status'] = $this->resolveStatusToken($project, $matches[1]);
+        }
+        // Natural language pattern e.g. 'todo tasks', 'in progress tasks', 'review task', 'done tasks'
+        elseif (preg_match('/\b(todo|in\s?progress|review|done)\b\s+tasks?\b/i', $m, $sm)) {
+            $filters['status'] = $this->resolveStatusToken($project, $sm[1]);
         }
         if (strpos($m, 'overdue') !== false) {
             $filters['overdue'] = true;
@@ -247,11 +324,16 @@ class CommandProcessingService
         if (preg_match("/\b([A-Za-z]+)'s\s+tasks\b/u", $message, $mm)) {
             $filters['assigned_to_hint'] = trim($mm[1]);
         }
-        if (preg_match('/\bfor\s+(@?[a-z0-9._\- ]+)/i', $m, $mm)) {
+        if (preg_match('/\bfor\s+(@?[a-z0-9._\-]{2,40})\b(?!\s+priority)/i', $m, $mm)) {
             $filters['assigned_to_hint'] = ltrim(trim($mm[1]), '@');
         }
         if (preg_match('/\ball\s+tasks?\b/i', $m)) {
             $filters['all'] = true;
+        }
+
+        // If we accidentally captured a phrase containing 'priority' as an assignee hint, discard it
+        if (! empty($filters['assigned_to_hint']) && str_contains($filters['assigned_to_hint'], 'priority')) {
+            unset($filters['assigned_to_hint']);
         }
 
         return $filters;
@@ -295,11 +377,26 @@ class CommandProcessingService
     private function parseAssignCommand(Project $project, string $message, string $assignee): array
     {
         $assignee = trim($assignee);
+        $lowerAssignee = strtolower($assignee);
+        if (in_array($lowerAssignee, ['me','myself'])) {
+            $assignee = '__ME__';
+        } elseif ($lowerAssignee === 'owner') {
+            $assignee = '__OWNER__';
+        }
         if (preg_match('/#?(\d+)/', $message, $matches)) {
             return $this->createTaskUpdatePlan((int) $matches[1], ['assignee_hint' => $assignee]);
         }
 
         $filters = $this->parseFiltersEnhanced($project, $message);
+
+        // We never want to filter by existing assignee when performing an assignment; drop assigned_to_hint.
+        if (isset($filters['assigned_to_hint'])) {
+            unset($filters['assigned_to_hint']);
+        }
+        // If no other filters, default to all
+        if (empty($filters)) {
+            $filters = ['all' => true];
+        }
 
         return [
             'type' => 'bulk_assign',
@@ -415,7 +512,8 @@ class CommandProcessingService
             if (empty($filters)) {
                 return ['_ok' => false, '_why' => 'Please specify which tasks to affect (e.g., "all overdue tasks").'];
             }
-            if ($this->contextService->countAffected($project, $filters) <= 0) {
+            $affected = !empty($filters['all']) ? Task::where('project_id', $project->id)->count() : $this->contextService->countAffected($project, $filters);
+            if ($affected <= 0) {
                 return ['_ok' => false, '_why' => 'No tasks match the specified filters.'];
             }
             if ($type === 'bulk_update' && empty($plan['updates'])) {
@@ -674,6 +772,50 @@ class CommandProcessingService
         } catch (Throwable $e) {
             return null;
         }
+    }
+
+    /**
+     * Parse simple relative date expressions used in task update commands.
+     * Supports: today, tomorrow, next week, next <weekday>, this <weekday>, next <n> days, +N days, +N weeks, Friday, next Friday, etc.
+     */
+    private function parseRelativeDate(string $raw): ?Carbon
+    {
+        $t = strtolower(trim($raw));
+        $now = Carbon::now();
+
+        if ($t === 'today') return $now->copy();
+        if ($t === 'tomorrow') return $now->copy()->addDay();
+        if ($t === 'next week') return $now->copy()->addWeek();
+        if ($t === 'this week') return $now->copy();
+
+        // +N days / +N weeks
+        if (preg_match('/^\+?(\d+)\s+day(s)?$/', $t, $m)) {
+            return $now->copy()->addDays((int) $m[1]);
+        }
+        if (preg_match('/^\+?(\d+)\s+week(s)?$/', $t, $m)) {
+            return $now->copy()->addWeeks((int) $m[1]);
+        }
+
+        // next N days (alias for +N days)
+        if (preg_match('/^next\s+(\d+)\s+day(s)?$/', $t, $m)) {
+            return $now->copy()->addDays((int) $m[1]);
+        }
+
+        // Weekday names (this <weekday>, next <weekday>)
+        $weekdays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+        foreach ($weekdays as $idx => $wd) {
+            if ($t === $wd || $t === 'this '.$wd) {
+                $candidate = $now->copy()->nextOrSame(ucfirst($wd));
+                return $candidate;
+            }
+            if ($t === 'next '.$wd) {
+                $candidate = $now->copy()->next(ucfirst($wd));
+                return $candidate;
+            }
+        }
+
+        // Try natural parse fallback (may handle explicit dates)
+        return $this->parseDate($raw);
     }
 
     private function norm(string $text): string

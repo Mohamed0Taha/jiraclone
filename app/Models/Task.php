@@ -6,6 +6,7 @@ use App\Events\TaskCreated;
 use App\Events\TaskUpdated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Task extends Model
 {
@@ -38,10 +39,16 @@ class Task extends Model
     {
         static::created(function ($task) {
             TaskCreated::dispatch($task);
+            Cache::forget('project_snapshot_v1_'.$task->project_id);
         });
 
         static::updated(function ($task) {
             TaskUpdated::dispatch($task, $task->getChanges());
+            Cache::forget('project_snapshot_v1_'.$task->project_id);
+        });
+
+        static::deleted(function ($task) {
+            Cache::forget('project_snapshot_v1_'.$task->project_id);
         });
     }
 

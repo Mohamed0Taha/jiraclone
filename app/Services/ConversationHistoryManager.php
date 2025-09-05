@@ -7,6 +7,8 @@ use App\Models\Task;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+use App\Models\ConversationMessage;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * ConversationHistoryManager
@@ -226,21 +228,34 @@ class ConversationHistoryManager
     private function getHistory(string $sessionId): array
     {
         // Try cache first
-        $history = Cache::get("conversation_{$sessionId}");
-        if ($history) {
-            return $history;
+        if ($cached = Cache::get("conversation_{$sessionId}")) {
+            return $cached;
         }
 
-        // Try session
-        $history = Session::get("conversation_{$sessionId}", []);
-        if (! empty($history)) {
-            // Store in cache for faster access
-            Cache::put("conversation_{$sessionId}", $history, now()->addHours(2));
+        // Load from persistent storage (limit last 100 stored messages for the project)
+        $projectId = $this->extractProjectIdFromSessionKey($sessionId);
+        if ($projectId) {
+            $stored = ConversationMessage::where('project_id', $projectId)
+                ->orderByDesc('id')
+                ->limit(100)
+                ->get()
+                ->reverse()
+                ->map(function($m) {
+                    return [
+                        'role' => $m->role,
+                        'content' => $m->content,
+                        'timestamp' => $m->created_at?->toIso8601String(),
+                        'persisted' => true,
+                        'entities' => $m->metadata['entities'] ?? null,
+                    ];
+                })->values()->all();
 
-            return $history;
+            Cache::put("conversation_{$sessionId}", $stored, now()->addMinutes(10));
+            return $stored;
         }
 
-        return [];
+        // Fallback to session (legacy) if no project id found
+        return Session::get("conversation_{$sessionId}", []);
     }
 
     /**
@@ -248,9 +263,30 @@ class ConversationHistoryManager
      */
     private function saveHistory(string $sessionId, array $history): void
     {
-        // Save to both cache and session
         Cache::put("conversation_{$sessionId}", $history, now()->addHours(2));
         Session::put("conversation_{$sessionId}", $history);
+
+        // Persist only the latest appended non-system message (avoid re-writing whole history)
+        $last = end($history);
+        if ($last && isset($last['role']) && in_array($last['role'], ['user','assistant'])) {
+            $projectId = $this->extractProjectIdFromSessionKey($sessionId);
+            if ($projectId) {
+                try {
+                    ConversationMessage::create([
+                        'project_id' => $projectId,
+                        'user_id' => $last['role'] === 'user' ? (Auth::id() ?: null) : null,
+                        'role' => $last['role'],
+                        'content' => $last['content'] ?? '',
+                        'metadata' => [
+                            'entities' => $last['entities'] ?? null,
+                            'context_snapshot' => $last['context_snapshot'] ?? null,
+                        ],
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('[ConversationHistoryManager] Persist failed', ['error' => $e->getMessage()]);
+                }
+            }
+        }
     }
 
     /**
@@ -483,6 +519,14 @@ class ConversationHistoryManager
         }
 
         return $importantMessages;
+    }
+
+    private function extractProjectIdFromSessionKey(string $sessionId): ?int
+    {
+        if (preg_match('/project_(\d+)_/', $sessionId, $m)) {
+            return (int)$m[1];
+        }
+        return null;
     }
 
     /**

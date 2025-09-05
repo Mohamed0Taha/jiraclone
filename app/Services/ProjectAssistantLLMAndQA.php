@@ -507,6 +507,19 @@ SYS;
         $m = strtolower($message);
         $suggestions = "I couldn't understand that command. ";
 
+        // Recognize weekly progress style queries and route to Q&A for deterministic answer
+        if (preg_match('/\b(weekly|week)\b.*\b(progress|report|summary)\b/', $m) || str_contains($m, 'weekly progress')) {
+            if (class_exists(QuestionAnsweringService::class)) {
+                try {
+                    $qas = app(QuestionAnsweringService::class);
+                    $ans = $qas->answer($project, 'Weekly progress report', [], null);
+                    return $this->createResponse('information', $ans, false);
+                } catch (\Throwable $e) {
+                    // fall through to suggestions if something fails
+                }
+            }
+        }
+
         if (strpos($m, 'task') !== false) {
             $suggestions .= "Try:\n• Create task \"Your task title\"\n• Show task #123\n• Find tasks assigned to John";
         } elseif (strpos($m, 'project') !== false) {
@@ -514,7 +527,7 @@ SYS;
         } elseif (strpos($m, 'who') !== false || strpos($m, 'team') !== false) {
             $suggestions .= "Try:\n• Who are the team members?\n• Who created task #123?\n• Who is assigned to task #456?";
         } else {
-            $suggestions .= "Try commands like:\n• Create task \"Task title\"\n• Show task #123\n• Project overview\n• Tasks due this week";
+            $suggestions .= "Try commands like:\n• Create task \"Task title\"\n• Show task #123\n• Project overview\n• Tasks due this week\n• Weekly progress report";
         }
 
         return $this->createResponse('information', $suggestions, false);

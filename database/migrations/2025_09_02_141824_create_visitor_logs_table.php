@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('visitor_logs')) {
+            return; // Already exists (duplicate migration situation)
+        }
+
         Schema::create('visitor_logs', function (Blueprint $table) {
             $table->id();
             $table->string('ip_address')->index();

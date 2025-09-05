@@ -11,6 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        $driver = Schema::getConnection()->getDriverName();
+        if ($driver === 'sqlite') {
+            // Skip on sqlite – original enum is fine for tests.
+            return;
+        }
+
         Schema::table('certification_attempts', function (Blueprint $table) {
             // Modify the phase enum to include 'theory_failed'
             $table->enum('phase', ['pm_concepts', 'practical_scenario', 'certification_complete', 'theory_failed'])
@@ -24,6 +30,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        $driver = Schema::getConnection()->getDriverName();
+        if ($driver === 'sqlite') {
+            return; // nothing changed
+        }
+
         Schema::table('certification_attempts', function (Blueprint $table) {
             // Revert to original enum values
             $table->enum('phase', ['pm_concepts', 'practical_scenario', 'certification_complete'])
