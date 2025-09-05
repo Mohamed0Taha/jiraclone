@@ -9,9 +9,10 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
-        "ext-pdo": "*",
-        "ext-pdo_mysql": "*",
+    "php": "^8.2",
+    "ext-pdo": "*",
+    "ext-pdo_mysql": "*",
+    "ext-imap": "*",
         "dompdf/dompdf": "^2.0",
         "filament/filament": "^4.0",
         "imagekit/imagekit": "^4.0",
