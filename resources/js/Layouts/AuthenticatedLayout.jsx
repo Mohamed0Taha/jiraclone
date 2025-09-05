@@ -96,7 +96,13 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
 
                         {/* Right / User (desktop) */}
-                        <div className="hidden sm:flex items-center gap-3">
+                        <div className="hidden sm:flex items-center gap-4">
+                            <Link
+                                href={route('sales.navigator')}
+                                className="text-sm font-medium text-gray-600 hover:text-indigo-600 transition"
+                            >
+                                Sales Navigator
+                            </Link>
                             <div className="relative">
                                 <Dropdown>
                                     <Dropdown.Trigger>
@@ -237,6 +243,12 @@ export default function AuthenticatedLayout({ header, children }) {
                                     onClick={closeMobile}
                                 >
                                     Dashboard
+                                </ResponsiveNavLink>
+                                <ResponsiveNavLink
+                                    href={route('sales.navigator')}
+                                    onClick={closeMobile}
+                                >
+                                    Sales Navigator
                                 </ResponsiveNavLink>
                             </div>
                         </div>

@@ -333,6 +333,10 @@ Route::post('/email/verification-notification', function (Request $request) {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
+    // Sales Navigator prototype
+    Route::get('/sales-navigator', [\App\Http\Controllers\SalesNavigatorController::class, 'index'])->name('sales.navigator');
+    Route::post('/sales-navigator/ingest', [\App\Http\Controllers\SalesNavigatorController::class, 'ingest']);
+    Route::post('/sales-navigator/batches', [\App\Http\Controllers\SalesNavigatorController::class, 'createBatch']);
     Route::get('/certification', [CertificationController::class, 'index'])->name('certification.index');
     Route::post('/certification/answer', [CertificationController::class, 'submitAnswer'])->name('certification.answer');
     Route::get('/certification/answer', function () {
