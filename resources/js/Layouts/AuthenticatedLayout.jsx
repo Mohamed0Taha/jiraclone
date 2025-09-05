@@ -98,10 +98,10 @@ export default function AuthenticatedLayout({ header, children }) {
                         {/* Right / User (desktop) */}
                         <div className="hidden sm:flex items-center gap-4">
                             <Link
-                                href={route('sales.navigator')}
+                                href={route('admin.index')}
                                 className="text-sm font-medium text-gray-600 hover:text-indigo-600 transition"
                             >
-                                Sales Navigator
+                                Admin
                             </Link>
                             <div className="relative">
                                 <Dropdown>
@@ -245,10 +245,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                     Dashboard
                                 </ResponsiveNavLink>
                                 <ResponsiveNavLink
-                                    href={route('sales.navigator')}
+                                    href={route('admin.index')}
                                     onClick={closeMobile}
                                 >
-                                    Sales Navigator
+                                    Admin
                                 </ResponsiveNavLink>
                             </div>
                         </div>
