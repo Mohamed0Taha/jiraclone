@@ -383,6 +383,22 @@ class CommandProcessingService
         } elseif ($lowerAssignee === 'owner') {
             $assignee = '__OWNER__';
         }
+        // If the user used a plural/collective phrase, ask for clarification instead of treating literal string
+        if (preg_match('/\b(team\s+members?|all\s+members?|everyone|the\s+team)\b/', $lowerAssignee)) {
+            return [
+                '_error' => 'Please specify a single team member. Available members: '.$this->listTeamMembersString($project).'.'
+            ];
+        }
+
+        // Validate that the assignee can be resolved (unless special placeholders)
+        if (! in_array($assignee, ['__ME__','__OWNER__'], true)) {
+            $resolvedId = $this->contextService->resolveAssigneeId($project, $assignee);
+            if (! $resolvedId) {
+                return [
+                    '_error' => 'No matching team member for "'.$assignee.'". Available members: '.$this->listTeamMembersString($project).'.'
+                ];
+            }
+        }
         if (preg_match('/#?(\d+)/', $message, $matches)) {
             return $this->createTaskUpdatePlan((int) $matches[1], ['assignee_hint' => $assignee]);
         }
@@ -403,6 +419,23 @@ class CommandProcessingService
             'filters' => empty($filters) ? ['all' => true] : $filters,
             'assignee' => $assignee,
         ];
+    }
+
+    private function listTeamMembersString(Project $project): string
+    {
+        try {
+            $members = $this->contextService->getProjectMembers($project);
+            $owner = $this->contextService->getProjectOwner($project);
+            if ($owner) {
+                $members = $members->push($owner)->unique('id');
+            }
+            if ($members->isEmpty()) {
+                return 'No members available';
+            }
+            return $members->pluck('name')->filter()->implode(', ');
+        } catch (\Throwable $e) {
+            return 'Unavailable';
+        }
     }
 
     private function scaffoldedPlanSynthesis(Project $project, string $message, array $history): array
@@ -732,11 +765,13 @@ class CommandProcessingService
     private function resolvePriorityToken(string $token): ?string
     {
         $t = $this->norm($token);
-        if (in_array($t, self::PRIORITIES)) {
-            return $t;
+        if (in_array($t, self::PRIORITIES, true)) return $t;
+        // Use central alias normalization if available
+        if (method_exists($this->contextService, 'normalizePriorityAlias')) {
+            $alias = $this->contextService->normalizePriorityAlias($t);
+            if ($alias) return $alias;
         }
-        $map = ['p3' => 'low', 'p2' => 'medium', 'p1' => 'high', 'p0' => 'urgent', 'critical' => 'urgent', 'blocker' => 'urgent'];
-
+        $map = ['p3' => 'low', 'p2' => 'medium', 'p1' => 'high', 'p0' => 'urgent'];
         return $map[$t] ?? null;
     }
 
