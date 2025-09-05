@@ -333,18 +333,6 @@ Route::post('/email/verification-notification', function (Request $request) {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
-    // Admin dashboard + restricted dev tools
-    Route::prefix('admin')->middleware('admin.only')->group(function() {
-        Route::get('/', function() { return Inertia::render('Admin/Index'); })->name('admin.index');
-        Route::get('/analytics', function() { return Inertia::render('Admin/Analytics'); })->name('admin.analytics');
-
-        // Dev tool restricted further to owner-only
-        Route::middleware('owner.only')->group(function() {
-            Route::get('/sales-navigator', [\App\Http\Controllers\SalesNavigatorController::class, 'index'])->name('admin.sales.navigator');
-            Route::post('/sales-navigator/ingest', [\App\Http\Controllers\SalesNavigatorController::class, 'ingest']);
-            Route::post('/sales-navigator/batches', [\App\Http\Controllers\SalesNavigatorController::class, 'createBatch']);
-        });
-    });
     Route::get('/certification', [CertificationController::class, 'index'])->name('certification.index');
     Route::post('/certification/answer', [CertificationController::class, 'submitAnswer'])->name('certification.answer');
     Route::get('/certification/answer', function () {
