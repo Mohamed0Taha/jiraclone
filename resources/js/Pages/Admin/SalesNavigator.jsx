@@ -19,8 +19,8 @@ export default function SalesNavigator({ leads = [], batches = [] }) {
     if (!url) return;
     setBusy(true);
     try {
-      await fetch('/sales-navigator/ingest', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }, body: JSON.stringify({ url }) });
-      router.visit(route('sales.navigator')); // refresh
+  await fetch('/admin/sales-navigator/ingest', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }, body: JSON.stringify({ url }) });
+  router.visit(route('admin.sales.navigator')); // refresh
     } finally { setBusy(false); }
   };
 
@@ -28,8 +28,8 @@ export default function SalesNavigator({ leads = [], batches = [] }) {
     if (selected.size === 0) return;
     setBusy(true);
     try {
-      await fetch('/sales-navigator/batches', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }, body: JSON.stringify({ lead_ids: Array.from(selected), template }) });
-      router.visit(route('sales.navigator'));
+  await fetch('/admin/sales-navigator/batches', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }, body: JSON.stringify({ lead_ids: Array.from(selected), template }) });
+  router.visit(route('admin.sales.navigator'));
     } finally { setBusy(false); }
   };
 

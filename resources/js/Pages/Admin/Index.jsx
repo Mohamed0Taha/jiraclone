@@ -13,7 +13,7 @@ export default function AdminIndex() {
     {
       title: 'Sales Navigator',
       description: 'Ingest leads & create bulk message batches',
-      href: '/sales-navigator',
+      href: '/admin/sales-navigator',
       gradient: 'from-emerald-500 to-teal-500'
     }
   ];

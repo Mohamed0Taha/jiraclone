@@ -333,10 +333,29 @@ Route::post('/email/verification-notification', function (Request $request) {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
-    // Sales Navigator prototype
-    Route::get('/sales-navigator', [\App\Http\Controllers\SalesNavigatorController::class, 'index'])->name('sales.navigator');
-    Route::post('/sales-navigator/ingest', [\App\Http\Controllers\SalesNavigatorController::class, 'ingest']);
-    Route::post('/sales-navigator/batches', [\App\Http\Controllers\SalesNavigatorController::class, 'createBatch']);
+    // Admin dashboard + restricted dev tools
+    Route::prefix('admin')->group(function() {
+        Route::get('/', function() { return Inertia::render('Admin/Index'); })->name('admin.index');
+        Route::get('/analytics', function() { return Inertia::render('Admin/Analytics'); })->name('admin.analytics');
+
+        // Restrict Sales Navigator to a single privileged user (by email) to avoid exposure.
+        Route::middleware(function ($request, $next) {
+            $user = $request->user();
+            $allowedEmails = [
+                // Add any additional privileged emails here
+                'mohamed.taha@example.com',
+                'mohamed.taha@taskpilot.us',
+            ];
+            if (! $user || ! in_array(strtolower($user->email), array_map('strtolower', $allowedEmails))) {
+                abort(403, 'Unauthorized dev tool access.');
+            }
+            return $next($request);
+        })->group(function() {
+            Route::get('/sales-navigator', [\App\Http\Controllers\SalesNavigatorController::class, 'index'])->name('admin.sales.navigator');
+            Route::post('/sales-navigator/ingest', [\App\Http\Controllers\SalesNavigatorController::class, 'ingest']);
+            Route::post('/sales-navigator/batches', [\App\Http\Controllers\SalesNavigatorController::class, 'createBatch']);
+        });
+    });
     Route::get('/certification', [CertificationController::class, 'index'])->name('certification.index');
     Route::post('/certification/answer', [CertificationController::class, 'submitAnswer'])->name('certification.answer');
     Route::get('/certification/answer', function () {
