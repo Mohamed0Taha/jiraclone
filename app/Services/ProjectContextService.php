@@ -25,6 +25,114 @@ class ProjectContextService
 
     private const METH_LEAN = 'lean';
 
+    /**
+     * Unified cross–methodology status alias map.
+     * Each canonical status (server value) maps to an array of phrases users might say.
+     * These include methodology-specific phase names and common synonyms.
+     */
+    private const STATUS_ALIASES = [
+        'todo' => [
+            'todo','to do','backlog','product backlog','sprint backlog','icebox','ideas','idea backlog',
+            'requirements','specification','specifications','analysis','planning','plan','pending','not started','open'
+        ],
+        'inprogress' => [
+            'in progress','inprogress','doing','wip','work in progress','active','ongoing','started','progress',
+            'design','implementation','construction','build','building','development','dev','executing','execution'
+        ],
+        'review' => [
+            'review','code review','peer review','qa','quality assurance','testing','test','verification','validation',
+            'test phase','staging','approval','awaiting review','awaiting approval','ready for review'
+        ],
+        'done' => [
+            'done','complete','completed','finished','closed','resolved','shipped','deployed','released','maintenance',
+            'live','accepted','closed out'
+        ],
+    ];
+
+    /** Cached flattened alias lookup */
+    private static array $aliasLookup = [];
+
+    /**
+     * Normalize a single user-provided status phrase to canonical server status.
+     */
+    public function normalizeStatusAlias(string $phrase, ?string $methodology = null): ?string
+    {
+        $p = strtolower(trim(preg_replace('/\s+/', ' ', str_replace(['_', '-'], ' ', $phrase))));
+        if ($p === '') return null;
+
+        // Build lookup once
+        if (empty(self::$aliasLookup)) {
+            foreach (self::STATUS_ALIASES as $canonical => $list) {
+                foreach ($list as $alias) {
+                    self::$aliasLookup[$alias] = $canonical;
+                }
+            }
+        }
+
+        if (isset(self::$aliasLookup[$p])) {
+            return self::$aliasLookup[$p];
+        }
+
+        // Fallback to methodology specific mapping (existing logic)
+        if ($methodology) {
+            $methodMap = $this->methodPhaseToServer($methodology);
+            if (isset($methodMap[$p])) {
+                return $methodMap[$p];
+            }
+        } else {
+            // Try each methodology map if none supplied
+            foreach ([self::METH_KANBAN,self::METH_SCRUM,self::METH_AGILE,self::METH_WATERFALL,self::METH_LEAN] as $m) {
+                $methodMap = $this->methodPhaseToServer($m);
+                if (isset($methodMap[$p])) return $methodMap[$p];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Attempt to extract the first recognizable status alias from a free-form text string.
+     */
+    public function extractStatusFromText(string $text, ?string $methodology = null): ?string
+    {
+        $t = strtolower($text);
+        // Check multi-word aliases first (sorted by length desc so longer phrases win)
+        $multi = [];
+        foreach (self::STATUS_ALIASES as $canonical => $aliases) {
+            foreach ($aliases as $a) { if (str_contains($a, ' ')) { $multi[$a] = $canonical; } }
+        }
+        uksort($multi, fn($a,$b)=> strlen($b) <=> strlen($a));
+        foreach ($multi as $alias => $canonical) {
+            $pattern = '/\b'.preg_quote($alias,'/').'\b/';
+            if (preg_match($pattern, $t)) return $canonical;
+        }
+        // Single word aliases
+        $single = [];
+        foreach (self::STATUS_ALIASES as $canonical => $aliases) {
+            foreach ($aliases as $a) { if (!str_contains($a,' ')) { $single[$a] = $canonical; } }
+        }
+        foreach ($single as $alias => $canonical) {
+            if (preg_match('/\b'.preg_quote($alias,'/').'\b/', $t)) return $canonical;
+        }
+        // Fallback to methodology map scanning
+    $method = $methodology ?? $this->getCurrentMethodologyFromTextContext($text) ?? self::METH_KANBAN;
+        $map = $this->methodPhaseToServer($method);
+        foreach ($map as $phase => $canonical) {
+            if (preg_match('/\b'.preg_quote($phase,'/').'\b/', $t)) return $canonical;
+        }
+        return null;
+    }
+
+    /** Basic heuristic to guess methodology mention inside text (very lightweight) */
+    private function getCurrentMethodologyFromTextContext(string $text): ?string
+    {
+        $t = strtolower($text);
+        foreach ([self::METH_SCRUM,self::METH_AGILE,self::METH_WATERFALL,self::METH_LEAN,self::METH_KANBAN] as $m) {
+            if (str_contains($t, $m)) return $m;
+        }
+        return null;
+    }
+
     public function getProjectOwner(Project $project): ?User
     {
         try {

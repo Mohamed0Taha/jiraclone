@@ -714,15 +714,18 @@ class CommandProcessingService
     private function resolveStatusToken(Project $project, string $token): ?string
     {
         $t = $this->norm($token);
-        if ($t === 'in progress') {
-            $t = 'inprogress';
-        }
-        if (in_array($t, self::SERVER_STATUSES)) {
-            return $t;
+        if ($t === 'in progress') { $t = 'inprogress'; }
+        // Direct canonical match
+        if (in_array($t, self::SERVER_STATUSES, true)) return $t;
+
+        // Try new alias normalization (cross-methodology)
+        if (method_exists($this->contextService, 'normalizeStatusAlias')) {
+            $alias = $this->contextService->normalizeStatusAlias($t, $this->contextService->getCurrentMethodology($project));
+            if ($alias) return $alias;
         }
 
+        // Fallback to methodology map
         $map = $this->contextService->methodPhaseToServer($this->contextService->getCurrentMethodology($project));
-
         return $map[$t] ?? null;
     }
 

@@ -743,6 +743,15 @@ SYS;
         try {
             $snapshot = $this->getSnapshotCached($project);
             $m = strtolower($message);
+            // Attempt cross-methodology status alias resolution for counting queries
+            if (method_exists($this->contextService, 'extractStatusFromText')) {
+                $aliasStatus = $this->contextService->extractStatusFromText($m, $this->contextService->getCurrentMethodology($project));
+                if ($aliasStatus && isset($snapshot['tasks']['by_status'][$aliasStatus])) {
+                    $labels = $this->contextService->serverToMethodPhase($this->contextService->getCurrentMethodology($project));
+                    $count = $snapshot['tasks']['by_status'][$aliasStatus] ?? 0;
+                    return $this->createResponse("There are {$count} task(s) in {$labels[$aliasStatus]}.");
+                }
+            }
 
             // Comparison first so single status tokens don't early-return
             if (preg_match('/(done|todo|in\s?progress|review)\s+vs\s+(done|todo|in\s?progress|review)/', $m, $cm)) {
