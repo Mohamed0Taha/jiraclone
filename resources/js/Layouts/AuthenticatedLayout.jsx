@@ -97,7 +97,6 @@ export default function AuthenticatedLayout({ header, children }) {
 
                         {/* Right / User (desktop) */}
                         <div className="hidden sm:flex items-center gap-4">
-                            {/* Admin link removed per requirement */}
                             <div className="relative">
                                 <Dropdown>
                                     <Dropdown.Trigger>
@@ -239,7 +238,6 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     Dashboard
                                 </ResponsiveNavLink>
-                                {/* Admin link removed from mobile nav */}
                             </div>
                         </div>
 
