@@ -5,6 +5,7 @@ import CookieConsent from '@/Components/CookieConsent';
 import { Link, usePage } from '@inertiajs/react';
 
 export default function AuthenticatedLayout({ header, children }) {
+    // CACHE BUST: Admin button completely removed - build 002
     const { props } = usePage();
     const user = props?.auth?.user || {};
     const [mobileOpen, setMobileOpen] = useState(false);

@@ -752,6 +752,14 @@ SYS;
                     return $this->createResponse("There are {$count} task(s) in {$labels[$aliasStatus]}.");
                 }
             }
+            // Priority alias resolution
+            if (method_exists($this->contextService, 'extractPriorityFromText')) {
+                $aliasPriority = $this->contextService->extractPriorityFromText($m);
+                if ($aliasPriority && isset($snapshot['tasks']['by_priority'][$aliasPriority])) {
+                    $count = $snapshot['tasks']['by_priority'][$aliasPriority] ?? 0;
+                    return $this->createResponse("There are {$count} {$aliasPriority} priority task(s).");
+                }
+            }
 
             // Comparison first so single status tokens don't early-return
             if (preg_match('/(done|todo|in\s?progress|review)\s+vs\s+(done|todo|in\s?progress|review)/', $m, $cm)) {

@@ -52,6 +52,16 @@ class ProjectContextService
     /** Cached flattened alias lookup */
     private static array $aliasLookup = [];
 
+    /** Priority alias mapping (canonical -> list of synonyms) */
+    private const PRIORITY_ALIASES = [
+        'low' => ['low','p3','minor','trivial','non urgent','later','defer','nice to have','lowest','minor priority'],
+        'medium' => ['medium','med','normal','standard','p2','regular','moderate','default','average'],
+        'high' => ['high','p1','important','major','significant','elevated','sev2','severity 2','higher'],
+        'urgent' => ['urgent','critical','blocker','p0','immediate','asap','sev1','severity 1','highest','emergency','hotfix','fire'],
+    ];
+
+    private static array $priorityAliasLookup = [];
+
     /**
      * Normalize a single user-provided status phrase to canonical server status.
      */
@@ -87,6 +97,45 @@ class ProjectContextService
             }
         }
 
+        return null;
+    }
+
+    /** Normalize priority phrase to canonical priority (low|medium|high|urgent) */
+    public function normalizePriorityAlias(string $phrase): ?string
+    {
+        $p = strtolower(trim(preg_replace('/\s+/', ' ', str_replace(['_', '-'], ' ', $phrase))));
+        if ($p === '') return null;
+        if (empty(self::$priorityAliasLookup)) {
+            foreach (self::PRIORITY_ALIASES as $canonical => $list) {
+                foreach ($list as $alias) {
+                    self::$priorityAliasLookup[$alias] = $canonical;
+                }
+            }
+        }
+        return self::$priorityAliasLookup[$p] ?? null;
+    }
+
+    /** Extract first priority alias from free-form text */
+    public function extractPriorityFromText(string $text): ?string
+    {
+        $t = strtolower($text);
+        // Multi word first
+        $multi = [];
+        foreach (self::PRIORITY_ALIASES as $canonical => $aliases) {
+            foreach ($aliases as $a) if (str_contains($a,' ')) $multi[$a] = $canonical;
+        }
+        uksort($multi, fn($a,$b)=> strlen($b) <=> strlen($a));
+        foreach ($multi as $alias => $canonical) {
+            if (preg_match('/\b'.preg_quote($alias,'/').'\b/', $t)) return $canonical;
+        }
+        // Single words
+        $single = [];
+        foreach (self::PRIORITY_ALIASES as $canonical => $aliases) {
+            foreach ($aliases as $a) if (!str_contains($a,' ')) $single[$a] = $canonical;
+        }
+        foreach ($single as $alias => $canonical) {
+            if (preg_match('/\b'.preg_quote($alias,'/').'\b/', $t)) return $canonical;
+        }
         return null;
     }
 
