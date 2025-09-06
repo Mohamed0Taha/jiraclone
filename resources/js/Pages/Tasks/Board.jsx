@@ -368,6 +368,7 @@ export default function Board({
             const matchesPriority = !priorityFilter || task.priority === priorityFilter;
             // Normalize assignee id (tasks may have either assignee_id or nested assignee relation)
             const assigneeId = task.assignee_id ?? task.assignee?.id ?? '';
+            
             const matchesTeamMember =
                 !teamMemberFilter ||
                 (teamMemberFilter === 'unassigned'
