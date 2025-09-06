@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('lead_message_batches', function (Blueprint $table) {
-            $table->string('name')->nullable()->after('user_id');
-            $table->string('status')->default('draft')->after('failed');
+            $table->dropColumn(['name', 'status']);
         });
     }
 
@@ -23,7 +22,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('lead_message_batches', function (Blueprint $table) {
-            $table->dropColumn(['name', 'status']);
+            $table->string('name')->nullable()->after('user_id');
+            $table->string('status')->default('draft')->after('failed');
         });
     }
 };

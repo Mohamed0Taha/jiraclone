@@ -249,7 +249,7 @@ export default function Board({
     // Debug: Monitor task state changes
     useEffect(() => {
         console.log('Task state changed:', taskState);
-        Object.keys(taskState).forEach(status => {
+        Object.keys(taskState).forEach((status) => {
             console.log(`${status}:`, taskState[status]?.length || 0, 'tasks');
         });
     }, [taskState]);
@@ -366,8 +366,13 @@ export default function Board({
                 (task.description &&
                     task.description.toLowerCase().includes(searchQuery.toLowerCase()));
             const matchesPriority = !priorityFilter || task.priority === priorityFilter;
-            const matchesTeamMember = !teamMemberFilter || 
-                (teamMemberFilter === 'unassigned' ? !task.assignee_id : task.assignee_id == teamMemberFilter);
+            // Normalize assignee id (tasks may have either assignee_id or nested assignee relation)
+            const assigneeId = task.assignee_id ?? task.assignee?.id ?? '';
+            const matchesTeamMember =
+                !teamMemberFilter ||
+                (teamMemberFilter === 'unassigned'
+                    ? !assigneeId
+                    : String(assigneeId) === String(teamMemberFilter));
             return matchesSearch && matchesPriority && matchesTeamMember;
         });
     };
@@ -411,9 +416,11 @@ export default function Board({
         fetch(route('tasks.index', project.id), {
             method: 'GET',
             headers: {
-                'Accept': 'application/json',
+                Accept: 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-CSRF-TOKEN':
+                    document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                    '',
             },
         })
             .then((response) => response.json())
@@ -429,9 +436,14 @@ export default function Board({
                         if (!Array.isArray(arr)) return;
                         arr.forEach((t) => {
                             const mappedPhase = phaseMap?.[t.id];
-                            let localPhase = mappedPhase && STATUS_ORDER.includes(mappedPhase)
-                                ? mappedPhase
-                                : STATUS_ORDER.find(ph => (METHOD_TO_SERVER[methodology][ph] || 'todo') === serverStatus) || STATUS_ORDER[0];
+                            let localPhase =
+                                mappedPhase && STATUS_ORDER.includes(mappedPhase)
+                                    ? mappedPhase
+                                    : STATUS_ORDER.find(
+                                          (ph) =>
+                                              (METHOD_TO_SERVER[methodology][ph] || 'todo') ===
+                                              serverStatus
+                                      ) || STATUS_ORDER[0];
                             next[localPhase].push({ ...t, status: localPhase });
                         });
                     });
@@ -619,8 +631,10 @@ export default function Board({
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': document
+                        .querySelector('meta[name="csrf-token"]')
+                        .getAttribute('content'),
                 },
                 body: JSON.stringify(payload),
             })
@@ -634,7 +648,7 @@ export default function Board({
                         // Preserve the column user selected (data.status) even when multiple phases map to same server status
                         const chosenLocalPhase = data.status; // form's local phase
                         // Register phase so future refresh respects it
-                        setPhaseMap(prev => ({ ...prev, [newTask.id]: chosenLocalPhase }));
+                        setPhaseMap((prev) => ({ ...prev, [newTask.id]: chosenLocalPhase }));
                         pushTask({ ...newTask, status: chosenLocalPhase });
                     }
                     refreshTasks(); // Ensure full sync after push
@@ -1286,7 +1300,10 @@ export default function Board({
                                                 }
                                                 onDuplicateClick={(duplicateOfId) =>
                                                     router.get(
-                                                        route('tasks.show', [project.id, duplicateOfId])
+                                                        route('tasks.show', [
+                                                            project.id,
+                                                            duplicateOfId,
+                                                        ])
                                                     )
                                                 }
                                                 onParentClick={(parentId) =>
@@ -1362,19 +1379,15 @@ export default function Board({
                                     gap: 1,
                                 }}
                             >
-                                {editMode 
-                                    ? 'Edit Task' 
-                                    : data.parent_id 
-                                        ? 'Create Sub-Task' 
-                                        : 'Create Task'
-                                }
+                                {editMode
+                                    ? 'Edit Task'
+                                    : data.parent_id
+                                      ? 'Create Sub-Task'
+                                      : 'Create Task'}
                                 <Chip
                                     size="small"
-                                    label={editMode 
-                                        ? 'Editing' 
-                                        : data.parent_id 
-                                            ? 'Sub-Task' 
-                                            : 'New'
+                                    label={
+                                        editMode ? 'Editing' : data.parent_id ? 'Sub-Task' : 'New'
                                     }
                                     sx={{
                                         fontWeight: 700,
@@ -1423,14 +1436,15 @@ export default function Board({
                                         }}
                                     >
                                         <Stack direction="row" alignItems="center" spacing={1}>
-                                            <AccountTreeIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                                            <AccountTreeIcon
+                                                sx={{ color: 'primary.main', fontSize: 20 }}
+                                            />
                                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                Creating sub-task for: {
-                                                    Object.values(filteredTaskState)
-                                                        .flat()
-                                                        .find(t => t.id === parseInt(data.parent_id))?.title || 
-                                                    `Task #${data.parent_id}`
-                                                }
+                                                Creating sub-task for:{' '}
+                                                {Object.values(filteredTaskState)
+                                                    .flat()
+                                                    .find((t) => t.id === parseInt(data.parent_id))
+                                                    ?.title || `Task #${data.parent_id}`}
                                             </Typography>
                                         </Stack>
                                     </Box>
@@ -1580,7 +1594,10 @@ export default function Board({
                                     value={data.duplicate_of}
                                     onChange={(e) => setData('duplicate_of', e.target.value)}
                                     error={!!errors.duplicate_of}
-                                    helperText={errors.duplicate_of || 'Mark this task as a duplicate of another task'}
+                                    helperText={
+                                        errors.duplicate_of ||
+                                        'Mark this task as a duplicate of another task'
+                                    }
                                     size="small"
                                     InputProps={{
                                         startAdornment: (
