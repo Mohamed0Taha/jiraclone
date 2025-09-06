@@ -45,6 +45,7 @@ import RocketLaunchRoundedIcon from '@mui/icons-material/RocketLaunchRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import SmartToyRoundedIcon from '@mui/icons-material/SmartToyRounded';
+import PushPinRoundedIcon from '@mui/icons-material/PushPinRounded';
 import { getCsrfToken } from '@/utils/csrf';
 
 /** GET suggestions (no CSRF). `max` is clamped 3..8 for backend service to prevent timeouts. */
@@ -132,6 +133,9 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
     const [chips, setChips] = useState([]);
     const [loadingChips, setLoadingChips] = useState(false);
     const [chipError, setChipError] = useState('');
+
+    // Pinned tasks from previous generation
+    const [pinnedTasks, setPinnedTasks] = useState(prefill.pinnedTasks || []);
 
     // File upload state
     const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -496,7 +500,11 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                 const token = getCsrfToken() || '';
                 router.post(
                     route('tasks.ai.preview', project.id),
-                    { count, prompt: fullPrompt },
+                    { 
+                        count, 
+                        prompt: fullPrompt,
+                        pinnedTasks: pinnedTasks 
+                    },
                     {
                         preserveScroll: true,
                         headers: {
@@ -1138,6 +1146,55 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                         : '🚀 Generate Advanced Tasks'}
                                 </Button>
                             </Stack>
+
+                            {/* Pinned tasks from previous generation - subtle display at bottom */}
+                            {pinnedTasks.length > 0 && (
+                                <Box sx={{ 
+                                    mt: 3, 
+                                    p: 1.5, 
+                                    borderRadius: 2,
+                                    background: alpha(theme.palette.grey[100], 0.4),
+                                    border: `1px solid ${alpha(theme.palette.grey[300], 0.5)}`,
+                                }}>
+                                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                                        <PushPinRoundedIcon sx={{ 
+                                            fontSize: 14, 
+                                            color: alpha(theme.palette.text.secondary, 0.7),
+                                            transform: 'rotate(45deg)' 
+                                        }} />
+                                        <Typography 
+                                            variant="caption" 
+                                            sx={{ 
+                                                color: alpha(theme.palette.text.secondary, 0.8),
+                                                fontWeight: 500,
+                                                fontSize: '0.75rem'
+                                            }}
+                                        >
+                                            Will keep {pinnedTasks.length} pinned task{pinnedTasks.length === 1 ? '' : 's'} from previous generation
+                                        </Typography>
+                                    </Stack>
+                                    <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                        {pinnedTasks.map((task, index) => (
+                                            <Chip
+                                                key={index}
+                                                label={task?.title ? (task.title.length > 25 ? task.title.substring(0, 25) + '...' : task.title) : `Task ${index + 1}`}
+                                                size="small"
+                                                sx={{
+                                                    height: 24,
+                                                    fontSize: '0.7rem',
+                                                    fontWeight: 500,
+                                                    background: alpha(theme.palette.primary.main, 0.08),
+                                                    color: alpha(theme.palette.text.secondary, 0.9),
+                                                    border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+                                                    '& .MuiChip-label': {
+                                                        px: 1
+                                                    }
+                                                }}
+                                            />
+                                        ))}
+                                    </Stack>
+                                </Box>
+                            )}
 
                             <Divider sx={{ my: 2.5 }} />
 

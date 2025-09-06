@@ -18,8 +18,8 @@ use App\Models\CertificationAttempt;
 use App\Models\Project;
 use App\Models\User;
 use App\Notifications\CustomVerifyEmail;
-use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -667,9 +667,33 @@ Route::middleware('auth')->group(function () {
     /* Nested project-scoped routes */
     Route::prefix('projects/{project}')->group(function () {
         /* TASKS: AI generator flow (premium feature - ai_task_generation) */
-        Route::get('/tasks/ai', function (Project $project) {
+        Route::get('/tasks/ai', function (Request $request, Project $project) {
+            $prefillData = $request->all();
+            
+            // Debug log the incoming data
+            Log::info('AI Form Route - Incoming request data:', [
+                'pinnedTasks_count' => isset($prefillData['pinnedTasks']) ? count($prefillData['pinnedTasks']) : 0,
+                'pinnedTasks_sample' => isset($prefillData['pinnedTasks']) ? array_slice($prefillData['pinnedTasks'], 0, 3) : [],
+            ]);
+            
+            // Clean and validate pinnedTasks to prevent data accumulation issues
+            if (isset($prefillData['pinnedTasks']) && is_array($prefillData['pinnedTasks'])) {
+                // Filter out any invalid or malformed pinned tasks
+                $prefillData['pinnedTasks'] = array_filter($prefillData['pinnedTasks'], function($task) {
+                    return is_array($task) && isset($task['title']) && !empty($task['title']);
+                });
+                
+                // Limit to reasonable number to prevent UI issues
+                $prefillData['pinnedTasks'] = array_slice($prefillData['pinnedTasks'], 0, 20);
+                
+                Log::info('AI Form Route - After cleaning:', [
+                    'cleaned_pinnedTasks_count' => count($prefillData['pinnedTasks']),
+                ]);
+            }
+            
             return Inertia::render('Tasks/AITasksGenerator', [
                 'project' => $project,
+                'prefill' => $prefillData,
             ]);
         })->name('tasks.ai.form'); // Remove middleware to allow access
 

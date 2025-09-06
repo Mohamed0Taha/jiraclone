@@ -558,6 +558,10 @@ class TaskController extends Controller
         $val = $request->validate([
             'count' => ['required', 'integer', 'min:1', 'max:8'],
             'prompt' => ['nullable', 'string', 'max:2000'],
+            'pinnedTasks' => ['nullable', 'array'],
+            'pinnedTasks.*.title' => ['required', 'string'],
+            'pinnedTasks.*.description' => ['nullable', 'string'],
+            'pinnedTasks.*.end_date' => ['nullable', 'string'],
         ]);
 
         $user = $request->user();
@@ -584,11 +588,24 @@ class TaskController extends Controller
                 'prompt' => $val['prompt'] ?? 'none',
             ]);
 
-            $tasks = $generator->generateTasks($project, $val['count'], $val['prompt'] ?? '');
+            $pinnedTasks = $val['pinnedTasks'] ?? [];
+            $pinnedCount = count($pinnedTasks);
+            $newTasksNeeded = max(0, $val['count'] - $pinnedCount);
+
+            // Only generate new tasks if we need more than what's pinned
+            $newTasks = [];
+            if ($newTasksNeeded > 0) {
+                $newTasks = $generator->generateTasks($project, $newTasksNeeded, $val['prompt'] ?? '');
+            }
+
+            // Combine pinned tasks with newly generated tasks
+            $tasks = array_merge($pinnedTasks, $newTasks);
 
             Log::info('TaskGeneratorService: Tasks generated successfully', [
                 'project_id' => $project->id,
-                'task_count' => count($tasks),
+                'pinned_count' => $pinnedCount,
+                'new_tasks_count' => count($newTasks),
+                'total_task_count' => count($tasks),
                 'first_task' => $tasks[0]['title'] ?? 'none',
             ]);
 

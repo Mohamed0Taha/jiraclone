@@ -1,14 +1,17 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
     alpha,
     Box,
     Button,
+    Checkbox,
     Chip,
     Divider,
+    FormControlLabel,
     Paper,
     Stack,
+    Tooltip,
     Typography,
     useTheme,
 } from '@mui/material';
@@ -18,6 +21,7 @@ import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TaskAltRoundedIcon from '@mui/icons-material/TaskAltRounded';
+import PushPinRoundedIcon from '@mui/icons-material/PushPinRounded';
 
 export default function AITasksPreview({
     auth,
@@ -29,14 +33,39 @@ export default function AITasksPreview({
     limitExceeded = false,
 }) {
     const theme = useTheme();
+    const [pinnedTasks, setPinnedTasks] = useState(new Set());
 
-    const redo = () =>
+    const handlePinToggle = (taskIndex) => {
+        setPinnedTasks(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(taskIndex)) {
+                newSet.delete(taskIndex);
+            } else {
+                newSet.add(taskIndex);
+            }
+            return newSet;
+        });
+    };
+
+    const redo = () => {
+        const pinnedTasksArray = Array.from(pinnedTasks).map(index => generated[index]);
+        console.log('Preview: Sending pinned tasks to generator:', {
+            pinnedIndices: Array.from(pinnedTasks),
+            pinnedTasksArray: pinnedTasksArray,
+            pinnedCount: pinnedTasksArray.length,
+            originalInputKeys: Object.keys(originalInput),
+        });
+        
         router.visit(route('tasks.ai.form', project.id), {
             method: 'get',
-            data: originalInput,
+            data: {
+                ...originalInput,
+                pinnedTasks: pinnedTasksArray,
+            },
             preserveState: true,
             preserveScroll: true,
         });
+    };
 
     const accept = () =>
         router.post(route('tasks.ai.accept', project.id), {
@@ -164,6 +193,15 @@ export default function AITasksPreview({
 
                         <Divider sx={{ mb: 3 }} />
 
+                        {/* Instructions for pinning */}
+                        {generated.length > 0 && (
+                            <Box sx={{ mb: 2, p: 1.5, bgcolor: alpha(theme.palette.info.main, 0.06), borderRadius: 2, border: `1px solid ${alpha(theme.palette.info.main, 0.2)}` }}>
+                                <Typography variant="body2" sx={{ color: alpha(theme.palette.text.primary, 0.8) }}>
+                                    📌 <strong>All tasks start unpinned.</strong> Click the pin icon on tasks you want to keep, then click "Redo" to regenerate only the unpinned ones.
+                                </Typography>
+                            </Box>
+                        )}
+
                         <Stack spacing={2} sx={{ position: 'relative' }}>
                             {generated.map((t, i) => {
                                 const palette = [
@@ -214,7 +252,7 @@ export default function AITasksPreview({
                                         <Typography
                                             variant="subtitle1"
                                             fontWeight={700}
-                                            sx={{ pr: 4, lineHeight: 1.35 }}
+                                            sx={{ lineHeight: 1.35, mb: 1 }}
                                         >
                                             {t.title}
                                         </Typography>
@@ -249,6 +287,80 @@ export default function AITasksPreview({
                                                 Execute by: {t.end_date}
                                             </Typography>
                                         )}
+
+                                        {/* 3D Pin at bottom of card */}
+                                        <Box sx={{ 
+                                            display: 'flex', 
+                                            justifyContent: 'flex-end', 
+                                            mt: 1.5,
+                                            position: 'relative'
+                                        }}>
+                                            <Tooltip title={pinnedTasks.has(i) ? "Unpin task" : "Pin task to keep when redoing"}>
+                                                <Box
+                                                    onClick={() => handlePinToggle(i)}
+                                                    sx={{
+                                                        cursor: 'pointer',
+                                                        position: 'relative',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        width: 32,
+                                                        height: 32,
+                                                        borderRadius: '50%',
+                                                        background: pinnedTasks.has(i) 
+                                                            ? `linear-gradient(135deg, ${accent}22, ${accent}15)`
+                                                            : `linear-gradient(135deg, ${alpha(theme.palette.grey[200], 0.2)}, ${alpha(theme.palette.grey[100], 0.1)})`,
+                                                        border: pinnedTasks.has(i) 
+                                                            ? `2px solid ${alpha(accent, 0.4)}`
+                                                            : `2px solid ${alpha(theme.palette.grey[300], 0.2)}`,
+                                                        boxShadow: pinnedTasks.has(i)
+                                                            ? `
+                                                                0 4px 8px -2px ${alpha(accent, 0.3)},
+                                                                0 2px 4px -1px ${alpha(accent, 0.2)},
+                                                                inset 0 1px 0 rgba(255,255,255,0.3),
+                                                                inset 0 -1px 0 ${alpha(accent, 0.1)}
+                                                            `
+                                                            : `
+                                                                0 3px 6px -2px rgba(0,0,0,0.15),
+                                                                0 1px 3px -1px rgba(0,0,0,0.1),
+                                                                inset 0 1px 0 rgba(255,255,255,0.4),
+                                                                inset 0 -1px 0 rgba(0,0,0,0.05)
+                                                            `,
+                                                        transition: 'all 0.2s ease-in-out',
+                                                        '&:hover': {
+                                                            transform: 'translateY(-1px) scale(1.05)',
+                                                            boxShadow: pinnedTasks.has(i)
+                                                                ? `
+                                                                    0 6px 12px -3px ${alpha(accent, 0.4)},
+                                                                    0 3px 6px -2px ${alpha(accent, 0.3)},
+                                                                    inset 0 1px 0 rgba(255,255,255,0.4),
+                                                                    inset 0 -1px 0 ${alpha(accent, 0.2)}
+                                                                `
+                                                                : `
+                                                                    0 5px 10px -3px rgba(0,0,0,0.2),
+                                                                    0 2px 5px -2px rgba(0,0,0,0.15),
+                                                                    inset 0 1px 0 rgba(255,255,255,0.5),
+                                                                    inset 0 -1px 0 rgba(0,0,0,0.08)
+                                                                `,
+                                                        },
+                                                        '&:active': {
+                                                            transform: 'translateY(0) scale(0.98)',
+                                                        }
+                                                    }}
+                                                >
+                                                    <PushPinRoundedIcon 
+                                                        sx={{ 
+                                                            fontSize: 18,
+                                                            color: pinnedTasks.has(i) ? accent : alpha(theme.palette.grey[500], 0.5),
+                                                            filter: pinnedTasks.has(i) 
+                                                                ? `drop-shadow(0 1px 2px ${alpha(accent, 0.3)})`
+                                                                : 'drop-shadow(0 1px 1px rgba(0,0,0,0.05))',
+                                                            transition: 'all 0.2s ease-in-out',
+                                                        }} 
+                                                    />
+                                                </Box>
+                                            </Tooltip>
+                                        </Box>
                                         <Chip
                                             size="small"
                                             label={`#${i + 1}`}
@@ -292,7 +404,12 @@ export default function AITasksPreview({
                                 variant="text"
                                 color="inherit"
                                 startIcon={<ArrowBackRoundedIcon />}
-                                onClick={() => router.visit(route('tasks.ai.form', project.id))}
+                                onClick={() => router.visit(route('tasks.ai.form', project.id), {
+                                    method: 'get',
+                                    data: originalInput,
+                                    preserveState: true,
+                                    preserveScroll: true,
+                                })}
                                 sx={{ textTransform: 'none', fontWeight: 600 }}
                             >
                                 Back
@@ -307,7 +424,7 @@ export default function AITasksPreview({
                                     borderRadius: 2,
                                 }}
                             >
-                                Redo
+                                {pinnedTasks.size > 0 ? `Redo (Keep ${pinnedTasks.size})` : 'Redo'}
                             </Button>
                             <Button
                                 variant="contained"
@@ -422,7 +539,12 @@ export default function AITasksPreview({
                                     <Button
                                         variant="text"
                                         onClick={() =>
-                                            router.visit(route('tasks.ai.form', project.id))
+                                            router.visit(route('tasks.ai.form', project.id), {
+                                                method: 'get',
+                                                data: originalInput,
+                                                preserveState: true,
+                                                preserveScroll: true,
+                                            })
                                         }
                                         sx={{
                                             textTransform: 'none',
