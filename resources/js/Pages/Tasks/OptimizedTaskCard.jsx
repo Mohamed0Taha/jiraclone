@@ -25,6 +25,9 @@ import ImageIcon from '@mui/icons-material/Image';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import SyncIcon from '@mui/icons-material/Sync';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
 import ImageModal from '@/Components/ImageModal';
 import { LazyImage, LazyBackground } from '@/hooks/useLazyAssets.jsx';
 
@@ -46,6 +49,10 @@ const OptimizedTaskCard = memo(
         isPending = false,
         isUpdating = false,
         lazy = true,
+        projectId,
+        onDuplicateClick,
+        onParentClick,
+        onAddSubTask,
     }) => {
         const theme = useTheme();
         const defaultAccent = theme.palette.primary.main;
@@ -327,6 +334,130 @@ const OptimizedTaskCard = memo(
                             {task.title}
                         </Typography>
 
+                        {/* Duplicate Indicators */}
+                        {task.is_duplicate && (
+                            <Box
+                                sx={{
+                                    mb: 1,
+                                    p: 1,
+                                    borderRadius: 1,
+                                    bgcolor: alpha(theme.palette.warning.main, 0.1),
+                                    border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+                                    cursor: task.duplicate_of?.id ? 'pointer' : 'default',
+                                    '&:hover': task.duplicate_of?.id ? {
+                                        bgcolor: alpha(theme.palette.warning.main, 0.15),
+                                    } : {},
+                                }}
+                                onClick={(e) => {
+                                    if (task.duplicate_of?.id && onDuplicateClick) {
+                                        e.stopPropagation();
+                                        onDuplicateClick(task.duplicate_of.id);
+                                    }
+                                }}
+                            >
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    <ContentCopyIcon 
+                                        sx={{ 
+                                            fontSize: '1rem', 
+                                            color: theme.palette.warning.main 
+                                        }} 
+                                    />
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            fontWeight: 600,
+                                            color: theme.palette.warning.dark,
+                                            textDecoration: task.duplicate_of?.id ? 'underline' : 'none',
+                                        }}
+                                    >
+                                        Duplicate of: #{task.duplicate_of?.id || 'Unknown'}
+                                    </Typography>
+                                </Stack>
+                            </Box>
+                        )}
+
+                        {task.has_duplicates && !task.is_duplicate && (
+                            <Box sx={{ mb: 1 }}>
+                                <Chip
+                                    icon={<ContentCopyIcon />}
+                                    label={`Has ${task.duplicates?.length || 0} duplicate(s)`}
+                                    size="small"
+                                    sx={{
+                                        fontSize: '0.7rem',
+                                        height: 20,
+                                        bgcolor: alpha(theme.palette.info.main, 0.1),
+                                        color: theme.palette.info.main,
+                                        '& .MuiChip-icon': {
+                                            fontSize: '0.75rem',
+                                            color: theme.palette.info.main,
+                                        },
+                                    }}
+                                />
+                            </Box>
+                        )}
+
+                        {/* Sub-task Indicators */}
+                        {task.is_sub_task && (
+                            <Box
+                                sx={{
+                                    mb: 1,
+                                    p: 1,
+                                    borderRadius: 1,
+                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                    border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                                    cursor: task.parent?.id ? 'pointer' : 'default',
+                                    '&:hover': task.parent?.id ? {
+                                        bgcolor: alpha(theme.palette.primary.main, 0.15),
+                                    } : {},
+                                }}
+                                onClick={(e) => {
+                                    if (task.parent?.id && onParentClick) {
+                                        e.stopPropagation();
+                                        onParentClick(task.parent.id);
+                                    }
+                                }}
+                            >
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    <SubdirectoryArrowRightIcon 
+                                        sx={{ 
+                                            fontSize: '1rem', 
+                                            color: theme.palette.primary.main 
+                                        }} 
+                                    />
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            fontWeight: 600,
+                                            color: theme.palette.primary.dark,
+                                            textDecoration: task.parent?.id ? 'underline' : 'none',
+                                        }}
+                                    >
+                                        Child of: #{task.parent?.id || 'Unknown'}
+                                    </Typography>
+                                </Stack>
+                            </Box>
+                        )}
+
+                        {task.has_sub_tasks && !task.is_sub_task && (
+                            <Box sx={{ mb: 1 }}>
+                                <Chip
+                                    icon={<AccountTreeIcon />}
+                                    label={`Has ${task.children?.length || 0} sub-task(s)`}
+                                    size="small"
+                                    sx={{
+                                        fontSize: '0.7rem',
+                                        height: 20,
+                                        bgcolor: alpha(theme.palette.success.main, 0.1),
+                                        color: theme.palette.success.main,
+                                        '& .MuiChip-icon': {
+                                            fontSize: '0.75rem',
+                                            color: theme.palette.success.main,
+                                        },
+                                    }}
+                                />
+                            </Box>
+                        )}
+
                         {/* Description Preview */}
                         {task.description && (
                             <Typography
@@ -534,6 +665,18 @@ const OptimizedTaskCard = memo(
                                         sx={{ p: 0.5 }}
                                     >
                                         <EditIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Add sub-task">
+                                    <IconButton
+                                        size="small"
+                                        onClick={(e) => {
+                                            stop(e);
+                                            onAddSubTask?.(task);
+                                        }}
+                                        sx={{ p: 0.5 }}
+                                    >
+                                        <SubdirectoryArrowRightIcon fontSize="small" />
                                     </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Delete task">

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
+import { route } from 'ziggy-js';
+import { alpha } from '@mui/material/styles';
 import {
     Container,
     Paper,
@@ -21,6 +23,7 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    Tooltip,
 } from '@mui/material';
 import {
     ArrowBack,
@@ -29,11 +32,232 @@ import {
     Reply as ReplyIcon,
     Delete as DeleteIcon,
     PriorityHigh as PriorityHighIcon,
+    AccountTree as AccountTreeIcon,
+    CloseRounded as CloseRoundedIcon,
+    CalendarMonth as CalendarMonthRoundedIcon,
+    Person as PersonRoundedIcon,
+    Flag as FlagRoundedIcon,
+    ContentCopy as ContentCopyIcon,
+    DeleteOutline as DeleteOutlineIcon,
 } from '@mui/icons-material';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ImageModal from '@/Components/ImageModal';
+import {
+    METHODOLOGIES,
+    DEFAULT_METHOD,
+    getStatusMeta,
+    getStatusOrder,
+    mapLegacyStatusToMethod,
+} from '../Board/meta.jsx';
 
-export default function TaskShow({ auth, project, taskData, users, priorities }) {
+// Mapping from local methodology phases to canonical server statuses (duplicated from Board)
+const METHOD_TO_SERVER = {
+    [METHODOLOGIES.KANBAN]: {
+        todo: 'todo',
+        inprogress: 'inprogress',
+        review: 'review',
+        done: 'done',
+    },
+    [METHODOLOGIES.SCRUM]: {
+        backlog: 'todo',
+        todo: 'todo',
+        inprogress: 'inprogress',
+        testing: 'review',
+        review: 'review',
+        done: 'done',
+    },
+    [METHODOLOGIES.AGILE]: {
+        backlog: 'todo',
+        todo: 'todo',
+        inprogress: 'inprogress',
+        testing: 'review',
+        review: 'review',
+        done: 'done',
+    },
+    [METHODOLOGIES.WATERFALL]: {
+        requirements: 'todo',
+        design: 'inprogress',
+        implementation: 'inprogress',
+        verification: 'review',
+        maintenance: 'done',
+    },
+    [METHODOLOGIES.LEAN]: {
+        backlog: 'todo',
+        todo: 'inprogress',
+        testing: 'review',
+        review: 'review',
+        done: 'done',
+    },
+};
+
+export default function TaskShow({
+    auth,
+    project,
+    taskData,
+    users,
+    priorities,
+    allTasks,
+    methodology,
+}) {
+    // Design tokens (align view + modals)
+    const palette = {
+        gradientSurface: 'linear-gradient(155deg,#FFFFFF 0%,#F5F7FB 65%,#EEF2F9 100%)',
+        gradientHeader: 'linear-gradient(120deg,#6366F1 0%,#5850EC 45%,#4338CA 100%)',
+        gradientPrimary: 'linear-gradient(120deg,#6366F1,#4F46E5)',
+        gradientPrimaryHover: 'linear-gradient(120deg,#4F46E5,#4338CA)',
+        accentBorder: 'rgba(99,102,241,0.28)',
+        thumb: 'rgba(99,102,241,0.40)',
+        thumbHover: 'rgba(99,102,241,0.65)',
+        subtlePanel: 'linear-gradient(145deg,#FFFFFF,#F3F5FB)',
+        badge: 'linear-gradient(135deg,#EEF2FF,#E0E7FF)',
+    };
+
+    const [localTask, setLocalTask] = useState(taskData);
+    const [creatingSubTask, setCreatingSubTask] = useState(false);
+    // Create modal state
+    const [createOpen, setCreateOpen] = useState(false);
+    const [editMode, setEditMode] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [formImageUploading, setFormImageUploading] = useState(false);
+    const baseMethodology = (() => {
+        const allowed = Object.values(METHODOLOGIES);
+        const fromMeta = project?.meta?.methodology;
+        if (allowed.includes(fromMeta)) return fromMeta;
+        let fromLocal = null;
+        try {
+            if (project?.id) {
+                fromLocal = localStorage.getItem(`project:${project.id}:methodology`);
+            }
+        } catch {}
+        if (allowed.includes(fromLocal)) return fromLocal;
+        return DEFAULT_METHOD;
+    })();
+    const createStatusOrder = getStatusOrder(baseMethodology);
+    const [createForm, setCreateForm] = useState({
+        title: '',
+        description: '',
+        start_date: '',
+        end_date: '',
+        assignee_id: '',
+        status: createStatusOrder[0] || 'todo',
+        priority: 'medium',
+        milestone: false,
+        duplicate_of: '',
+        parent_id: localTask.id,
+    });
+
+    const showAddSubTask = (parentTask) => {
+        setEditMode(false);
+        setEditingId(null);
+        setCreateForm({
+            title: '',
+            description: '',
+            start_date: '',
+            end_date: '',
+            assignee_id: '',
+            status: createStatusOrder[0] || 'todo',
+            priority: 'medium',
+            milestone: false,
+            duplicate_of: '',
+            parent_id: parentTask.id, // Set the parent task
+        });
+        setCreateOpen(true);
+    };
+
+    const submitCreate = (e) => {
+        e.preventDefault();
+
+        setCreateOpen(false);
+
+        const routeName = route('tasks.store', project.id);
+        const serverStatus = METHOD_TO_SERVER[currentMethodology][createForm.status] || 'todo';
+        const payload = { ...createForm, status: serverStatus };
+
+        // Use fetch to get JSON payload (controller updated to return JSON when wantsJson())
+        fetch(routeName, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': document
+                    .querySelector('meta[name="csrf-token"]')
+                    .getAttribute('content'),
+            },
+            body: JSON.stringify(payload),
+        })
+            .then(async (res) => {
+                if (!res.ok) throw await res.json().catch(() => ({}));
+                return res.json();
+            })
+            .then((json) => {
+                const newTask = json?.task;
+                if (newTask) {
+                    setLocalTask((prev) => ({
+                        ...prev,
+                        children: [
+                            ...(prev.children || []),
+                            { id: newTask.id, title: newTask.title },
+                        ],
+                        has_sub_tasks: true,
+                    }));
+                }
+                setCreateForm({
+                    title: '',
+                    description: '',
+                    start_date: '',
+                    end_date: '',
+                    assignee_id: '',
+                    status: createStatusOrder[0] || 'todo',
+                    priority: 'medium',
+                    milestone: false,
+                    duplicate_of: '',
+                    parent_id: localTask.id,
+                });
+            })
+            .catch((err) => {
+                console.error('Create task failed', err);
+            });
+    };
+
+    const createField = (name, value) => setCreateForm((f) => ({ ...f, [name]: value }));
+
+    // Create a setData function to mimic useForm behavior for the sub-task creation
+    const setData = (name, value) => setCreateForm((f) => ({ ...f, [name]: value }));
+
+    // Determine methodology using the same logic as Board component
+    const currentMethodology = (() => {
+        const allowed = Object.values(METHODOLOGIES);
+        const fromMeta = project?.meta?.methodology;
+        if (allowed.includes(fromMeta)) return fromMeta;
+        let fromLocal = null;
+        try {
+            if (project?.id) {
+                fromLocal = localStorage.getItem(`project:${project.id}:methodology`);
+            }
+        } catch {
+            fromLocal = null;
+        }
+        if (allowed.includes(fromLocal)) return fromLocal;
+        return DEFAULT_METHOD;
+    })();
+
+    // Get status options based on methodology
+    const statusOrder = getStatusOrder(currentMethodology);
+    const statusMeta = getStatusMeta(currentMethodology);
+
+    // Create constants that match Board.jsx naming
+    const STATUS_ORDER = statusOrder;
+    const STATUS_META = statusMeta;
+
+    // Create filteredTaskState for compatibility with Board.jsx modal structure
+    const filteredTaskState = { [localTask.status]: allTasks || [] };
+
+    // Helper function to get status label - uses 'title' property like the Board
+    const getStatusLabel = (status) => {
+        return statusMeta[status]?.title || status.charAt(0).toUpperCase() + status.slice(1);
+    };
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [commentText, setCommentText] = useState('');
     const [replyTo, setReplyTo] = useState(null);
@@ -56,9 +280,10 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
         start_date: taskData.start_date || '',
         end_date: taskData.end_date || '',
         assignee_id: taskData.assignee?.id || '',
-        status: taskData.status,
+        status: mapLegacyStatusToMethod(taskData.status, currentMethodology),
         priority: taskData.priority,
         milestone: taskData.milestone,
+        duplicate_of: taskData.duplicate_of?.id || '',
     });
 
     const getPriorityColor = (priority) => {
@@ -482,6 +707,15 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                                 component="label"
                                 size="small"
                                 disabled={coverUploading}
+                                sx={{
+                                    borderRadius: 2,
+                                    px: 2,
+                                    fontSize: 12,
+                                    lineHeight: 1.1,
+                                    fontWeight: 600,
+                                    letterSpacing: 0.3,
+                                    height: 36,
+                                }}
                             >
                                 {coverUploading ? 'Uploading...' : 'Add Image'}
                                 <input
@@ -490,6 +724,54 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                                     accept="image/*"
                                     onChange={handleCoverUpload}
                                 />
+                            </Button>
+                            <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<EditIcon sx={{ fontSize: 16 }} />}
+                                onClick={() => setEditDialogOpen(true)}
+                                sx={{
+                                    borderRadius: 2,
+                                    px: 2.2,
+                                    fontSize: 12,
+                                    lineHeight: 1.1,
+                                    letterSpacing: 0.3,
+                                    fontWeight: 600,
+                                    height: 36,
+                                    background: 'linear-gradient(120deg,#6366F1,#4F46E5)',
+                                    boxShadow: '0 3px 10px -2px rgba(79,70,229,0.45)',
+                                    '&:hover': {
+                                        background: 'linear-gradient(120deg,#4F46E5,#4338CA)',
+                                    },
+                                }}
+                            >
+                                Edit Task
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<AccountTreeIcon sx={{ fontSize: 16 }} />}
+                                onClick={() => showAddSubTask(localTask)}
+                                disabled={creatingSubTask}
+                                sx={{
+                                    borderRadius: 2,
+                                    px: 2.2,
+                                    fontSize: 12,
+                                    lineHeight: 1.1,
+                                    letterSpacing: 0.3,
+                                    fontWeight: 600,
+                                    height: 36,
+                                    color: 'primary.main',
+                                    borderColor: 'rgba(99,102,241,0.55)',
+                                    '&:hover': {
+                                        borderColor: 'primary.main',
+                                        background: 'rgba(99,102,241,0.08)',
+                                    },
+                                    // Removed opacity fade; keep interaction consistent with Board.jsx
+                                    pointerEvents: creatingSubTask ? 'none' : 'auto',
+                                }}
+                            >
+                                Add Sub Task
                             </Button>
                         </Stack>
                         {taskData.attachments && taskData.attachments.length > 0 ? (
@@ -615,27 +897,6 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                                 {new Date(taskData.created_at).toLocaleDateString()}
                             </Typography>
                         </Box>
-                        <Button
-                            variant="contained"
-                            startIcon={<EditIcon />}
-                            onClick={() => setEditDialogOpen(true)}
-                            sx={{
-                                flexShrink: 0,
-                                borderRadius: 2,
-                                px: 3,
-                                py: 1.5,
-                                minWidth: 'auto',
-                                whiteSpace: 'nowrap',
-                                background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
-                                boxShadow: '0 3px 10px rgba(25, 118, 210, 0.3)',
-                                '&:hover': {
-                                    background: 'linear-gradient(45deg, #1565c0, #1976d2)',
-                                    boxShadow: '0 4px 15px rgba(25, 118, 210, 0.4)',
-                                },
-                            }}
-                        >
-                            Edit Task
-                        </Button>
                     </Stack>
 
                     {/* Priority and Status badges */}
@@ -654,9 +915,7 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                             }}
                         />
                         <Chip
-                            label={
-                                taskData.status.charAt(0).toUpperCase() + taskData.status.slice(1)
-                            }
+                            label={getStatusLabel(taskData.status)}
                             variant="outlined"
                             sx={{
                                 borderColor: 'primary.main',
@@ -677,6 +936,87 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                                     fontSize: '0.875rem',
                                     height: 32,
                                     backgroundColor: 'rgba(237, 108, 2, 0.05)',
+                                }}
+                            />
+                        )}
+                        {taskData.is_duplicate && (
+                            <Chip
+                                label={`Duplicate of: #${taskData.duplicate_of?.id || 'Unknown'}`}
+                                color="warning"
+                                variant="outlined"
+                                clickable
+                                onClick={() => {
+                                    if (taskData.duplicate_of?.id) {
+                                        router.get(
+                                            route('tasks.show', [
+                                                project.id,
+                                                taskData.duplicate_of.id,
+                                            ])
+                                        );
+                                    }
+                                }}
+                                sx={{
+                                    fontWeight: 'medium',
+                                    fontSize: '0.875rem',
+                                    height: 32,
+                                    backgroundColor: 'rgba(237, 108, 2, 0.05)',
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(237, 108, 2, 0.15)',
+                                    },
+                                }}
+                            />
+                        )}
+                        {taskData.has_duplicates && (
+                            <Chip
+                                label={`Has ${taskData.duplicates?.length || 0} duplicate(s)`}
+                                color="info"
+                                variant="outlined"
+                                sx={{
+                                    fontWeight: 'medium',
+                                    fontSize: '0.875rem',
+                                    height: 32,
+                                    backgroundColor: 'rgba(2, 136, 209, 0.05)',
+                                }}
+                            />
+                        )}
+                        {taskData.is_sub_task && (
+                            <Chip
+                                label={`Child of: #${taskData.parent?.id || 'Unknown'}`}
+                                color="primary"
+                                variant="outlined"
+                                clickable
+                                icon={<AccountTreeIcon />}
+                                onClick={() => {
+                                    if (taskData.parent?.id) {
+                                        router.get(
+                                            route('tasks.show', [project.id, taskData.parent.id])
+                                        );
+                                    }
+                                }}
+                                sx={{
+                                    fontWeight: 'medium',
+                                    fontSize: '0.875rem',
+                                    height: 32,
+                                    backgroundColor: 'rgba(25, 118, 210, 0.05)',
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(25, 118, 210, 0.15)',
+                                    },
+                                }}
+                            />
+                        )}
+                        {taskData.has_sub_tasks && (
+                            <Chip
+                                label={`Has ${taskData.children?.length || 0} sub-task(s)`}
+                                color="success"
+                                variant="outlined"
+                                icon={<AccountTreeIcon />}
+                                sx={{
+                                    fontWeight: 'medium',
+                                    fontSize: '0.875rem',
+                                    height: 32,
+                                    backgroundColor: 'rgba(46, 125, 50, 0.05)',
                                 }}
                             />
                         )}
@@ -886,10 +1226,6 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                                     background: 'linear-gradient(45deg, #1565c0, #1976d2)',
                                     boxShadow: '0 4px 15px rgba(25, 118, 210, 0.4)',
                                 },
-                                '&:disabled': {
-                                    background: 'rgba(0,0,0,0.12)',
-                                    boxShadow: 'none',
-                                },
                             }}
                         >
                             {replyTo ? 'Reply' : 'Comment'}
@@ -936,7 +1272,7 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                 </Paper>
             </Container>
 
-            {/* Edit Task Dialog */}
+            {/* Edit Task Dialog (Board style) */}
             <Dialog
                 open={editDialogOpen}
                 onClose={() => setEditDialogOpen(false)}
@@ -944,163 +1280,240 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                 fullWidth
                 PaperProps={{
                     sx: {
-                        borderRadius: 3,
-                        boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                        borderRadius: 4,
+                        backgroundColor: (t) => t.palette.background.paper,
+                        border: (t) => `1px solid ${alpha(t.palette.divider, 0.6)}`,
+                        boxShadow: '0 8px 28px -6px rgba(0,0,0,0.35)',
                     },
                 }}
             >
-                <DialogTitle
-                    sx={{
-                        background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        fontSize: '1.25rem',
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        handleUpdateTask();
                     }}
                 >
-                    Edit Task
-                </DialogTitle>
-                <DialogContent
-                    sx={{
-                        maxHeight: '60vh',
-                        overflowY: 'auto',
-                        backgroundColor: 'rgba(0,0,0,0.01)',
-                        '&::-webkit-scrollbar': {
-                            width: '8px',
-                        },
-                        '&::-webkit-scrollbar-track': {
-                            background: 'rgba(0,0,0,0.05)',
-                            borderRadius: '4px',
-                        },
-                        '&::-webkit-scrollbar-thumb': {
-                            background: 'rgba(25, 118, 210, 0.3)',
-                            borderRadius: '4px',
-                            '&:hover': {
-                                background: 'rgba(25, 118, 210, 0.5)',
-                            },
-                        },
-                    }}
-                >
-                    <Stack spacing={3} sx={{ mt: 2 }}>
-                        <TextField
-                            label="Title"
-                            value={editForm.title}
-                            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                            fullWidth
-                            required
+                    <DialogTitle
+                        sx={{
+                            fontWeight: 700,
+                            pr: 6,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                        }}
+                    >
+                        Edit Task
+                        <Chip
+                            size="small"
+                            label="Editing"
                             sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    borderRadius: 2,
+                                fontWeight: 700,
+                                height: 22,
+                                bgcolor: '#ffc107',
+                                color: '#212529',
+                                border: 'none',
+                                fontSize: '0.75rem',
+                                '& .MuiChip-label': {
+                                    fontWeight: 700,
+                                    color: '#212529',
+                                    px: 1,
                                 },
                             }}
                         />
+                        <IconButton
+                            size="small"
+                            aria-label="Close"
+                            onClick={() => setEditDialogOpen(false)}
+                            sx={{ ml: 'auto' }}
+                        >
+                            <CloseRoundedIcon fontSize="small" />
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent
+                        dividers
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1.5,
+                            pt: 2,
+                            maxHeight: '60vh',
+                            overflowY: 'auto',
+                        }}
+                    >
+                        <TextField
+                            label="Title"
+                            required
+                            fullWidth
+                            value={editForm.title}
+                            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                            placeholder="Concise task name"
+                            variant="outlined"
+                            size="small"
+                        />
                         <TextField
                             label="Description"
+                            multiline
+                            minRows={3}
+                            fullWidth
                             value={editForm.description}
                             onChange={(e) =>
                                 setEditForm({ ...editForm, description: e.target.value })
                             }
-                            multiline
-                            rows={4}
-                            fullWidth
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    borderRadius: 2,
-                                },
-                            }}
+                            placeholder="Add more context..."
+                            size="small"
                         />
-                        <Stack direction="row" spacing={2}>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                             <TextField
                                 label="Start Date"
                                 type="date"
+                                fullWidth
+                                InputLabelProps={{ shrink: true }}
                                 value={editForm.start_date}
                                 onChange={(e) =>
                                     setEditForm({ ...editForm, start_date: e.target.value })
                                 }
-                                InputLabelProps={{ shrink: true }}
-                                fullWidth
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 2,
-                                    },
+                                size="small"
+                                InputProps={{
+                                    startAdornment: (
+                                        <CalendarMonthRoundedIcon
+                                            fontSize="small"
+                                            sx={{ mr: 1, color: 'text.disabled' }}
+                                        />
+                                    ),
                                 }}
                             />
                             <TextField
-                                label="End Date"
+                                label="Due / Execution Date"
                                 type="date"
+                                fullWidth
+                                InputLabelProps={{ shrink: true }}
                                 value={editForm.end_date}
                                 onChange={(e) =>
                                     setEditForm({ ...editForm, end_date: e.target.value })
                                 }
-                                InputLabelProps={{ shrink: true }}
-                                fullWidth
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 2,
-                                    },
+                                size="small"
+                                InputProps={{
+                                    startAdornment: (
+                                        <CalendarMonthRoundedIcon
+                                            fontSize="small"
+                                            sx={{ mr: 1, color: 'text.disabled' }}
+                                        />
+                                    ),
                                 }}
                             />
-                        </Stack>
-                        <Stack direction="row" spacing={2}>
-                            <FormControl fullWidth>
-                                <InputLabel>Assignee</InputLabel>
-                                <Select
-                                    value={editForm.assignee_id}
-                                    onChange={(e) =>
-                                        setEditForm({ ...editForm, assignee_id: e.target.value })
-                                    }
-                                    label="Assignee"
-                                    sx={{
-                                        borderRadius: 2,
-                                    }}
-                                >
-                                    <MenuItem value="">Unassigned</MenuItem>
-                                    {users.map((user) => (
-                                        <MenuItem key={user.id} value={user.id}>
-                                            {user.name}
+                            <TextField
+                                select
+                                label="Assign To"
+                                fullWidth
+                                value={editForm.assignee_id}
+                                onChange={(e) =>
+                                    setEditForm({ ...editForm, assignee_id: e.target.value })
+                                }
+                                size="small"
+                                InputProps={{
+                                    startAdornment: (
+                                        <PersonRoundedIcon
+                                            fontSize="small"
+                                            sx={{ mr: 1, color: 'text.disabled' }}
+                                        />
+                                    ),
+                                }}
+                            >
+                                <MenuItem value="">— Unassigned —</MenuItem>
+                                {Array.isArray(users) &&
+                                    users.map((u) => (
+                                        <MenuItem key={u.id} value={u.id}>
+                                            {u.name}
                                         </MenuItem>
                                     ))}
-                                </Select>
-                            </FormControl>
-                            <FormControl fullWidth>
-                                <InputLabel>Status</InputLabel>
-                                <Select
-                                    value={editForm.status}
-                                    onChange={(e) =>
-                                        setEditForm({ ...editForm, status: e.target.value })
-                                    }
-                                    label="Status"
-                                    sx={{
-                                        borderRadius: 2,
-                                    }}
-                                >
-                                    <MenuItem value="todo">To Do</MenuItem>
-                                    <MenuItem value="inprogress">In Progress</MenuItem>
-                                    <MenuItem value="review">Review</MenuItem>
-                                    <MenuItem value="done">Done</MenuItem>
-                                </Select>
-                            </FormControl>
+                            </TextField>
                         </Stack>
-                        <FormControl fullWidth>
-                            <InputLabel>Priority</InputLabel>
-                            <Select
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                            <TextField
+                                select
+                                label="Priority"
+                                fullWidth
                                 value={editForm.priority}
                                 onChange={(e) =>
                                     setEditForm({ ...editForm, priority: e.target.value })
                                 }
-                                label="Priority"
-                                sx={{
-                                    borderRadius: 2,
+                                helperText="Task priority level"
+                                size="small"
+                            >
+                                <MenuItem value="low">Low</MenuItem>
+                                <MenuItem value="medium">Medium</MenuItem>
+                                <MenuItem value="high">High</MenuItem>
+                                <MenuItem value="urgent">Urgent</MenuItem>
+                            </TextField>
+                            <TextField
+                                select
+                                label="Milestone"
+                                fullWidth
+                                value={String(editForm.milestone)}
+                                onChange={(e) =>
+                                    setEditForm({
+                                        ...editForm,
+                                        milestone: e.target.value === 'true',
+                                    })
+                                }
+                                helperText="Mark as project milestone"
+                                size="small"
+                                InputProps={{
+                                    startAdornment: (
+                                        <FlagRoundedIcon
+                                            fontSize="small"
+                                            sx={{ mr: 1, color: 'text.disabled' }}
+                                        />
+                                    ),
                                 }}
                             >
-                                {priorities.map((priority) => (
-                                    <MenuItem key={priority} value={priority}>
-                                        {getPriorityLabel(priority)}
+                                <MenuItem value={'false'}>Regular Task</MenuItem>
+                                <MenuItem value={'true'}>Milestone</MenuItem>
+                            </TextField>
+                        </Stack>
+                        <TextField
+                            select
+                            label="Duplicate Of"
+                            fullWidth
+                            value={editForm.duplicate_of}
+                            onChange={(e) =>
+                                setEditForm({ ...editForm, duplicate_of: e.target.value })
+                            }
+                            helperText="Mark this task as a duplicate of another task"
+                            size="small"
+                            InputProps={{
+                                startAdornment: (
+                                    <ContentCopyIcon
+                                        fontSize="small"
+                                        sx={{ mr: 1, color: 'text.disabled' }}
+                                    />
+                                ),
+                            }}
+                        >
+                            <MenuItem value="">Not a duplicate</MenuItem>
+                            {allTasks
+                                .filter((t) => t.id !== localTask.id)
+                                .map((task) => (
+                                    <MenuItem key={task.id} value={task.id}>
+                                        {task.title}
                                     </MenuItem>
                                 ))}
-                            </Select>
-                        </FormControl>
-
-                        {/* Image Upload Section */}
+                        </TextField>
+                        <TextField
+                            select
+                            label="Status"
+                            fullWidth
+                            value={editForm.status}
+                            onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                            helperText="Choose where it should appear on the board."
+                            size="small"
+                        >
+                            {STATUS_ORDER.map((s) => (
+                                <MenuItem key={s} value={s}>
+                                    {STATUS_META[s]?.title || s}
+                                </MenuItem>
+                            ))}
+                        </TextField>
                         <Box
                             sx={{
                                 p: 2,
@@ -1110,7 +1523,10 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                                 backgroundColor: 'rgba(0,0,0,0.02)',
                             }}
                         >
-                            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                            <Typography
+                                variant="subtitle2"
+                                sx={{ mb: 1, fontWeight: 600, fontSize: '0.875rem' }}
+                            >
                                 Task Images
                             </Typography>
                             <Button
@@ -1118,7 +1534,7 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                                 component="label"
                                 size="small"
                                 disabled={coverUploading}
-                                sx={{ mb: 2 }}
+                                sx={{ mb: 1 }}
                             >
                                 {coverUploading ? 'Uploading...' : 'Add Image'}
                                 <input
@@ -1129,100 +1545,343 @@ export default function TaskShow({ auth, project, taskData, users, priorities })
                                 />
                             </Button>
                             {taskData.attachments && taskData.attachments.length > 0 && (
-                                <Box
-                                    sx={{
-                                        display: 'grid',
-                                        gap: 1,
-                                        gridTemplateColumns: 'repeat(auto-fill,minmax(80px,1fr))',
-                                        maxHeight: 120,
-                                        overflowY: 'auto',
-                                    }}
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{ display: 'block' }}
                                 >
-                                    {taskData.attachments.slice(0, 4).map((a) => (
-                                        <Box
-                                            key={a.id}
-                                            sx={{
-                                                position: 'relative',
-                                                borderRadius: 1,
-                                                overflow: 'hidden',
-                                                border: '1px solid',
-                                                borderColor: 'divider',
-                                                aspectRatio: '1',
-                                                cursor: 'pointer',
-                                            }}
-                                            onClick={() =>
-                                                openImageModal(
-                                                    a.url,
-                                                    a.original_name,
-                                                    `Task #${taskData.id}: ${a.original_name}`,
-                                                    true,
-                                                    () =>
-                                                        router.delete(
-                                                            route('tasks.attachments.destroy', [
-                                                                project.id,
-                                                                taskData.id,
-                                                                a.id,
-                                                            ])
-                                                        )
-                                                )
-                                            }
-                                        >
-                                            <img
-                                                src={a.url}
-                                                alt={a.original_name}
-                                                style={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    objectFit: 'cover',
-                                                }}
-                                            />
-                                        </Box>
-                                    ))}
-                                    {taskData.attachments.length > 4 && (
-                                        <Box
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                backgroundColor: 'rgba(0,0,0,0.1)',
-                                                borderRadius: 1,
-                                                aspectRatio: '1',
-                                            }}
-                                        >
-                                            <Typography variant="caption">
-                                                +{taskData.attachments.length - 4}
-                                            </Typography>
-                                        </Box>
-                                    )}
-                                </Box>
+                                    {taskData.attachments.length} image
+                                    {taskData.attachments.length !== 1 ? 's' : ''} attached
+                                </Typography>
                             )}
                         </Box>
-                    </Stack>
-                </DialogContent>
-                <DialogActions sx={{ p: 3, backgroundColor: 'rgba(0,0,0,0.02)' }}>
-                    <Button
-                        onClick={() => setEditDialogOpen(false)}
-                        sx={{ borderRadius: 2, px: 3 }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleUpdateTask}
-                        variant="contained"
+                    </DialogContent>
+                    <DialogActions sx={{ px: 2, py: 1.5 }}>
+                        <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            sx={{
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                px: 2.2,
+                                py: 0.6,
+                                background: 'primary.main',
+                                boxShadow: '0 6px 16px -8px rgba(0,0,0,.28)',
+                                '&:hover': { opacity: 0.95 },
+                            }}
+                        >
+                            Update Task
+                        </Button>
+                    </DialogActions>
+                </form>
+            </Dialog>
+
+            {/* Sub-task Create Modal */}
+            <Dialog
+                open={createOpen}
+                onClose={() => setCreateOpen(false)}
+                fullWidth
+                maxWidth="sm"
+                PaperProps={{
+                    sx: {
+                        borderRadius: 4,
+                        backgroundColor: (t) => t.palette.background.paper,
+                        border: (t) => `1px solid ${alpha(t.palette.divider, 0.6)}`,
+                        boxShadow: '0 8px 28px -6px rgba(0,0,0,0.35)',
+                    },
+                }}
+            >
+                <form onSubmit={submitCreate}>
+                    <DialogTitle
                         sx={{
-                            borderRadius: 2,
-                            px: 3,
-                            background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
-                            boxShadow: '0 3px 10px rgba(25, 118, 210, 0.3)',
-                            '&:hover': {
-                                background: 'linear-gradient(45deg, #1565c0, #1976d2)',
-                                boxShadow: '0 4px 15px rgba(25, 118, 210, 0.4)',
-                            },
+                            fontWeight: 700,
+                            pr: 6,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
                         }}
                     >
-                        Update Task
-                    </Button>
-                </DialogActions>
+                        {editMode
+                            ? 'Edit Task'
+                            : createForm.parent_id
+                              ? 'Create Sub-Task'
+                              : 'Create Task'}
+                        <Chip
+                            size="small"
+                            label={editMode ? 'Editing' : createForm.parent_id ? 'Sub-Task' : 'New'}
+                            sx={{
+                                fontWeight: 700,
+                                height: 22,
+                                bgcolor: editMode ? '#ffc107' : '#17a2b8',
+                                color: editMode ? '#212529' : '#ffffff',
+                                border: 'none',
+                                fontSize: '0.75rem',
+                                '& .MuiChip-label': {
+                                    fontWeight: 700,
+                                    color: editMode ? '#212529' : '#ffffff',
+                                    px: 1,
+                                },
+                            }}
+                        />
+                        <IconButton
+                            size="small"
+                            aria-label="Close"
+                            onClick={() => setCreateOpen(false)}
+                            sx={{ ml: 'auto' }}
+                        >
+                            <CloseRoundedIcon fontSize="small" />
+                        </IconButton>
+                    </DialogTitle>
+
+                    <DialogContent
+                        dividers
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1.5,
+                            pt: 2,
+                            maxHeight: '60vh',
+                            overflowY: 'auto',
+                        }}
+                    >
+                        {/* Parent Task Indicator for Sub-Tasks */}
+                        {!editMode && createForm.parent_id && (
+                            <Box
+                                sx={{
+                                    p: 2,
+                                    borderRadius: 2,
+                                    bgcolor: 'rgba(25, 118, 210, 0.08)',
+                                    border: '1px solid rgba(25, 118, 210, 0.2)',
+                                    mb: 1,
+                                }}
+                            >
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    <AccountTreeIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                        Creating sub-task for:{' '}
+                                        {Object.values(filteredTaskState)
+                                            .flat()
+                                            .find((t) => t.id === parseInt(createForm.parent_id))
+                                            ?.title ||
+                                            localTask.title ||
+                                            `Task #${createForm.parent_id}`}
+                                    </Typography>
+                                </Stack>
+                            </Box>
+                        )}
+                        <TextField
+                            label="Title"
+                            required
+                            fullWidth
+                            value={createForm.title}
+                            onChange={(e) => setData('title', e.target.value)}
+                            error={!!errors.title}
+                            helperText={errors.title}
+                            placeholder="Concise task name"
+                            variant="outlined"
+                            size="small"
+                        />
+                        <TextField
+                            label="Description"
+                            multiline
+                            minRows={3}
+                            fullWidth
+                            value={createForm.description}
+                            onChange={(e) => setData('description', e.target.value)}
+                            error={!!errors.description}
+                            helperText={
+                                errors.description ||
+                                'Add optional context, acceptance criteria, etc.'
+                            }
+                            placeholder="Add more context..."
+                            size="small"
+                        />
+
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                            <TextField
+                                label="Start Date"
+                                type="date"
+                                fullWidth
+                                InputLabelProps={{ shrink: true }}
+                                value={createForm.start_date}
+                                onChange={(e) => setData('start_date', e.target.value)}
+                                error={!!errors.start_date}
+                                helperText={errors.start_date || 'Optional'}
+                                size="small"
+                                InputProps={{
+                                    startAdornment: (
+                                        <CalendarMonthRoundedIcon
+                                            fontSize="small"
+                                            sx={{ mr: 1, color: 'text.disabled' }}
+                                        />
+                                    ),
+                                }}
+                            />
+                            <TextField
+                                label="Due / Execution Date"
+                                type="date"
+                                fullWidth
+                                InputLabelProps={{ shrink: true }}
+                                value={createForm.end_date}
+                                onChange={(e) => setData('end_date', e.target.value)}
+                                error={!!errors.end_date}
+                                helperText={errors.end_date || 'Optional'}
+                                size="small"
+                                InputProps={{
+                                    startAdornment: (
+                                        <CalendarMonthRoundedIcon
+                                            fontSize="small"
+                                            sx={{ mr: 1, color: 'text.disabled' }}
+                                        />
+                                    ),
+                                }}
+                            />
+                            <TextField
+                                select
+                                label="Assign To"
+                                fullWidth
+                                value={createForm.assignee_id}
+                                onChange={(e) => setData('assignee_id', e.target.value)}
+                                error={!!errors.assignee_id}
+                                helperText={errors.assignee_id || 'Optional'}
+                                size="small"
+                                InputProps={{
+                                    startAdornment: (
+                                        <PersonRoundedIcon
+                                            fontSize="small"
+                                            sx={{ mr: 1, color: 'text.disabled' }}
+                                        />
+                                    ),
+                                }}
+                            >
+                                <MenuItem value="">— Unassigned —</MenuItem>
+                                {Array.isArray(users) &&
+                                    users.map((u) => (
+                                        <MenuItem key={u.id} value={u.id}>
+                                            {u.name}
+                                        </MenuItem>
+                                    ))}
+                            </TextField>
+                        </Stack>
+
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                            <TextField
+                                select
+                                label="Priority"
+                                fullWidth
+                                value={createForm.priority}
+                                onChange={(e) => setData('priority', e.target.value)}
+                                error={!!errors.priority}
+                                helperText={errors.priority || 'Task priority level'}
+                                size="small"
+                            >
+                                <MenuItem value="low">Low</MenuItem>
+                                <MenuItem value="medium">Medium</MenuItem>
+                                <MenuItem value="high">High</MenuItem>
+                                <MenuItem value="urgent">Urgent</MenuItem>
+                            </TextField>
+
+                            <TextField
+                                select
+                                label="Milestone"
+                                fullWidth
+                                value={String(createForm.milestone)}
+                                onChange={(e) => setData('milestone', e.target.value === 'true')}
+                                error={!!errors.milestone}
+                                helperText={errors.milestone || 'Mark as project milestone'}
+                                size="small"
+                                InputProps={{
+                                    startAdornment: (
+                                        <FlagRoundedIcon
+                                            fontSize="small"
+                                            sx={{ mr: 1, color: 'text.disabled' }}
+                                        />
+                                    ),
+                                }}
+                            >
+                                <MenuItem value={'false'}>Regular Task</MenuItem>
+                                <MenuItem value={'true'}>Milestone</MenuItem>
+                            </TextField>
+                        </Stack>
+
+                        <TextField
+                            select
+                            label="Duplicate Of"
+                            fullWidth
+                            value={createForm.duplicate_of}
+                            onChange={(e) => setData('duplicate_of', e.target.value)}
+                            error={!!errors.duplicate_of}
+                            helperText={
+                                errors.duplicate_of ||
+                                'Mark this task as a duplicate of another task'
+                            }
+                            size="small"
+                            InputProps={{
+                                startAdornment: (
+                                    <ContentCopyIcon
+                                        fontSize="small"
+                                        sx={{ mr: 1, color: 'text.disabled' }}
+                                    />
+                                ),
+                            }}
+                        >
+                            <MenuItem value="">Not a duplicate</MenuItem>
+                            {Object.values(filteredTaskState)
+                                .flat()
+                                .filter((task) => task.id !== editingId) // Don't allow self-reference
+                                .map((task) => (
+                                    <MenuItem key={task.id} value={task.id}>
+                                        {task.title}
+                                    </MenuItem>
+                                ))}
+                        </TextField>
+
+                        <TextField
+                            select
+                            label="Status"
+                            fullWidth
+                            value={createForm.status}
+                            onChange={(e) => setData('status', e.target.value)}
+                            helperText="Choose where it should appear on the board."
+                            size="small"
+                        >
+                            {STATUS_ORDER.map((s) => (
+                                <MenuItem key={s} value={s}>
+                                    {STATUS_META[s]?.title || s}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    </DialogContent>
+
+                    <DialogActions sx={{ px: 2, py: 1.5 }}>
+                        <Button onClick={() => setCreateOpen(false)} disabled={processing}>
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={processing}
+                            sx={{
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                px: 2.2,
+                                py: 0.6,
+                                background: 'primary.main',
+                                boxShadow: '0 6px 16px -8px rgba(0,0,0,.28)',
+                                '&:hover': { opacity: 0.95 },
+                            }}
+                        >
+                            {processing
+                                ? editMode
+                                    ? 'Updating…'
+                                    : 'Creating…'
+                                : editMode
+                                  ? 'Update Task'
+                                  : 'Create Task'}
+                        </Button>
+                    </DialogActions>
+                </form>
             </Dialog>
 
             {/* Image Modal */}

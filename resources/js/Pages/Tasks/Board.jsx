@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Head, useForm, router, usePage } from '@inertiajs/react';
+import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
     alpha,
@@ -41,6 +42,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 import SyncIcon from '@mui/icons-material/Sync';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { DragDropContext } from 'react-beautiful-dnd';
 
 import HeaderBanner from '../Board/HeaderBanner';
@@ -243,6 +246,14 @@ export default function Board({
     const STATUS_ORDER = useMemo(() => getStatusOrder(methodology), [methodology]);
     const methodStyles = METHOD_STYLES[methodology] || METHOD_STYLES[METHODOLOGIES.KANBAN];
 
+    // Debug: Monitor task state changes
+    useEffect(() => {
+        console.log('Task state changed:', taskState);
+        Object.keys(taskState).forEach(status => {
+            console.log(`${status}:`, taskState[status]?.length || 0, 'tasks');
+        });
+    }, [taskState]);
+
     const COLUMN_WIDTH = 320;
     const COLUMN_GAP = 12;
 
@@ -312,6 +323,7 @@ export default function Board({
 
     const [searchQuery, setSearchQuery] = useState('');
     const [priorityFilter, setPriorityFilter] = useState('');
+    const [teamMemberFilter, setTeamMemberFilter] = useState('');
 
     const [membersOpen, setMembersOpen] = useState(false);
     const [reportOpen, setReportOpen] = useState(false);
@@ -344,7 +356,7 @@ export default function Board({
 
     const filterTasks = (tasksArr) => {
         if (!Array.isArray(tasksArr)) return [];
-        if (!searchQuery && !priorityFilter) return tasksArr;
+        if (!searchQuery && !priorityFilter && !teamMemberFilter) return tasksArr;
 
         return tasksArr.filter((task) => {
             if (!task) return false;
@@ -354,7 +366,9 @@ export default function Board({
                 (task.description &&
                     task.description.toLowerCase().includes(searchQuery.toLowerCase()));
             const matchesPriority = !priorityFilter || task.priority === priorityFilter;
-            return matchesSearch && matchesPriority;
+            const matchesTeamMember = !teamMemberFilter || 
+                (teamMemberFilter === 'unassigned' ? !task.assignee_id : task.assignee_id == teamMemberFilter);
+            return matchesSearch && matchesPriority && matchesTeamMember;
         });
     };
 
@@ -365,7 +379,7 @@ export default function Board({
             filtered[statusKey] = filterTasks(taskState[statusKey] || []);
         });
         return filtered;
-    }, [taskState, searchQuery, priorityFilter]);
+    }, [taskState, searchQuery, priorityFilter, teamMemberFilter]);
 
     // Preload critical images when tasks load
     useEffect(() => {
@@ -393,8 +407,42 @@ export default function Board({
 
     // Refresh tasks function for callbacks
     const refreshTasks = useCallback(() => {
-        router.reload({ only: ['tasks'] });
-    }, []);
+        console.log('Refreshing tasks...');
+        fetch(route('tasks.index', project.id), {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+            },
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                const serverTasks = data.tasks || {};
+                setTaskState((prev) => {
+                    // Build new columns but keep existing tasks not yet on server (e.g. just added) and preserve local phases via phaseMap
+                    const next = { ...prev };
+                    // Initialize all columns
+                    STATUS_ORDER.forEach((k) => (next[k] = []));
+                    // Insert server tasks mapped to local phases
+                    Object.entries(serverTasks).forEach(([serverStatus, arr]) => {
+                        if (!Array.isArray(arr)) return;
+                        arr.forEach((t) => {
+                            const mappedPhase = phaseMap?.[t.id];
+                            let localPhase = mappedPhase && STATUS_ORDER.includes(mappedPhase)
+                                ? mappedPhase
+                                : STATUS_ORDER.find(ph => (METHOD_TO_SERVER[methodology][ph] || 'todo') === serverStatus) || STATUS_ORDER[0];
+                            next[localPhase].push({ ...t, status: localPhase });
+                        });
+                    });
+                    return next;
+                });
+            })
+            .catch((error) => {
+                console.error('Error refreshing tasks:', error);
+                router.reload({ only: ['tasks'] });
+            });
+    }, [project.id, phaseMap, methodology, STATUS_ORDER]);
 
     const pendingTask = useMemo(() => {
         if (!pendingDeleteId) return null;
@@ -414,6 +462,8 @@ export default function Board({
         status: STATUS_ORDER[0] || 'todo',
         priority: 'medium',
         milestone: false,
+        duplicate_of: '',
+        parent_id: '',
     });
 
     const totalTasks = useMemo(
@@ -453,6 +503,25 @@ export default function Board({
             status: STATUS_ORDER.includes(t.status) ? t.status : STATUS_ORDER[0],
             priority: t.priority ?? 'medium',
             milestone: t.milestone ?? false,
+            duplicate_of: t.duplicate_of?.id ?? '',
+        });
+        setOpenForm(true);
+    };
+
+    const showAddSubTask = (parentTask) => {
+        setEditMode(false);
+        setEditingId(null);
+        setData({
+            title: '',
+            description: '',
+            start_date: '',
+            end_date: '',
+            assignee_id: '',
+            status: STATUS_ORDER[0],
+            priority: 'medium',
+            milestone: false,
+            duplicate_of: '',
+            parent_id: parentTask.id, // Set the parent task
         });
         setOpenForm(true);
     };
@@ -544,66 +613,48 @@ export default function Board({
         const serverStatus = METHOD_TO_SERVER[methodology][data.status] || 'todo';
         const payload = { ...data, status: serverStatus };
 
-        // Optimistic update for new tasks
         if (!editMode) {
-            const optimisticTask = {
-                id: makeTempId(), // Temporary string ID
-                __temp: true,
-                title: data.title,
-                description: data.description,
-                status: data.status,
-                priority: data.priority || 'medium',
-                milestone: data.milestone || false,
-                start_date: data.start_date,
-                end_date: data.end_date,
-                assignee: data.assignee_id ? users.find((u) => u.id == data.assignee_id) : null,
-                creator: auth.user,
-                comments_count: 0,
-                attachments_count: 0,
-                cover_image: null,
-            };
-            pushTask(optimisticTask);
+            // Use fetch to get JSON payload (controller updated to return JSON when wantsJson())
+            fetch(routeName, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                },
+                body: JSON.stringify(payload),
+            })
+                .then(async (res) => {
+                    if (!res.ok) throw await res.json().catch(() => ({}));
+                    return res.json();
+                })
+                .then((json) => {
+                    const newTask = json?.task;
+                    if (newTask) {
+                        // Preserve the column user selected (data.status) even when multiple phases map to same server status
+                        const chosenLocalPhase = data.status; // form's local phase
+                        // Register phase so future refresh respects it
+                        setPhaseMap(prev => ({ ...prev, [newTask.id]: chosenLocalPhase }));
+                        pushTask({ ...newTask, status: chosenLocalPhase });
+                    }
+                    refreshTasks(); // Ensure full sync after push
+                    reset();
+                })
+                .catch((err) => {
+                    console.error('Create task failed', err);
+                });
+            return;
         }
 
-        const action = editMode ? patch : post;
-        action(routeName, payload, {
+        // Edit flow (still inertia)
+        patch(routeName, payload, {
             preserveScroll: true,
-            onSuccess: (p) => {
-                try {
-                    const tid = editMode ? editingId : p?.props?.task?.id;
-                    if (tid) {
-                        setPhaseMap((prev) => ({ ...prev, [tid]: data.status }));
-
-                        // If new task, replace optimistic task with real data
-                        if (!editMode && p?.props?.task) {
-                            const newTask = {
-                                ...p.props.task,
-                                status: data.status,
-                                assignee: data.assignee_id
-                                    ? users.find((u) => u.id == data.assignee_id)
-                                    : null,
-                            };
-                            // Remove optimistic and add real
-                            // Replace the first temp task for this status
-                            const temp = (taskState[data.status] || []).find((t) => t.__temp);
-                            if (temp) dropTask(temp.id);
-                            pushTask({ ...newTask, status: data.status });
-                        }
-                    }
-                } catch {}
-                // Refresh tasks to sync with server
+            onSuccess: () => {
                 refreshTasks();
                 reset();
             },
             onError: (errors) => {
-                console.error('Task submission failed:', errors);
-                // If new task failed, remove optimistic update
-                if (!editMode) {
-                    // Remove temp tasks for this status
-                    (taskState[data.status] || [])
-                        .filter((t) => t.__temp)
-                        .forEach((t) => dropTask(t.id));
-                }
+                console.error('Task update failed:', errors);
             },
         });
     };
@@ -1130,13 +1181,44 @@ export default function Board({
                             </Select>
                         </FormControl>
 
-                        {(searchQuery || priorityFilter) && (
+                        <FormControl size="small" sx={{ minWidth: 160 }}>
+                            <InputLabel>Team Member</InputLabel>
+                            <Select
+                                value={teamMemberFilter}
+                                onChange={(e) => setTeamMemberFilter(e.target.value)}
+                                label="Team Member"
+                                sx={{
+                                    borderRadius: 2,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
+                                    '&.Mui-focused': { backgroundColor: 'rgba(255, 255, 255, 1)' },
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: (t) => methodStyles.chipBorder(t),
+                                    },
+                                }}
+                                startAdornment={
+                                    <PersonRoundedIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                                }
+                            >
+                                <MenuItem value="">All Members</MenuItem>
+                                <MenuItem value="unassigned">Unassigned</MenuItem>
+                                {Array.isArray(users) &&
+                                    users.map((user) => (
+                                        <MenuItem key={user.id} value={user.id}>
+                                            {user.name}
+                                        </MenuItem>
+                                    ))}
+                            </Select>
+                        </FormControl>
+
+                        {(searchQuery || priorityFilter || teamMemberFilter) && (
                             <Button
                                 size="small"
                                 variant="outlined"
                                 onClick={() => {
                                     setSearchQuery('');
                                     setPriorityFilter('');
+                                    setTeamMemberFilter('');
                                 }}
                                 sx={{
                                     borderRadius: 2,
@@ -1201,6 +1283,19 @@ export default function Board({
                                                     router.get(
                                                         route('tasks.show', [project.id, task.id])
                                                     )
+                                                }
+                                                onDuplicateClick={(duplicateOfId) =>
+                                                    router.get(
+                                                        route('tasks.show', [project.id, duplicateOfId])
+                                                    )
+                                                }
+                                                onParentClick={(parentId) =>
+                                                    router.get(
+                                                        route('tasks.show', [project.id, parentId])
+                                                    )
+                                                }
+                                                onAddSubTask={(parentTask) =>
+                                                    showAddSubTask(parentTask)
                                                 }
                                                 onImageUpload={(taskId) => {
                                                     const input = document.createElement('input');
@@ -1267,10 +1362,20 @@ export default function Board({
                                     gap: 1,
                                 }}
                             >
-                                {editMode ? 'Edit Task' : 'Create Task'}
+                                {editMode 
+                                    ? 'Edit Task' 
+                                    : data.parent_id 
+                                        ? 'Create Sub-Task' 
+                                        : 'Create Task'
+                                }
                                 <Chip
                                     size="small"
-                                    label={editMode ? 'Editing' : 'New'}
+                                    label={editMode 
+                                        ? 'Editing' 
+                                        : data.parent_id 
+                                            ? 'Sub-Task' 
+                                            : 'New'
+                                    }
                                     sx={{
                                         fontWeight: 700,
                                         height: 22,
@@ -1306,6 +1411,30 @@ export default function Board({
                                     overflowY: 'auto',
                                 }}
                             >
+                                {/* Parent Task Indicator for Sub-Tasks */}
+                                {!editMode && data.parent_id && (
+                                    <Box
+                                        sx={{
+                                            p: 2,
+                                            borderRadius: 2,
+                                            bgcolor: 'rgba(25, 118, 210, 0.08)',
+                                            border: '1px solid rgba(25, 118, 210, 0.2)',
+                                            mb: 1,
+                                        }}
+                                    >
+                                        <Stack direction="row" alignItems="center" spacing={1}>
+                                            <AccountTreeIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                Creating sub-task for: {
+                                                    Object.values(filteredTaskState)
+                                                        .flat()
+                                                        .find(t => t.id === parseInt(data.parent_id))?.title || 
+                                                    `Task #${data.parent_id}`
+                                                }
+                                            </Typography>
+                                        </Stack>
+                                    </Box>
+                                )}
                                 <TextField
                                     label="Title"
                                     required
@@ -1443,6 +1572,35 @@ export default function Board({
                                         <MenuItem value={'true'}>Milestone</MenuItem>
                                     </TextField>
                                 </Stack>
+
+                                <TextField
+                                    select
+                                    label="Duplicate Of"
+                                    fullWidth
+                                    value={data.duplicate_of}
+                                    onChange={(e) => setData('duplicate_of', e.target.value)}
+                                    error={!!errors.duplicate_of}
+                                    helperText={errors.duplicate_of || 'Mark this task as a duplicate of another task'}
+                                    size="small"
+                                    InputProps={{
+                                        startAdornment: (
+                                            <ContentCopyIcon
+                                                fontSize="small"
+                                                sx={{ mr: 1, color: 'text.disabled' }}
+                                            />
+                                        ),
+                                    }}
+                                >
+                                    <MenuItem value="">Not a duplicate</MenuItem>
+                                    {Object.values(filteredTaskState)
+                                        .flat()
+                                        .filter((task) => task.id !== editingId) // Don't allow self-reference
+                                        .map((task) => (
+                                            <MenuItem key={task.id} value={task.id}>
+                                                {task.title}
+                                            </MenuItem>
+                                        ))}
+                                </TextField>
 
                                 {/* Image Upload Section - Only show in edit mode */}
                                 {editMode && (

@@ -44,6 +44,55 @@ class TaskController extends Controller
         return $nullable ? 'nullable|'.$rule : $rule;
     }
 
+    /**
+     * Check if setting a parent would create a circular dependency
+     */
+    private function wouldCreateCircularDependency(Task $task, $parentId): bool
+    {
+        // If the potential parent is a child of this task, it would create a circle
+        $potentialParent = Task::find($parentId);
+        if (!$potentialParent) {
+            return false;
+        }
+
+        // Check if the potential parent is already a descendant of this task
+        return $this->isDescendantOf($potentialParent, $task->id);
+    }
+
+    /**
+     * Check if a task is a descendant of another task
+     */
+    private function isDescendantOf(Task $task, $ancestorId): bool
+    {
+        if ($task->parent_id === $ancestorId) {
+            return true;
+        }
+
+        if ($task->parent_id) {
+            $parent = Task::find($task->parent_id);
+            if ($parent) {
+                return $this->isDescendantOf($parent, $ancestorId);
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get all descendant IDs of a task
+     */
+    private function getDescendantIds(Task $task): array
+    {
+        $descendants = [];
+        
+        foreach ($task->children as $child) {
+            $descendants[] = $child->id;
+            $descendants = array_merge($descendants, $this->getDescendantIds($child));
+        }
+        
+        return $descendants;
+    }
+
     /* ------------------------------------------------ Board ----------- */
     public function index(Project $project)
     {
@@ -82,7 +131,7 @@ class TaskController extends Controller
     {
 
         $raw = $project->tasks()
-            ->with(['creator:id,name', 'assignee:id,name', 'comments.user:id,name', 'attachments'])
+            ->with(['creator:id,name', 'assignee:id,name', 'comments.user:id,name', 'attachments', 'duplicateOf:id,title', 'duplicates:id,title', 'parent:id,title', 'children:id,title'])
             ->orderBy('created_at')
             ->get()
             ->groupBy('status');
@@ -103,6 +152,20 @@ class TaskController extends Controller
                     'assignee' => $t->assignee ? ['id' => $t->assignee->id, 'name' => $t->assignee->name] : null,
                     'comments_count' => $t->comments->count(),
                     'attachments_count' => $t->attachments->count(),
+                    // Duplicate information
+                    'duplicate_of' => $t->duplicateOf ? ['id' => $t->duplicateOf->id, 'title' => $t->duplicateOf->title] : null,
+                    'is_duplicate' => (bool) $t->duplicate_of,
+                    'duplicates' => $t->duplicates->map(function ($duplicate) {
+                        return ['id' => $duplicate->id, 'title' => $duplicate->title];
+                    }),
+                    'has_duplicates' => $t->duplicates->count() > 0,
+                    // Parent/child information
+                    'parent' => $t->parent ? ['id' => $t->parent->id, 'title' => $t->parent->title] : null,
+                    'is_sub_task' => (bool) $t->parent_id,
+                    'children' => $t->children->map(function ($child) {
+                        return ['id' => $child->id, 'title' => $child->title];
+                    }),
+                    'has_sub_tasks' => $t->children->count() > 0,
                 ];
             });
         };
@@ -153,7 +216,11 @@ class TaskController extends Controller
             $tasks[$status] = $map($raw->get($status, collect()));
         }
 
-        $users = User::select('id', 'name')->get();
+        // Only project members + owner (match board logic)
+        $users = $project->members()->select('users.id', 'users.name')->get()
+            ->push(User::select('id', 'name')->find($project->user_id))
+            ->unique('id')
+            ->values();
 
         Log::info('🚀 TASKCONTROLLER TIMELINE SENDING DATA', [
             'tasks_count' => collect($tasks)->sum(function ($group) {
@@ -167,7 +234,7 @@ class TaskController extends Controller
     }
 
     /* -------------------------- Store manual task -------------------- */
-    public function store(Request $request, Project $project): RedirectResponse
+    public function store(Request $request, Project $project)
     {
         $this->authorize('view', $project);
 
@@ -180,6 +247,24 @@ class TaskController extends Controller
             'status' => $this->statusesRule(),
             'priority' => $this->prioritiesRule(),
             'milestone' => 'nullable|boolean',
+            'duplicate_of' => [
+                'nullable',
+                'exists:tasks,id',
+                function ($attribute, $value, $fail) use ($project) {
+                    if ($value && !$project->tasks()->where('id', $value)->exists()) {
+                        $fail('The selected task must belong to the same project.');
+                    }
+                },
+            ],
+            'parent_id' => [
+                'nullable',
+                'exists:tasks,id',
+                function ($attribute, $value, $fail) use ($project) {
+                    if ($value && !$project->tasks()->where('id', $value)->exists()) {
+                        $fail('The selected parent task must belong to the same project.');
+                    }
+                },
+            ],
         ]);
 
         $task = $project->tasks()->create([
@@ -192,11 +277,46 @@ class TaskController extends Controller
             'status' => $val['status'] ?? 'todo',
             'priority' => $val['priority'] ?? 'medium',
             'milestone' => $val['milestone'] ?? false,
+            'duplicate_of' => $val['duplicate_of'] ?? null,
+            'parent_id' => $val['parent_id'] ?? null,
         ]);
 
         TaskCreated::dispatch($task);
 
-        return back()->with('success', 'Task created.');
+        // Always load relations for structured responses
+        $task->load(['creator:id,name', 'assignee:id,name', 'duplicateOf:id,title', 'duplicates:id,title', 'parent:id,title', 'children:id,title']);
+
+        $payload = [
+            'id' => $task->id,
+            'title' => $task->title,
+            'description' => $task->description,
+            'start_date' => $task->start_date ? $task->start_date->format('Y-m-d') : null,
+            'end_date' => $task->end_date ? $task->end_date->format('Y-m-d') : null,
+            'status' => $task->status,
+            'priority' => $task->priority ?? 'medium',
+            'milestone' => $task->milestone ?? false,
+            'creator' => $task->creator ? ['id' => $task->creator->id, 'name' => $task->creator->name] : null,
+            'assignee' => $task->assignee ? ['id' => $task->assignee->id, 'name' => $task->assignee->name] : null,
+            'comments_count' => 0,
+            'attachments_count' => 0,
+            'cover_image' => null,
+            'duplicate_of' => $task->duplicateOf ? ['id' => $task->duplicateOf->id, 'title' => $task->duplicateOf->title] : null,
+            'is_duplicate' => (bool) $task->duplicate_of,
+            'duplicates' => $task->duplicates->map(fn ($d) => ['id' => $d->id, 'title' => $d->title]),
+            'has_duplicates' => $task->duplicates->count() > 0,
+            'parent' => $task->parent ? ['id' => $task->parent->id, 'title' => $task->parent->title] : null,
+            'is_sub_task' => (bool) $task->parent_id,
+            'children' => $task->children->map(fn ($c) => ['id' => $c->id, 'title' => $c->title]),
+            'has_sub_tasks' => $task->children->count() > 0,
+        ];
+
+    // Return JSON only for non-Inertia fetch/AJAX callers
+    if (($request->wantsJson() || $request->expectsJson() || $request->ajax()) && !$request->header('X-Inertia')) {
+            return response()->json(['task' => $payload]);
+        }
+
+        // Inertia POST fallback (redirect back with flash)
+        return back()->with(['success' => 'Task created.', 'task' => $payload]);
     }
 
     /* ---------------------------- Update task ------------------------ */
@@ -213,6 +333,36 @@ class TaskController extends Controller
             'status' => 'sometimes|'.$this->statusesRule(false),
             'priority' => 'sometimes|'.$this->prioritiesRule(false),
             'milestone' => 'sometimes|nullable|boolean',
+            'duplicate_of' => [
+                'sometimes',
+                'nullable',
+                'exists:tasks,id',
+                function ($attribute, $value, $fail) use ($task, $project) {
+                    if ($value && $value == $task->id) {
+                        $fail('A task cannot be a duplicate of itself.');
+                    }
+                    if ($value && !$project->tasks()->where('id', $value)->exists()) {
+                        $fail('The selected task must belong to the same project.');
+                    }
+                },
+            ],
+            'parent_id' => [
+                'sometimes',
+                'nullable',
+                'exists:tasks,id',
+                function ($attribute, $value, $fail) use ($task, $project) {
+                    if ($value && $value == $task->id) {
+                        $fail('A task cannot be a child of itself.');
+                    }
+                    if ($value && !$project->tasks()->where('id', $value)->exists()) {
+                        $fail('The selected parent task must belong to the same project.');
+                    }
+                    // Prevent circular relationships
+                    if ($value && $this->wouldCreateCircularDependency($task, $value)) {
+                        $fail('This would create a circular dependency.');
+                    }
+                },
+            ],
         ]);
 
         $task->update($validated);
@@ -247,6 +397,10 @@ class TaskController extends Controller
             },
             'attachments',
             'comments.attachments',
+            'duplicateOf:id,title',
+            'duplicates:id,title',
+            'parent:id,title',
+            'children:id,title',
         ]);
 
         $taskData = [
@@ -300,12 +454,40 @@ class TaskController extends Controller
                     }),
                 ];
             }),
+            // Duplicate information
+            'duplicate_of' => $task->duplicateOf ? ['id' => $task->duplicateOf->id, 'title' => $task->duplicateOf->title] : null,
+            'is_duplicate' => (bool) $task->duplicate_of,
+            'duplicates' => $task->duplicates->map(function ($duplicate) {
+                return ['id' => $duplicate->id, 'title' => $duplicate->title];
+            }),
+            'has_duplicates' => $task->duplicates->count() > 0,
+            // Parent/child information
+            'parent' => $task->parent ? ['id' => $task->parent->id, 'title' => $task->parent->title] : null,
+            'is_sub_task' => (bool) $task->parent_id,
+            'children' => $task->children->map(function ($child) {
+                return ['id' => $child->id, 'title' => $child->title];
+            }),
+            'has_sub_tasks' => $task->children->count() > 0,
         ];
 
-        $users = User::select('id', 'name')->get();
+        // Only expose project members (including owner) - SECURITY: prevent user enumeration
+        $users = $project->members()->select('users.id', 'users.name')->get()
+            ->push(User::select('id', 'name')->find($project->user_id))
+            ->unique('id')
+            ->values();
         $priorities = $this->priorities();
+        
+        // Get all tasks in the project for the duplicate_of dropdown
+        $allTasks = $project->tasks()
+            ->select('id', 'title')
+            ->where('id', '!=', $task->id) // Exclude current task
+            ->orderBy('title')
+            ->get();
 
-        return Inertia::render('Tasks/Show', compact('project', 'taskData', 'users', 'priorities'));
+        // Get project methodology for status options
+        $methodology = $project->meta['methodology'] ?? 'kanban';
+
+        return Inertia::render('Tasks/Show', compact('project', 'taskData', 'users', 'priorities', 'allTasks', 'methodology'));
     }
 
     /* ========= AI FLOW ========= */

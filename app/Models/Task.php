@@ -27,6 +27,8 @@ class Task extends Model
         'status',
         'milestone',
         'priority',
+        'duplicate_of',
+        'parent_id',
     ];
 
     protected $casts = [
@@ -75,5 +77,69 @@ class Task extends Model
     public function attachments()
     {
         return $this->hasMany(TaskAttachment::class);
+    }
+
+    /**
+     * The task this task is a duplicate of
+     */
+    public function duplicateOf()
+    {
+        return $this->belongsTo(Task::class, 'duplicate_of');
+    }
+
+    /**
+     * Tasks that are duplicates of this task
+     */
+    public function duplicates()
+    {
+        return $this->hasMany(Task::class, 'duplicate_of');
+    }
+
+    /**
+     * Check if this task is a duplicate
+     */
+    public function isDuplicate()
+    {
+        return !is_null($this->duplicate_of);
+    }
+
+    /**
+     * Check if this task has duplicates
+     */
+    public function hasDuplicates()
+    {
+        return $this->duplicates()->exists();
+    }
+
+    /**
+     * The parent task this task belongs to
+     */
+    public function parent()
+    {
+        return $this->belongsTo(Task::class, 'parent_id');
+    }
+
+    /**
+     * The child tasks (sub-tasks) of this task
+     */
+    public function children()
+    {
+        return $this->hasMany(Task::class, 'parent_id');
+    }
+
+    /**
+     * Check if this task is a sub-task
+     */
+    public function isSubTask()
+    {
+        return !is_null($this->parent_id);
+    }
+
+    /**
+     * Check if this task has sub-tasks
+     */
+    public function hasSubTasks()
+    {
+        return $this->children()->exists();
     }
 }
