@@ -134,7 +134,12 @@ SYS;
         ];
 
         try {
-            $text = $this->openAiChatText($msgs, 0.2);
+            // Prefer assistant-capable model for richer reasoning if configured
+            if (method_exists($this, 'openAiChatText')) {
+                $text = $this->openAiChatText($msgs, 0.2, true);
+            } else {
+                $text = $this->openAiChatText($msgs, 0.2); // fallback
+            }
             if (! is_string($text) || trim($text) === '') {
                 return null;
             }

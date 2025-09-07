@@ -25,6 +25,14 @@ return [
     */
     'model' => env('OPENAI_MODEL', 'gpt-4o'),
 
+    // Optional dedicated model for the interactive assistant (commands/chat)
+    // Falls back to general model if not set. Example values (preview capable):
+    // gpt-4.1-mini, gpt-4.1, o4-mini, o4
+    'assistant_model' => env('OPENAI_ASSISTANT_MODEL'),
+
+    // Optional debugging: when true will log model usage & latency for each call
+    'debug_models' => (bool) env('OPENAI_DEBUG_MODELS', false),
+
     /*
     |--------------------------------------------------------------------------
     | OpenAI API Project

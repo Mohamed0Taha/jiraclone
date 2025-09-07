@@ -28,9 +28,24 @@ class OpenAIService
     /**
      * Resolve model name from config/env.
      */
-    private function model(string $default = 'gpt-4o-mini'): string
+    private function model(string $default = 'gpt-4o-mini', ?string $override = null): string
     {
+        if ($override) {
+            return $override;
+        }
         return (string) (config('openai.model') ?: env('OPENAI_MODEL', $default));
+    }
+
+    /**
+     * Resolve assistant (command/chat capable) model if configured.
+     */
+    private function assistantModel(): ?string
+    {
+        $cfg = config('openai.assistant_model');
+        $env = env('OPENAI_ASSISTANT_MODEL');
+        $m = $cfg ?: $env;
+        $m = $m ? trim((string) $m) : null;
+        return $m ?: null;
     }
 
     /**
@@ -41,10 +56,10 @@ class OpenAIService
         return rtrim((string) (config('openai.base_uri') ?: env('OPENAI_BASE_URL', 'https://api.openai.com/v1')), '/');
     }
 
-    public function chatJson(array $messages, float $temperature = 0.1): array
+    public function chatJson(array $messages, float $temperature = 0.1, bool $useAssistantModel = false): array
     {
         $apiKey = $this->apiKey();
-        $model = $this->model('gpt-4o-mini');
+        $model = $this->model('gpt-4o-mini', $useAssistantModel ? $this->assistantModel() : null);
         if ($apiKey === '') {
             throw new Exception('OpenAI API key missing');
         }
@@ -54,6 +69,7 @@ class OpenAIService
         $startTime = microtime(true);
 
         try {
+            $start = microtime(true);
             $res = Http::timeout(25)->withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
@@ -63,6 +79,7 @@ class OpenAIService
                 'response_format' => ['type' => 'json_object'],
                 'messages' => $messages,
             ]);
+            $latencyMs = (int) ((microtime(true) - $start) * 1000);
 
             if (! $res->ok()) {
                 Log::error('OpenAI JSON request failed', ['status' => $res->status(), 'body' => $res->body()]);
@@ -107,6 +124,15 @@ class OpenAIService
                 );
             }
 
+            if (config('openai.debug_models')) {
+                Log::info('[OpenAIService] chatJson success', [
+                    'model' => $model,
+                    'assistant_override' => $useAssistantModel,
+                    'tokens' => $tokensUsed,
+                    'latency_ms' => $latencyMs,
+                ]);
+            }
+
             return is_array($data) ? $data : [];
 
         } catch (Exception $e) {
@@ -128,10 +154,10 @@ class OpenAIService
         }
     }
 
-    public function chatText(array $messages, float $temperature = 0.2): string
+    public function chatText(array $messages, float $temperature = 0.2, bool $useAssistantModel = false): string
     {
         $apiKey = $this->apiKey();
-        $model = $this->model('gpt-4o-mini');
+        $model = $this->model('gpt-4o-mini', $useAssistantModel ? $this->assistantModel() : null);
         if ($apiKey === '') {
             throw new Exception('OpenAI API key missing');
         }
@@ -140,7 +166,8 @@ class OpenAIService
         $userId = Auth::id();
 
         try {
-            $res = Http::timeout(25)->withHeaders([
+                $start = microtime(true);
+                $res = Http::timeout(25)->withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
             ])->post($this->baseUri().'/chat/completions', [
@@ -148,6 +175,7 @@ class OpenAIService
                 'temperature' => $temperature,
                 'messages' => $messages,
             ]);
+                $latencyMs = (int) ((microtime(true) - $start) * 1000);
 
             if (! $res->ok()) {
                 Log::error('OpenAI Text request failed', ['status' => $res->status(), 'body' => $res->body()]);
@@ -189,6 +217,15 @@ class OpenAIService
                     response: substr($text, 0, 1000), // Limit response length
                     successful: true
                 );
+            }
+
+            if (config('openai.debug_models')) {
+                Log::info('[OpenAIService] chatText success', [
+                    'model' => $model,
+                    'assistant_override' => $useAssistantModel,
+                    'tokens' => $tokensUsed,
+                    'latency_ms' => $latencyMs,
+                ]);
             }
 
             return (string) $text;

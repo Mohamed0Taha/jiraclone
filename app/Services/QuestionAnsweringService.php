@@ -64,7 +64,7 @@ class QuestionAnsweringService
             }
             if ($needsContext && $hasLLM) {
                 try {
-                    $llmAnswer = $this->questionAnswerWithOpenAI($project, $normalized, $history, $rephrasedQuestion);
+                    $llmAnswer = $this->questionAnswerWithOpenAI($project, $normalized, $history, $rephrasedQuestion, true);
                     if ($llmAnswer) {
                         return $llmAnswer;
                     }
@@ -85,7 +85,7 @@ class QuestionAnsweringService
             // Fall back to LLM if not already tried
     if (! $needsContext && $hasLLM) {
                 try {
-            $llmAnswer = $this->questionAnswerWithOpenAI($project, $normalized, $history, $rephrasedQuestion);
+            $llmAnswer = $this->questionAnswerWithOpenAI($project, $normalized, $history, $rephrasedQuestion, true);
                     if ($llmAnswer) {
                         return $llmAnswer;
                     }
@@ -155,7 +155,7 @@ class QuestionAnsweringService
         }
     }
 
-    private function questionAnswerWithOpenAI(Project $project, string $original, array $history, ?string $rephrased): ?string
+    private function questionAnswerWithOpenAI(Project $project, string $original, array $history, ?string $rephrased, bool $useAssistantModel = false): ?string
     {
         try {
             // Get comprehensive context including ALL project and task details
@@ -237,7 +237,7 @@ SYS;
                 'history_count' => count($recentHistory),
             ]);
 
-            $text = $this->openAIService->chatText($msgs, 0.2);
+            $text = $this->openAIService->chatText($msgs, 0.2, $useAssistantModel);
 
             if (trim($text)) {
                 Log::info('[QnA] OpenAI response received', ['response_length' => strlen($text)]);
