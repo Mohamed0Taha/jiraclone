@@ -782,6 +782,31 @@ Route::middleware('auth')->group(function () {
             }
         })->name('custom-views.get');
 
+        // API route for custom view SPA generation chat
+        Route::post('/custom-views/chat', function (Request $request, Project $project) {
+            $userId = $request->user()->id;
+            $message = $request->input('message', '');
+            $conversationHistory = $request->input('conversation_history', []);
+            
+            try {
+                $projectViewsService = app(\App\Services\ProjectViewsService::class);
+                $response = $projectViewsService->processCustomViewRequest(
+                    $project, 
+                    $message, 
+                    null, // sessionId
+                    $userId,
+                    'default' // viewName
+                );
+                
+                return response()->json($response);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'type' => 'error',
+                    'message' => 'Error generating custom view: ' . $e->getMessage(),
+                ], 500);
+            }
+        })->name('custom-views.chat');
+
         /* AUTOMATIONS (premium feature - automation) */
         // Allow all authenticated users to view automations index (overlay handles upsell)
         Route::get('/automations', [AutomationController::class, 'index'])->name('automations.index');
