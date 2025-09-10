@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Box, Fab, IconButton, Tooltip, Alert, Snackbar } from '@mui/material';
@@ -7,12 +7,56 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AssistantChat from './AssistantChat';
+import { enhanceGeneratedHTML } from '@/utils/htmlEnhancer';
 
 export default function CustomView({ auth, project, viewName }) {
     const [assistantOpen, setAssistantOpen] = useState(false);
     const [isLocked, setIsLocked] = useState(true);
     const [workingAreaContent, setWorkingAreaContent] = useState('');
+    const [customViewId, setCustomViewId] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+
+    // Load existing custom view on component mount
+    useEffect(() => {
+        loadExistingCustomView();
+    }, [project?.id, viewName]);
+
+    const loadExistingCustomView = async () => {
+        if (!project?.id) return;
+
+        try {
+            setIsLoading(true);
+            const response = await fetch(`/projects/${project.id}/custom-views/get?view_name=${viewName || 'default'}`, {
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.html) {
+                // Enhance the loaded HTML with additional JavaScript functionality
+                const enhancedHTML = enhanceGeneratedHTML(data.html);
+                setWorkingAreaContent(enhancedHTML);
+                setCustomViewId(data.custom_view_id);
+                setSnackbar({
+                    open: true,
+                    message: 'Custom view loaded successfully!',
+                    severity: 'success'
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load custom view:', error);
+            setSnackbar({
+                open: true,
+                message: 'Failed to load existing custom view.',
+                severity: 'warning'
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const toggleLock = () => {
         setIsLocked(!isLocked);
@@ -23,24 +67,71 @@ export default function CustomView({ auth, project, viewName }) {
         });
     };
 
-    const clearWorkingArea = () => {
-        setWorkingAreaContent('');
-        setSnackbar({
-            open: true,
-            message: 'Working area cleared',
-            severity: 'success'
-        });
+    const clearWorkingArea = async () => {
+        if (!customViewId) {
+            // Just clear the local state if no saved view
+            setWorkingAreaContent('');
+            setSnackbar({
+                open: true,
+                message: 'Working area cleared',
+                severity: 'success'
+            });
+            return;
+        }
+
+        try {
+            const response = await fetch(`/projects/${project.id}/custom-views/delete?view_name=${viewName || 'default'}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                setWorkingAreaContent('');
+                setCustomViewId(null);
+                setSnackbar({
+                    open: true,
+                    message: 'Custom view deleted permanently',
+                    severity: 'success'
+                });
+            } else {
+                throw new Error(data.message || 'Failed to delete custom view');
+            }
+        } catch (error) {
+            console.error('Failed to delete custom view:', error);
+            setSnackbar({
+                open: true,
+                message: 'Failed to delete custom view from server',
+                severity: 'error'
+            });
+        }
     };
 
     const handleCloseSnackbar = () => {
         setSnackbar({ ...snackbar, open: false });
     };
 
-    const handleSpaGenerated = (htmlContent) => {
-        setWorkingAreaContent(htmlContent);
+    const handleSpaGenerated = (htmlContent, responseData = {}) => {
+        // Enhance the HTML with additional JavaScript functionality
+        const enhancedHTML = enhanceGeneratedHTML(htmlContent);
+        setWorkingAreaContent(enhancedHTML);
+        
+        // Update custom view ID if provided
+        if (responseData.custom_view_id) {
+            setCustomViewId(responseData.custom_view_id);
+        }
+        
+        const message = responseData.is_update 
+            ? 'Custom application updated successfully!' 
+            : 'Custom application generated successfully!';
+            
         setSnackbar({
             open: true,
-            message: 'Custom application generated successfully!',
+            message,
             severity: 'success'
         });
     };
@@ -116,6 +207,19 @@ export default function CustomView({ auth, project, viewName }) {
                                 dangerouslySetInnerHTML={{ __html: workingAreaContent }}
                                 sx={{ width: '100%', height: '100%' }}
                             />
+                        ) : isLoading ? (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '100%',
+                                    flexDirection: 'column',
+                                    color: 'text.secondary',
+                                }}
+                            >
+                                <div>Loading custom view...</div>
+                            </Box>
                         ) : (
                             <Box
                                 sx={{
@@ -132,6 +236,9 @@ export default function CustomView({ auth, project, viewName }) {
                                     <div>Open the chat to generate a custom SPA application</div>
                                     <div style={{ fontSize: '0.9em', marginTop: '8px' }}>
                                         Try: "Create an expense tracker", "Build a vendor phonebook", "Make a project wiki"
+                                    </div>
+                                    <div style={{ fontSize: '0.8em', marginTop: '16px', fontStyle: 'italic' }}>
+                                        {customViewId ? 'Your previous custom view will be updated' : 'A new custom application will be created'}
                                     </div>
                                 </Box>
                             </Box>

@@ -764,6 +764,9 @@ Route::middleware('auth')->group(function () {
 
         /* CUSTOM VIEWS API */
         Route::post('/custom-views/chat', [App\Http\Controllers\ProjectViewsController::class, 'chat'])->name('custom-views.chat');
+        Route::get('/custom-views/get', [App\Http\Controllers\ProjectViewsController::class, 'getCustomView'])->name('custom-views.get');
+        Route::delete('/custom-views/delete', [App\Http\Controllers\ProjectViewsController::class, 'deleteCustomView'])->name('custom-views.delete');
+        Route::get('/custom-views/list', [App\Http\Controllers\ProjectViewsController::class, 'listCustomViews'])->name('custom-views.list');
         Route::delete('/custom-views/clear', [App\Http\Controllers\ProjectViewsController::class, 'clearWorkingArea'])->name('custom-views.clear');
 
         /* AUTOMATIONS (premium feature - automation) */

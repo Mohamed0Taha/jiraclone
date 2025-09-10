@@ -369,6 +369,8 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
         try {
             const payload = {
                 message: text,
+                session_id: sessionRef.current,
+                view_name: 'default', // Add view_name for custom views
                 conversation_history: messages.map((m) => ({
                     role: m.role,
                     content: m.text,
@@ -399,7 +401,7 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
                 
                 // Notify parent component about the generated SPA
                 if (onSpaGenerated) {
-                    onSpaGenerated(data.html);
+                    onSpaGenerated(data.html, data);
                 }
                 
                 setBusy(false);

@@ -31,19 +31,26 @@ class ProjectViewsController extends Controller
             $request->validate([
                 'message' => 'required|string|max:2000',
                 'session_id' => 'nullable|string',
+                'view_name' => 'nullable|string|max:255',
             ]);
+
+            $viewName = $request->input('view_name', 'default');
+            $userId = auth()->id();
 
             Log::info('[ProjectViewsController] Processing custom view chat', [
                 'project_id' => $project->id,
                 'message' => $request->input('message'),
-                'user_id' => auth()->id(),
+                'user_id' => $userId,
+                'view_name' => $viewName,
             ]);
 
             // Process the message through ProjectViewsService
             $response = $this->projectViewsService->processCustomViewRequest(
                 $project,
                 $request->input('message'),
-                $request->input('session_id')
+                $request->input('session_id'),
+                $userId,
+                $viewName
             );
 
             return response()->json($response);
@@ -93,6 +100,134 @@ class ProjectViewsController extends Controller
             return response()->json([
                 'type' => 'error',
                 'message' => 'Failed to clear working area.',
+                'success' => false,
+            ], 500);
+        }
+    }
+
+    /**
+     * Get existing custom view
+     */
+    public function getCustomView(Request $request, Project $project): JsonResponse
+    {
+        try {
+            // Check authorization
+            $this->authorize('view', $project);
+            
+            $request->validate([
+                'view_name' => 'nullable|string|max:255',
+            ]);
+
+            $viewName = $request->input('view_name', 'default');
+            $userId = auth()->id();
+
+            $customView = $this->projectViewsService->getCustomView($project, $userId, $viewName);
+
+            if (!$customView) {
+                return response()->json([
+                    'type' => 'empty',
+                    'message' => 'No custom view found.',
+                    'html' => null,
+                    'success' => true,
+                ]);
+            }
+
+            return response()->json([
+                'type' => 'custom_view_loaded',
+                'message' => 'Custom view loaded successfully.',
+                'html' => $customView->html_content,
+                'custom_view_id' => $customView->id,
+                'metadata' => $customView->metadata,
+                'success' => true,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('[ProjectViewsController] Error getting custom view', [
+                'error' => $e->getMessage(),
+                'project_id' => $project->id,
+            ]);
+
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Failed to load custom view.',
+                'success' => false,
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete custom view
+     */
+    public function deleteCustomView(Request $request, Project $project): JsonResponse
+    {
+        try {
+            // Check authorization
+            $this->authorize('view', $project);
+            
+            $request->validate([
+                'view_name' => 'nullable|string|max:255',
+            ]);
+
+            $viewName = $request->input('view_name', 'default');
+            $userId = auth()->id();
+
+            $deleted = $this->projectViewsService->deleteCustomView($project, $userId, $viewName);
+
+            if ($deleted) {
+                return response()->json([
+                    'type' => 'success',
+                    'message' => 'Custom view deleted successfully.',
+                    'success' => true,
+                ]);
+            } else {
+                return response()->json([
+                    'type' => 'error',
+                    'message' => 'Custom view not found.',
+                    'success' => false,
+                ], 404);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('[ProjectViewsController] Error deleting custom view', [
+                'error' => $e->getMessage(),
+                'project_id' => $project->id,
+            ]);
+
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Failed to delete custom view.',
+                'success' => false,
+            ], 500);
+        }
+    }
+
+    /**
+     * List user's custom views
+     */
+    public function listCustomViews(Request $request, Project $project): JsonResponse
+    {
+        try {
+            // Check authorization
+            $this->authorize('view', $project);
+            
+            $userId = auth()->id();
+            $customViews = $this->projectViewsService->getUserCustomViews($project, $userId);
+
+            return response()->json([
+                'type' => 'success',
+                'custom_views' => $customViews,
+                'success' => true,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('[ProjectViewsController] Error listing custom views', [
+                'error' => $e->getMessage(),
+                'project_id' => $project->id,
+            ]);
+
+            return response()->json([
+                'type' => 'error',
+                'message' => 'Failed to list custom views.',
                 'success' => false,
             ], 500);
         }
