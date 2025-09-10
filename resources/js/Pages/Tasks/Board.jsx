@@ -23,6 +23,13 @@ import {
     Select,
     LinearProgress,
     Alert,
+    Drawer,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemText,
+    Divider,
+    Fab,
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
@@ -44,6 +51,8 @@ import ClearIcon from '@mui/icons-material/Clear';
 import SyncIcon from '@mui/icons-material/Sync';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import AddIcon from '@mui/icons-material/Add';
 import { DragDropContext } from 'react-beautiful-dnd';
 
 import HeaderBanner from '../Board/HeaderBanner';
@@ -330,6 +339,20 @@ export default function Board({
     const [upgradeOpen, setUpgradeOpen] = useState(false);
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [assistantOpen, setAssistantOpen] = useState(false);
+
+    // Custom Views state
+    const [customViewsDrawerOpen, setCustomViewsDrawerOpen] = useState(false);
+    const [createViewDialogOpen, setCreateViewDialogOpen] = useState(false);
+    const [newViewName, setNewViewName] = useState('');
+    const [customViews, setCustomViews] = useState(() => {
+        // Load custom views from localStorage
+        try {
+            const stored = localStorage.getItem(`customViews:${project?.id}`);
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    });
 
     const buildColumnsFromServer = (incomingTasksObj) => {
         const cols = {};
@@ -848,6 +871,45 @@ export default function Board({
 
     const requirePro = (openFn) => (isPro ? openFn(true) : setUpgradeOpen(true));
 
+    // Custom Views handlers
+    const handleCreateView = () => {
+        if (!newViewName.trim()) return;
+        
+        const newView = {
+            id: Date.now().toString(),
+            name: newViewName.trim(),
+            createdAt: new Date().toISOString()
+        };
+        
+        const updatedViews = [...customViews, newView];
+        setCustomViews(updatedViews);
+        
+        // Save to localStorage
+        try {
+            localStorage.setItem(`customViews:${project?.id}`, JSON.stringify(updatedViews));
+        } catch (error) {
+            console.error('Failed to save custom views:', error);
+        }
+        
+        setNewViewName('');
+        setCreateViewDialogOpen(false);
+    };
+
+    const handleViewClick = (viewName) => {
+        router.visit(`/projects/${project.id}/custom-views/${encodeURIComponent(viewName)}`);
+    };
+
+    const handleDeleteView = (viewId) => {
+        const updatedViews = customViews.filter(view => view.id !== viewId);
+        setCustomViews(updatedViews);
+        
+        try {
+            localStorage.setItem(`customViews:${project?.id}`, JSON.stringify(updatedViews));
+        } catch (error) {
+            console.error('Failed to save custom views:', error);
+        }
+    };
+
     const fmtDate = (d) => {
         if (!d) return null;
         try {
@@ -1062,12 +1124,20 @@ export default function Board({
                     sx={{
                         minHeight: '100vh',
                         display: 'flex',
-                        flexDirection: 'column',
+                        flexDirection: 'row',
                         background: methodStyles.gradient,
-                        p: { xs: 1.5, md: 2 },
                     }}
                     style={{ ['--col-w']: `${COLUMN_WIDTH}px`, ['--col-gap']: `${COLUMN_GAP}px` }}
                 >
+                    {/* Main Content */}
+                    <Box
+                        sx={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            p: { xs: 1.5, md: 2 },
+                        }}
+                    >
                     <HeaderBanner
                         projectName={project?.name ?? 'Project'}
                         totalTasks={totalTasks}
@@ -1819,6 +1889,214 @@ export default function Board({
                         open={assistantOpen}
                         onClose={() => setAssistantOpen(false)}
                     />
+                </Box>
+
+                {/* Custom Views Drawer */}
+                <Drawer
+                    anchor="right"
+                    open={customViewsDrawerOpen}
+                    onClose={() => setCustomViewsDrawerOpen(false)}
+                    PaperProps={{
+                        sx: {
+                            width: 320,
+                            background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9))',
+                            backdropFilter: 'blur(10px)',
+                            borderLeft: '1px solid rgba(0, 0, 0, 0.1)',
+                        }
+                    }}
+                >
+                    <Box sx={{ p: 2 }}>
+                        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+                            <Typography variant="h6" fontWeight={700}>
+                                Custom Views
+                            </Typography>
+                            <IconButton
+                                size="small"
+                                onClick={() => setCustomViewsDrawerOpen(false)}
+                                sx={{ color: 'text.secondary' }}
+                            >
+                                <CloseRoundedIcon />
+                            </IconButton>
+                        </Stack>
+
+                        <Button
+                            variant="contained"
+                            fullWidth
+                            startIcon={<AddIcon />}
+                            onClick={() => setCreateViewDialogOpen(true)}
+                            sx={{
+                                mb: 2,
+                                background: methodStyles.accent,
+                                fontWeight: 600,
+                                textTransform: 'none',
+                                borderRadius: 2,
+                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                '&:hover': {
+                                    background: methodStyles.accent,
+                                    opacity: 0.9,
+                                }
+                            }}
+                        >
+                            Create View
+                        </Button>
+
+                        <Divider sx={{ mb: 2 }} />
+
+                        <List sx={{ p: 0 }}>
+                            {customViews.length === 0 ? (
+                                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                                    <ViewListIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
+                                    <Typography variant="body2">
+                                        No custom views yet.
+                                        Create your first view!
+                                    </Typography>
+                                </Box>
+                            ) : (
+                                customViews.map((view) => (
+                                    <ListItem
+                                        key={view.id}
+                                        disablePadding
+                                        sx={{
+                                            mb: 1,
+                                            borderRadius: 2,
+                                            overflow: 'hidden',
+                                            border: '1px solid rgba(0, 0, 0, 0.1)',
+                                            '&:hover': {
+                                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                                            }
+                                        }}
+                                    >
+                                        <ListItemButton
+                                            onClick={() => handleViewClick(view.name)}
+                                            sx={{
+                                                borderRadius: 2,
+                                                background: 'rgba(255, 255, 255, 0.7)',
+                                                '&:hover': {
+                                                    background: 'rgba(255, 255, 255, 0.9)',
+                                                }
+                                            }}
+                                        >
+                                            <ListItemText
+                                                primary={view.name}
+                                                secondary={`Created ${new Date(view.createdAt).toLocaleDateString()}`}
+                                                primaryTypographyProps={{
+                                                    fontWeight: 600,
+                                                    fontSize: '0.9rem'
+                                                }}
+                                                secondaryTypographyProps={{
+                                                    fontSize: '0.75rem',
+                                                    color: 'text.secondary'
+                                                }}
+                                            />
+                                            <IconButton
+                                                size="small"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteView(view.id);
+                                                }}
+                                                sx={{
+                                                    color: 'error.main',
+                                                    opacity: 0.7,
+                                                    '&:hover': {
+                                                        opacity: 1,
+                                                        background: 'rgba(211, 47, 47, 0.1)'
+                                                    }
+                                                }}
+                                            >
+                                                <DeleteOutlineIcon fontSize="small" />
+                                            </IconButton>
+                                        </ListItemButton>
+                                    </ListItem>
+                                ))
+                            )}
+                        </List>
+                    </Box>
+                </Drawer>
+
+                {/* Floating drawer toggle button */}
+                <Fab
+                    color="primary"
+                    onClick={() => setCustomViewsDrawerOpen(true)}
+                    sx={{
+                        position: 'fixed',
+                        bottom: 16,
+                        right: 16,
+                        zIndex: 1200,
+                        background: methodStyles.accent,
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                        '&:hover': {
+                            background: methodStyles.accent,
+                            opacity: 0.9,
+                            transform: 'scale(1.1)',
+                        },
+                        transition: 'all 0.3s ease',
+                    }}
+                >
+                    <ViewListIcon />
+                </Fab>
+
+                {/* Create View Dialog */}
+                <Dialog
+                    open={createViewDialogOpen}
+                    onClose={() => setCreateViewDialogOpen(false)}
+                    maxWidth="sm"
+                    fullWidth
+                    PaperProps={{
+                        sx: {
+                            borderRadius: 3,
+                            background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9))',
+                            backdropFilter: 'blur(10px)',
+                        }
+                    }}
+                >
+                    <DialogTitle sx={{ fontWeight: 700 }}>
+                        Create Custom View
+                    </DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            autoFocus
+                            fullWidth
+                            label="View Name"
+                            variant="outlined"
+                            value={newViewName}
+                            onChange={(e) => setNewViewName(e.target.value)}
+                            placeholder="Enter a name for your custom view"
+                            sx={{ mt: 1 }}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter' && newViewName.trim()) {
+                                    handleCreateView();
+                                }
+                            }}
+                        />
+                    </DialogContent>
+                    <DialogActions sx={{ p: 2 }}>
+                        <Button
+                            onClick={() => {
+                                setCreateViewDialogOpen(false);
+                                setNewViewName('');
+                            }}
+                            sx={{ textTransform: 'none' }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleCreateView}
+                            variant="contained"
+                            disabled={!newViewName.trim()}
+                            sx={{
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                background: methodStyles.accent,
+                                '&:hover': {
+                                    background: methodStyles.accent,
+                                    opacity: 0.9,
+                                }
+                            }}
+                        >
+                            Create
+                        </Button>
+                    </DialogActions>
+                </Dialog>
                 </Box>
             </AuthenticatedLayout>
         </>
