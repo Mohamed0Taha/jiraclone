@@ -43,7 +43,7 @@ const DynamicViewManager = ({ project, isOpen, onClose }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [savedViews, setSavedViews] = useState([]);
     const [currentView, setCurrentView] = useState(null);
-    const [apiEndpoint, setApiEndpoint] = useState(`/api/project/${project?.id}/tasks`);
+    const [apiEndpoint, setApiEndpoint] = useState(`/projects/${project?.id}/data/tasks`);
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -91,7 +91,7 @@ What kind of view would you like to create?`,
         setIsLoading(true);
 
         try {
-            const response = await axios.post('/api/dashboard/chat', {
+            const response = await axios.post('/dashboard/chat', {
                 message: inputMessage,
                 endpoint: window.location.origin + apiEndpoint,
                 context: {
@@ -103,6 +103,7 @@ What kind of view would you like to create?`,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
                 },
             });
 

@@ -11,12 +11,6 @@ import {
     Button,
     CircularProgress,
     Alert,
-    Divider,
-    Tooltip,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     Fab,
     Slide,
 } from '@mui/material';
@@ -25,49 +19,24 @@ import {
     SmartToy as SmartToyIcon,
     Close as CloseIcon,
     Minimize as MinimizeIcon,
-    ExpandMore as ExpandMoreIcon,
-    Lock as LockIcon,
 } from '@mui/icons-material';
 import { keyframes } from '@emotion/react';
 import { useSubscription } from '../Hooks/useSubscription';
 import { router } from '@inertiajs/react';
-// FeatureOverlay removed for inline upgrade card approach
 
 const Transition = React.forwardRef(function Transition(props, ref) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-// Robot typing animation keyframes
-const robotBounce = keyframes`
-  0%, 20%, 50%, 80%, 100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  40% {
-    transform: translateY(-3px) rotate(-2deg);
-  }
-  60% {
-    transform: translateY(-1px) rotate(1deg);
-  }
+// Simple, clean animations that match the theme
+const pulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 `;
 
 const typingDot = keyframes`
-  0%, 80%, 100% {
-    transform: scale(0.6);
-    opacity: 0.4;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
-`;
-
-const shimmer = keyframes`
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
 `;
 
 // Robot typing animation component
@@ -79,26 +48,13 @@ function RobotTypingIndicator() {
                 alignItems: 'center',
                 gap: 1,
                 p: 2,
-                borderRadius: 2,
+                borderRadius: 1,
                 bgcolor: 'grey.50',
                 border: '1px solid',
-                borderColor: 'primary.100',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: '-100%',
-                    width: '100%',
-                    height: '100%',
-                    background:
-                        'linear-gradient(90deg, transparent, rgba(25, 118, 210, 0.1), transparent)',
-                    animation: `${shimmer} 2s ease-in-out infinite`,
-                },
+                borderColor: 'grey.200',
             }}
         >
-            {/* Robot avatar with bouncing animation */}
+            {/* Robot avatar */}
             <Box
                 sx={{
                     width: 32,
@@ -109,8 +65,6 @@ function RobotTypingIndicator() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'white',
-                    animation: `${robotBounce} 2s ease-in-out infinite`,
-                    boxShadow: '0 2px 8px rgba(25, 118, 210, 0.3)',
                 }}
             >
                 <SmartToyIcon sx={{ fontSize: 18 }} />
@@ -119,7 +73,7 @@ function RobotTypingIndicator() {
             {/* Typing message */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    🤖 Assistant is crafting a response
+                    Assistant is typing
                 </Typography>
 
                 {/* Animated typing dots */}
@@ -128,8 +82,8 @@ function RobotTypingIndicator() {
                         <Box
                             key={index}
                             sx={{
-                                width: 6,
-                                height: 6,
+                                width: 4,
+                                height: 4,
                                 borderRadius: '50%',
                                 bgcolor: 'primary.main',
                                 animation: `${typingDot} 1.4s ease-in-out infinite`,
@@ -138,33 +92,6 @@ function RobotTypingIndicator() {
                         />
                     ))}
                 </Box>
-            </Box>
-
-            {/* Small sparkling effects */}
-            <Box
-                sx={{
-                    position: 'absolute',
-                    right: 16,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    display: 'flex',
-                    gap: 0.5,
-                }}
-            >
-                {[0, 1, 2].map((index) => (
-                    <Box
-                        key={index}
-                        sx={{
-                            width: 3,
-                            height: 3,
-                            borderRadius: '50%',
-                            bgcolor: 'secondary.main',
-                            opacity: 0.6,
-                            animation: `${typingDot} 1.8s ease-in-out infinite`,
-                            animationDelay: `${index * 0.3}s`,
-                        }}
-                    />
-                ))}
             </Box>
         </Box>
     );
@@ -326,7 +253,7 @@ export default function AssistantChat({ project, open, onClose }) {
         });
     };
 
-    const getMessageAvatar = (role, isLatest = false) => {
+    const getMessageAvatar = (role) => {
         if (role === 'assistant') {
             return (
                 <Avatar
@@ -334,17 +261,24 @@ export default function AssistantChat({ project, open, onClose }) {
                         bgcolor: 'primary.main',
                         width: 32,
                         height: 32,
-                        ...(isLatest && {
-                            animation: `${robotBounce} 3s ease-in-out infinite`,
-                            boxShadow: '0 0 12px rgba(25, 118, 210, 0.4)',
-                        }),
                     }}
                 >
                     <SmartToyIcon sx={{ fontSize: 18 }} />
                 </Avatar>
             );
         }
-        return <Avatar sx={{ bgcolor: 'grey.400', width: 32, height: 32 }}>U</Avatar>;
+        return (
+            <Avatar 
+                sx={{ 
+                    bgcolor: 'secondary.main', 
+                    width: 32, 
+                    height: 32,
+                    color: 'text.primary'
+                }}
+            >
+                U
+            </Avatar>
+        );
     };
 
     if (!open) return null;
@@ -368,11 +302,11 @@ export default function AssistantChat({ project, open, onClose }) {
 
     return (
         <Paper
-            elevation={8}
+            elevation={3}
             sx={{
                 position: 'fixed',
                 bottom: 20,
-                right: 100, // Moved left to avoid overlap with FAB group
+                right: 100,
                 width: { xs: '90vw', sm: 400 },
                 height: { xs: '70vh', sm: 500 },
                 zIndex: 1300,
@@ -380,16 +314,16 @@ export default function AssistantChat({ project, open, onClose }) {
                 flexDirection: 'column',
                 borderRadius: 2,
                 overflow: 'hidden',
-                position: 'fixed',
+                bgcolor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'grey.200',
             }}
         >
-            {/* Global overlay appears AFTER first assistant response if locked */}
             {/* Header */}
             <Box
                 sx={{
                     p: 2,
                     bgcolor: 'primary.main',
-                    background: 'linear-gradient(90deg,#1e3a8a,#1d4ed8 60%,#2563eb)',
                     color: 'white',
                     display: 'flex',
                     alignItems: 'center',
@@ -402,8 +336,8 @@ export default function AssistantChat({ project, open, onClose }) {
                         <Typography variant="h6" sx={{ fontSize: '1rem', lineHeight: 1 }}>
                             Project Assistant
                         </Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.85 }}>
-                            Ask for summaries or actions. First reply visible preview.
+                        <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                            AI-powered project management help
                         </Typography>
                     </Box>
                 </Stack>
@@ -422,9 +356,14 @@ export default function AssistantChat({ project, open, onClose }) {
             </Box>
 
             {/* Project Info */}
-            <Box sx={{ p: 2, bgcolor: 'grey.50', borderBottom: 1, borderColor: 'grey.200' }}>
+            <Box sx={{ 
+                p: 1.5, 
+                bgcolor: 'grey.50', 
+                borderBottom: 1, 
+                borderColor: 'grey.200' 
+            }}>
                 <Typography variant="body2" color="text.secondary">
-                    Chatting about: <strong>{project.name}</strong>
+                    Project: <strong>{project.name}</strong>
                 </Typography>
             </Box>
 
@@ -448,74 +387,44 @@ export default function AssistantChat({ project, open, onClose }) {
                     }}
                 >
                     {conversation.length === 0 && (
-                        <Box sx={{ p: 3 }}>
-                            <Box sx={{ textAlign: 'center', mb: 3 }}>
-                                <SmartToyIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    Hi! I'm your project assistant. Ask me anything about "
-                                    {project.name}".
-                                </Typography>
-                            </Box>
+                        <Box sx={{ p: 3, textAlign: 'center' }}>
+                            <SmartToyIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                            <Typography variant="h6" color="text.primary" sx={{ mb: 1 }}>
+                                Hi! I'm your project assistant
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                Ask me anything about "{project.name}". I can help with summaries, 
+                                task management, and project insights.
+                            </Typography>
 
                             {/* Suggestions */}
                             {showSuggestions && suggestions.length > 0 && (
                                 <Box>
                                     <Typography
-                                        variant="h6"
-                                        sx={{
-                                            mb: 2,
-                                            fontSize: '0.9rem',
-                                            color: 'text.secondary',
-                                            textAlign: 'center',
-                                        }}
+                                        variant="subtitle2"
+                                        sx={{ mb: 2, color: 'text.primary' }}
                                     >
-                                        💡 Suggested Questions
+                                        Try asking:
                                     </Typography>
-                                    <Box
-                                        sx={{
-                                            maxHeight: 200,
-                                            overflowY: 'auto',
-                                            '&::-webkit-scrollbar': {
-                                                width: '6px',
-                                            },
-                                            '&::-webkit-scrollbar-track': {
-                                                background: '#f1f1f1',
-                                            },
-                                            '&::-webkit-scrollbar-thumb': {
-                                                background: '#c1c1c1',
-                                                borderRadius: '3px',
-                                            },
-                                        }}
-                                    >
-                                        <Stack spacing={1}>
-                                            {suggestions.map((suggestion, index) => (
-                                                <Button
-                                                    key={index}
-                                                    variant="outlined"
-                                                    size="small"
-                                                    onClick={() =>
-                                                        handleSuggestionClick(suggestion)
-                                                    }
-                                                    disabled={isLoading}
-                                                    sx={{
-                                                        justifyContent: 'flex-start',
-                                                        textAlign: 'left',
-                                                        textTransform: 'none',
-                                                        fontSize: '0.8rem',
-                                                        py: 1,
-                                                        px: 1.5,
-                                                        borderColor: 'grey.300',
-                                                        '&:hover': {
-                                                            borderColor: 'primary.main',
-                                                            bgcolor: 'primary.50',
-                                                        },
-                                                    }}
-                                                >
-                                                    {suggestion}
-                                                </Button>
-                                            ))}
-                                        </Stack>
-                                    </Box>
+                                    <Stack spacing={1}>
+                                        {suggestions.map((suggestion, index) => (
+                                            <Button
+                                                key={index}
+                                                variant="outlined"
+                                                size="small"
+                                                onClick={() => handleSuggestionClick(suggestion)}
+                                                disabled={isLoading}
+                                                sx={{
+                                                    justifyContent: 'flex-start',
+                                                    textAlign: 'left',
+                                                    textTransform: 'none',
+                                                    fontSize: '0.85rem',
+                                                }}
+                                            >
+                                                {suggestion}
+                                            </Button>
+                                        ))}
+                                    </Stack>
                                 </Box>
                             )}
                         </Box>
@@ -538,39 +447,28 @@ export default function AssistantChat({ project, open, onClose }) {
                                         alignItems: 'flex-start',
                                     }}
                                 >
-                                    {getMessageAvatar(msg.role, isLastAssistantMessage)}
+                                    {getMessageAvatar(msg.role)}
                                     <Box sx={{ flex: 1, minWidth: 0 }}>
                                         <Paper
                                             elevation={1}
                                             sx={{
-                                                position: 'relative', // For overlay positioning
                                                 p: 1.5,
-                                                bgcolor:
-                                                    msg.role === 'user'
-                                                        ? 'primary.main'
-                                                        : 'grey.100',
-                                                color:
-                                                    msg.role === 'user' ? 'white' : 'text.primary',
+                                                bgcolor: msg.role === 'user' ? 'primary.main' : 'grey.100',
+                                                color: msg.role === 'user' ? 'white' : 'text.primary',
                                                 borderRadius: 2,
                                                 maxWidth: '85%',
                                                 ml: msg.role === 'user' ? 'auto' : 0,
                                                 mr: msg.role === 'assistant' ? 'auto' : 0,
-                                                ...(isLastAssistantMessage && {
-                                                    borderLeft: '3px solid',
-                                                    borderLeftColor: 'primary.main',
-                                                    bgcolor: 'primary.50',
-                                                }),
                                             }}
                                         >
                                             {msg.type === 'upgrade' ? (
                                                 <Box
                                                     sx={{
-                                                        p: 1.5,
+                                                        p: 2,
                                                         borderRadius: 2,
-                                                        bgcolor: 'white',
+                                                        bgcolor: 'background.paper',
                                                         border: '1px solid',
-                                                        borderColor: 'primary.100',
-                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+                                                        borderColor: 'primary.main',
                                                         display: 'flex',
                                                         flexDirection: 'column',
                                                         gap: 1,
@@ -578,7 +476,7 @@ export default function AssistantChat({ project, open, onClose }) {
                                                 >
                                                     <Typography
                                                         variant="subtitle2"
-                                                        sx={{ fontWeight: 800 }}
+                                                        sx={{ fontWeight: 600, color: 'primary.main' }}
                                                     >
                                                         {msg.title}
                                                     </Typography>
@@ -600,11 +498,10 @@ export default function AssistantChat({ project, open, onClose }) {
                                                         }
                                                         sx={{
                                                             textTransform: 'none',
-                                                            fontWeight: 700,
                                                             alignSelf: 'flex-start',
                                                         }}
                                                     >
-                                                        See plans
+                                                        Upgrade Now
                                                     </Button>
                                                 </Box>
                                             ) : (
@@ -679,7 +576,7 @@ export default function AssistantChat({ project, open, onClose }) {
                         }}
                         sx={{
                             '& .MuiOutlinedInput-root': {
-                                borderRadius: 2,
+                                borderRadius: 1,
                             },
                         }}
                     />
@@ -703,7 +600,6 @@ export default function AssistantChat({ project, open, onClose }) {
                     </IconButton>
                 </Box>
             </Box>
-            {/* Global overlay removed; locked state shown inline above */}
         </Paper>
     );
 }

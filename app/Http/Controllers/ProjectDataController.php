@@ -11,14 +11,13 @@ class ProjectDataController extends Controller
     /**
      * Get project tasks data for API consumption by LLM
      */
-    public function getTasks(Request $request, $id): JsonResponse
+    public function getTasks(Request $request, Project $project): JsonResponse
     {
         try {
-            $project = Project::with(['tasks' => function($query) {
+            $project->load(['tasks' => function($query) {
                 $query->with(['comments.user', 'attachments'])
                       ->orderBy('created_at', 'desc');
-            }, 'user:id,name,email'])
-            ->findOrFail($id);
+            }, 'user:id,name,email']);
 
             // Check if user has access to this project
             $user = $request->user();
@@ -72,7 +71,7 @@ class ProjectDataController extends Controller
                         'review' => $tasks->where('status', 'review')->count(),
                         'done' => $tasks->where('status', 'done')->count(),
                     ],
-                    'endpoint' => url("/api/project/{$id}/tasks"),
+                    'endpoint' => route('projects.data.tasks', $project),
                     'generated_at' => now()->toISOString(),
                 ]
             ]);
@@ -88,11 +87,10 @@ class ProjectDataController extends Controller
     /**
      * Get comprehensive dashboard data for a project
      */
-    public function getDashboardData(Request $request, $id): JsonResponse
+    public function getDashboardData(Request $request, Project $project): JsonResponse
     {
         try {
-            $project = Project::with(['tasks', 'user:id,name,email', 'members:id,name,email'])
-                             ->findOrFail($id);
+            $project->load(['tasks', 'user:id,name,email', 'members:id,name,email']);
 
             // Check if user has access to this project
             $user = $request->user();
@@ -150,8 +148,8 @@ class ProjectDataController extends Controller
                     ];
                 })->values(),
                 'endpoints' => [
-                    'tasks' => url("/api/project/{$id}/tasks"),
-                    'dashboard' => url("/api/project/{$id}/dashboard-data"),
+                    'tasks' => route('projects.data.tasks', $project),
+                    'dashboard' => route('projects.data.dashboard', $project),
                 ],
                 'generated_at' => now()->toISOString(),
             ]);
