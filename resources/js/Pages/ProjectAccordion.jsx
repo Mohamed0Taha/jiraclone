@@ -417,34 +417,79 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                         sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
                     >
                         <Tooltip title="Edit project" arrow>
-                            <IconButton
-                                size="small"
+                            <Box
+                                role="button"
+                                tabIndex={0}
                                 onClick={gotoEdit}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        gotoEdit(e);
+                                    }
+                                }}
                                 aria-label={`Edit project ${project.name}`}
                                 sx={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
                                     color: alpha('#243A63', 0.7),
-                                    '&:hover': { color: alpha('#243A63', 0.95) },
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': { 
+                                        color: alpha('#243A63', 0.95),
+                                        backgroundColor: alpha('#243A63', 0.08),
+                                    },
+                                    '&:focus-visible': {
+                                        outline: `2px solid ${alpha('#243A63', 0.5)}`,
+                                        outlineOffset: 2,
+                                    },
                                 }}
                             >
                                 <EditRoundedIcon fontSize="small" />
-                            </IconButton>
+                            </Box>
                         </Tooltip>
 
                         <Tooltip title="Delete project" arrow>
-                            <IconButton
-                                size="small"
+                            <Box
+                                role="button"
+                                tabIndex={0}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onDelete?.(e, project);
                                 }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        onDelete?.(e, project);
+                                    }
+                                }}
                                 aria-label={`Delete project ${project.name}`}
                                 sx={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
                                     color: alpha('#243A63', 0.7),
-                                    '&:hover': { color: alpha('#243A63', 0.95) },
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': { 
+                                        color: alpha('#243A63', 0.95),
+                                        backgroundColor: alpha('#243A63', 0.08),
+                                    },
+                                    '&:focus-visible': {
+                                        outline: `2px solid ${alpha('#243A63', 0.5)}`,
+                                        outlineOffset: 2,
+                                    },
                                 }}
                             >
                                 <DeleteRoundedIcon fontSize="small" />
-                            </IconButton>
+                            </Box>
                         </Tooltip>
                     </Box>
                 )}

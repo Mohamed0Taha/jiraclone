@@ -709,30 +709,29 @@ const OptimizedTaskCard = memo(
                     />
                 )}
 
-                {/* CSS for spinning animation */}
-                <style jsx>{`
-                    @keyframes spin {
-                        from {
-                            transform: rotate(0deg);
-                        }
-                        to {
-                            transform: rotate(360deg);
-                        }
-                    }
-                    @keyframes shimmer {
-                        0% {
-                            transform: translateX(-100%);
-                        }
-                        100% {
-                            transform: translateX(100%);
-                        }
-                    }
-                `}</style>
+
             </>
         );
     }
 );
 
 OptimizedTaskCard.displayName = 'OptimizedTaskCard';
+
+// Inject keyframes for animations
+if (typeof document !== 'undefined' && !document.getElementById('optimized-task-card-keyframes')) {
+    const style = document.createElement('style');
+    style.id = 'optimized-task-card-keyframes';
+    style.innerHTML = `
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 export default OptimizedTaskCard;
