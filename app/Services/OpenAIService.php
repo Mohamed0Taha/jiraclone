@@ -646,6 +646,25 @@ class OpenAIService
         }
     }
 
+    /**
+     * Generate custom view HTML/JS application using OpenAI
+     */
+    public function generateCustomView(string $prompt): string
+    {
+        $messages = [
+            [
+                'role' => 'system',
+                'content' => 'You are an expert web developer who creates beautiful, functional single-page applications. You respond only with complete HTML code including embedded CSS and JavaScript. No explanations, no markdown formatting.',
+            ],
+            [
+                'role' => 'user',
+                'content' => $prompt,
+            ],
+        ];
+
+        return $this->chatText($messages, 0.3, false);
+    }
+
     private function calculateCost(string $model, int $tokens): float
     {
         // Rough cost calculation based on current OpenAI pricing (as of 2025)

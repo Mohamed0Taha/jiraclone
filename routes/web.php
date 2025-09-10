@@ -732,6 +732,11 @@ Route::middleware('auth')->group(function () {
 
         /* CUSTOM VIEWS */
         Route::get('/custom-views/{name}', function (Request $request, Project $project, $name) {
+            // Check if user can view the project
+            if (!$request->user()->can('view', $project)) {
+                abort(403);
+            }
+            
             // Get project tasks for the custom view
             $tasks = $project->tasks()
                 ->with(['creator:id,name', 'assignee:id,name'])
@@ -756,6 +761,10 @@ Route::middleware('auth')->group(function () {
                 'isPro' => $request->user()?->hasActiveSubscription() ?? false,
             ]);
         })->name('custom-views.show');
+
+        /* CUSTOM VIEWS API */
+        Route::post('/custom-views/chat', [App\Http\Controllers\ProjectViewsController::class, 'chat'])->name('custom-views.chat');
+        Route::delete('/custom-views/clear', [App\Http\Controllers\ProjectViewsController::class, 'clearWorkingArea'])->name('custom-views.clear');
 
         /* AUTOMATIONS (premium feature - automation) */
         // Allow all authenticated users to view automations index (overlay handles upsell)
