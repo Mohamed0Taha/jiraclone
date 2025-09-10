@@ -757,6 +757,10 @@ Route::middleware('auth')->group(function () {
             ]);
         })->name('custom-views.show');
 
+        /* CUSTOM VIEWS API */
+        Route::post('/custom-views/chat', [App\Http\Controllers\ProjectViewsController::class, 'chat'])->name('custom-views.chat');
+        Route::delete('/custom-views/clear', [App\Http\Controllers\ProjectViewsController::class, 'clearWorkingArea'])->name('custom-views.clear');
+
         /* AUTOMATIONS (premium feature - automation) */
         // Allow all authenticated users to view automations index (overlay handles upsell)
         Route::get('/automations', [AutomationController::class, 'index'])->name('automations.index');

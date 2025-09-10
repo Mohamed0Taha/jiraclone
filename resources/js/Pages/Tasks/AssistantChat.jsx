@@ -99,7 +99,7 @@ const palette = {
     cancelText: colors.error,
 };
 
-export default function AssistantChat({ project, open, onClose }) {
+export default function AssistantChat({ project, open, onClose, isCustomView = false, onSpaGenerated = null }) {
     const { props } = usePage();
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState([]);
@@ -142,17 +142,31 @@ export default function AssistantChat({ project, open, onClose }) {
 
     useEffect(() => {
         if (!open) return;
-        fetch(`/projects/${project.id}/assistant/suggestions`, {
-            method: 'GET',
-            headers: { Accept: 'application/json' },
-            credentials: 'same-origin',
-        })
-            .then((response) => response.json())
-            .then((d) => {
-                if (Array.isArray(d?.suggestions)) setSuggestions(d.suggestions);
+        
+        // Use different suggestions for custom view
+        if (isCustomView) {
+            setSuggestions([
+                "Create an expense tracker for my team",
+                "Build a vendor phonebook",
+                "Make a project wiki page",
+                "Create a task analytics dashboard",
+                "Build a team workload overview",
+                "Create a milestone timeline",
+                "Build a budget tracking app"
+            ]);
+        } else {
+            fetch(`/projects/${project.id}/assistant/suggestions`, {
+                method: 'GET',
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
             })
-            .catch(() => {});
-    }, [open, project?.id]);
+                .then((response) => response.json())
+                .then((d) => {
+                    if (Array.isArray(d?.suggestions)) setSuggestions(d.suggestions);
+                })
+                .catch(() => {});
+        }
+    }, [open, project?.id, isCustomView]);
 
     useEffect(() => {
         if (!open) return;
@@ -361,11 +375,36 @@ export default function AssistantChat({ project, open, onClose }) {
                 })),
             };
 
-            const response = await csrfFetch(`/projects/${project.id}/assistant/chat`, {
+            // Route to different endpoints based on context
+            const endpoint = isCustomView 
+                ? `/projects/${project.id}/custom-views/chat`
+                : `/projects/${project.id}/assistant/chat`;
+
+            const response = await csrfFetch(endpoint, {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });
             const data = await response.json();
+
+            // Handle custom view SPA generation
+            if (isCustomView && data?.type === 'spa_generated' && data?.html) {
+                const asstMsg = {
+                    role: 'assistant',
+                    text: data?.message || 'Generated your custom application!',
+                    response: data,
+                    ts: Date.now(),
+                };
+                
+                setMessages((prev) => [...prev, asstMsg]);
+                
+                // Notify parent component about the generated SPA
+                if (onSpaGenerated) {
+                    onSpaGenerated(data.html);
+                }
+                
+                setBusy(false);
+                return;
+            }
 
             // If backend indicates overlay (free tier), show upgrade card style message
             if (data?.show_overlay) {
@@ -490,7 +529,7 @@ export default function AssistantChat({ project, open, onClose }) {
                     component="div"
                     sx={{ fontWeight: 800, letterSpacing: 0.15 }}
                 >
-                    Project Assistant
+                    {isCustomView ? 'Custom SPA Generator' : 'Project Assistant'}
                 </Typography>
                 <Chip
                     size="small"
@@ -1316,7 +1355,9 @@ export default function AssistantChat({ project, open, onClose }) {
                             inputRef={inputRef}
                             fullWidth
                             size="small"
-                            placeholder="Type your message..."
+                            placeholder={isCustomView 
+                                ? "Describe the SPA you want to create..." 
+                                : "Type your message..."}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => {
