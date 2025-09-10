@@ -332,6 +332,7 @@ export default function Board({
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [assistantOpen, setAssistantOpen] = useState(false);
     const [dynamicViewOpen, setDynamicViewOpen] = useState(false);
+    const [savedViews, setSavedViews] = useState([]);
 
     const buildColumnsFromServer = (incomingTasksObj) => {
         const cols = {};
@@ -911,6 +912,36 @@ export default function Board({
         } catch {}
     }, [project?.id, methodology]);
 
+    // Load saved views from localStorage
+    const loadSavedViews = useCallback(() => {
+        try {
+            if (project?.id) {
+                const saved = localStorage.getItem(`saved_views_${project.id}`);
+                if (saved) {
+                    const parsedViews = JSON.parse(saved);
+                    setSavedViews(Array.isArray(parsedViews) ? parsedViews : []);
+                } else {
+                    setSavedViews([]);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load saved views:', error);
+            setSavedViews([]);
+        }
+    }, [project?.id]);
+
+    // Load saved views on component mount and project change
+    useEffect(() => {
+        loadSavedViews();
+    }, [loadSavedViews]);
+
+    // Handle clicking on a saved view chip
+    const handleViewChipClick = useCallback((view) => {
+        setDynamicViewOpen(true);
+        // Note: The DynamicViewManager will need to handle loading the specific view
+        // We'll pass the selected view through a callback or state
+    }, []);
+
     const ProjectSummaryBar = () => {
         if (!project) return null;
         return (
@@ -1091,6 +1122,8 @@ export default function Board({
                         onOpenReport={() => requirePro(setReportOpen)}
                         onOpenDetails={() => setDetailsOpen(true)}
                         onOpenAssistant={() => setAssistantOpen(true)}
+                        savedViews={savedViews}
+                        onViewChipClick={handleViewChipClick}
                     />
 
                     {/* Performance Indicators - Simplified */}
@@ -1827,6 +1860,7 @@ export default function Board({
                         project={project}
                         isOpen={dynamicViewOpen}
                         onClose={() => setDynamicViewOpen(false)}
+                        onViewSaved={loadSavedViews}
                     />
                 </Box>
             </AuthenticatedLayout>

@@ -37,7 +37,7 @@ import {
 import { router } from '@inertiajs/react';
 import axios from 'axios';
 
-const DynamicViewManager = ({ project, isOpen, onClose }) => {
+const DynamicViewManager = ({ project, isOpen, onClose, onViewSaved }) => {
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -165,10 +165,19 @@ What kind of view would you like to create?`,
             project_id: project?.id,
         };
 
-        setSavedViews(prev => [...prev, viewToSave]);
+        const updatedViews = [...savedViews, viewToSave];
+        setSavedViews(updatedViews);
         
-        // In a real implementation, you'd save this to the backend
-        localStorage.setItem(`saved_views_${project?.id}`, JSON.stringify([...savedViews, viewToSave]));
+        // Save to localStorage
+        try {
+            localStorage.setItem(`saved_views_${project?.id}`, JSON.stringify(updatedViews));
+            // Notify parent component that views have been updated
+            if (onViewSaved) {
+                onViewSaved();
+            }
+        } catch (error) {
+            console.error('Failed to save view:', error);
+        }
     };
 
     const loadSavedViews = () => {

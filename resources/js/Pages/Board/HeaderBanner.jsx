@@ -18,6 +18,7 @@ import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import LockIcon from '@mui/icons-material/Lock';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import ProCluster from './ProCluster'; // ✅ relative path (same folder)
 import { useSubscription } from '@/Hooks/useSubscription';
 import { router } from '@inertiajs/react';
@@ -34,6 +35,8 @@ export default function HeaderBanner({
     onOpenReport,
     onOpenDetails,
     onOpenAssistant,
+    savedViews = [],
+    onViewChipClick,
 }) {
     const theme = useTheme();
     const { shouldShowOverlay, userPlan } = useSubscription();
@@ -126,6 +129,32 @@ export default function HeaderBanner({
                             }}
                         />
                     </Stack>
+
+                    {/* Saved Views Chips */}
+                    {savedViews.length > 0 && (
+                        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                            {savedViews.map((view) => (
+                                <Chip
+                                    key={view.id}
+                                    icon={<ViewModuleIcon />}
+                                    label={view.title || view.type || 'View'}
+                                    onClick={() => onViewChipClick && onViewChipClick(view)}
+                                    sx={{
+                                        fontWeight: 600,
+                                        height: 30,
+                                        background: `linear-gradient(120deg, ${alpha(theme.palette.secondary.main, 0.15)}, ${alpha(theme.palette.secondary.light, 0.1)})`,
+                                        border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                            background: `linear-gradient(120deg, ${alpha(theme.palette.secondary.main, 0.25)}, ${alpha(theme.palette.secondary.light, 0.15)})`,
+                                            transform: 'scale(1.02)',
+                                        },
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                />
+                            ))}
+                        </Stack>
+                    )}
 
                     {/* Action Buttons - Grouped together with consistent styling */}
                     <Box sx={{ ml: 'auto', display: 'flex', gap: 1, alignItems: 'center' }}>
