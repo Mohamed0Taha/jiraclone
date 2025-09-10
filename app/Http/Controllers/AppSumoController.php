@@ -20,7 +20,7 @@ class AppSumoController extends Controller
     public function redeemPage(Request $request, $code = null)
     {
         return Inertia::render('AppSumo/Redeem', [
-            'prefilledCode' => $code // Pre-fill the code if provided in URL
+            'prefilledCode' => $code, // Pre-fill the code if provided in URL
         ]);
     }
 
@@ -38,9 +38,9 @@ class AppSumoController extends Controller
         ];
 
         $isGmailAccount = str_contains(strtolower($request->email), '@gmail.com');
-        
+
         // Require password for non-Gmail accounts
-        if (!$isGmailAccount) {
+        if (! $isGmailAccount) {
             $validationRules['password'] = 'required|string|min:8|confirmed';
             $validationRules['password_confirmation'] = 'required|string|min:8';
         }
@@ -49,7 +49,7 @@ class AppSumoController extends Controller
 
         $code = AppSumoCode::where('code', $request->code)->first();
 
-        if (!$code) {
+        if (! $code) {
             throw ValidationException::withMessages([
                 'code' => 'Invalid redemption code. Please check your code and try again.',
             ]);
@@ -66,7 +66,7 @@ class AppSumoController extends Controller
         try {
             // Check if user already exists
             $existingUser = User::where('email', $request->email)->first();
-            
+
             if ($existingUser) {
                 // Upgrade existing user to lifetime access
                 $this->createAppSumoSubscription($existingUser);
@@ -74,23 +74,23 @@ class AppSumoController extends Controller
                 $isNewUser = false;
             } else {
                 // Create new user account
-                $fullName = trim($request->first_name . ' ' . $request->last_name);
-                
+                $fullName = trim($request->first_name.' '.$request->last_name);
+
                 // Determine password based on account type
-                $password = $isGmailAccount 
+                $password = $isGmailAccount
                     ? Hash::make(str()->random(32)) // Random password for Gmail users (they'll use OAuth)
                     : Hash::make($request->password); // Use provided password for non-Gmail users
-                
+
                 $user = User::create([
                     'name' => $fullName,
                     'email' => $request->email,
                     'password' => $password,
                     'email_verified_at' => now(), // Auto-verify AppSumo users
                 ]);
-                
+
                 // Create AppSumo lifetime subscription
                 $this->createAppSumoSubscription($user);
-                
+
                 $isNewUser = true;
             }
 
@@ -111,9 +111,9 @@ class AppSumoController extends Controller
 
             DB::commit();
 
-            $welcomeMessage = $isNewUser 
-                ? "🎉 Welcome to TaskPilot! Your lifetime subscription is now active. Thank you for your AppSumo purchase!"
-                : "🎉 Your account has been upgraded to lifetime access! Thank you for your AppSumo purchase!";
+            $welcomeMessage = $isNewUser
+                ? '🎉 Welcome to TaskPilot! Your lifetime subscription is now active. Thank you for your AppSumo purchase!'
+                : '🎉 Your account has been upgraded to lifetime access! Thank you for your AppSumo purchase!';
 
             return redirect()->route('dashboard')
                 ->with('appsumo_welcome', true)
@@ -121,7 +121,7 @@ class AppSumoController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return back()->withErrors([
                 'email' => 'An error occurred while processing your redemption. Please try again.',
             ]);
@@ -133,7 +133,7 @@ class AppSumoController extends Controller
      */
     public function successPage()
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->route('appsumo.redeem')
                 ->with('error', 'Please complete the redemption process first.');
         }
@@ -191,7 +191,7 @@ class AppSumoController extends Controller
         ]);
 
         $codes = [];
-        
+
         for ($i = 0; $i < $request->count; $i++) {
             $codes[] = [
                 'code' => AppSumoCode::generateUniqueCode(),
@@ -215,12 +215,12 @@ class AppSumoController extends Controller
         $codes = AppSumoCode::with('redeemedByUser')->get();
 
         $csv = "Code,Status,Redeemed By,Email,Redeemed At,Created At\n";
-        
+
         foreach ($codes as $code) {
             $redeemedBy = $code->redeemedByUser ? $code->redeemedByUser->name : '';
             $email = $code->redeemedByUser ? $code->redeemedByUser->email : '';
             $redeemedAt = $code->redeemed_at ? $code->redeemed_at->format('Y-m-d H:i:s') : '';
-            
+
             $csv .= sprintf(
                 "%s,%s,%s,%s,%s,%s\n",
                 $code->code,
@@ -234,7 +234,7 @@ class AppSumoController extends Controller
 
         return Response::make($csv, 200, [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="appsumo-codes-' . date('Y-m-d') . '.csv"',
+            'Content-Disposition' => 'attachment; filename="appsumo-codes-'.date('Y-m-d').'.csv"',
         ]);
     }
 
@@ -255,14 +255,14 @@ class AppSumoController extends Controller
         $stripePriceId = $plans['pro']['price_id'] ?? 'price_manual_appsumo_pro';
 
         // Create fake Stripe customer ID for AppSumo users if user doesn't have one
-        if (!$user->stripe_id) {
-            $user->update(['stripe_id' => 'cus_appsumo_' . $user->id]);
+        if (! $user->stripe_id) {
+            $user->update(['stripe_id' => 'cus_appsumo_'.$user->id]);
         }
 
         // Create AppSumo lifetime subscription record
         $subscription = $user->subscriptions()->create([
             'type' => 'default',
-            'stripe_id' => 'sub_appsumo_' . $user->id . '_' . time(),
+            'stripe_id' => 'sub_appsumo_'.$user->id.'_'.time(),
             'stripe_status' => 'active',
             'stripe_price' => $stripePriceId,
             'quantity' => 1,

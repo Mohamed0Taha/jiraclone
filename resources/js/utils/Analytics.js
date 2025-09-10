@@ -39,7 +39,7 @@ class TaskPilotAnalytics {
                 clicks: 0,
                 viewport_width: window.innerWidth,
                 viewport_height: window.innerHeight,
-            }
+            },
         };
 
         this.sendTracking(data);
@@ -47,8 +47,9 @@ class TaskPilotAnalytics {
 
     trackTimeOnPage() {
         const timeOnPage = Math.round((Date.now() - this.startTime) / 1000);
-        
-        if (timeOnPage > 5) { // Only track if user stayed more than 5 seconds
+
+        if (timeOnPage > 5) {
+            // Only track if user stayed more than 5 seconds
             this.sendTracking({
                 url: window.location.pathname,
                 time_on_page: timeOnPage,
@@ -59,7 +60,7 @@ class TaskPilotAnalytics {
 
     trackClicks() {
         let clickCount = 0;
-        
+
         // Track clicks on important elements
         const importantSelectors = [
             'button',
@@ -68,31 +69,35 @@ class TaskPilotAnalytics {
             'a[href*="pricing"]',
             'a[href*="demo"]',
             '.cta-button',
-            '[data-track="true"]'
+            '[data-track="true"]',
         ];
 
-        importantSelectors.forEach(selector => {
-            document.addEventListener('click', (e) => {
-                if (e.target.matches(selector) || e.target.closest(selector)) {
-                    clickCount++;
-                    
-                    const element = e.target.closest(selector) || e.target;
-                    const elementText = element.textContent?.trim().substring(0, 100) || '';
-                    const elementHref = element.href || '';
-                    
-                    this.sendTracking({
-                        url: window.location.pathname,
-                        custom_data: {
-                            event_type: 'click',
-                            element_selector: selector,
-                            element_text: elementText,
-                            element_href: elementHref,
-                            click_count: clickCount,
-                            timestamp: Date.now()
-                        }
-                    });
-                }
-            }, true);
+        importantSelectors.forEach((selector) => {
+            document.addEventListener(
+                'click',
+                (e) => {
+                    if (e.target.matches(selector) || e.target.closest(selector)) {
+                        clickCount++;
+
+                        const element = e.target.closest(selector) || e.target;
+                        const elementText = element.textContent?.trim().substring(0, 100) || '';
+                        const elementHref = element.href || '';
+
+                        this.sendTracking({
+                            url: window.location.pathname,
+                            custom_data: {
+                                event_type: 'click',
+                                element_selector: selector,
+                                element_text: elementText,
+                                element_href: elementHref,
+                                click_count: clickCount,
+                                timestamp: Date.now(),
+                            },
+                        });
+                    }
+                },
+                true
+            );
         });
     }
 
@@ -102,9 +107,10 @@ class TaskPilotAnalytics {
 
         window.addEventListener('scroll', () => {
             const scrollPercent = Math.round(
-                (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
+                (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) *
+                    100
             );
-            
+
             if (scrollPercent > maxScroll) {
                 maxScroll = scrollPercent;
             }
@@ -117,8 +123,8 @@ class TaskPilotAnalytics {
                     custom_data: {
                         event_type: 'scroll_depth',
                         max_scroll_percent: maxScroll,
-                        timestamp: Date.now()
-                    }
+                        timestamp: Date.now(),
+                    },
                 });
             }
         });
@@ -127,7 +133,7 @@ class TaskPilotAnalytics {
     sendTracking(data) {
         // Use sendBeacon for better reliability, fallback to fetch
         const payload = JSON.stringify(data);
-        
+
         if (navigator.sendBeacon) {
             navigator.sendBeacon('/api/analytics/track', payload);
         } else {
@@ -138,8 +144,8 @@ class TaskPilotAnalytics {
                     'X-CSRF-TOKEN': this.getCsrfToken(),
                 },
                 body: payload,
-                keepalive: true
-            }).catch(error => {
+                keepalive: true,
+            }).catch((error) => {
                 // Silently fail - don't disrupt user experience
                 console.debug('Analytics tracking failed:', error);
             });
@@ -171,8 +177,10 @@ class TaskPilotAnalytics {
 }
 
 // Initialize analytics if not a bot
-if (typeof navigator !== 'undefined' && 
-    !navigator.userAgent.match(/bot|crawler|spider|crawling/i)) {
+if (
+    typeof navigator !== 'undefined' &&
+    !navigator.userAgent.match(/bot|crawler|spider|crawling/i)
+) {
     window.taskPilotAnalytics = new TaskPilotAnalytics();
 }
 

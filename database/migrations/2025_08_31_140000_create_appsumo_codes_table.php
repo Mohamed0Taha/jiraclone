@@ -17,7 +17,7 @@ return new class extends Migration
             $table->json('redemption_data')->nullable(); // Store name, email from redemption
             $table->string('campaign', 100)->default('appsumo_2025'); // Track different campaigns
             $table->timestamps();
-            
+
             $table->index(['status', 'campaign']);
             $table->index('redeemed_at');
         });

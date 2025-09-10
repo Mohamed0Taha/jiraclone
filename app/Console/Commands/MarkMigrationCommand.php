@@ -22,6 +22,7 @@ class MarkMigrationCommand extends Command
         $name = trim($this->argument('name'));
         if ($name === '') {
             $this->error('Migration name required.');
+
             return self::FAILURE;
         }
 
@@ -32,6 +33,7 @@ class MarkMigrationCommand extends Command
 
         if (DB::table('migrations')->where('migration', $name)->exists()) {
             $this->info("Migration '{$name}' is already recorded.");
+
             return self::SUCCESS;
         }
 
@@ -40,6 +42,7 @@ class MarkMigrationCommand extends Command
             $batch = (int) $batchOption;
             if ($batch <= 0) {
                 $this->error('Batch must be a positive integer when provided.');
+
                 return self::FAILURE;
             }
         } else {
@@ -55,6 +58,7 @@ class MarkMigrationCommand extends Command
         ]);
 
         $this->info("Inserted migration '{$name}' with batch {$batch}.");
+
         return self::SUCCESS;
     }
 }

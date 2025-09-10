@@ -60,12 +60,12 @@ class CertificationAttempt extends Model
         if (! $this->exam_expires_at) {
             return null;
         }
-        
+
         // If exam has expired, return 0
         if (now()->isAfter($this->exam_expires_at)) {
             return 0;
         }
-        
+
         // Return seconds remaining until expiration (expires_at - now)
         return now()->diffInSeconds($this->exam_expires_at);
     }

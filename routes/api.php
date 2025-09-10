@@ -23,7 +23,7 @@ Route::get('/test-dashboard', function () {
     return response()->json([
         'success' => true,
         'message' => 'Dashboard API is working',
-        'timestamp' => now()->toISOString()
+        'timestamp' => now()->toISOString(),
     ]);
 });
 

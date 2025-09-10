@@ -500,10 +500,10 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                 const token = getCsrfToken() || '';
                 router.post(
                     route('tasks.ai.preview', project.id),
-                    { 
-                        count, 
+                    {
+                        count,
                         prompt: fullPrompt,
-                        pinnedTasks: pinnedTasks 
+                        pinnedTasks: pinnedTasks,
                     },
                     {
                         preserveScroll: true,
@@ -1149,46 +1149,66 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
 
                             {/* Pinned tasks from previous generation - subtle display at bottom */}
                             {pinnedTasks.length > 0 && (
-                                <Box sx={{ 
-                                    mt: 3, 
-                                    p: 1.5, 
-                                    borderRadius: 2,
-                                    background: alpha(theme.palette.grey[100], 0.4),
-                                    border: `1px solid ${alpha(theme.palette.grey[300], 0.5)}`,
-                                }}>
-                                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                                        <PushPinRoundedIcon sx={{ 
-                                            fontSize: 14, 
-                                            color: alpha(theme.palette.text.secondary, 0.7),
-                                            transform: 'rotate(45deg)' 
-                                        }} />
-                                        <Typography 
-                                            variant="caption" 
-                                            sx={{ 
+                                <Box
+                                    sx={{
+                                        mt: 3,
+                                        p: 1.5,
+                                        borderRadius: 2,
+                                        background: alpha(theme.palette.grey[100], 0.4),
+                                        border: `1px solid ${alpha(theme.palette.grey[300], 0.5)}`,
+                                    }}
+                                >
+                                    <Stack
+                                        direction="row"
+                                        alignItems="center"
+                                        spacing={1}
+                                        sx={{ mb: 1 }}
+                                    >
+                                        <PushPinRoundedIcon
+                                            sx={{
+                                                fontSize: 14,
+                                                color: alpha(theme.palette.text.secondary, 0.7),
+                                                transform: 'rotate(45deg)',
+                                            }}
+                                        />
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
                                                 color: alpha(theme.palette.text.secondary, 0.8),
                                                 fontWeight: 500,
-                                                fontSize: '0.75rem'
+                                                fontSize: '0.75rem',
                                             }}
                                         >
-                                            Will keep {pinnedTasks.length} pinned task{pinnedTasks.length === 1 ? '' : 's'} from previous generation
+                                            Will keep {pinnedTasks.length} pinned task
+                                            {pinnedTasks.length === 1 ? '' : 's'} from previous
+                                            generation
                                         </Typography>
                                     </Stack>
                                     <Stack direction="row" spacing={0.5} flexWrap="wrap">
                                         {pinnedTasks.map((task, index) => (
                                             <Chip
                                                 key={index}
-                                                label={task?.title ? (task.title.length > 25 ? task.title.substring(0, 25) + '...' : task.title) : `Task ${index + 1}`}
+                                                label={
+                                                    task?.title
+                                                        ? task.title.length > 25
+                                                            ? task.title.substring(0, 25) + '...'
+                                                            : task.title
+                                                        : `Task ${index + 1}`
+                                                }
                                                 size="small"
                                                 sx={{
                                                     height: 24,
                                                     fontSize: '0.7rem',
                                                     fontWeight: 500,
-                                                    background: alpha(theme.palette.primary.main, 0.08),
+                                                    background: alpha(
+                                                        theme.palette.primary.main,
+                                                        0.08
+                                                    ),
                                                     color: alpha(theme.palette.text.secondary, 0.9),
                                                     border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
                                                     '& .MuiChip-label': {
-                                                        px: 1
-                                                    }
+                                                        px: 1,
+                                                    },
                                                 }}
                                             />
                                         ))}

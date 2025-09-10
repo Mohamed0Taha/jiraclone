@@ -11,7 +11,7 @@ class PMQuestionsSeeder extends Seeder
     {
         // Clear existing questions
         PMQuestion::truncate();
-        
+
         $questions = [
             // ============= FUNDAMENTALS (25 questions) =============
             [

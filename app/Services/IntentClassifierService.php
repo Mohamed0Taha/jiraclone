@@ -130,8 +130,8 @@ SYS;
             'recent_context' => $recentContext,
         ]);
 
-    // Use assistant model (if configured) because routing benefits from higher tool/command reasoning.
-    $result = $this->openAIService->chatJson($msgs, 0.1, true);
+        // Use assistant model (if configured) because routing benefits from higher tool/command reasoning.
+        $result = $this->openAIService->chatJson($msgs, 0.1, true);
 
         // Enhance follow-up questions if needed
         if (isset($result['kind']) && $result['kind'] === 'question') {

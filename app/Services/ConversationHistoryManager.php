@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\ConversationMessage;
 use App\Models\Project;
 use App\Models\Task;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
-use App\Models\ConversationMessage;
-use Illuminate\Support\Facades\Auth;
 
 /**
  * ConversationHistoryManager
@@ -240,7 +240,7 @@ class ConversationHistoryManager
                 ->limit(100)
                 ->get()
                 ->reverse()
-                ->map(function($m) {
+                ->map(function ($m) {
                     return [
                         'role' => $m->role,
                         'content' => $m->content,
@@ -251,6 +251,7 @@ class ConversationHistoryManager
                 })->values()->all();
 
             Cache::put("conversation_{$sessionId}", $stored, now()->addMinutes(10));
+
             return $stored;
         }
 
@@ -268,7 +269,7 @@ class ConversationHistoryManager
 
         // Persist only the latest appended non-system message (avoid re-writing whole history)
         $last = end($history);
-        if ($last && isset($last['role']) && in_array($last['role'], ['user','assistant'])) {
+        if ($last && isset($last['role']) && in_array($last['role'], ['user', 'assistant'])) {
             $projectId = $this->extractProjectIdFromSessionKey($sessionId);
             if ($projectId) {
                 try {
@@ -524,8 +525,9 @@ class ConversationHistoryManager
     private function extractProjectIdFromSessionKey(string $sessionId): ?int
     {
         if (preg_match('/project_(\d+)_/', $sessionId, $m)) {
-            return (int)$m[1];
+            return (int) $m[1];
         }
+
         return null;
     }
 

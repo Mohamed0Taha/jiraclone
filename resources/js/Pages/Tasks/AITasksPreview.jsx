@@ -36,7 +36,7 @@ export default function AITasksPreview({
     const [pinnedTasks, setPinnedTasks] = useState(new Set());
 
     const handlePinToggle = (taskIndex) => {
-        setPinnedTasks(prev => {
+        setPinnedTasks((prev) => {
             const newSet = new Set(prev);
             if (newSet.has(taskIndex)) {
                 newSet.delete(taskIndex);
@@ -48,14 +48,14 @@ export default function AITasksPreview({
     };
 
     const redo = () => {
-        const pinnedTasksArray = Array.from(pinnedTasks).map(index => generated[index]);
+        const pinnedTasksArray = Array.from(pinnedTasks).map((index) => generated[index]);
         console.log('Preview: Sending pinned tasks to generator:', {
             pinnedIndices: Array.from(pinnedTasks),
             pinnedTasksArray: pinnedTasksArray,
             pinnedCount: pinnedTasksArray.length,
             originalInputKeys: Object.keys(originalInput),
         });
-        
+
         router.visit(route('tasks.ai.form', project.id), {
             method: 'get',
             data: {
@@ -195,9 +195,22 @@ export default function AITasksPreview({
 
                         {/* Instructions for pinning */}
                         {generated.length > 0 && (
-                            <Box sx={{ mb: 2, p: 1.5, bgcolor: alpha(theme.palette.info.main, 0.06), borderRadius: 2, border: `1px solid ${alpha(theme.palette.info.main, 0.2)}` }}>
-                                <Typography variant="body2" sx={{ color: alpha(theme.palette.text.primary, 0.8) }}>
-                                    📌 <strong>All tasks start unpinned.</strong> Click the pin icon on tasks you want to keep, then click "Redo" to regenerate only the unpinned ones.
+                            <Box
+                                sx={{
+                                    mb: 2,
+                                    p: 1.5,
+                                    bgcolor: alpha(theme.palette.info.main, 0.06),
+                                    borderRadius: 2,
+                                    border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                                }}
+                            >
+                                <Typography
+                                    variant="body2"
+                                    sx={{ color: alpha(theme.palette.text.primary, 0.8) }}
+                                >
+                                    📌 <strong>All tasks start unpinned.</strong> Click the pin icon
+                                    on tasks you want to keep, then click "Redo" to regenerate only
+                                    the unpinned ones.
                                 </Typography>
                             </Box>
                         )}
@@ -289,13 +302,21 @@ export default function AITasksPreview({
                                         )}
 
                                         {/* 3D Pin at bottom of card */}
-                                        <Box sx={{ 
-                                            display: 'flex', 
-                                            justifyContent: 'flex-end', 
-                                            mt: 1.5,
-                                            position: 'relative'
-                                        }}>
-                                            <Tooltip title={pinnedTasks.has(i) ? "Unpin task" : "Pin task to keep when redoing"}>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                justifyContent: 'flex-end',
+                                                mt: 1.5,
+                                                position: 'relative',
+                                            }}
+                                        >
+                                            <Tooltip
+                                                title={
+                                                    pinnedTasks.has(i)
+                                                        ? 'Unpin task'
+                                                        : 'Pin task to keep when redoing'
+                                                }
+                                            >
                                                 <Box
                                                     onClick={() => handlePinToggle(i)}
                                                     sx={{
@@ -307,10 +328,10 @@ export default function AITasksPreview({
                                                         width: 32,
                                                         height: 32,
                                                         borderRadius: '50%',
-                                                        background: pinnedTasks.has(i) 
+                                                        background: pinnedTasks.has(i)
                                                             ? `linear-gradient(135deg, ${accent}22, ${accent}15)`
                                                             : `linear-gradient(135deg, ${alpha(theme.palette.grey[200], 0.2)}, ${alpha(theme.palette.grey[100], 0.1)})`,
-                                                        border: pinnedTasks.has(i) 
+                                                        border: pinnedTasks.has(i)
                                                             ? `2px solid ${alpha(accent, 0.4)}`
                                                             : `2px solid ${alpha(theme.palette.grey[300], 0.2)}`,
                                                         boxShadow: pinnedTasks.has(i)
@@ -328,7 +349,8 @@ export default function AITasksPreview({
                                                             `,
                                                         transition: 'all 0.2s ease-in-out',
                                                         '&:hover': {
-                                                            transform: 'translateY(-1px) scale(1.05)',
+                                                            transform:
+                                                                'translateY(-1px) scale(1.05)',
                                                             boxShadow: pinnedTasks.has(i)
                                                                 ? `
                                                                     0 6px 12px -3px ${alpha(accent, 0.4)},
@@ -345,18 +367,23 @@ export default function AITasksPreview({
                                                         },
                                                         '&:active': {
                                                             transform: 'translateY(0) scale(0.98)',
-                                                        }
+                                                        },
                                                     }}
                                                 >
-                                                    <PushPinRoundedIcon 
-                                                        sx={{ 
+                                                    <PushPinRoundedIcon
+                                                        sx={{
                                                             fontSize: 18,
-                                                            color: pinnedTasks.has(i) ? accent : alpha(theme.palette.grey[500], 0.5),
-                                                            filter: pinnedTasks.has(i) 
+                                                            color: pinnedTasks.has(i)
+                                                                ? accent
+                                                                : alpha(
+                                                                      theme.palette.grey[500],
+                                                                      0.5
+                                                                  ),
+                                                            filter: pinnedTasks.has(i)
                                                                 ? `drop-shadow(0 1px 2px ${alpha(accent, 0.3)})`
                                                                 : 'drop-shadow(0 1px 1px rgba(0,0,0,0.05))',
                                                             transition: 'all 0.2s ease-in-out',
-                                                        }} 
+                                                        }}
                                                     />
                                                 </Box>
                                             </Tooltip>
@@ -404,12 +431,14 @@ export default function AITasksPreview({
                                 variant="text"
                                 color="inherit"
                                 startIcon={<ArrowBackRoundedIcon />}
-                                onClick={() => router.visit(route('tasks.ai.form', project.id), {
-                                    method: 'get',
-                                    data: originalInput,
-                                    preserveState: true,
-                                    preserveScroll: true,
-                                })}
+                                onClick={() =>
+                                    router.visit(route('tasks.ai.form', project.id), {
+                                        method: 'get',
+                                        data: originalInput,
+                                        preserveState: true,
+                                        preserveScroll: true,
+                                    })
+                                }
                                 sx={{ textTransform: 'none', fontWeight: 600 }}
                             >
                                 Back

@@ -9,7 +9,7 @@ class BlogController extends Controller
     public function index()
     {
         \Log::info('Blog index accessed');
-        
+
         $blogs = Blog::published()
             ->with('author')
             ->orderBy('published_at', 'desc')
@@ -30,7 +30,7 @@ class BlogController extends Controller
                 'published_at' => $blog->published_at?->toDateTimeString(),
             ]);
 
-            if (!$blog->is_published || ($blog->published_at && $blog->published_at->isFuture())) {
+            if (! $blog->is_published || ($blog->published_at && $blog->published_at->isFuture())) {
                 \Log::warning('Blog access denied - unpublished or future', [
                     'slug' => $blog->slug,
                     'is_published' => $blog->is_published,
@@ -50,6 +50,7 @@ class BlogController extends Controller
                 ->get();
 
             \Log::info('Blog show rendering view', ['slug' => $blog->slug]);
+
             return view('blog.show', compact('blog', 'relatedPosts'));
         } catch (\Exception $e) {
             \Log::error('Blog show exception', [

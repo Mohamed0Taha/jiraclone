@@ -4,8 +4,6 @@ namespace App\Console\Commands;
 
 use App\Services\EmailForwardingService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class ForwardEmailCommand extends Command
 {
@@ -53,13 +51,16 @@ class ForwardEmailCommand extends Command
 
             if ($success) {
                 $this->info('✅ Email forwarded successfully!');
+
                 return Command::SUCCESS;
             } else {
                 $this->error('❌ Failed to forward email. Check logs for details.');
+
                 return Command::FAILURE;
             }
         } catch (\Exception $e) {
-            $this->error('❌ Exception occurred: ' . $e->getMessage());
+            $this->error('❌ Exception occurred: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }

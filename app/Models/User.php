@@ -201,11 +201,11 @@ class User extends Authenticatable implements MustVerifyEmail
         if ($this->hasAppSumoAccess()) {
             return 'AppSumo';
         }
-        
+
         if ($this->hasActiveSubscription()) {
             return 'Stripe';
         }
-        
+
         return 'Free';
     }
 

@@ -51,7 +51,7 @@ class TaskController extends Controller
     {
         // If the potential parent is a child of this task, it would create a circle
         $potentialParent = Task::find($parentId);
-        if (!$potentialParent) {
+        if (! $potentialParent) {
             return false;
         }
 
@@ -84,12 +84,12 @@ class TaskController extends Controller
     private function getDescendantIds(Task $task): array
     {
         $descendants = [];
-        
+
         foreach ($task->children as $child) {
             $descendants[] = $child->id;
             $descendants = array_merge($descendants, $this->getDescendantIds($child));
         }
-        
+
         return $descendants;
     }
 
@@ -251,7 +251,7 @@ class TaskController extends Controller
                 'nullable',
                 'exists:tasks,id',
                 function ($attribute, $value, $fail) use ($project) {
-                    if ($value && !$project->tasks()->where('id', $value)->exists()) {
+                    if ($value && ! $project->tasks()->where('id', $value)->exists()) {
                         $fail('The selected task must belong to the same project.');
                     }
                 },
@@ -260,7 +260,7 @@ class TaskController extends Controller
                 'nullable',
                 'exists:tasks,id',
                 function ($attribute, $value, $fail) use ($project) {
-                    if ($value && !$project->tasks()->where('id', $value)->exists()) {
+                    if ($value && ! $project->tasks()->where('id', $value)->exists()) {
                         $fail('The selected parent task must belong to the same project.');
                     }
                 },
@@ -310,8 +310,8 @@ class TaskController extends Controller
             'has_sub_tasks' => $task->children->count() > 0,
         ];
 
-    // Return JSON only for non-Inertia fetch/AJAX callers
-    if (($request->wantsJson() || $request->expectsJson() || $request->ajax()) && !$request->header('X-Inertia')) {
+        // Return JSON only for non-Inertia fetch/AJAX callers
+        if (($request->wantsJson() || $request->expectsJson() || $request->ajax()) && ! $request->header('X-Inertia')) {
             return response()->json(['task' => $payload]);
         }
 
@@ -341,7 +341,7 @@ class TaskController extends Controller
                     if ($value && $value == $task->id) {
                         $fail('A task cannot be a duplicate of itself.');
                     }
-                    if ($value && !$project->tasks()->where('id', $value)->exists()) {
+                    if ($value && ! $project->tasks()->where('id', $value)->exists()) {
                         $fail('The selected task must belong to the same project.');
                     }
                 },
@@ -354,7 +354,7 @@ class TaskController extends Controller
                     if ($value && $value == $task->id) {
                         $fail('A task cannot be a child of itself.');
                     }
-                    if ($value && !$project->tasks()->where('id', $value)->exists()) {
+                    if ($value && ! $project->tasks()->where('id', $value)->exists()) {
                         $fail('The selected parent task must belong to the same project.');
                     }
                     // Prevent circular relationships
@@ -476,7 +476,7 @@ class TaskController extends Controller
             ->unique('id')
             ->values();
         $priorities = $this->priorities();
-        
+
         // Get all tasks in the project for the duplicate_of dropdown
         $allTasks = $project->tasks()
             ->select('id', 'title')

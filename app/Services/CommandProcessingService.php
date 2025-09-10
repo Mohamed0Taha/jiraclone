@@ -41,6 +41,7 @@ class CommandProcessingService
                 if (class_exists(QuestionAnsweringService::class)) {
                     $qas = app(QuestionAnsweringService::class);
                     $report = $qas->answer($project, 'Weekly progress report', [], null);
+
                     return [
                         'preview_message' => $report,
                         'command_data' => null, // informational only
@@ -165,6 +166,7 @@ class CommandProcessingService
         if (preg_match('/\bassign\b.*\b(all\s+of\s+)?(them|these|those)\b.*\bto\s+(me|myself|owner)\b/i', $mLow) ||
             preg_match('/\bassign\b.*\b(to\s+me|to\s+myself|to\s+owner)\b/i', $mLow)) {
             $assignee = (str_contains($mLow, 'owner')) ? '__OWNER__' : '__ME__';
+
             return [
                 'type' => 'bulk_assign',
                 'filters' => ['all' => true],
@@ -203,6 +205,7 @@ class CommandProcessingService
         if ($project && Task::where('project_id', $project->id)->exists()) {
             return true;
         }
+
         return false;
     }
 
@@ -293,7 +296,7 @@ class CommandProcessingService
         if (preg_match_all('/#(\d+)/', $message, $matches)) {
             $filters['ids'] = array_map('intval', $matches[1]);
         }
-    if (preg_match('/\b(low|medium|high|urgent)\s+priority\b/i', $m, $matches) || preg_match('/\bfor\s+(low|medium|high|urgent)\s+priority\b/i', $m, $matches)) {
+        if (preg_match('/\b(low|medium|high|urgent)\s+priority\b/i', $m, $matches) || preg_match('/\bfor\s+(low|medium|high|urgent)\s+priority\b/i', $m, $matches)) {
             $filters['priority'] = $this->resolvePriorityToken($matches[1]);
         }
         // Also catch patterns like 'urgent tasks', 'high task', etc.
@@ -378,7 +381,7 @@ class CommandProcessingService
     {
         $assignee = trim($assignee);
         $lowerAssignee = strtolower($assignee);
-        if (in_array($lowerAssignee, ['me','myself'])) {
+        if (in_array($lowerAssignee, ['me', 'myself'])) {
             $assignee = '__ME__';
         } elseif ($lowerAssignee === 'owner') {
             $assignee = '__OWNER__';
@@ -386,16 +389,16 @@ class CommandProcessingService
         // If the user used a plural/collective phrase, ask for clarification instead of treating literal string
         if (preg_match('/\b(team\s+members?|all\s+members?|everyone|the\s+team)\b/', $lowerAssignee)) {
             return [
-                '_error' => 'Please specify a single team member. Available members: '.$this->listTeamMembersString($project).'.'
+                '_error' => 'Please specify a single team member. Available members: '.$this->listTeamMembersString($project).'.',
             ];
         }
 
         // Validate that the assignee can be resolved (unless special placeholders)
-        if (! in_array($assignee, ['__ME__','__OWNER__'], true)) {
+        if (! in_array($assignee, ['__ME__', '__OWNER__'], true)) {
             $resolvedId = $this->contextService->resolveAssigneeId($project, $assignee);
             if (! $resolvedId) {
                 return [
-                    '_error' => 'No matching team member for "'.$assignee.'". Available members: '.$this->listTeamMembersString($project).'.'
+                    '_error' => 'No matching team member for "'.$assignee.'". Available members: '.$this->listTeamMembersString($project).'.',
                 ];
             }
         }
@@ -432,6 +435,7 @@ class CommandProcessingService
             if ($members->isEmpty()) {
                 return 'No members available';
             }
+
             return $members->pluck('name')->filter()->implode(', ');
         } catch (\Throwable $e) {
             return 'Unavailable';
@@ -545,7 +549,7 @@ class CommandProcessingService
             if (empty($filters)) {
                 return ['_ok' => false, '_why' => 'Please specify which tasks to affect (e.g., "all overdue tasks").'];
             }
-            $affected = !empty($filters['all']) ? Task::where('project_id', $project->id)->count() : $this->contextService->countAffected($project, $filters);
+            $affected = ! empty($filters['all']) ? Task::where('project_id', $project->id)->count() : $this->contextService->countAffected($project, $filters);
             if ($affected <= 0) {
                 return ['_ok' => false, '_why' => 'No tasks match the specified filters.'];
             }
@@ -747,31 +751,43 @@ class CommandProcessingService
     private function resolveStatusToken(Project $project, string $token): ?string
     {
         $t = $this->norm($token);
-        if ($t === 'in progress') { $t = 'inprogress'; }
+        if ($t === 'in progress') {
+            $t = 'inprogress';
+        }
         // Direct canonical match
-        if (in_array($t, self::SERVER_STATUSES, true)) return $t;
+        if (in_array($t, self::SERVER_STATUSES, true)) {
+            return $t;
+        }
 
         // Try new alias normalization (cross-methodology)
         if (method_exists($this->contextService, 'normalizeStatusAlias')) {
             $alias = $this->contextService->normalizeStatusAlias($t, $this->contextService->getCurrentMethodology($project));
-            if ($alias) return $alias;
+            if ($alias) {
+                return $alias;
+            }
         }
 
         // Fallback to methodology map
         $map = $this->contextService->methodPhaseToServer($this->contextService->getCurrentMethodology($project));
+
         return $map[$t] ?? null;
     }
 
     private function resolvePriorityToken(string $token): ?string
     {
         $t = $this->norm($token);
-        if (in_array($t, self::PRIORITIES, true)) return $t;
+        if (in_array($t, self::PRIORITIES, true)) {
+            return $t;
+        }
         // Use central alias normalization if available
         if (method_exists($this->contextService, 'normalizePriorityAlias')) {
             $alias = $this->contextService->normalizePriorityAlias($t);
-            if ($alias) return $alias;
+            if ($alias) {
+                return $alias;
+            }
         }
         $map = ['p3' => 'low', 'p2' => 'medium', 'p1' => 'high', 'p0' => 'urgent'];
+
         return $map[$t] ?? null;
     }
 
@@ -821,10 +837,18 @@ class CommandProcessingService
         $t = strtolower(trim($raw));
         $now = Carbon::now();
 
-        if ($t === 'today') return $now->copy();
-        if ($t === 'tomorrow') return $now->copy()->addDay();
-        if ($t === 'next week') return $now->copy()->addWeek();
-        if ($t === 'this week') return $now->copy();
+        if ($t === 'today') {
+            return $now->copy();
+        }
+        if ($t === 'tomorrow') {
+            return $now->copy()->addDay();
+        }
+        if ($t === 'next week') {
+            return $now->copy()->addWeek();
+        }
+        if ($t === 'this week') {
+            return $now->copy();
+        }
 
         // +N days / +N weeks
         if (preg_match('/^\+?(\d+)\s+day(s)?$/', $t, $m)) {
@@ -840,14 +864,16 @@ class CommandProcessingService
         }
 
         // Weekday names (this <weekday>, next <weekday>)
-        $weekdays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+        $weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
         foreach ($weekdays as $idx => $wd) {
             if ($t === $wd || $t === 'this '.$wd) {
                 $candidate = $now->copy()->nextOrSame(ucfirst($wd));
+
                 return $candidate;
             }
             if ($t === 'next '.$wd) {
                 $candidate = $now->copy()->next(ucfirst($wd));
+
                 return $candidate;
             }
         }

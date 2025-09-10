@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class AnalyticsController extends Controller
@@ -21,7 +20,7 @@ class AnalyticsController extends Controller
 
         // Get unique visitors with location data
         $visitors = $this->getVisitorsWithLocation();
-        
+
         // Get chart data for different periods
         $chartData = $this->getChartData();
 
@@ -116,7 +115,7 @@ class AnalyticsController extends Controller
             'JP' => '🇯🇵', 'CN' => '🇨🇳', 'IN' => '🇮🇳', 'BR' => '🇧🇷',
             'MX' => '🇲🇽', 'RU' => '🇷🇺', 'KR' => '🇰🇷', 'SG' => '🇸🇬',
         ];
-        
+
         return $flags[$countryCode] ?? '🌍';
     }
 
@@ -124,17 +123,17 @@ class AnalyticsController extends Controller
     {
         $ip = $request->ip();
         $userAgent = $request->userAgent();
-        
+
         // Check if visitor already exists today
         $existingVisitor = DB::table('visitor_logs')
             ->where('ip_address', $ip)
             ->whereDate('created_at', today())
             ->first();
 
-        if (!$existingVisitor) {
+        if (! $existingVisitor) {
             // Get location data for new visitor
             $locationData = $this->getLocationData($ip);
-            
+
             DB::table('visitor_logs')->insert([
                 'ip_address' => $ip,
                 'user_agent' => $userAgent,
@@ -169,9 +168,10 @@ class AnalyticsController extends Controller
         try {
             // Use a free IP geolocation service (you can replace with your preferred service)
             $response = Http::timeout(5)->get("http://ip-api.com/json/{$ip}");
-            
+
             if ($response->successful()) {
                 $data = $response->json();
+
                 return [
                     'city' => $data['city'] ?? null,
                     'region' => $data['regionName'] ?? null,
@@ -188,12 +188,12 @@ class AnalyticsController extends Controller
 
     protected function isLocalIP($ip)
     {
-        return in_array($ip, ['127.0.0.1', '::1', '0.0.0.0']) || 
+        return in_array($ip, ['127.0.0.1', '::1', '0.0.0.0']) ||
                preg_match('/^192\.168\./', $ip) ||
                preg_match('/^10\./', $ip) ||
                preg_match('/^172\.(1[6-9]|2[0-9]|3[0-1])\./', $ip);
     }
-    
+
     protected function getChartData()
     {
         // Generate chart data for different time periods
@@ -203,12 +203,12 @@ class AnalyticsController extends Controller
             '90d' => $this->getVisitorChartData(90),
         ];
     }
-    
+
     protected function getVisitorChartData($days)
     {
         $labels = [];
         $data = [];
-        
+
         // Get visitor data for the specified number of days
         $visitors = DB::table('visitor_logs')
             ->selectRaw('DATE(created_at) as date, COUNT(DISTINCT ip_address) as unique_visitors')
@@ -217,13 +217,13 @@ class AnalyticsController extends Controller
             ->orderBy('date')
             ->get()
             ->keyBy('date');
-        
+
         // If no real data, generate sample data for demonstration
         if ($visitors->isEmpty()) {
             for ($i = $days - 1; $i >= 0; $i--) {
                 $date = now()->subDays($i);
                 $labels[] = $date->format($days <= 7 ? 'M j' : 'M j');
-                
+
                 // Generate realistic sample data with growth trend
                 $baseVisitors = 10;
                 $growthFactor = 1 + (($days - $i) / $days * 0.5); // 50% growth over period
@@ -238,7 +238,7 @@ class AnalyticsController extends Controller
                 $data[] = $visitors->get($date)->unique_visitors ?? 0;
             }
         }
-        
+
         return [
             'labels' => $labels,
             'data' => $data,

@@ -7,11 +7,7 @@ use App\Models\LeadMessage;
 use App\Models\LeadMessageBatch;
 use App\Services\LinkedInSalesNavigatorService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\View;
-use Illuminate\Support\Facades\Http;
 
 class SalesNavigatorController extends Controller
 {
@@ -20,9 +16,9 @@ class SalesNavigatorController extends Controller
         $user = $request->user();
         $leads = Lead::where('user_id', $user->id)->latest()->limit(100)->get();
         $batches = LeadMessageBatch::where('user_id', $user->id)->with('messages')->latest()->limit(10)->get();
-        
+
         // Check LinkedIn authentication status
-        $linkedInService = new LinkedInSalesNavigatorService();
+        $linkedInService = new LinkedInSalesNavigatorService;
         $linkedInAuthConfigured = $linkedInService->hasValidAuth();
         $authInstructions = LinkedInSalesNavigatorService::getAuthSetupInstructions();
 
@@ -30,7 +26,7 @@ class SalesNavigatorController extends Controller
             return response()->json([
                 'leads' => $leads,
                 'batches' => $batches,
-                'linkedin_auth_configured' => $linkedInAuthConfigured
+                'linkedin_auth_configured' => $linkedInAuthConfigured,
             ]);
         }
 
@@ -47,27 +43,27 @@ class SalesNavigatorController extends Controller
     {
         $data = $request->validate([
             'url' => 'required|string|min:10',
-            'count' => 'nullable|integer|min:1|max:100'
+            'count' => 'nullable|integer|min:1|max:100',
         ]);
 
         $count = $data['count'] ?? 25;
         $url = $data['url'];
-        
+
         // Use the LinkedIn Sales Navigator service
-        $linkedInService = new LinkedInSalesNavigatorService();
+        $linkedInService = new LinkedInSalesNavigatorService;
         $result = $linkedInService->extractLeadsFromUrl($url, $count);
-        
-        if (!$result['success']) {
+
+        if (! $result['success']) {
             return response()->json([
                 'success' => false,
                 'error' => $result['error'],
-                'leads' => []
+                'leads' => [],
             ]);
         }
-        
+
         // Create hash for this search
         $hash = substr(hash('sha256', $url), 0, 32);
-        
+
         // Save leads to database
         $inserted = 0;
         foreach ($result['leads'] as $leadData) {
@@ -78,25 +74,25 @@ class SalesNavigatorController extends Controller
                 'status' => 'new',
                 'search_hash' => $hash,
             ]));
-            
+
             if ($lead->wasRecentlyCreated) {
                 $inserted++;
             }
         }
-        
+
         Log::info('LinkedIn leads extracted', [
             'url' => $url,
             'total_leads' => count($result['leads']),
             'new_leads' => $inserted,
-            'search_params' => $result['search_params'] ?? null
+            'search_params' => $result['search_params'] ?? null,
         ]);
-        
+
         return response()->json([
-            'success' => true, 
-            'hash' => $hash, 
+            'success' => true,
+            'hash' => $hash,
             'inserted' => $inserted,
             'total_processed' => count($result['leads']),
-            'search_params' => $result['search_params'] ?? null
+            'search_params' => $result['search_params'] ?? null,
         ]);
     }
 
@@ -106,37 +102,37 @@ class SalesNavigatorController extends Controller
     public function testLinkedInAuth(Request $request)
     {
         try {
-            $linkedInService = new LinkedInSalesNavigatorService();
-            
+            $linkedInService = new LinkedInSalesNavigatorService;
+
             // Check if we have manual cookies first
-            if (!empty(env('LINKEDIN_LI_AT')) || !empty(env('LINKEDIN_SESSION_COOKIE'))) {
+            if (! empty(env('LINKEDIN_LI_AT')) || ! empty(env('LINKEDIN_SESSION_COOKIE'))) {
                 // Test existing cookies
                 $loginResult = $linkedInService->loginToLinkedIn();
-                
+
                 if ($loginResult) {
                     return response()->json([
                         'success' => true,
                         'message' => 'LinkedIn session cookies are valid and working!',
-                        'method' => 'manual_cookies'
+                        'method' => 'manual_cookies',
                     ]);
                 } else {
                     return response()->json([
                         'success' => false,
                         'message' => 'LinkedIn session cookies appear to be expired. Please update them.',
                         'instructions' => 'Please follow the manual cookie extraction steps shown above.',
-                        'method' => 'manual_cookies_expired'
+                        'method' => 'manual_cookies_expired',
                     ]);
                 }
             }
-            
+
             // Try automated login (likely to fail due to LinkedIn's protections)
             $loginResult = $linkedInService->loginToLinkedIn();
-            
+
             if ($loginResult) {
                 return response()->json([
                     'success' => true,
                     'message' => 'LinkedIn automated login successful!',
-                    'method' => 'automated_login'
+                    'method' => 'automated_login',
                 ]);
             } else {
                 return response()->json([
@@ -150,16 +146,16 @@ class SalesNavigatorController extends Controller
                         '3. Open Developer Tools (F12)',
                         '4. Go to Application/Storage → Cookies → linkedin.com',
                         '5. Copy the li_at cookie value',
-                        '6. Add LINKEDIN_LI_AT=your_cookie_value to your .env file'
-                    ]
+                        '6. Add LINKEDIN_LI_AT=your_cookie_value to your .env file',
+                    ],
                 ]);
             }
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error testing LinkedIn auth: ' . $e->getMessage(),
-                'method' => 'error'
+                'message' => 'Error testing LinkedIn auth: '.$e->getMessage(),
+                'method' => 'error',
             ]);
         }
     }
@@ -170,29 +166,29 @@ class SalesNavigatorController extends Controller
     private function parseLinkedInSearchUrl($url)
     {
         $params = [];
-        
+
         // Extract query parameters from URL
         if (preg_match('/query=([^&]+)/', $url, $matches)) {
             $queryString = urldecode($matches[1]);
-            
+
             // Parse common search parameters
             if (preg_match('/keywords%3A([^%,)]+)/', $queryString, $keywordMatches)) {
                 $params['keywords'] = str_replace('%2520', ' ', $keywordMatches[1]);
             }
-            
+
             if (preg_match('/title%3A([^%,)]+)/', $queryString, $titleMatches)) {
                 $params['title'] = str_replace('%2520', ' ', $titleMatches[1]);
             }
-            
+
             if (preg_match('/company%3A([^%,)]+)/', $queryString, $companyMatches)) {
                 $params['company'] = str_replace('%2520', ' ', $companyMatches[1]);
             }
-            
+
             if (preg_match('/location%3A([^%,)]+)/', $queryString, $locationMatches)) {
                 $params['location'] = str_replace('%2520', ' ', $locationMatches[1]);
             }
         }
-        
+
         return $params;
     }
 
@@ -205,10 +201,10 @@ class SalesNavigatorController extends Controller
         $title = $searchParams['title'] ?? 'Manager';
         $company = $searchParams['company'] ?? '';
         $location = $searchParams['location'] ?? 'United States';
-        
+
         $sampleFirstNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Avery', 'Quinn', 'Sage', 'Rowan', 'Blake', 'Cameron', 'Drew', 'Emery', 'Finley', 'Gray', 'Harley', 'Jamie', 'Kai', 'Lane'];
         $sampleLastNames = ['Anderson', 'Brown', 'Chen', 'Davis', 'Evans', 'Foster', 'Garcia', 'Harris', 'Johnson', 'Kim', 'Lee', 'Martinez', 'Nelson', 'O\'Connor', 'Patel', 'Rodriguez', 'Smith', 'Taylor', 'Wilson', 'Zhang'];
-        
+
         $titleVariations = [
             'project manager' => ['Project Manager', 'Senior Project Manager', 'Lead Project Manager', 'Principal Project Manager', 'Project Management Lead'],
             'manager' => ['Manager', 'Senior Manager', 'Lead Manager', 'Operations Manager', 'Team Manager'],
@@ -216,16 +212,16 @@ class SalesNavigatorController extends Controller
             'engineer' => ['Software Engineer', 'Senior Engineer', 'Lead Engineer', 'Principal Engineer'],
             'analyst' => ['Business Analyst', 'Data Analyst', 'Senior Analyst', 'Lead Analyst'],
         ];
-        
+
         $companyTypes = ['Tech', 'Corp', 'Inc', 'LLC', 'Solutions', 'Systems', 'Innovations', 'Technologies', 'Enterprises', 'Group'];
-        
+
         $leads = [];
-        
+
         for ($i = 0; $i < $count; $i++) {
             $firstName = $sampleFirstNames[array_rand($sampleFirstNames)];
             $lastName = $sampleLastNames[array_rand($sampleLastNames)];
-            $fullName = $firstName . ' ' . $lastName;
-            
+            $fullName = $firstName.' '.$lastName;
+
             // Generate title based on search keywords
             $generatedTitle = $title;
             foreach ($titleVariations as $keyword => $variations) {
@@ -234,10 +230,10 @@ class SalesNavigatorController extends Controller
                     break;
                 }
             }
-            
+
             // Generate company name
-            $generatedCompany = $company ?: (ucfirst($keywords) . ' ' . $companyTypes[array_rand($companyTypes)]);
-            
+            $generatedCompany = $company ?: (ucfirst($keywords).' '.$companyTypes[array_rand($companyTypes)]);
+
             $leads[] = [
                 'full_name' => $fullName,
                 'first_name' => $firstName,
@@ -245,15 +241,15 @@ class SalesNavigatorController extends Controller
                 'title' => $generatedTitle,
                 'company' => $generatedCompany,
                 'location' => $location,
-                'linkedin_profile_url' => 'https://linkedin.com/in/' . strtolower($firstName . '-' . $lastName . '-' . rand(100, 999)),
+                'linkedin_profile_url' => 'https://linkedin.com/in/'.strtolower($firstName.'-'.$lastName.'-'.rand(100, 999)),
                 'meta' => [
                     'source' => 'sales_navigator',
                     'search_keywords' => $keywords,
                     'extracted_at' => now()->toISOString(),
-                ]
+                ],
             ];
         }
-        
+
         return $leads;
     }
 
@@ -266,21 +262,21 @@ class SalesNavigatorController extends Controller
             'template' => 'required|string|min:5',
             'batch_name' => 'nullable|string|max:255',
         ]);
-        
+
         $userId = $request->user()->id;
         $templateHash = substr(hash('sha256', $payload['template']), 0, 16);
-        
+
         $batch = LeadMessageBatch::create([
             'user_id' => $userId,
-            'name' => $payload['batch_name'] ?? 'Batch ' . now()->format('M j, Y g:i A'),
+            'name' => $payload['batch_name'] ?? 'Batch '.now()->format('M j, Y g:i A'),
             'template_hash' => $templateHash,
             'template_raw' => $payload['template'],
             'total' => count($payload['lead_ids']),
             'status' => 'draft',
         ]);
-        
+
         $leads = Lead::where('user_id', $userId)->whereIn('id', $payload['lead_ids'])->get();
-        
+
         foreach ($leads as $lead) {
             $render = $this->renderTemplate($payload['template'], $lead);
             LeadMessage::create([
@@ -291,11 +287,11 @@ class SalesNavigatorController extends Controller
                 'status' => 'pending',
             ]);
         }
-        
+
         return response()->json([
-            'success' => true, 
+            'success' => true,
             'batch_id' => $batch->id,
-            'total_messages' => $leads->count()
+            'total_messages' => $leads->count(),
         ]);
     }
 
@@ -308,9 +304,9 @@ class SalesNavigatorController extends Controller
         if ($lead->user_id !== auth()->id()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-        
+
         $lead->delete();
-        
+
         return response()->json(['success' => true]);
     }
 
@@ -321,18 +317,18 @@ class SalesNavigatorController extends Controller
     {
         $user = $request->user();
         $leads = Lead::where('user_id', $user->id)->get();
-        
+
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="leads_export_' . now()->format('Y-m-d_H-i-s') . '.csv"',
+            'Content-Disposition' => 'attachment; filename="leads_export_'.now()->format('Y-m-d_H-i-s').'.csv"',
         ];
-        
-        $callback = function() use ($leads) {
+
+        $callback = function () use ($leads) {
             $file = fopen('php://output', 'w');
-            
+
             // CSV Headers
             fputcsv($file, ['Full Name', 'First Name', 'Last Name', 'Title', 'Company', 'Location', 'LinkedIn URL', 'Status', 'Created At']);
-            
+
             foreach ($leads as $lead) {
                 fputcsv($file, [
                     $lead->full_name,
@@ -346,10 +342,10 @@ class SalesNavigatorController extends Controller
                     $lead->created_at->format('Y-m-d H:i:s'),
                 ]);
             }
-            
+
             fclose($file);
         };
-        
+
         return response()->stream($callback, 200, $headers);
     }
 
@@ -366,7 +362,7 @@ class SalesNavigatorController extends Controller
             '{{title}}' => $lead->title,
             '{{location}}' => $lead->location,
         ];
-        
+
         return str_replace(array_keys($replacements), array_values($replacements), $tpl);
     }
 }

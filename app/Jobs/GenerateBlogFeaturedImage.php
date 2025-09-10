@@ -4,8 +4,8 @@ namespace App\Jobs;
 
 use App\Models\Blog;
 use App\Services\BlogAIService;
-use App\Services\OpenAIService;
 use App\Services\ImageKitService;
+use App\Services\OpenAIService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -18,6 +18,7 @@ class GenerateBlogFeaturedImage implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 2;
+
     public $timeout = 60; // seconds
 
     public function __construct(public int $blogId) {}
@@ -25,12 +26,14 @@ class GenerateBlogFeaturedImage implements ShouldQueue
     public function handle(OpenAIService $openAI, ImageKitService $imageKit, BlogAIService $blogAI)
     {
         $blog = Blog::find($this->blogId);
-        if (!$blog) {
+        if (! $blog) {
             Log::warning('GenerateBlogFeaturedImage: blog missing', ['blog_id' => $this->blogId]);
+
             return;
         }
         if ($blog->featured_image) {
             Log::info('GenerateBlogFeaturedImage: image already present', ['blog_id' => $blog->id]);
+
             return;
         }
         try {

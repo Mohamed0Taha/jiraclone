@@ -48,9 +48,9 @@ export default function AuthenticatedLayout({ header, children }) {
                         <div className="flex items-center gap-5">
                             {/* Brand (static text now, not another dashboard link) */}
                             <div className="flex items-center gap-2">
-                                <img 
-                                    src="/taskpilot-logo.png" 
-                                    alt="TaskPilot Logo" 
+                                <img
+                                    src="/taskpilot-logo.png"
+                                    alt="TaskPilot Logo"
                                     className="w-8 h-8 rounded-full shadow-sm"
                                 />
                                 <div

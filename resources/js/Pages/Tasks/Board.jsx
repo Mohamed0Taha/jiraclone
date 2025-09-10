@@ -391,7 +391,7 @@ export default function Board({
             const matchesPriority = !priorityFilter || task.priority === priorityFilter;
             // Normalize assignee id (tasks may have either assignee_id or nested assignee relation)
             const assigneeId = task.assignee_id ?? task.assignee?.id ?? '';
-            
+
             const matchesTeamMember =
                 !teamMemberFilter ||
                 (teamMemberFilter === 'unassigned'
@@ -874,23 +874,23 @@ export default function Board({
     // Custom Views handlers
     const handleCreateView = () => {
         if (!newViewName.trim()) return;
-        
+
         const newView = {
             id: Date.now().toString(),
             name: newViewName.trim(),
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
         };
-        
+
         const updatedViews = [...customViews, newView];
         setCustomViews(updatedViews);
-        
+
         // Save to localStorage
         try {
             localStorage.setItem(`customViews:${project?.id}`, JSON.stringify(updatedViews));
         } catch (error) {
             console.error('Failed to save custom views:', error);
         }
-        
+
         setNewViewName('');
         setCreateViewDialogOpen(false);
     };
@@ -900,9 +900,9 @@ export default function Board({
     };
 
     const handleDeleteView = (viewId) => {
-        const updatedViews = customViews.filter(view => view.id !== viewId);
+        const updatedViews = customViews.filter((view) => view.id !== viewId);
         setCustomViews(updatedViews);
-        
+
         try {
             localStorage.setItem(`customViews:${project?.id}`, JSON.stringify(updatedViews));
         } catch (error) {
@@ -1138,965 +1138,983 @@ export default function Board({
                             p: { xs: 1.5, md: 2 },
                         }}
                     >
-                    <HeaderBanner
-                        projectName={project?.name ?? 'Project'}
-                        totalTasks={totalTasks}
-                        percentDone={percentDone}
-                        usersCount={Array.isArray(users) ? users.length : 0}
-                        onAiTasks={() => {
-                            router.visit(`/projects/${project.id}/tasks/ai`);
-                        }}
-                        isPro={isPro}
-                        onOpenMembers={() => requirePro(setMembersOpen)}
-                        onOpenAutomations={() => {
-                            if (automationLocked) {
-                                router.visit(userPlan?.billing_url || '/billing');
-                                return;
-                            }
-                            router.visit(`/projects/${project.id}/automations`);
-                        }}
-                        onOpenReport={() => requirePro(setReportOpen)}
-                        onOpenDetails={() => setDetailsOpen(true)}
-                        onOpenAssistant={() => setAssistantOpen(true)}
-                    />
-
-                    {/* Performance Indicators - Simplified */}
-
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                        <TextField
-                            select
-                            size="small"
-                            label="Methodology"
-                            value={methodology}
-                            onChange={(e) => {
-                                const next = e.target.value;
-                                setMethodology(next);
-                                setData('status', getStatusOrder(next)[0] || 'todo');
-                                persistMethodology(next);
+                        <HeaderBanner
+                            projectName={project?.name ?? 'Project'}
+                            totalTasks={totalTasks}
+                            percentDone={percentDone}
+                            usersCount={Array.isArray(users) ? users.length : 0}
+                            onAiTasks={() => {
+                                router.visit(`/projects/${project.id}/tasks/ai`);
                             }}
-                            sx={{
-                                minWidth: 180,
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: (t) => methodStyles.chipBorder(t),
-                                },
+                            isPro={isPro}
+                            onOpenMembers={() => requirePro(setMembersOpen)}
+                            onOpenAutomations={() => {
+                                if (automationLocked) {
+                                    router.visit(userPlan?.billing_url || '/billing');
+                                    return;
+                                }
+                                router.visit(`/projects/${project.id}/automations`);
                             }}
-                        >
-                            <MenuItem value={METHODOLOGIES.KANBAN}>Kanban</MenuItem>
-                            <MenuItem value={METHODOLOGIES.SCRUM}>Scrum</MenuItem>
-                            <MenuItem value={METHODOLOGIES.AGILE}>Agile</MenuItem>
-                            <MenuItem value={METHODOLOGIES.WATERFALL}>Waterfall</MenuItem>
-                            <MenuItem value={METHODOLOGIES.LEAN}>Lean</MenuItem>
-                        </TextField>
-                        <Chip
-                            size="small"
-                            label={methodLabel}
-                            sx={{
-                                fontWeight: 700,
-                                height: 22,
-                                background: (t) => methodStyles.chipBg(t),
-                                border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
-                            }}
-                        />
-                    </Stack>
-
-                    {/* Search / Filters */}
-                    <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-                        <TextField
-                            size="small"
-                            placeholder="Search tasks by name or description..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            sx={{
-                                flexGrow: 1,
-                                maxWidth: 400,
-                                '& .MuiOutlinedInput-root': {
-                                    borderRadius: 2,
-                                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
-                                    '&.Mui-focused': { backgroundColor: 'rgba(255, 255, 255, 1)' },
-                                },
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: (t) => methodStyles.chipBorder(t),
-                                },
-                            }}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon sx={{ color: 'text.secondary' }} />
-                                    </InputAdornment>
-                                ),
-                                endAdornment: searchQuery && (
-                                    <InputAdornment position="end">
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => setSearchQuery('')}
-                                            sx={{ color: 'text.secondary' }}
-                                        >
-                                            <ClearIcon fontSize="small" />
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
-                            }}
+                            onOpenReport={() => requirePro(setReportOpen)}
+                            onOpenDetails={() => setDetailsOpen(true)}
+                            onOpenAssistant={() => setAssistantOpen(true)}
                         />
 
-                        <FormControl size="small" sx={{ minWidth: 140 }}>
-                            <InputLabel>Priority Filter</InputLabel>
-                            <Select
-                                value={priorityFilter}
-                                onChange={(e) => setPriorityFilter(e.target.value)}
-                                label="Priority Filter"
-                                sx={{
-                                    borderRadius: 2,
-                                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
-                                    '&.Mui-focused': { backgroundColor: 'rgba(255, 255, 255, 1)' },
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: (t) => methodStyles.chipBorder(t),
-                                    },
-                                }}
-                                startAdornment={
-                                    <FilterListIcon sx={{ color: 'text.secondary', mr: 1 }} />
-                                }
-                            >
-                                <MenuItem value="">All Priorities</MenuItem>
-                                <MenuItem value="low">Low</MenuItem>
-                                <MenuItem value="medium">Medium</MenuItem>
-                                <MenuItem value="high">High</MenuItem>
-                                <MenuItem value="urgent">Urgent</MenuItem>
-                            </Select>
-                        </FormControl>
+                        {/* Performance Indicators - Simplified */}
 
-                        <FormControl size="small" sx={{ minWidth: 160 }}>
-                            <InputLabel>Team Member</InputLabel>
-                            <Select
-                                value={teamMemberFilter}
-                                onChange={(e) => setTeamMemberFilter(e.target.value)}
-                                label="Team Member"
-                                sx={{
-                                    borderRadius: 2,
-                                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
-                                    '&.Mui-focused': { backgroundColor: 'rgba(255, 255, 255, 1)' },
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: (t) => methodStyles.chipBorder(t),
-                                    },
-                                }}
-                                startAdornment={
-                                    <PersonRoundedIcon sx={{ color: 'text.secondary', mr: 1 }} />
-                                }
-                            >
-                                <MenuItem value="">All Members</MenuItem>
-                                <MenuItem value="unassigned">Unassigned</MenuItem>
-                                {Array.isArray(users) &&
-                                    users.map((user) => (
-                                        <MenuItem key={user.id} value={user.id}>
-                                            {user.name}
-                                        </MenuItem>
-                                    ))}
-                            </Select>
-                        </FormControl>
-
-                        {(searchQuery || priorityFilter || teamMemberFilter) && (
-                            <Button
+                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                            <TextField
+                                select
                                 size="small"
-                                variant="outlined"
-                                onClick={() => {
-                                    setSearchQuery('');
-                                    setPriorityFilter('');
-                                    setTeamMemberFilter('');
+                                label="Methodology"
+                                value={methodology}
+                                onChange={(e) => {
+                                    const next = e.target.value;
+                                    setMethodology(next);
+                                    setData('status', getStatusOrder(next)[0] || 'todo');
+                                    persistMethodology(next);
                                 }}
                                 sx={{
-                                    borderRadius: 2,
-                                    textTransform: 'none',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
-                                    borderColor: (t) => methodStyles.chipBorder(t),
+                                    minWidth: 180,
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: (t) => methodStyles.chipBorder(t),
+                                    },
                                 }}
                             >
-                                Clear Filters
-                            </Button>
-                        )}
-                    </Stack>
+                                <MenuItem value={METHODOLOGIES.KANBAN}>Kanban</MenuItem>
+                                <MenuItem value={METHODOLOGIES.SCRUM}>Scrum</MenuItem>
+                                <MenuItem value={METHODOLOGIES.AGILE}>Agile</MenuItem>
+                                <MenuItem value={METHODOLOGIES.WATERFALL}>Waterfall</MenuItem>
+                                <MenuItem value={METHODOLOGIES.LEAN}>Lean</MenuItem>
+                            </TextField>
+                            <Chip
+                                size="small"
+                                label={methodLabel}
+                                sx={{
+                                    fontWeight: 700,
+                                    height: 22,
+                                    background: (t) => methodStyles.chipBg(t),
+                                    border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
+                                }}
+                            />
+                        </Stack>
 
-                    <ProjectSummaryBar />
+                        {/* Search / Filters */}
+                        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+                            <TextField
+                                size="small"
+                                placeholder="Search tasks by name or description..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                sx={{
+                                    flexGrow: 1,
+                                    maxWidth: 400,
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 2,
+                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
+                                        '&.Mui-focused': {
+                                            backgroundColor: 'rgba(255, 255, 255, 1)',
+                                        },
+                                    },
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: (t) => methodStyles.chipBorder(t),
+                                    },
+                                }}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchIcon sx={{ color: 'text.secondary' }} />
+                                        </InputAdornment>
+                                    ),
+                                    endAdornment: searchQuery && (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setSearchQuery('')}
+                                                sx={{ color: 'text.secondary' }}
+                                            >
+                                                <ClearIcon fontSize="small" />
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
 
-                    <DragDropContext key={methodology} onDragEnd={onDragEnd}>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexDirection: 'row',
-                                alignItems: 'stretch',
-                                gap: 'var(--col-gap)',
-                                pb: 3,
-                                overflowX: 'auto',
-                                overflowY: 'hidden',
-                                scrollSnapType: 'x proximity',
-                                '&::-webkit-scrollbar': { height: 8 },
-                                '&::-webkit-scrollbar-thumb': {
-                                    background: alpha('#000', 0.2),
-                                    borderRadius: 8,
+                            <FormControl size="small" sx={{ minWidth: 140 }}>
+                                <InputLabel>Priority Filter</InputLabel>
+                                <Select
+                                    value={priorityFilter}
+                                    onChange={(e) => setPriorityFilter(e.target.value)}
+                                    label="Priority Filter"
+                                    sx={{
+                                        borderRadius: 2,
+                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
+                                        '&.Mui-focused': {
+                                            backgroundColor: 'rgba(255, 255, 255, 1)',
+                                        },
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: (t) => methodStyles.chipBorder(t),
+                                        },
+                                    }}
+                                    startAdornment={
+                                        <FilterListIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                                    }
+                                >
+                                    <MenuItem value="">All Priorities</MenuItem>
+                                    <MenuItem value="low">Low</MenuItem>
+                                    <MenuItem value="medium">Medium</MenuItem>
+                                    <MenuItem value="high">High</MenuItem>
+                                    <MenuItem value="urgent">Urgent</MenuItem>
+                                </Select>
+                            </FormControl>
+
+                            <FormControl size="small" sx={{ minWidth: 160 }}>
+                                <InputLabel>Team Member</InputLabel>
+                                <Select
+                                    value={teamMemberFilter}
+                                    onChange={(e) => setTeamMemberFilter(e.target.value)}
+                                    label="Team Member"
+                                    sx={{
+                                        borderRadius: 2,
+                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
+                                        '&.Mui-focused': {
+                                            backgroundColor: 'rgba(255, 255, 255, 1)',
+                                        },
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: (t) => methodStyles.chipBorder(t),
+                                        },
+                                    }}
+                                    startAdornment={
+                                        <PersonRoundedIcon
+                                            sx={{ color: 'text.secondary', mr: 1 }}
+                                        />
+                                    }
+                                >
+                                    <MenuItem value="">All Members</MenuItem>
+                                    <MenuItem value="unassigned">Unassigned</MenuItem>
+                                    {Array.isArray(users) &&
+                                        users.map((user) => (
+                                            <MenuItem key={user.id} value={user.id}>
+                                                {user.name}
+                                            </MenuItem>
+                                        ))}
+                                </Select>
+                            </FormControl>
+
+                            {(searchQuery || priorityFilter || teamMemberFilter) && (
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => {
+                                        setSearchQuery('');
+                                        setPriorityFilter('');
+                                        setTeamMemberFilter('');
+                                    }}
+                                    sx={{
+                                        borderRadius: 2,
+                                        textTransform: 'none',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
+                                        borderColor: (t) => methodStyles.chipBorder(t),
+                                    }}
+                                >
+                                    Clear Filters
+                                </Button>
+                            )}
+                        </Stack>
+
+                        <ProjectSummaryBar />
+
+                        <DragDropContext key={methodology} onDragEnd={onDragEnd}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    alignItems: 'stretch',
+                                    gap: 'var(--col-gap)',
+                                    pb: 3,
+                                    overflowX: 'auto',
+                                    overflowY: 'hidden',
+                                    scrollSnapType: 'x proximity',
+                                    '&::-webkit-scrollbar': { height: 8 },
+                                    '&::-webkit-scrollbar-thumb': {
+                                        background: alpha('#000', 0.2),
+                                        borderRadius: 8,
+                                    },
+                                }}
+                            >
+                                {STATUS_ORDER.map((statusKey) => (
+                                    <Column
+                                        key={statusKey}
+                                        statusKey={statusKey}
+                                        tasks={filteredTaskState[statusKey] || []}
+                                        onAddTask={showCreate}
+                                        statusMeta={STATUS_META}
+                                        project={project}
+                                        showProjectSummary={false}
+                                        renderTaskCard={(task, dragSnapshot) => (
+                                            <Box
+                                                sx={{
+                                                    transition: 'transform .18s, box-shadow .22s',
+                                                    transform: dragSnapshot.isDragging
+                                                        ? 'rotate(1.5deg) scale(1.02)'
+                                                        : 'none',
+                                                    boxShadow: dragSnapshot.isDragging
+                                                        ? `0 8px 20px -6px ${alpha(STATUS_META[statusKey]?.accent || methodStyles.accent, 0.45)}`
+                                                        : '0 1px 3px rgba(0,0,0,.12)',
+                                                    borderRadius: 2,
+                                                }}
+                                            >
+                                                <OptimizedTaskCard
+                                                    task={task}
+                                                    onEdit={() => showEdit(task)}
+                                                    onDelete={askDelete}
+                                                    onClick={() =>
+                                                        router.get(
+                                                            route('tasks.show', [
+                                                                project.id,
+                                                                task.id,
+                                                            ])
+                                                        )
+                                                    }
+                                                    onDuplicateClick={(duplicateOfId) =>
+                                                        router.get(
+                                                            route('tasks.show', [
+                                                                project.id,
+                                                                duplicateOfId,
+                                                            ])
+                                                        )
+                                                    }
+                                                    onParentClick={(parentId) =>
+                                                        router.get(
+                                                            route('tasks.show', [
+                                                                project.id,
+                                                                parentId,
+                                                            ])
+                                                        )
+                                                    }
+                                                    onAddSubTask={(parentTask) =>
+                                                        showAddSubTask(parentTask)
+                                                    }
+                                                    onImageUpload={(taskId) => {
+                                                        const input =
+                                                            document.createElement('input');
+                                                        input.type = 'file';
+                                                        input.accept = 'image/*';
+                                                        input.onchange = (e) => {
+                                                            const file = e.target.files[0];
+                                                            if (file) handleImageUpload(task, file);
+                                                        };
+                                                        input.click();
+                                                    }}
+                                                    accent={
+                                                        STATUS_META[statusKey]?.accent ||
+                                                        methodStyles.accent
+                                                    }
+                                                    isPending={
+                                                        !!task.__temp || pendingMoves.has(task.id)
+                                                    }
+                                                    isUpdating={task.uploading || false}
+                                                    lazy={true}
+                                                />
+                                            </Box>
+                                        )}
+                                    />
+                                ))}
+                            </Box>
+                        </DragDropContext>
+
+                        <FloatingActionGroup
+                            onAddTask={() => {
+                                showCreate(STATUS_ORDER[0]);
+                                setTimeout(() => titleRef.current?.focus(), 60);
+                            }}
+                            onOpenAssistant={() => setAssistantOpen(true)}
+                            onOpenCustomViews={() => setCustomViewsDrawerOpen(true)}
+                            methodStyles={methodStyles}
+                            assistantOpen={assistantOpen}
+                            projectId={project.id}
+                        />
+
+                        {/* Create/Edit */}
+                        <Dialog
+                            open={openForm}
+                            onClose={() => setOpenForm(false)}
+                            maxWidth="sm"
+                            fullWidth
+                            PaperProps={{
+                                sx: {
+                                    borderRadius: 3,
+                                    overflow: 'hidden',
+                                    background:
+                                        'linear-gradient(140deg,rgba(255,255,255,0.95),rgba(255,255,255,0.8))',
+                                    backdropFilter: 'blur(12px)',
+                                    border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
                                 },
                             }}
                         >
-                            {STATUS_ORDER.map((statusKey) => (
-                                <Column
-                                    key={statusKey}
-                                    statusKey={statusKey}
-                                    tasks={filteredTaskState[statusKey] || []}
-                                    onAddTask={showCreate}
-                                    statusMeta={STATUS_META}
-                                    project={project}
-                                    showProjectSummary={false}
-                                    renderTaskCard={(task, dragSnapshot) => (
+                            <form onSubmit={submit}>
+                                <DialogTitle
+                                    sx={{
+                                        fontWeight: 700,
+                                        pr: 6,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                    }}
+                                >
+                                    {editMode
+                                        ? 'Edit Task'
+                                        : data.parent_id
+                                          ? 'Create Sub-Task'
+                                          : 'Create Task'}
+                                    <Chip
+                                        size="small"
+                                        label={
+                                            editMode
+                                                ? 'Editing'
+                                                : data.parent_id
+                                                  ? 'Sub-Task'
+                                                  : 'New'
+                                        }
+                                        sx={{
+                                            fontWeight: 700,
+                                            height: 22,
+                                            bgcolor: editMode ? '#ffc107' : '#17a2b8',
+                                            color: editMode ? '#212529' : '#ffffff',
+                                            border: 'none',
+                                            fontSize: '0.75rem',
+                                            '& .MuiChip-label': {
+                                                fontWeight: 700,
+                                                color: editMode ? '#212529' : '#ffffff',
+                                                px: 1,
+                                            },
+                                        }}
+                                    />
+                                    <IconButton
+                                        size="small"
+                                        aria-label="Close"
+                                        onClick={() => setOpenForm(false)}
+                                        sx={{ ml: 'auto' }}
+                                    >
+                                        <CloseRoundedIcon fontSize="small" />
+                                    </IconButton>
+                                </DialogTitle>
+
+                                <DialogContent
+                                    dividers
+                                    sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 1.5,
+                                        pt: 2,
+                                        maxHeight: '60vh',
+                                        overflowY: 'auto',
+                                    }}
+                                >
+                                    {/* Parent Task Indicator for Sub-Tasks */}
+                                    {!editMode && data.parent_id && (
                                         <Box
                                             sx={{
-                                                transition: 'transform .18s, box-shadow .22s',
-                                                transform: dragSnapshot.isDragging
-                                                    ? 'rotate(1.5deg) scale(1.02)'
-                                                    : 'none',
-                                                boxShadow: dragSnapshot.isDragging
-                                                    ? `0 8px 20px -6px ${alpha(STATUS_META[statusKey]?.accent || methodStyles.accent, 0.45)}`
-                                                    : '0 1px 3px rgba(0,0,0,.12)',
+                                                p: 2,
                                                 borderRadius: 2,
+                                                bgcolor: 'rgba(25, 118, 210, 0.08)',
+                                                border: '1px solid rgba(25, 118, 210, 0.2)',
+                                                mb: 1,
                                             }}
                                         >
-                                            <OptimizedTaskCard
-                                                task={task}
-                                                onEdit={() => showEdit(task)}
-                                                onDelete={askDelete}
-                                                onClick={() =>
-                                                    router.get(
-                                                        route('tasks.show', [project.id, task.id])
-                                                    )
-                                                }
-                                                onDuplicateClick={(duplicateOfId) =>
-                                                    router.get(
-                                                        route('tasks.show', [
-                                                            project.id,
-                                                            duplicateOfId,
-                                                        ])
-                                                    )
-                                                }
-                                                onParentClick={(parentId) =>
-                                                    router.get(
-                                                        route('tasks.show', [project.id, parentId])
-                                                    )
-                                                }
-                                                onAddSubTask={(parentTask) =>
-                                                    showAddSubTask(parentTask)
-                                                }
-                                                onImageUpload={(taskId) => {
-                                                    const input = document.createElement('input');
-                                                    input.type = 'file';
-                                                    input.accept = 'image/*';
-                                                    input.onchange = (e) => {
-                                                        const file = e.target.files[0];
-                                                        if (file) handleImageUpload(task, file);
-                                                    };
-                                                    input.click();
-                                                }}
-                                                accent={
-                                                    STATUS_META[statusKey]?.accent ||
-                                                    methodStyles.accent
-                                                }
-                                                isPending={
-                                                    !!task.__temp || pendingMoves.has(task.id)
-                                                }
-                                                isUpdating={task.uploading || false}
-                                                lazy={true}
-                                            />
+                                            <Stack direction="row" alignItems="center" spacing={1}>
+                                                <AccountTreeIcon
+                                                    sx={{ color: 'primary.main', fontSize: 20 }}
+                                                />
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{ fontWeight: 600 }}
+                                                >
+                                                    Creating sub-task for:{' '}
+                                                    {Object.values(filteredTaskState)
+                                                        .flat()
+                                                        .find(
+                                                            (t) => t.id === parseInt(data.parent_id)
+                                                        )?.title || `Task #${data.parent_id}`}
+                                                </Typography>
+                                            </Stack>
                                         </Box>
                                     )}
-                                />
-                            ))}
-                        </Box>
-                    </DragDropContext>
+                                    <TextField
+                                        label="Title"
+                                        required
+                                        fullWidth
+                                        inputRef={titleRef}
+                                        value={data.title}
+                                        onChange={(e) => setData('title', e.target.value)}
+                                        error={!!errors.title}
+                                        helperText={errors.title}
+                                        placeholder="Concise task name"
+                                        variant="outlined"
+                                        size="small"
+                                    />
+                                    <TextField
+                                        label="Description"
+                                        multiline
+                                        minRows={3}
+                                        fullWidth
+                                        value={data.description}
+                                        onChange={(e) => setData('description', e.target.value)}
+                                        error={!!errors.description}
+                                        helperText={
+                                            errors.description ||
+                                            'Add optional context, acceptance criteria, etc.'
+                                        }
+                                        placeholder="Add more context..."
+                                        size="small"
+                                    />
 
-                    <FloatingActionGroup
-                        onAddTask={() => {
-                            showCreate(STATUS_ORDER[0]);
-                            setTimeout(() => titleRef.current?.focus(), 60);
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                                        <TextField
+                                            label="Start Date"
+                                            type="date"
+                                            fullWidth
+                                            InputLabelProps={{ shrink: true }}
+                                            value={data.start_date}
+                                            onChange={(e) => setData('start_date', e.target.value)}
+                                            error={!!errors.start_date}
+                                            helperText={errors.start_date || 'Optional'}
+                                            size="small"
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <CalendarMonthRoundedIcon
+                                                        fontSize="small"
+                                                        sx={{ mr: 1, color: 'text.disabled' }}
+                                                    />
+                                                ),
+                                            }}
+                                        />
+                                        <TextField
+                                            label="Due / Execution Date"
+                                            type="date"
+                                            fullWidth
+                                            InputLabelProps={{ shrink: true }}
+                                            value={data.end_date}
+                                            onChange={(e) => setData('end_date', e.target.value)}
+                                            error={!!errors.end_date}
+                                            helperText={errors.end_date || 'Optional'}
+                                            size="small"
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <CalendarMonthRoundedIcon
+                                                        fontSize="small"
+                                                        sx={{ mr: 1, color: 'text.disabled' }}
+                                                    />
+                                                ),
+                                            }}
+                                        />
+                                        <TextField
+                                            select
+                                            label="Assign To"
+                                            fullWidth
+                                            value={data.assignee_id}
+                                            onChange={(e) => setData('assignee_id', e.target.value)}
+                                            error={!!errors.assignee_id}
+                                            helperText={errors.assignee_id || 'Optional'}
+                                            size="small"
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <PersonRoundedIcon
+                                                        fontSize="small"
+                                                        sx={{ mr: 1, color: 'text.disabled' }}
+                                                    />
+                                                ),
+                                            }}
+                                        >
+                                            <MenuItem value="">— Unassigned —</MenuItem>
+                                            {Array.isArray(users) &&
+                                                users.map((u) => (
+                                                    <MenuItem key={u.id} value={u.id}>
+                                                        {u.name}
+                                                    </MenuItem>
+                                                ))}
+                                        </TextField>
+                                    </Stack>
+
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                                        <TextField
+                                            select
+                                            label="Priority"
+                                            fullWidth
+                                            value={data.priority}
+                                            onChange={(e) => setData('priority', e.target.value)}
+                                            error={!!errors.priority}
+                                            helperText={errors.priority || 'Task priority level'}
+                                            size="small"
+                                        >
+                                            <MenuItem value="low">Low</MenuItem>
+                                            <MenuItem value="medium">Medium</MenuItem>
+                                            <MenuItem value="high">High</MenuItem>
+                                            <MenuItem value="urgent">Urgent</MenuItem>
+                                        </TextField>
+
+                                        <TextField
+                                            select
+                                            label="Milestone"
+                                            fullWidth
+                                            value={String(data.milestone)}
+                                            onChange={(e) =>
+                                                setData('milestone', e.target.value === 'true')
+                                            }
+                                            error={!!errors.milestone}
+                                            helperText={
+                                                errors.milestone || 'Mark as project milestone'
+                                            }
+                                            size="small"
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <FlagRoundedIcon
+                                                        fontSize="small"
+                                                        sx={{ mr: 1, color: 'text.disabled' }}
+                                                    />
+                                                ),
+                                            }}
+                                        >
+                                            <MenuItem value={'false'}>Regular Task</MenuItem>
+                                            <MenuItem value={'true'}>Milestone</MenuItem>
+                                        </TextField>
+                                    </Stack>
+
+                                    <TextField
+                                        select
+                                        label="Duplicate Of"
+                                        fullWidth
+                                        value={data.duplicate_of}
+                                        onChange={(e) => setData('duplicate_of', e.target.value)}
+                                        error={!!errors.duplicate_of}
+                                        helperText={
+                                            errors.duplicate_of ||
+                                            'Mark this task as a duplicate of another task'
+                                        }
+                                        size="small"
+                                        InputProps={{
+                                            startAdornment: (
+                                                <ContentCopyIcon
+                                                    fontSize="small"
+                                                    sx={{ mr: 1, color: 'text.disabled' }}
+                                                />
+                                            ),
+                                        }}
+                                    >
+                                        <MenuItem value="">Not a duplicate</MenuItem>
+                                        {Object.values(filteredTaskState)
+                                            .flat()
+                                            .filter((task) => task.id !== editingId) // Don't allow self-reference
+                                            .map((task) => (
+                                                <MenuItem key={task.id} value={task.id}>
+                                                    {task.title}
+                                                </MenuItem>
+                                            ))}
+                                    </TextField>
+
+                                    {/* Image Upload Section - Only show in edit mode */}
+                                    {editMode && (
+                                        <Box
+                                            sx={{
+                                                p: 2,
+                                                border: '1px dashed',
+                                                borderColor: 'divider',
+                                                borderRadius: 2,
+                                                backgroundColor: 'rgba(0,0,0,0.02)',
+                                            }}
+                                        >
+                                            <Typography
+                                                variant="subtitle2"
+                                                sx={{
+                                                    mb: 1,
+                                                    fontWeight: 600,
+                                                    fontSize: '0.875rem',
+                                                }}
+                                            >
+                                                Task Images
+                                            </Typography>
+                                            <Button
+                                                variant="outlined"
+                                                component="label"
+                                                size="small"
+                                                disabled={formImageUploading}
+                                                sx={{ mb: 1 }}
+                                            >
+                                                {formImageUploading ? 'Uploading...' : 'Add Image'}
+                                                <input
+                                                    hidden
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleFormImageUpload}
+                                                />
+                                            </Button>
+                                            {editingId &&
+                                                (() => {
+                                                    // Use current in-memory taskState (includes optimistic changes)
+                                                    let currentTask = null;
+                                                    for (const col of Object.values(taskState)) {
+                                                        currentTask = (col || []).find(
+                                                            (t) => t.id === editingId
+                                                        );
+                                                        if (currentTask) break;
+                                                    }
+                                                    if (currentTask?.attachments_count > 0) {
+                                                        return (
+                                                            <Typography
+                                                                variant="caption"
+                                                                color="text.secondary"
+                                                                sx={{ display: 'block' }}
+                                                            >
+                                                                {currentTask.attachments_count}{' '}
+                                                                image
+                                                                {currentTask.attachments_count !== 1
+                                                                    ? 's'
+                                                                    : ''}{' '}
+                                                                attached
+                                                            </Typography>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
+                                        </Box>
+                                    )}
+
+                                    <TextField
+                                        select
+                                        label="Status"
+                                        fullWidth
+                                        value={data.status}
+                                        onChange={(e) => setData('status', e.target.value)}
+                                        helperText="Choose where it should appear on the board."
+                                        size="small"
+                                    >
+                                        {STATUS_ORDER.map((s) => (
+                                            <MenuItem key={s} value={s}>
+                                                {STATUS_META[s]?.title || s}
+                                            </MenuItem>
+                                        ))}
+                                    </TextField>
+                                </DialogContent>
+
+                                <DialogActions sx={{ px: 2, py: 1.5 }}>
+                                    <Button
+                                        onClick={() => setOpenForm(false)}
+                                        disabled={processing}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    {editMode && (
+                                        <Tooltip title="Delete task">
+                                            <IconButton
+                                                color="error"
+                                                onClick={() => {
+                                                    setOpenForm(false);
+                                                    askDelete(editingId);
+                                                }}
+                                                size="small"
+                                                sx={{ mr: 'auto' }}
+                                            >
+                                                <DeleteOutlineIcon />
+                                            </IconButton>
+                                        </Tooltip>
+                                    )}
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        disabled={processing}
+                                        sx={{
+                                            textTransform: 'none',
+                                            fontWeight: 700,
+                                            px: 2.2,
+                                            py: 0.6,
+                                            background: methodStyles.accent,
+                                            boxShadow: '0 6px 16px -8px rgba(0,0,0,.28)',
+                                            '&:hover': { opacity: 0.95 },
+                                        }}
+                                    >
+                                        {processing
+                                            ? editMode
+                                                ? 'Updating…'
+                                                : 'Creating…'
+                                            : editMode
+                                              ? 'Update Task'
+                                              : 'Create Task'}
+                                    </Button>
+                                </DialogActions>
+                            </form>
+                        </Dialog>
+
+                        {/* Confirm single delete */}
+                        <Dialog
+                            open={confirmOpen}
+                            onClose={() => {
+                                setConfirmOpen(false);
+                                setPendingDeleteId(null);
+                            }}
+                            maxWidth="xs"
+                            fullWidth
+                            PaperProps={{
+                                sx: {
+                                    borderRadius: 3,
+                                    background: (t) =>
+                                        `linear-gradient(140deg, ${alpha(t.palette.error.light, 0.15)}, #fff)`,
+                                    border: (t) => `1px solid ${alpha(t.palette.error.main, 0.35)}`,
+                                    backdropFilter: 'blur(10px)',
+                                },
+                            }}
+                        >
+                            <DialogTitle sx={{ fontWeight: 800, pr: 6 }}>Delete Task</DialogTitle>
+                            <DialogContent
+                                dividers
+                                sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+                            >
+                                <Typography variant="body2">
+                                    Are you sure you want to permanently delete
+                                    {pendingTask ? ' "' + pendingTask.title + '"' : ' this task'}?
+                                    This action cannot be undone.
+                                </Typography>
+                            </DialogContent>
+                            <DialogActions sx={{ px: 2, py: 1.25 }}>
+                                <Button
+                                    onClick={() => {
+                                        setConfirmOpen(false);
+                                        setPendingDeleteId(null);
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={confirmDelete}
+                                    color="error"
+                                    variant="contained"
+                                    sx={{ fontWeight: 700, textTransform: 'none' }}
+                                >
+                                    Delete
+                                </Button>
+                            </DialogActions>
+                        </Dialog>
+
+                        <MembersManagerDialog
+                            open={membersOpen}
+                            onClose={() => setMembersOpen(false)}
+                            project={project}
+                            members={Array.isArray(users) ? users : []}
+                        />
+                        <AIPdfReportDialog
+                            key={reportOpen ? 'open' : 'closed'}
+                            open={reportOpen}
+                            onClose={() => setReportOpen(false)}
+                            project={project}
+                            tasks={filteredTaskState}
+                            users={users}
+                        />
+                        <UpgradeDialog open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
+                        <ProjectDetailsDialog
+                            open={detailsOpen}
+                            onClose={() => setDetailsOpen(false)}
+                            project={project}
+                        />
+                        <AssistantChat
+                            project={project}
+                            open={assistantOpen}
+                            onClose={() => setAssistantOpen(false)}
+                        />
+                    </Box>
+
+                    {/* Custom Views Drawer */}
+                    <Drawer
+                        anchor="right"
+                        open={customViewsDrawerOpen}
+                        onClose={() => setCustomViewsDrawerOpen(false)}
+                        PaperProps={{
+                            sx: {
+                                width: 320,
+                                background:
+                                    'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9))',
+                                backdropFilter: 'blur(10px)',
+                                borderLeft: '1px solid rgba(0, 0, 0, 0.1)',
+                            },
                         }}
-                        onOpenAssistant={() => setAssistantOpen(true)}
-                        methodStyles={methodStyles}
-                        assistantOpen={assistantOpen}
-                        projectId={project.id}
-                    />
+                    >
+                        <Box sx={{ p: 2 }}>
+                            <Stack
+                                direction="row"
+                                alignItems="center"
+                                justifyContent="space-between"
+                                mb={2}
+                            >
+                                <Typography variant="h6" fontWeight={700}>
+                                    Custom Views
+                                </Typography>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => setCustomViewsDrawerOpen(false)}
+                                    sx={{ color: 'text.secondary' }}
+                                >
+                                    <CloseRoundedIcon />
+                                </IconButton>
+                            </Stack>
 
-                    {/* Create/Edit */}
+                            <Button
+                                variant="contained"
+                                fullWidth
+                                startIcon={<AddIcon />}
+                                onClick={() => setCreateViewDialogOpen(true)}
+                                sx={{
+                                    mb: 2,
+                                    background: methodStyles.accent,
+                                    fontWeight: 600,
+                                    textTransform: 'none',
+                                    borderRadius: 2,
+                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                    '&:hover': {
+                                        background: methodStyles.accent,
+                                        opacity: 0.9,
+                                    },
+                                }}
+                            >
+                                Create View
+                            </Button>
+
+                            <Divider sx={{ mb: 2 }} />
+
+                            <List sx={{ p: 0 }}>
+                                {customViews.length === 0 ? (
+                                    <Box
+                                        sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}
+                                    >
+                                        <ViewListIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
+                                        <Typography variant="body2">
+                                            No custom views yet. Create your first view!
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    customViews.map((view) => (
+                                        <ListItem
+                                            key={view.id}
+                                            disablePadding
+                                            sx={{
+                                                mb: 1,
+                                                borderRadius: 2,
+                                                overflow: 'hidden',
+                                                border: '1px solid rgba(0, 0, 0, 0.1)',
+                                                '&:hover': {
+                                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                                                },
+                                            }}
+                                        >
+                                            <ListItemButton
+                                                onClick={() => handleViewClick(view.name)}
+                                                sx={{
+                                                    borderRadius: 2,
+                                                    background: 'rgba(255, 255, 255, 0.7)',
+                                                    '&:hover': {
+                                                        background: 'rgba(255, 255, 255, 0.9)',
+                                                    },
+                                                }}
+                                            >
+                                                <ListItemText
+                                                    primary={view.name}
+                                                    secondary={`Created ${new Date(view.createdAt).toLocaleDateString()}`}
+                                                    primaryTypographyProps={{
+                                                        fontWeight: 600,
+                                                        fontSize: '0.9rem',
+                                                    }}
+                                                    secondaryTypographyProps={{
+                                                        fontSize: '0.75rem',
+                                                        color: 'text.secondary',
+                                                    }}
+                                                />
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteView(view.id);
+                                                    }}
+                                                    sx={{
+                                                        color: 'error.main',
+                                                        opacity: 0.7,
+                                                        '&:hover': {
+                                                            opacity: 1,
+                                                            background: 'rgba(211, 47, 47, 0.1)',
+                                                        },
+                                                    }}
+                                                >
+                                                    <DeleteOutlineIcon fontSize="small" />
+                                                </IconButton>
+                                            </ListItemButton>
+                                        </ListItem>
+                                    ))
+                                )}
+                            </List>
+                        </Box>
+                    </Drawer>
+
+                    {/* Create View Dialog */}
                     <Dialog
-                        open={openForm}
-                        onClose={() => setOpenForm(false)}
+                        open={createViewDialogOpen}
+                        onClose={() => setCreateViewDialogOpen(false)}
                         maxWidth="sm"
                         fullWidth
                         PaperProps={{
                             sx: {
                                 borderRadius: 3,
-                                overflow: 'hidden',
                                 background:
-                                    'linear-gradient(140deg,rgba(255,255,255,0.95),rgba(255,255,255,0.8))',
-                                backdropFilter: 'blur(12px)',
-                                border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
-                            },
-                        }}
-                    >
-                        <form onSubmit={submit}>
-                            <DialogTitle
-                                sx={{
-                                    fontWeight: 700,
-                                    pr: 6,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                }}
-                            >
-                                {editMode
-                                    ? 'Edit Task'
-                                    : data.parent_id
-                                      ? 'Create Sub-Task'
-                                      : 'Create Task'}
-                                <Chip
-                                    size="small"
-                                    label={
-                                        editMode ? 'Editing' : data.parent_id ? 'Sub-Task' : 'New'
-                                    }
-                                    sx={{
-                                        fontWeight: 700,
-                                        height: 22,
-                                        bgcolor: editMode ? '#ffc107' : '#17a2b8',
-                                        color: editMode ? '#212529' : '#ffffff',
-                                        border: 'none',
-                                        fontSize: '0.75rem',
-                                        '& .MuiChip-label': {
-                                            fontWeight: 700,
-                                            color: editMode ? '#212529' : '#ffffff',
-                                            px: 1,
-                                        },
-                                    }}
-                                />
-                                <IconButton
-                                    size="small"
-                                    aria-label="Close"
-                                    onClick={() => setOpenForm(false)}
-                                    sx={{ ml: 'auto' }}
-                                >
-                                    <CloseRoundedIcon fontSize="small" />
-                                </IconButton>
-                            </DialogTitle>
-
-                            <DialogContent
-                                dividers
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 1.5,
-                                    pt: 2,
-                                    maxHeight: '60vh',
-                                    overflowY: 'auto',
-                                }}
-                            >
-                                {/* Parent Task Indicator for Sub-Tasks */}
-                                {!editMode && data.parent_id && (
-                                    <Box
-                                        sx={{
-                                            p: 2,
-                                            borderRadius: 2,
-                                            bgcolor: 'rgba(25, 118, 210, 0.08)',
-                                            border: '1px solid rgba(25, 118, 210, 0.2)',
-                                            mb: 1,
-                                        }}
-                                    >
-                                        <Stack direction="row" alignItems="center" spacing={1}>
-                                            <AccountTreeIcon
-                                                sx={{ color: 'primary.main', fontSize: 20 }}
-                                            />
-                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                Creating sub-task for:{' '}
-                                                {Object.values(filteredTaskState)
-                                                    .flat()
-                                                    .find((t) => t.id === parseInt(data.parent_id))
-                                                    ?.title || `Task #${data.parent_id}`}
-                                            </Typography>
-                                        </Stack>
-                                    </Box>
-                                )}
-                                <TextField
-                                    label="Title"
-                                    required
-                                    fullWidth
-                                    inputRef={titleRef}
-                                    value={data.title}
-                                    onChange={(e) => setData('title', e.target.value)}
-                                    error={!!errors.title}
-                                    helperText={errors.title}
-                                    placeholder="Concise task name"
-                                    variant="outlined"
-                                    size="small"
-                                />
-                                <TextField
-                                    label="Description"
-                                    multiline
-                                    minRows={3}
-                                    fullWidth
-                                    value={data.description}
-                                    onChange={(e) => setData('description', e.target.value)}
-                                    error={!!errors.description}
-                                    helperText={
-                                        errors.description ||
-                                        'Add optional context, acceptance criteria, etc.'
-                                    }
-                                    placeholder="Add more context..."
-                                    size="small"
-                                />
-
-                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                                    <TextField
-                                        label="Start Date"
-                                        type="date"
-                                        fullWidth
-                                        InputLabelProps={{ shrink: true }}
-                                        value={data.start_date}
-                                        onChange={(e) => setData('start_date', e.target.value)}
-                                        error={!!errors.start_date}
-                                        helperText={errors.start_date || 'Optional'}
-                                        size="small"
-                                        InputProps={{
-                                            startAdornment: (
-                                                <CalendarMonthRoundedIcon
-                                                    fontSize="small"
-                                                    sx={{ mr: 1, color: 'text.disabled' }}
-                                                />
-                                            ),
-                                        }}
-                                    />
-                                    <TextField
-                                        label="Due / Execution Date"
-                                        type="date"
-                                        fullWidth
-                                        InputLabelProps={{ shrink: true }}
-                                        value={data.end_date}
-                                        onChange={(e) => setData('end_date', e.target.value)}
-                                        error={!!errors.end_date}
-                                        helperText={errors.end_date || 'Optional'}
-                                        size="small"
-                                        InputProps={{
-                                            startAdornment: (
-                                                <CalendarMonthRoundedIcon
-                                                    fontSize="small"
-                                                    sx={{ mr: 1, color: 'text.disabled' }}
-                                                />
-                                            ),
-                                        }}
-                                    />
-                                    <TextField
-                                        select
-                                        label="Assign To"
-                                        fullWidth
-                                        value={data.assignee_id}
-                                        onChange={(e) => setData('assignee_id', e.target.value)}
-                                        error={!!errors.assignee_id}
-                                        helperText={errors.assignee_id || 'Optional'}
-                                        size="small"
-                                        InputProps={{
-                                            startAdornment: (
-                                                <PersonRoundedIcon
-                                                    fontSize="small"
-                                                    sx={{ mr: 1, color: 'text.disabled' }}
-                                                />
-                                            ),
-                                        }}
-                                    >
-                                        <MenuItem value="">— Unassigned —</MenuItem>
-                                        {Array.isArray(users) &&
-                                            users.map((u) => (
-                                                <MenuItem key={u.id} value={u.id}>
-                                                    {u.name}
-                                                </MenuItem>
-                                            ))}
-                                    </TextField>
-                                </Stack>
-
-                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                                    <TextField
-                                        select
-                                        label="Priority"
-                                        fullWidth
-                                        value={data.priority}
-                                        onChange={(e) => setData('priority', e.target.value)}
-                                        error={!!errors.priority}
-                                        helperText={errors.priority || 'Task priority level'}
-                                        size="small"
-                                    >
-                                        <MenuItem value="low">Low</MenuItem>
-                                        <MenuItem value="medium">Medium</MenuItem>
-                                        <MenuItem value="high">High</MenuItem>
-                                        <MenuItem value="urgent">Urgent</MenuItem>
-                                    </TextField>
-
-                                    <TextField
-                                        select
-                                        label="Milestone"
-                                        fullWidth
-                                        value={String(data.milestone)}
-                                        onChange={(e) =>
-                                            setData('milestone', e.target.value === 'true')
-                                        }
-                                        error={!!errors.milestone}
-                                        helperText={errors.milestone || 'Mark as project milestone'}
-                                        size="small"
-                                        InputProps={{
-                                            startAdornment: (
-                                                <FlagRoundedIcon
-                                                    fontSize="small"
-                                                    sx={{ mr: 1, color: 'text.disabled' }}
-                                                />
-                                            ),
-                                        }}
-                                    >
-                                        <MenuItem value={'false'}>Regular Task</MenuItem>
-                                        <MenuItem value={'true'}>Milestone</MenuItem>
-                                    </TextField>
-                                </Stack>
-
-                                <TextField
-                                    select
-                                    label="Duplicate Of"
-                                    fullWidth
-                                    value={data.duplicate_of}
-                                    onChange={(e) => setData('duplicate_of', e.target.value)}
-                                    error={!!errors.duplicate_of}
-                                    helperText={
-                                        errors.duplicate_of ||
-                                        'Mark this task as a duplicate of another task'
-                                    }
-                                    size="small"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <ContentCopyIcon
-                                                fontSize="small"
-                                                sx={{ mr: 1, color: 'text.disabled' }}
-                                            />
-                                        ),
-                                    }}
-                                >
-                                    <MenuItem value="">Not a duplicate</MenuItem>
-                                    {Object.values(filteredTaskState)
-                                        .flat()
-                                        .filter((task) => task.id !== editingId) // Don't allow self-reference
-                                        .map((task) => (
-                                            <MenuItem key={task.id} value={task.id}>
-                                                {task.title}
-                                            </MenuItem>
-                                        ))}
-                                </TextField>
-
-                                {/* Image Upload Section - Only show in edit mode */}
-                                {editMode && (
-                                    <Box
-                                        sx={{
-                                            p: 2,
-                                            border: '1px dashed',
-                                            borderColor: 'divider',
-                                            borderRadius: 2,
-                                            backgroundColor: 'rgba(0,0,0,0.02)',
-                                        }}
-                                    >
-                                        <Typography
-                                            variant="subtitle2"
-                                            sx={{ mb: 1, fontWeight: 600, fontSize: '0.875rem' }}
-                                        >
-                                            Task Images
-                                        </Typography>
-                                        <Button
-                                            variant="outlined"
-                                            component="label"
-                                            size="small"
-                                            disabled={formImageUploading}
-                                            sx={{ mb: 1 }}
-                                        >
-                                            {formImageUploading ? 'Uploading...' : 'Add Image'}
-                                            <input
-                                                hidden
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleFormImageUpload}
-                                            />
-                                        </Button>
-                                        {editingId &&
-                                            (() => {
-                                                // Use current in-memory taskState (includes optimistic changes)
-                                                let currentTask = null;
-                                                for (const col of Object.values(taskState)) {
-                                                    currentTask = (col || []).find(
-                                                        (t) => t.id === editingId
-                                                    );
-                                                    if (currentTask) break;
-                                                }
-                                                if (currentTask?.attachments_count > 0) {
-                                                    return (
-                                                        <Typography
-                                                            variant="caption"
-                                                            color="text.secondary"
-                                                            sx={{ display: 'block' }}
-                                                        >
-                                                            {currentTask.attachments_count} image
-                                                            {currentTask.attachments_count !== 1
-                                                                ? 's'
-                                                                : ''}{' '}
-                                                            attached
-                                                        </Typography>
-                                                    );
-                                                }
-                                                return null;
-                                            })()}
-                                    </Box>
-                                )}
-
-                                <TextField
-                                    select
-                                    label="Status"
-                                    fullWidth
-                                    value={data.status}
-                                    onChange={(e) => setData('status', e.target.value)}
-                                    helperText="Choose where it should appear on the board."
-                                    size="small"
-                                >
-                                    {STATUS_ORDER.map((s) => (
-                                        <MenuItem key={s} value={s}>
-                                            {STATUS_META[s]?.title || s}
-                                        </MenuItem>
-                                    ))}
-                                </TextField>
-                            </DialogContent>
-
-                            <DialogActions sx={{ px: 2, py: 1.5 }}>
-                                <Button onClick={() => setOpenForm(false)} disabled={processing}>
-                                    Cancel
-                                </Button>
-                                {editMode && (
-                                    <Tooltip title="Delete task">
-                                        <IconButton
-                                            color="error"
-                                            onClick={() => {
-                                                setOpenForm(false);
-                                                askDelete(editingId);
-                                            }}
-                                            size="small"
-                                            sx={{ mr: 'auto' }}
-                                        >
-                                            <DeleteOutlineIcon />
-                                        </IconButton>
-                                    </Tooltip>
-                                )}
-                                <Button
-                                    type="submit"
-                                    variant="contained"
-                                    disabled={processing}
-                                    sx={{
-                                        textTransform: 'none',
-                                        fontWeight: 700,
-                                        px: 2.2,
-                                        py: 0.6,
-                                        background: methodStyles.accent,
-                                        boxShadow: '0 6px 16px -8px rgba(0,0,0,.28)',
-                                        '&:hover': { opacity: 0.95 },
-                                    }}
-                                >
-                                    {processing
-                                        ? editMode
-                                            ? 'Updating…'
-                                            : 'Creating…'
-                                        : editMode
-                                          ? 'Update Task'
-                                          : 'Create Task'}
-                                </Button>
-                            </DialogActions>
-                        </form>
-                    </Dialog>
-
-                    {/* Confirm single delete */}
-                    <Dialog
-                        open={confirmOpen}
-                        onClose={() => {
-                            setConfirmOpen(false);
-                            setPendingDeleteId(null);
-                        }}
-                        maxWidth="xs"
-                        fullWidth
-                        PaperProps={{
-                            sx: {
-                                borderRadius: 3,
-                                background: (t) =>
-                                    `linear-gradient(140deg, ${alpha(t.palette.error.light, 0.15)}, #fff)`,
-                                border: (t) => `1px solid ${alpha(t.palette.error.main, 0.35)}`,
+                                    'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9))',
                                 backdropFilter: 'blur(10px)',
                             },
                         }}
                     >
-                        <DialogTitle sx={{ fontWeight: 800, pr: 6 }}>Delete Task</DialogTitle>
-                        <DialogContent
-                            dividers
-                            sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
-                        >
-                            <Typography variant="body2">
-                                Are you sure you want to permanently delete
-                                {pendingTask ? ' "' + pendingTask.title + '"' : ' this task'}? This
-                                action cannot be undone.
-                            </Typography>
+                        <DialogTitle sx={{ fontWeight: 700 }}>Create Custom View</DialogTitle>
+                        <DialogContent>
+                            <TextField
+                                autoFocus
+                                fullWidth
+                                label="View Name"
+                                variant="outlined"
+                                value={newViewName}
+                                onChange={(e) => setNewViewName(e.target.value)}
+                                placeholder="Enter a name for your custom view"
+                                sx={{ mt: 1 }}
+                                onKeyPress={(e) => {
+                                    if (e.key === 'Enter' && newViewName.trim()) {
+                                        handleCreateView();
+                                    }
+                                }}
+                            />
                         </DialogContent>
-                        <DialogActions sx={{ px: 2, py: 1.25 }}>
+                        <DialogActions sx={{ p: 2 }}>
                             <Button
                                 onClick={() => {
-                                    setConfirmOpen(false);
-                                    setPendingDeleteId(null);
+                                    setCreateViewDialogOpen(false);
+                                    setNewViewName('');
                                 }}
+                                sx={{ textTransform: 'none' }}
                             >
                                 Cancel
                             </Button>
                             <Button
-                                onClick={confirmDelete}
-                                color="error"
+                                onClick={handleCreateView}
                                 variant="contained"
-                                sx={{ fontWeight: 700, textTransform: 'none' }}
+                                disabled={!newViewName.trim()}
+                                sx={{
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                    background: methodStyles.accent,
+                                    '&:hover': {
+                                        background: methodStyles.accent,
+                                        opacity: 0.9,
+                                    },
+                                }}
                             >
-                                Delete
+                                Create
                             </Button>
                         </DialogActions>
                     </Dialog>
-
-                    <MembersManagerDialog
-                        open={membersOpen}
-                        onClose={() => setMembersOpen(false)}
-                        project={project}
-                        members={Array.isArray(users) ? users : []}
-                    />
-                    <AIPdfReportDialog
-                        key={reportOpen ? 'open' : 'closed'}
-                        open={reportOpen}
-                        onClose={() => setReportOpen(false)}
-                        project={project}
-                        tasks={filteredTaskState}
-                        users={users}
-                    />
-                    <UpgradeDialog open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
-                    <ProjectDetailsDialog
-                        open={detailsOpen}
-                        onClose={() => setDetailsOpen(false)}
-                        project={project}
-                    />
-                    <AssistantChat
-                        project={project}
-                        open={assistantOpen}
-                        onClose={() => setAssistantOpen(false)}
-                    />
-                </Box>
-
-                {/* Custom Views Drawer */}
-                <Drawer
-                    anchor="right"
-                    open={customViewsDrawerOpen}
-                    onClose={() => setCustomViewsDrawerOpen(false)}
-                    PaperProps={{
-                        sx: {
-                            width: 320,
-                            background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9))',
-                            backdropFilter: 'blur(10px)',
-                            borderLeft: '1px solid rgba(0, 0, 0, 0.1)',
-                        }
-                    }}
-                >
-                    <Box sx={{ p: 2 }}>
-                        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
-                            <Typography variant="h6" fontWeight={700}>
-                                Custom Views
-                            </Typography>
-                            <IconButton
-                                size="small"
-                                onClick={() => setCustomViewsDrawerOpen(false)}
-                                sx={{ color: 'text.secondary' }}
-                            >
-                                <CloseRoundedIcon />
-                            </IconButton>
-                        </Stack>
-
-                        <Button
-                            variant="contained"
-                            fullWidth
-                            startIcon={<AddIcon />}
-                            onClick={() => setCreateViewDialogOpen(true)}
-                            sx={{
-                                mb: 2,
-                                background: methodStyles.accent,
-                                fontWeight: 600,
-                                textTransform: 'none',
-                                borderRadius: 2,
-                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                                '&:hover': {
-                                    background: methodStyles.accent,
-                                    opacity: 0.9,
-                                }
-                            }}
-                        >
-                            Create View
-                        </Button>
-
-                        <Divider sx={{ mb: 2 }} />
-
-                        <List sx={{ p: 0 }}>
-                            {customViews.length === 0 ? (
-                                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                                    <ViewListIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
-                                    <Typography variant="body2">
-                                        No custom views yet.
-                                        Create your first view!
-                                    </Typography>
-                                </Box>
-                            ) : (
-                                customViews.map((view) => (
-                                    <ListItem
-                                        key={view.id}
-                                        disablePadding
-                                        sx={{
-                                            mb: 1,
-                                            borderRadius: 2,
-                                            overflow: 'hidden',
-                                            border: '1px solid rgba(0, 0, 0, 0.1)',
-                                            '&:hover': {
-                                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                                            }
-                                        }}
-                                    >
-                                        <ListItemButton
-                                            onClick={() => handleViewClick(view.name)}
-                                            sx={{
-                                                borderRadius: 2,
-                                                background: 'rgba(255, 255, 255, 0.7)',
-                                                '&:hover': {
-                                                    background: 'rgba(255, 255, 255, 0.9)',
-                                                }
-                                            }}
-                                        >
-                                            <ListItemText
-                                                primary={view.name}
-                                                secondary={`Created ${new Date(view.createdAt).toLocaleDateString()}`}
-                                                primaryTypographyProps={{
-                                                    fontWeight: 600,
-                                                    fontSize: '0.9rem'
-                                                }}
-                                                secondaryTypographyProps={{
-                                                    fontSize: '0.75rem',
-                                                    color: 'text.secondary'
-                                                }}
-                                            />
-                                            <IconButton
-                                                size="small"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteView(view.id);
-                                                }}
-                                                sx={{
-                                                    color: 'error.main',
-                                                    opacity: 0.7,
-                                                    '&:hover': {
-                                                        opacity: 1,
-                                                        background: 'rgba(211, 47, 47, 0.1)'
-                                                    }
-                                                }}
-                                            >
-                                                <DeleteOutlineIcon fontSize="small" />
-                                            </IconButton>
-                                        </ListItemButton>
-                                    </ListItem>
-                                ))
-                            )}
-                        </List>
-                    </Box>
-                </Drawer>
-
-                {/* Floating drawer toggle button */}
-                <Fab
-                    color="primary"
-                    onClick={() => setCustomViewsDrawerOpen(true)}
-                    sx={{
-                        position: 'fixed',
-                        bottom: 16,
-                        right: 16,
-                        zIndex: 1200,
-                        background: methodStyles.accent,
-                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-                        '&:hover': {
-                            background: methodStyles.accent,
-                            opacity: 0.9,
-                            transform: 'scale(1.1)',
-                        },
-                        transition: 'all 0.3s ease',
-                    }}
-                >
-                    <ViewListIcon />
-                </Fab>
-
-                {/* Create View Dialog */}
-                <Dialog
-                    open={createViewDialogOpen}
-                    onClose={() => setCreateViewDialogOpen(false)}
-                    maxWidth="sm"
-                    fullWidth
-                    PaperProps={{
-                        sx: {
-                            borderRadius: 3,
-                            background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9))',
-                            backdropFilter: 'blur(10px)',
-                        }
-                    }}
-                >
-                    <DialogTitle sx={{ fontWeight: 700 }}>
-                        Create Custom View
-                    </DialogTitle>
-                    <DialogContent>
-                        <TextField
-                            autoFocus
-                            fullWidth
-                            label="View Name"
-                            variant="outlined"
-                            value={newViewName}
-                            onChange={(e) => setNewViewName(e.target.value)}
-                            placeholder="Enter a name for your custom view"
-                            sx={{ mt: 1 }}
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter' && newViewName.trim()) {
-                                    handleCreateView();
-                                }
-                            }}
-                        />
-                    </DialogContent>
-                    <DialogActions sx={{ p: 2 }}>
-                        <Button
-                            onClick={() => {
-                                setCreateViewDialogOpen(false);
-                                setNewViewName('');
-                            }}
-                            sx={{ textTransform: 'none' }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleCreateView}
-                            variant="contained"
-                            disabled={!newViewName.trim()}
-                            sx={{
-                                textTransform: 'none',
-                                fontWeight: 600,
-                                background: methodStyles.accent,
-                                '&:hover': {
-                                    background: methodStyles.accent,
-                                    opacity: 0.9,
-                                }
-                            }}
-                        >
-                            Create
-                        </Button>
-                    </DialogActions>
-                </Dialog>
                 </Box>
             </AuthenticatedLayout>
         </>

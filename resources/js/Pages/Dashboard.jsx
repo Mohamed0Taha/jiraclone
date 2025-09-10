@@ -407,51 +407,72 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
             <AuthenticatedLayout user={auth.user}>
                 {/* AppSumo Welcome Message */}
                 {appsumo_welcome && (
-                    <Box sx={{ backgroundColor: '#dcfce7', borderBottom: '1px solid #bbf7d0', py: 2 }}>
+                    <Box
+                        sx={{
+                            backgroundColor: '#dcfce7',
+                            borderBottom: '1px solid #bbf7d0',
+                            py: 2,
+                        }}
+                    >
                         <Container maxWidth="lg">
-                            <Paper 
+                            <Paper
                                 elevation={0}
-                                sx={{ 
-                                    p: 3, 
-                                    backgroundColor: 'white', 
+                                sx={{
+                                    p: 3,
+                                    backgroundColor: 'white',
                                     border: '2px solid #22c55e',
                                     borderRadius: 2,
-                                    background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)'
+                                    background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)',
                                 }}
                             >
                                 <Stack direction="row" alignItems="center" spacing={2}>
-                                    <Box sx={{ 
-                                        width: 48, 
-                                        height: 48, 
-                                        borderRadius: '50%', 
-                                        backgroundColor: '#22c55e',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}>
+                                    <Box
+                                        sx={{
+                                            width: 48,
+                                            height: 48,
+                                            borderRadius: '50%',
+                                            backgroundColor: '#22c55e',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
                                         <Typography sx={{ fontSize: '24px' }}>🎉</Typography>
                                     </Box>
                                     <Box sx={{ flexGrow: 1 }}>
-                                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#166534', mb: 0.5 }}>
+                                        <Typography
+                                            variant="h6"
+                                            sx={{ fontWeight: 'bold', color: '#166534', mb: 0.5 }}
+                                        >
                                             Welcome to TaskPilot - Lifetime Access Activated!
                                         </Typography>
-                                        <Typography variant="body2" sx={{ color: '#166534', mb: 2 }}>
-                                            Thank you for your AppSumo purchase! Your lifetime subscription is now active with access to all premium features.
+                                        <Typography
+                                            variant="body2"
+                                            sx={{ color: '#166534', mb: 2 }}
+                                        >
+                                            Thank you for your AppSumo purchase! Your lifetime
+                                            subscription is now active with access to all premium
+                                            features.
                                         </Typography>
                                         <Stack direction="row" spacing={2} alignItems="center">
-                                            <Button 
+                                            <Button
                                                 variant="contained"
                                                 size="small"
-                                                sx={{ 
+                                                sx={{
                                                     backgroundColor: '#22c55e',
-                                                    '&:hover': { backgroundColor: '#16a34a' }
+                                                    '&:hover': { backgroundColor: '#16a34a' },
                                                 }}
-                                                onClick={() => window.open('https://appsumo.com/products/taskpilot', '_blank')}
+                                                onClick={() =>
+                                                    window.open(
+                                                        'https://appsumo.com/products/taskpilot',
+                                                        '_blank'
+                                                    )
+                                                }
                                             >
                                                 ⭐ Leave a Review on AppSumo
                                             </Button>
-                                            <Button 
-                                                variant="outlined" 
+                                            <Button
+                                                variant="outlined"
                                                 size="small"
                                                 onClick={() => router.visit('/certification')}
                                             >
@@ -467,9 +488,18 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
 
                 {/* Regular success message */}
                 {message && !appsumo_welcome && (
-                    <Box sx={{ backgroundColor: '#dbeafe', borderBottom: '1px solid #93c5fd', py: 1 }}>
+                    <Box
+                        sx={{
+                            backgroundColor: '#dbeafe',
+                            borderBottom: '1px solid #93c5fd',
+                            py: 1,
+                        }}
+                    >
                         <Container maxWidth="lg">
-                            <Typography variant="body2" sx={{ color: '#1e40af', textAlign: 'center' }}>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: '#1e40af', textAlign: 'center' }}
+                            >
                                 {message}
                             </Typography>
                         </Container>

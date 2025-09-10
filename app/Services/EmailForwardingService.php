@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Mail\ForwardedEmail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -19,14 +18,15 @@ class EmailForwardingService
     ): bool {
         try {
             $targetEmail = 'taha.elfatih@gmail.com';
-            
+
             // Try Mailtrap API first (more reliable)
-            $mailtrapApi = new MailtrapApiService();
+            $mailtrapApi = new MailtrapApiService;
             if ($mailtrapApi->forwardEmail($subject, $content, $fromEmail, $targetEmail, $headers)) {
                 Log::info('Email forwarded successfully via Mailtrap API');
+
                 return true;
             }
-            
+
             // Fallback to SMTP
             Log::info('Mailtrap API failed, using SMTP fallback', [
                 'original_subject' => $subject,
@@ -34,9 +34,9 @@ class EmailForwardingService
                 'to' => $targetEmail,
             ]);
 
-            Mail::raw("FORWARDED EMAIL\n\nOriginal Subject: $subject\nOriginal From: $fromEmail\nForwarded: " . now()->format('F j, Y \a\t g:i A') . "\n\n---\n\n$content", function ($message) use ($targetEmail, $subject) {
+            Mail::raw("FORWARDED EMAIL\n\nOriginal Subject: $subject\nOriginal From: $fromEmail\nForwarded: ".now()->format('F j, Y \a\t g:i A')."\n\n---\n\n$content", function ($message) use ($targetEmail, $subject) {
                 $message->to($targetEmail)
-                        ->subject('[FORWARDED] ' . $subject);
+                    ->subject('[FORWARDED] '.$subject);
             });
 
             Log::info('Email forwarded successfully via SMTP', [
@@ -76,25 +76,25 @@ class EmailForwardingService
         string $to,
         string $subject,
         string $plainContent,
-        string $htmlContent = null,
+        ?string $htmlContent = null,
         string $fromEmail = 'support@taskpilot.us'
     ): bool {
         try {
             Log::info('Sending test email via scheduler', [
                 'to' => $to,
                 'subject' => $subject,
-                'from' => $fromEmail
+                'from' => $fromEmail,
             ]);
 
-            Mail::raw($plainContent, function ($message) use ($to, $subject, $fromEmail) {
+            Mail::raw($plainContent, function ($message) use ($to, $subject) {
                 $message->to($to)
-                        ->subject($subject)
-                        ->from(config('mail.from.address'), config('mail.from.name'));
+                    ->subject($subject)
+                    ->from(config('mail.from.address'), config('mail.from.name'));
             });
 
             Log::info('Test email sent successfully', [
                 'to' => $to,
-                'subject' => $subject
+                'subject' => $subject,
             ]);
 
             // Log to database
@@ -112,7 +112,7 @@ class EmailForwardingService
             Log::error('Failed to send test email', [
                 'to' => $to,
                 'subject' => $subject,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             // Log failed attempt

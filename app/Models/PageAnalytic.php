@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class PageAnalytic extends Model
 {
@@ -68,7 +68,7 @@ class PageAnalytic extends Model
     public function scopeThisMonth($query)
     {
         return $query->whereMonth('created_at', now()->month)
-                    ->whereYear('created_at', now()->year);
+            ->whereYear('created_at', now()->year);
     }
 
     public function scopeLandingPage($query)

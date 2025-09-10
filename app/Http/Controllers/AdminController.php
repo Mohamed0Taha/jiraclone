@@ -1715,7 +1715,7 @@ class AdminController extends Controller
         try {
             for ($i = 0; $i < $count; $i++) {
                 $code = $this->generateUniqueAppSumoCode();
-                
+
                 $codeRecord = AppSumoCode::create([
                     'code' => $code,
                     'status' => 'active',
@@ -1732,7 +1732,7 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.appsumo.dashboard')
-                ->with('error', 'Failed to generate codes: ' . $e->getMessage());
+                ->with('error', 'Failed to generate codes: '.$e->getMessage());
         }
     }
 
@@ -1745,16 +1745,16 @@ class AdminController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $filename = 'appsumo_codes_' . date('Y_m_d_H_i_s') . '.csv';
-        
+        $filename = 'appsumo_codes_'.date('Y_m_d_H_i_s').'.csv';
+
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
-        $callback = function() use ($codes) {
+        $callback = function () use ($codes) {
             $file = fopen('php://output', 'w');
-            
+
             // NO HEADERS - AppSumo requirement
             // Only output the codes, one per row, no additional information
             foreach ($codes as $code) {
@@ -1779,7 +1779,7 @@ class AdminController extends Controller
 
         try {
             $codeIds = $request->input('code_ids');
-            
+
             // Only allow deletion of active codes (not redeemed ones)
             $deletedCount = AppSumoCode::whereIn('id', $codeIds)
                 ->where('status', 'active')
@@ -1792,7 +1792,7 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.appsumo.dashboard')
-                ->with('error', 'Failed to delete codes: ' . $e->getMessage());
+                ->with('error', 'Failed to delete codes: '.$e->getMessage());
         }
     }
 
@@ -1803,7 +1803,7 @@ class AdminController extends Controller
     {
         do {
             // Generate format: AS + 8 random alphanumeric characters (uppercase)
-            $code = 'AS' . strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 8));
+            $code = 'AS'.strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 8));
         } while (AppSumoCode::where('code', $code)->exists());
 
         return $code;

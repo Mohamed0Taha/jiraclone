@@ -443,11 +443,10 @@ export default function AssistantChat({ project, open, onClose }) {
     };
 
     return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            maxWidth="md"
-            fullWidth
+    <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth={false}
             PaperProps={{
                 sx: {
                     borderRadius: 3,
@@ -456,6 +455,8 @@ export default function AssistantChat({ project, open, onClose }) {
                     border: 'none',
                     boxShadow: '0 30px 60px -12px rgba(31,41,255,0.45)',
                     display: 'flex',
+            width: 'clamp(420px, 92vw, 900px)',
+            minWidth: 400,
                     height: '85vh',
                 },
             }}
@@ -470,6 +471,7 @@ export default function AssistantChat({ project, open, onClose }) {
                     background: palette.titleBg,
                     borderBottom: '1px solid rgba(255,255,255,0.25)',
                     color: 'white',
+                    position: 'relative',
                 }}
             >
                 <Avatar
@@ -541,7 +543,11 @@ export default function AssistantChat({ project, open, onClose }) {
                     }}
                 />
 
-                <IconButton onClick={onClose} sx={{ ml: 'auto' }} aria-label="Close assistant chat">
+                <IconButton
+                    onClick={onClose}
+                    sx={{ position: 'absolute', top: 8, right: 8 }}
+                    aria-label="Close assistant chat"
+                >
                     <CloseRoundedIcon fontSize="small" sx={{ color: 'white' }} />
                 </IconButton>
             </DialogTitle>

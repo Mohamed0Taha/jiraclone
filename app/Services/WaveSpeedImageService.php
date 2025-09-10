@@ -5,7 +5,6 @@ namespace App\Services;
 use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 /**
  * WaveSpeedImageService
@@ -57,61 +56,62 @@ class WaveSpeedImageService
             'enable_sync_mode' => true,  // Use sync mode to get direct result
         ];
 
-        $submitUrl = 'https://api.wavespeed.ai/api/v3/wavespeed-ai/' . $model;
+        $submitUrl = 'https://api.wavespeed.ai/api/v3/wavespeed-ai/'.$model;
         $res = Http::timeout(90)->withHeaders([
-            'Authorization' => 'Bearer ' . $key,
+            'Authorization' => 'Bearer '.$key,
             'Content-Type' => 'application/json',
         ])->post($submitUrl, $payload);
 
-        if (!$res->ok()) {
+        if (! $res->ok()) {
             Log::error('WaveSpeed image request failed', ['status' => $res->status(), 'body' => $res->body()]);
-            throw new Exception('WaveSpeed image generation failed (HTTP ' . $res->status() . ')');
+            throw new Exception('WaveSpeed image generation failed (HTTP '.$res->status().')');
         }
 
         $json = $res->json();
-        
+
         // Handle sync mode response (direct result)
-        if (isset($json['data']['outputs']) && !empty($json['data']['outputs'])) {
+        if (isset($json['data']['outputs']) && ! empty($json['data']['outputs'])) {
             $url = $json['data']['outputs'][0];
-            return [ 'url' => $url, 'provider' => 'wavespeed', 'model' => $model ];
+
+            return ['url' => $url, 'provider' => 'wavespeed', 'model' => $model];
         }
-        
+
         // Handle async mode response (task ID for polling)
         $taskId = $json['data']['id'] ?? null;
-        if (!$taskId) {
+        if (! $taskId) {
             throw new Exception('WaveSpeed response missing task ID or outputs');
         }
 
         // Poll for result (fallback if sync mode didn't work)
-        $resultUrl = 'https://api.wavespeed.ai/api/v3/predictions/' . $taskId . '/result';
+        $resultUrl = 'https://api.wavespeed.ai/api/v3/predictions/'.$taskId.'/result';
         $maxAttempts = 20; // 20 * 3 = 60 seconds max wait
-        
+
         for ($i = 0; $i < $maxAttempts; $i++) {
             sleep(3); // Wait 3 seconds between polls
-            
+
             $resultRes = Http::timeout(30)->withHeaders([
-                'Authorization' => 'Bearer ' . $key,
+                'Authorization' => 'Bearer '.$key,
             ])->get($resultUrl);
-            
-            if (!$resultRes->ok()) {
+
+            if (! $resultRes->ok()) {
                 continue; // Retry on error
             }
-            
+
             $resultJson = $resultRes->json();
             $status = $resultJson['data']['status'] ?? '';
-            
+
             if ($status === 'completed') {
                 $outputs = $resultJson['data']['outputs'] ?? [];
-                if (!empty($outputs)) {
-                    return [ 'url' => $outputs[0], 'provider' => 'wavespeed', 'model' => $model ];
+                if (! empty($outputs)) {
+                    return ['url' => $outputs[0], 'provider' => 'wavespeed', 'model' => $model];
                 }
             } elseif ($status === 'failed') {
                 $error = $resultJson['data']['error'] ?? 'Unknown error';
-                throw new Exception('WaveSpeed generation failed: ' . $error);
+                throw new Exception('WaveSpeed generation failed: '.$error);
             }
             // Continue polling if status is 'created' or 'processing'
         }
-        
+
         throw new Exception('WaveSpeed generation timed out after 60 seconds');
     }
 }

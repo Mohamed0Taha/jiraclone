@@ -266,10 +266,17 @@ export default function CertificationIndex({
             typeof localRemaining === 'number'
                 ? localRemaining
                 : (remainingSeconds ?? totalSeconds);
-        
+
         // Debug: Log the values to understand where large number comes from
-        console.log('Timer Debug - remainingSeconds:', remainingSeconds, 'localRemaining:', localRemaining, 'remainRaw:', remainRaw);
-        
+        console.log(
+            'Timer Debug - remainingSeconds:',
+            remainingSeconds,
+            'localRemaining:',
+            localRemaining,
+            'remainRaw:',
+            remainRaw
+        );
+
         const remaining = Math.max(0, Math.min(totalSeconds, Math.floor(remainRaw)));
         const elapsed = totalSeconds - remaining;
         const progressFrac = elapsed / totalSeconds; // 0..1

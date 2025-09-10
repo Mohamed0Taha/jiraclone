@@ -5,10 +5,10 @@ namespace Tests\Feature;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use App\Services\CommandProcessingService;
 use App\Services\OpenAIService;
 use App\Services\ProjectContextService;
 use App\Services\QuestionAnsweringService;
-use App\Services\CommandProcessingService;
 use App\Services\TaskGeneratorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
@@ -19,24 +19,26 @@ class AssistantEndToEndTest extends TestCase
     use RefreshDatabase;
 
     private QuestionAnsweringService $qas;
+
     private CommandProcessingService $cps;
+
     private Project $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-    // Ensure no LLM fallback during deterministic tests
-    putenv('OPENAI_API_KEY=');
+        // Ensure no LLM fallback during deterministic tests
+        putenv('OPENAI_API_KEY=');
         $openAIMock = Mockery::mock(OpenAIService::class);
         $openAIMock->shouldIgnoreMissing();
         $openAIMock->shouldReceive('chatText')->andReturn('Mocked LLM response');
 
-        $this->qas = new QuestionAnsweringService($openAIMock, new ProjectContextService());
+        $this->qas = new QuestionAnsweringService($openAIMock, new ProjectContextService);
 
         $taskGenMock = Mockery::mock(TaskGeneratorService::class);
         $taskGenMock->shouldIgnoreMissing();
         $taskGenMock->shouldReceive('generateTasks')->andReturn([]);
-        $this->cps = new CommandProcessingService($openAIMock, new ProjectContextService(), $taskGenMock);
+        $this->cps = new CommandProcessingService($openAIMock, new ProjectContextService, $taskGenMock);
 
         $owner = User::factory()->create(['name' => 'OwnerUser']);
         $this->project = Project::factory()->create(['user_id' => $owner->id, 'name' => 'Alpha']);
@@ -54,16 +56,16 @@ class AssistantEndToEndTest extends TestCase
 
     public function test_task_listing_and_ids()
     {
-    // Force deterministic path (no LLM) by ensuring api key env not set
-    putenv('OPENAI_API_KEY=');
-    $ans = $this->qas->answer($this->project, 'List all tasks', [], null);
+        // Force deterministic path (no LLM) by ensuring api key env not set
+        putenv('OPENAI_API_KEY=');
+        $ans = $this->qas->answer($this->project, 'List all tasks', [], null);
         $this->assertStringContainsString('Task', $ans);
         $history = [
             ['role' => 'assistant', 'content' => $ans],
             ['role' => 'user', 'content' => 'List all tasks'],
         ];
         $idsAnswer = $this->qas->answer($this->project, 'task ids', $history, null);
-    $this->assertMatchesRegularExpression('/#\d+/', $idsAnswer, 'Should list at least one task id');
+        $this->assertMatchesRegularExpression('/#\d+/', $idsAnswer, 'Should list at least one task id');
     }
 
     public function test_specific_task_fetch()
@@ -77,23 +79,23 @@ class AssistantEndToEndTest extends TestCase
     {
         $ans = $this->qas->answer($this->project, 'How many tasks are done?', [], null);
         $this->assertStringContainsString('There are', $ans);
-    $cmp = $this->qas->answer($this->project, 'done vs in progress', [], null);
-    $this->assertStringContainsString('Comparison:', $cmp, 'Should include status comparison output');
+        $cmp = $this->qas->answer($this->project, 'done vs in progress', [], null);
+        $this->assertStringContainsString('Comparison:', $cmp, 'Should include status comparison output');
     }
 
     public function test_keyword_search()
     {
         $t = Task::where('project_id', $this->project->id)->first();
         $word = explode(' ', $t->title)[0];
-    putenv('OPENAI_API_KEY=');
-    $ans = $this->qas->answer($this->project, 'search '.$word, [], null);
+        putenv('OPENAI_API_KEY=');
+        $ans = $this->qas->answer($this->project, 'search '.$word, [], null);
         $this->assertStringContainsString('Matched', $ans);
     }
 
     public function test_due_date_filters()
     {
-    putenv('OPENAI_API_KEY=');
-    $ans = $this->qas->answer($this->project, 'list tasks due this week', [], null);
+        putenv('OPENAI_API_KEY=');
+        $ans = $this->qas->answer($this->project, 'list tasks due this week', [], null);
         $this->assertStringContainsString('Found', $ans);
     }
 
@@ -201,7 +203,7 @@ class AssistantEndToEndTest extends TestCase
         $member = User::factory()->create(['name' => 'Jane Marie Doe']);
         // Assume membership (simplest: make them owner of new project context)
         $project2 = Project::factory()->create(['user_id' => $member->id]);
-        Task::factory()->count(2)->create(['project_id'=>$project2->id,'status'=>'inprogress']);
+        Task::factory()->count(2)->create(['project_id' => $project2->id, 'status' => 'inprogress']);
         $plan2 = $this->cps->generatePlan($project2, 'assign in progress tasks to Jane Doe', []);
         $this->assertEquals('bulk_assign', $plan2['command_data']['type'] ?? null);
         $this->assertEquals('inprogress', $plan2['command_data']['filters']['status'] ?? null);
@@ -211,19 +213,19 @@ class AssistantEndToEndTest extends TestCase
     public function test_assign_done_tasks_to_me_plan()
     {
         // create a done task to ensure filter matches
-        Task::factory()->create(['project_id'=>$this->project->id,'status'=>'done']);
-        $plan = $this->cps->generatePlan($this->project,'assign done tasks to me',[]);
-        $this->assertEquals('bulk_assign',$plan['command_data']['type'] ?? null);
-        $this->assertEquals('done',$plan['command_data']['filters']['status'] ?? null);
-        $this->assertEquals('__ME__',$plan['command_data']['assignee'] ?? null);
+        Task::factory()->create(['project_id' => $this->project->id, 'status' => 'done']);
+        $plan = $this->cps->generatePlan($this->project, 'assign done tasks to me', []);
+        $this->assertEquals('bulk_assign', $plan['command_data']['type'] ?? null);
+        $this->assertEquals('done', $plan['command_data']['filters']['status'] ?? null);
+        $this->assertEquals('__ME__', $plan['command_data']['assignee'] ?? null);
     }
 
     public function test_assign_high_priority_tasks_to_owner()
     {
-        Task::factory()->create(['project_id'=>$this->project->id,'priority'=>'high']);
-        $plan = $this->cps->generatePlan($this->project,'assign high priority tasks to owner',[]);
-        $this->assertEquals('bulk_assign',$plan['command_data']['type'] ?? null);
-        $this->assertEquals('high',$plan['command_data']['filters']['priority'] ?? null);
-        $this->assertEquals('__OWNER__',$plan['command_data']['assignee'] ?? null);
+        Task::factory()->create(['project_id' => $this->project->id, 'priority' => 'high']);
+        $plan = $this->cps->generatePlan($this->project, 'assign high priority tasks to owner', []);
+        $this->assertEquals('bulk_assign', $plan['command_data']['type'] ?? null);
+        $this->assertEquals('high', $plan['command_data']['filters']['priority'] ?? null);
+        $this->assertEquals('__OWNER__', $plan['command_data']['assignee'] ?? null);
     }
 }

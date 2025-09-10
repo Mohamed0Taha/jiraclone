@@ -100,7 +100,7 @@ class Task extends Model
      */
     public function isDuplicate()
     {
-        return !is_null($this->duplicate_of);
+        return ! is_null($this->duplicate_of);
     }
 
     /**
@@ -132,7 +132,7 @@ class Task extends Model
      */
     public function isSubTask()
     {
-        return !is_null($this->parent_id);
+        return ! is_null($this->parent_id);
     }
 
     /**

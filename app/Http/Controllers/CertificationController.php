@@ -489,26 +489,28 @@ class CertificationController extends Controller
                     return $answer->pmQuestion ? $answer->pmQuestion->points : 0;
                 });
             $theoryPercentage = $maxTheoryScore > 0 ? ($totalTheoryScore / $maxTheoryScore) * 100 : 0;
-            
+
             // Update attempt with theory results
             $attempt->update([
                 'total_score' => $totalTheoryScore,
                 'max_possible_score' => $maxTheoryScore,
                 'percentage' => $theoryPercentage,
             ]);
-            
+
             // Check if theory score meets 80% threshold
             if ($theoryPercentage >= 80) {
                 // Move to practical scenario phase
                 $attempt->update(['phase' => 'practical_scenario', 'current_step' => 1]);
+
                 return $this->showPhaseResults($attempt, 'theory_passed');
             } else {
                 // Failed theory phase - do not allow progression to simulator
                 $attempt->update([
                     'phase' => 'theory_failed',
                     'passed' => false,
-                    'completed_at' => now()
+                    'completed_at' => now(),
                 ]);
+
                 return $this->showPhaseResults($attempt, 'theory_failed');
             }
         }
@@ -599,7 +601,7 @@ class CertificationController extends Controller
         $totalScore = $attempt->total_score;
         $maxPossibleScore = $attempt->max_possible_score;
         $percentage = $attempt->percentage;
-        
+
         // Different passing thresholds based on phase and result type
         if ($resultType === 'theory_failed') {
             $passed = false;
@@ -1132,7 +1134,7 @@ class CertificationController extends Controller
             $theoryScore = $attempt->total_score;
             $theoryMaxScore = $attempt->max_possible_score;
             $theoryPercentage = $theoryMaxScore > 0 ? ($theoryScore / $theoryMaxScore) * 100 : 0;
-            
+
             // Check individual phase requirements
             $theoryPassed = $theoryPercentage >= 80; // PM questions require 80%
             $simulatorPassed = $practicalPercentage >= 70; // Simulator requires 70%
@@ -1154,8 +1156,8 @@ class CertificationController extends Controller
                     'theory_percentage' => $theoryPercentage,
                     'simulation_percentage' => $practicalPercentage,
                     'theory_passed' => $theoryPassed,
-                    'simulation_passed' => $simulatorPassed
-                ])
+                    'simulation_passed' => $simulatorPassed,
+                ]),
             ]);
 
             return $this->showFinalResults($attempt);
@@ -1672,10 +1674,10 @@ class CertificationController extends Controller
         } catch (\Throwable $e) {
             Log::error('[BADGE OG] Render failure: '.$e->getMessage());
 
-            return response()->json(['error' => 'OG generation failed'],500);
+            return response()->json(['error' => 'OG generation failed'], 500);
         }
     }
-    
+
     /**
      * Complete certification from simulator with proper scoring
      */
@@ -1683,43 +1685,43 @@ class CertificationController extends Controller
     {
         $request->validate([
             'simulation_score' => 'required|numeric|min:0|max:100',
-            'simulation_data' => 'required|array'
+            'simulation_data' => 'required|array',
         ]);
-        
+
         $user = $request->user();
         $simulationScore = $request->simulation_score;
         $simulationData = $request->simulation_data;
-        
+
         // Find the user's current practical_scenario attempt
         $attempt = CertificationAttempt::where('user_id', $user->id)
             ->where('phase', 'practical_scenario')
             ->orderByDesc('id')
             ->first();
-            
-        if (!$attempt) {
+
+        if (! $attempt) {
             return response()->json([
                 'success' => false,
-                'message' => 'No active certification attempt found.'
+                'message' => 'No active certification attempt found.',
             ], 400);
         }
-        
+
         // Verify they passed theory phase (80% requirement)
         $theoryPercentage = $attempt->percentage ?? 0;
         if ($theoryPercentage < 80) {
             return response()->json([
                 'success' => false,
-                'message' => 'Theory phase must be passed with 80% before completing certification.'
+                'message' => 'Theory phase must be passed with 80% before completing certification.',
             ], 403);
         }
-        
+
         // Check if simulation meets 70% threshold
         $simulatorPassed = $simulationScore >= 70;
         $theoryPassed = $theoryPercentage >= 80;
         $overallPassed = $theoryPassed && $simulatorPassed;
-        
+
         // Calculate weighted overall score (theory: 60%, simulation: 40%)
         $overallPercentage = ($theoryPercentage * 0.6) + ($simulationScore * 0.4);
-        
+
         // Store simulation performance
         $simulationPerformance = [
             'simulation_score' => $simulationScore,
@@ -1727,18 +1729,18 @@ class CertificationController extends Controller
             'simulation_passed' => $simulatorPassed,
             'theory_percentage' => $theoryPercentage,
             'theory_passed' => $theoryPassed,
-            'submitted_at' => now()
+            'submitted_at' => now(),
         ];
-        
+
         $attempt->update([
             'phase' => 'certification_complete',
             'percentage' => $overallPercentage,
             'passed' => $overallPassed,
             'completed_at' => now(),
             'practical_performance' => $simulationPerformance,
-            'serial' => $attempt->serial ?? (string) \Illuminate\Support\Str::uuid()
+            'serial' => $attempt->serial ?? (string) \Illuminate\Support\Str::uuid(),
         ]);
-        
+
         return response()->json([
             'success' => true,
             'passed' => $overallPassed,
@@ -1747,10 +1749,10 @@ class CertificationController extends Controller
             'overall_percentage' => round($overallPercentage, 2),
             'simulation_percentage' => $simulationScore,
             'theory_percentage' => $theoryPercentage,
-            'message' => $overallPassed 
+            'message' => $overallPassed
                 ? 'Congratulations! You have successfully completed the certification.'
                 : 'Certification not granted. Requirements: PM Questions ≥80%, Simulator ≥70%',
-            'certificate_url' => $overallPassed ? route('certification.certificate') : null
+            'certificate_url' => $overallPassed ? route('certification.certificate') : null,
         ]);
     }
 }

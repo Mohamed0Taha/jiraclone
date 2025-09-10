@@ -85,7 +85,7 @@ export default function Tasks({
             </Stack>
 
             <Stack spacing={1.25} sx={{ overflowY: 'auto', pr: 0.5, alignItems: 'stretch' }}>
-        {data.map((t) => (
+                {data.map((t) => (
                     <Task
                         key={t.id}
                         task={t}
@@ -98,9 +98,9 @@ export default function Tasks({
                         onTaskAction={onTaskAction}
                         currentWeek={currentWeek}
                         simulationState={simulationState}
-            events={events}
-            resolvedEventIds={resolvedEventIds}
-            onResolveEventAction={onResolveEventAction}
+                        events={events}
+                        resolvedEventIds={resolvedEventIds}
+                        onResolveEventAction={onResolveEventAction}
                     />
                 ))}
                 {data.length === 0 && (

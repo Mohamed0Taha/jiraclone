@@ -97,7 +97,7 @@ class ImageKitService
     public function uploadFromUrl(string $imageUrl, ?string $folder = null, ?string $fileName = null): array
     {
         $folder = $folder ?: config('services.imagekit.default_folder', 'tasks');
-        $fileName = $fileName ?: 'ai-generated-' . time() . '.png';
+        $fileName = $fileName ?: 'ai-generated-'.time().'.png';
 
         try {
             // Download the image from the URL
@@ -120,12 +120,12 @@ class ImageKitService
             // Clean up temp file
             unlink($tempFile);
 
-            if (!empty($uploadResult->error)) {
+            if (! empty($uploadResult->error)) {
                 Log::error('ImageKit upload from URL failed', [
                     'error' => $uploadResult->error,
                     'url' => $imageUrl,
                 ]);
-                throw new Exception('ImageKit upload failed: ' . json_encode($uploadResult->error));
+                throw new Exception('ImageKit upload failed: '.json_encode($uploadResult->error));
             }
 
             $result = $uploadResult->result ?? $uploadResult;

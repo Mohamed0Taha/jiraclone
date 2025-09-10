@@ -11,8 +11,11 @@ class ForwardedEmail extends Mailable
     use Queueable, SerializesModels;
 
     public $originalSubject;
+
     public $originalContent;
+
     public $originalFrom;
+
     public $originalHeaders;
 
     public function __construct(
@@ -30,13 +33,13 @@ class ForwardedEmail extends Mailable
     public function build()
     {
         return $this->to('taha.elfatih@gmail.com')
-                    ->subject('[FORWARDED] ' . $this->originalSubject)
-                    ->view('emails.forwarded')
-                    ->with([
-                        'originalSubject' => $this->originalSubject,
-                        'originalContent' => $this->originalContent,
-                        'originalFrom' => $this->originalFrom,
-                        'originalHeaders' => $this->originalHeaders
-                    ]);
+            ->subject('[FORWARDED] '.$this->originalSubject)
+            ->view('emails.forwarded')
+            ->with([
+                'originalSubject' => $this->originalSubject,
+                'originalContent' => $this->originalContent,
+                'originalFrom' => $this->originalFrom,
+                'originalHeaders' => $this->originalHeaders,
+            ]);
     }
 }

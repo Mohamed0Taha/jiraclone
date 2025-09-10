@@ -23,7 +23,7 @@ class QuestionAnsweringServiceTest extends TestCase
         // Never call external network in unit tests
         $openAI->shouldReceive('chatText')->andReturn('Mocked LLM answer with tasks listed.');
 
-        return new QuestionAnsweringService($openAI, new ProjectContextService());
+        return new QuestionAnsweringService($openAI, new ProjectContextService);
     }
 
     public function test_lists_task_ids()

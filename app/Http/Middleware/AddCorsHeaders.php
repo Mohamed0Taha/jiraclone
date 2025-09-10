@@ -17,7 +17,7 @@ class AddCorsHeaders
                 'https://laravel-react-automation-app-c44cbffeacff.herokuapp.com',
                 'http://localhost:3000',
                 'http://localhost:8000',
-                'http://localhost:5173'
+                'http://localhost:5173',
             ];
 
             $origin = $request->headers->get('Origin');
@@ -40,11 +40,11 @@ class AddCorsHeaders
             'https://laravel-react-automation-app-c44cbffeacff.herokuapp.com',
             'http://localhost:3000',
             'http://localhost:8000',
-            'http://localhost:5173'
+            'http://localhost:5173',
         ];
 
         $origin = $request->headers->get('Origin');
-        
+
         // Only add CORS headers if there's an Origin header (cross-origin request)
         if ($origin) {
             if (in_array($origin, $allowedOrigins)) {
@@ -52,7 +52,7 @@ class AddCorsHeaders
             } else {
                 $response->headers->set('Access-Control-Allow-Origin', 'https://taskpilot.us');
             }
-            
+
             $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
             $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
             $response->headers->set('Access-Control-Allow-Credentials', 'true');

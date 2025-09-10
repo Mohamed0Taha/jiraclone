@@ -2,16 +2,13 @@
 
 namespace App\Services;
 
-use App\Services\OpenAIService;
-use App\Services\ImageKitService;
-use App\Services\WaveSpeedImageService;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
-use App\Jobs\GenerateBlogFeaturedImage;
+use Illuminate\Support\Str;
 
 class BlogAIService
 {
     protected $openAIService;
+
     protected $imageKitService;
 
     public function __construct(OpenAIService $openAIService, ImageKitService $imageKitService)
@@ -30,23 +27,23 @@ class BlogAIService
             // Generate the blog content
             $prompt = $this->buildBlogPrompt($topic, $targetAudience, $tone);
             $messages = [
-                ['role' => 'user', 'content' => $prompt]
+                ['role' => 'user', 'content' => $prompt],
             ];
 
             $response = $this->openAIService->chatJson($messages, 0.6);
-            if (!is_array($response)) {
+            if (! is_array($response)) {
                 throw new \Exception('Unexpected AI response format');
             }
-            
-            if (!$response) {
+
+            if (! $response) {
                 throw new \Exception('Failed to generate blog content');
             }
 
             $parsedResponse = $this->parseBlogResponse($response);
-            
+
             // Conditional, time‑boxed image generation to avoid Heroku 30s timeout
             $autoImage = (bool) config('blog_ai.auto_image');
-            if ($autoImage && !empty($parsedResponse['title'])) {
+            if ($autoImage && ! empty($parsedResponse['title'])) {
                 $maxSync = (int) config('blog_ai.max_sync_seconds', 23);
                 $elapsed = microtime(true) - $overallStart;
                 if ($elapsed < $maxSync - 3) { // leave buffer for response serialization
@@ -94,7 +91,7 @@ class BlogAIService
             return $parsedResponse;
 
         } catch (\Exception $e) {
-            Log::error('BlogAIService generateBlogPost error: ' . $e->getMessage());
+            Log::error('BlogAIService generateBlogPost error: '.$e->getMessage());
             throw $e;
         }
     }
@@ -128,7 +125,7 @@ Return as JSON array with this structure:
 Focus on actionable, valuable content that positions TaskPilot as the solution.";
 
         $messages = [
-            ['role' => 'user', 'content' => $prompt]
+            ['role' => 'user', 'content' => $prompt],
         ];
 
         $response = $this->openAIService->chatJson($messages, 0.6);
@@ -142,7 +139,7 @@ Focus on actionable, valuable content that positions TaskPilot as the solution."
     public function optimizeForSEO($title, $content, $targetKeywords = [])
     {
         $keywordsList = implode(', ', $targetKeywords);
-        
+
         $prompt = "Optimize this blog content for SEO while maintaining readability and value:
 
 TITLE: {$title}
@@ -186,7 +183,7 @@ Return as JSON with these keys:
 - optimization_score: Estimated SEO score (1-100)";
 
         $messages = [
-            ['role' => 'user', 'content' => $prompt]
+            ['role' => 'user', 'content' => $prompt],
         ];
 
         $response = $this->openAIService->chatJson($messages, 0.6);
@@ -200,7 +197,7 @@ Return as JSON with these keys:
     protected function buildBlogPrompt($topic, $targetAudience, $tone)
     {
         $taskPilotContext = $this->getTaskPilotFeatureContext();
-        
+
         return "You are an expert SEO content marketer writing for TaskPilot, creating high-quality, SEO-optimized, how-to style blog posts similar to WikiHow and HubSpot. 
 
 Create a comprehensive, step-by-step guide about: {$topic}
@@ -286,16 +283,16 @@ Make this a comprehensive, actionable guide that positions TaskPilot as the esse
                 } else {
                     $imageData = $this->openAIService->generateImage($imagePrompt, $opts['size'], $opts['quality']);
                 }
-                if (!$imageData || !isset($imageData['url'])) {
+                if (! $imageData || ! isset($imageData['url'])) {
                     throw new \Exception('Image provider returned no URL');
                 }
-                $fileName = 'blog-' . Str::slug($title) . '-' . time() . ($idx === 0 ? '' : '-fb') . '.png';
+                $fileName = 'blog-'.Str::slug($title).'-'.time().($idx === 0 ? '' : '-fb').'.png';
                 $imageKitResponse = $this->imageKitService->uploadFromUrl(
                     $imageData['url'],
                     '',
                     $fileName
                 );
-                if (!$imageKitResponse || !isset($imageKitResponse['url'])) {
+                if (! $imageKitResponse || ! isset($imageKitResponse['url'])) {
                     throw new \Exception('ImageKit upload failed');
                 }
                 Log::info('BlogAIService: featured image generated', [
@@ -303,6 +300,7 @@ Make this a comprehensive, actionable guide that positions TaskPilot as the esse
                     'size' => $opts['size'],
                     'quality' => $opts['quality'],
                 ]);
+
                 return $imageKitResponse['url'];
             } catch (\Throwable $e) {
                 Log::warning('BlogAIService: image attempt failed', [
@@ -319,8 +317,9 @@ Make this a comprehensive, actionable guide that positions TaskPilot as the esse
         if (config('blog_ai.use_placeholder_on_fail')) {
             $query = Str::slug($topic ?: $title) ?: 'project-management';
             $placeholderBase = rtrim(config('blog_ai.placeholder_base', 'https://source.unsplash.com/featured/?'), '/?');
-            $url = $placeholderBase . '/' . $query;
-            Log::notice('BlogAIService: using placeholder image', [ 'url' => $url ]);
+            $url = $placeholderBase.'/'.$query;
+            Log::notice('BlogAIService: using placeholder image', ['url' => $url]);
+
             return $url; // Not uploaded to ImageKit; external link
         }
 
@@ -374,7 +373,7 @@ The final image must look like premium stock photography that could be licensed 
      */
     protected function getTaskPilotFeatureContext()
     {
-        return "TaskPilot is a comprehensive AI-powered project management and task automation platform designed for modern teams and businesses. 
+        return 'TaskPilot is a comprehensive AI-powered project management and task automation platform designed for modern teams and businesses. 
 
 KEY FEATURES:
 - **AI Task Generation**: Automatically create detailed task lists, subtasks, and project plans using artificial intelligence
@@ -399,7 +398,7 @@ UNIQUE VALUE PROPOSITIONS:
 - Dramatic reduction in manual task creation and project planning
 - Intelligent automation that learns from team patterns
 - Seamless integration with existing business workflows
-- Industry-specific templates and best practices built-in";
+- Industry-specific templates and best practices built-in';
     }
 
     /**
@@ -419,24 +418,24 @@ UNIQUE VALUE PROPOSITIONS:
             'internal_links_used' => [],
             'schema_data' => [],
             'cta_text' => 'Get Started with TaskPilot',
-            'cta_url' => '/register'
+            'cta_url' => '/register',
         ];
 
-        if (!is_array($response)) {
+        if (! is_array($response)) {
             return $defaults;
         }
 
         $parsed = array_merge($defaults, $response);
-        
+
         // Ensure meta_title doesn't exceed 60 characters
-        if (!empty($parsed['meta_title']) && strlen($parsed['meta_title']) > 60) {
-            $parsed['meta_title'] = substr($parsed['meta_title'], 0, 57) . '...';
+        if (! empty($parsed['meta_title']) && strlen($parsed['meta_title']) > 60) {
+            $parsed['meta_title'] = substr($parsed['meta_title'], 0, 57).'...';
         }
-        
+
         // If meta_title is empty, use title (truncated)
-        if (empty($parsed['meta_title']) && !empty($parsed['title'])) {
-            $parsed['meta_title'] = strlen($parsed['title']) > 60 
-                ? substr($parsed['title'], 0, 57) . '...'
+        if (empty($parsed['meta_title']) && ! empty($parsed['title'])) {
+            $parsed['meta_title'] = strlen($parsed['title']) > 60
+                ? substr($parsed['title'], 0, 57).'...'
                 : $parsed['title'];
         }
 
@@ -457,30 +456,30 @@ UNIQUE VALUE PROPOSITIONS:
 
         // Convert markdown-style formatting to HTML
         $content = $this->formatInlineText($content);
-        
+
         // Process sections and headers
         $content = preg_replace('/^### (.+)$/m', '<h3 class="text-lg font-semibold text-gray-800 mt-6 mb-3">$1</h3>', $content);
         $content = preg_replace('/^## (.+)$/m', '<h2 class="text-xl font-bold text-gray-900 mt-8 mb-4">$1</h2>', $content);
         $content = preg_replace('/^# (.+)$/m', '<h1 class="text-2xl font-bold text-gray-900 mt-8 mb-6">$1</h1>', $content);
-        
+
         // Process numbered lists
         $content = preg_replace('/^\d+\.\s+(.+)$/m', '<div class="numbered-item mb-3"><span class="font-semibold text-blue-600">$0</span></div>', $content);
-        
+
         // Process bullet points
         $content = preg_replace('/^[-•]\s+(.+)$/m', '<div class="bullet-item mb-2 ml-4"><span class="text-blue-500 mr-2">•</span>$1</div>', $content);
-        
+
         // Process paragraphs
         $paragraphs = explode("\n\n", $content);
         $formattedParagraphs = [];
-        
+
         foreach ($paragraphs as $paragraph) {
             $paragraph = trim($paragraph);
-            if (!empty($paragraph) && !preg_match('/^<[^>]+>/', $paragraph)) {
-                $paragraph = '<p class="mb-4 text-gray-700 leading-relaxed">' . $paragraph . '</p>';
+            if (! empty($paragraph) && ! preg_match('/^<[^>]+>/', $paragraph)) {
+                $paragraph = '<p class="mb-4 text-gray-700 leading-relaxed">'.$paragraph.'</p>';
             }
             $formattedParagraphs[] = $paragraph;
         }
-        
+
         return implode("\n\n", $formattedParagraphs);
     }
 
@@ -491,20 +490,20 @@ UNIQUE VALUE PROPOSITIONS:
     {
         // Bold text
         $text = preg_replace('/\*\*(.+?)\*\*/', '<strong class="font-semibold text-gray-900">$1</strong>', $text);
-        
+
         // Italic text
         $text = preg_replace('/\*(.+?)\*/', '<em class="italic text-gray-800">$1</em>', $text);
-        
+
         // Links with TaskPilot styling
         $text = preg_replace(
             '/\[([^\]]+)\]\(([^)]+)\)/',
             '<a href="$2" class="text-blue-600 hover:text-blue-800 font-medium underline decoration-blue-300 hover:decoration-blue-500 transition-colors duration-200">$1</a>',
             $text
         );
-        
+
         // Code/feature mentions
         $text = preg_replace('/`([^`]+)`/', '<code class="bg-gray-100 text-gray-800 px-2 py-1 rounded font-mono text-sm">$1</code>', $text);
-        
+
         return $text;
     }
 
@@ -533,10 +532,11 @@ Return as JSON:
 }";
 
         $messages = [
-            ['role' => 'user', 'content' => $prompt]
+            ['role' => 'user', 'content' => $prompt],
         ];
 
         $response = $this->openAIService->chatJson($messages, 0.3);
+
         return $response ?? [];
     }
 
@@ -546,7 +546,7 @@ Return as JSON:
     public function generateSEOAudit($title, $content, $targetKeywords = [])
     {
         $keywordsList = implode(', ', $targetKeywords);
-        
+
         $prompt = "Perform an SEO audit of this blog content:
 
 TITLE: {$title}
@@ -583,10 +583,11 @@ Return detailed audit as JSON:
 }";
 
         $messages = [
-            ['role' => 'user', 'content' => $prompt]
+            ['role' => 'user', 'content' => $prompt],
         ];
 
         $response = $this->openAIService->chatJson($messages, 0.4);
+
         return $response ?? [];
     }
 
@@ -616,10 +617,11 @@ Return as JSON with schema objects:
 }";
 
         $messages = [
-            ['role' => 'user', 'content' => $prompt]
+            ['role' => 'user', 'content' => $prompt],
         ];
 
         $response = $this->openAIService->chatJson($messages, 0.3);
+
         return $response ?? [];
     }
 
@@ -648,10 +650,11 @@ Return as JSON array:
 ]";
 
         $messages = [
-            ['role' => 'user', 'content' => $prompt]
+            ['role' => 'user', 'content' => $prompt],
         ];
 
         $response = $this->openAIService->chatJson($messages, 0.7);
+
         return $response ?? [];
     }
 
@@ -687,10 +690,11 @@ Return as JSON:
 }";
 
         $messages = [
-            ['role' => 'user', 'content' => $prompt]
+            ['role' => 'user', 'content' => $prompt],
         ];
 
         $response = $this->openAIService->chatJson($messages, 0.6);
+
         return $response ?? [];
     }
 
@@ -701,16 +705,16 @@ Return as JSON:
     {
         // Remove inline style color attributes
         $content = preg_replace('/style\s*=\s*["\'][^"\']*color\s*:[^"\']*["\']/', '', $content);
-        
+
         // Remove color CSS classes that might have been generated
         $content = preg_replace('/<span[^>]*style\s*=\s*["\'][^"\']*color[^"\']*["\'][^>]*>(.*?)<\/span>/i', '$1', $content);
-        
+
         // Remove any remaining color references
         $content = preg_replace('/color\s*:\s*[^;"\'\s]+[;"\']?/', '', $content);
-        
+
         // Remove font color HTML tags
         $content = preg_replace('/<font[^>]*color[^>]*>(.*?)<\/font>/i', '$1', $content);
-        
+
         return $content;
     }
 }

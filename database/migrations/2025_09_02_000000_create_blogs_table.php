@@ -21,7 +21,7 @@ return new class extends Migration
             $table->timestamp('published_at')->nullable();
             $table->foreignId('author_id')->constrained('users')->onDelete('cascade');
             $table->timestamps();
-            
+
             $table->index(['is_published', 'published_at']);
             $table->index('slug');
         });

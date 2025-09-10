@@ -10,7 +10,7 @@ class ConversationMessage extends Model
     use HasFactory;
 
     protected $fillable = [
-        'project_id', 'user_id', 'role', 'content', 'metadata'
+        'project_id', 'user_id', 'role', 'content', 'metadata',
     ];
 
     protected $casts = [

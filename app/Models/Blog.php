@@ -4,8 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class Blog extends Model
 {
@@ -13,7 +13,7 @@ class Blog extends Model
 
     protected $fillable = [
         'title',
-        'slug', 
+        'slug',
         'excerpt',
         'content',
         'featured_image',
@@ -21,7 +21,7 @@ class Blog extends Model
         'meta_description',
         'is_published',
         'published_at',
-        'author_id'
+        'author_id',
     ];
 
     protected $casts = [
@@ -54,7 +54,7 @@ class Blog extends Model
      */
     public function getCanonicalUrl()
     {
-        return url('/blog/' . $this->slug);
+        return url('/blog/'.$this->slug);
     }
 
     /**
@@ -70,7 +70,7 @@ class Blog extends Model
             'author' => [
                 '@type' => 'Organization',
                 'name' => 'TaskPilot Team',
-                'url' => 'https://taskpilot.us'
+                'url' => 'https://taskpilot.us',
             ],
             'publisher' => [
                 '@type' => 'Organization',
@@ -78,50 +78,50 @@ class Blog extends Model
                 'url' => 'https://taskpilot.us',
                 'logo' => [
                     '@type' => 'ImageObject',
-                    'url' => 'https://taskpilot.us/logo.png'
-                ]
+                    'url' => 'https://taskpilot.us/logo.png',
+                ],
             ],
             'mainEntityOfPage' => [
                 '@type' => 'WebPage',
-                '@id' => $this->getCanonicalUrl()
+                '@id' => $this->getCanonicalUrl(),
             ],
             'datePublished' => $this->published_at?->toISOString(),
             'dateModified' => $this->updated_at->toISOString(),
             'image' => $this->featured_image ? [
                 '@type' => 'ImageObject',
-                'url' => $this->featured_image
-            ] : null
+                'url' => $this->featured_image,
+            ] : null,
         ];
     }
 
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($blog) {
             if (empty($blog->slug)) {
-                $baseSlug = Str::slug($blog->title ?: 'blog-' . Str::random(6));
+                $baseSlug = Str::slug($blog->title ?: 'blog-'.Str::random(6));
                 $slug = $baseSlug;
-                
+
                 // Ensure unique slug with incremental suffix
                 $counter = 1;
                 while (static::where('slug', $slug)->exists()) {
-                    $slug = $baseSlug . '-' . $counter;
+                    $slug = $baseSlug.'-'.$counter;
                     $counter++;
                     // Safety break after 100 attempts
                     if ($counter > 100) {
-                        $slug = $baseSlug . '-' . Str::lower(Str::random(6));
+                        $slug = $baseSlug.'-'.Str::lower(Str::random(6));
                         break;
                     }
                 }
-                
+
                 $blog->slug = $slug;
             }
             if (empty($blog->author_id) && Auth::check()) {
                 $blog->author_id = Auth::id();
             }
         });
-        
+
         static::updating(function ($blog) {
             if ($blog->isDirty('title') && empty($blog->getOriginal('slug'))) {
                 $blog->slug = Str::slug($blog->title);
@@ -136,12 +136,14 @@ class Blog extends Model
     {
         try {
             $blogAIService = app(\App\Services\BlogAIService::class);
+
             return $blogAIService->formatBlogContent($this->content);
         } catch (\Throwable $e) {
             \Log::warning('Blog formatted content fallback due to service error', [
                 'error' => $e->getMessage(),
                 'blog_id' => $this->id ?? null,
             ]);
+
             // Fallback: return raw content so page still renders
             return $this->content;
         }
@@ -155,8 +157,8 @@ class Blog extends Model
     public function scopePublished($query)
     {
         return $query->where('is_published', true)
-                    ->whereNotNull('published_at')
-                    ->where('published_at', '<=', now());
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now());
     }
 
     public function getRouteKeyName()

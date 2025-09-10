@@ -61,7 +61,7 @@ export default function Task({
     const [actionDialog, setActionDialog] = useState({ open: false, type: null });
     const [actionParams, setActionParams] = useState({});
     const [actionResult, setActionResult] = useState(null);
-    
+
     // If parent later forces expansion (e.g., walkthrough), respond once
     useEffect(() => {
         if (defaultExpanded) setExpanded(true);
@@ -92,13 +92,16 @@ export default function Task({
     const executeAdvancedAction = async () => {
         try {
             if (!onTaskAction) {
-                setActionResult({ success: false, message: 'Task actions not supported in this context' });
+                setActionResult({
+                    success: false,
+                    message: 'Task actions not supported in this context',
+                });
                 return;
             }
 
             const result = await onTaskAction(local.id, actionDialog.type, actionParams);
             setActionResult(result);
-            
+
             if (result.success) {
                 // Update task state based on action result
                 if (result.taskUpdates) {
@@ -106,7 +109,7 @@ export default function Task({
                     setLocal(updated);
                     onChange && onChange(updated);
                 }
-                
+
                 // Close dialog after short delay to show success
                 setTimeout(() => {
                     setActionDialog({ open: false, type: null });
@@ -120,7 +123,7 @@ export default function Task({
 
     const canPerformAction = (actionType) => {
         if (!simulationState) return true;
-        
+
         switch (actionType) {
             case 'split_task':
                 return local.estimated_hours > 8 && local.progress < 50;
@@ -425,14 +428,12 @@ export default function Task({
                         </Grid>
 
                         {/* Risk Indicators */}
-                        {(local.progress > 80 || local.remaining_hours > local.estimated_hours * 1.2) && (
-                            <Alert 
-                                severity="warning" 
-                                sx={{ mt: 1 }}
-                                icon={<WarningIcon />}
-                            >
-                                {local.progress > 80 ? 'Task nearing completion - limited action options' : 
-                                 'Task behind schedule - consider taking action'}
+                        {(local.progress > 80 ||
+                            local.remaining_hours > local.estimated_hours * 1.2) && (
+                            <Alert severity="warning" sx={{ mt: 1 }} icon={<WarningIcon />}>
+                                {local.progress > 80
+                                    ? 'Task nearing completion - limited action options'
+                                    : 'Task behind schedule - consider taking action'}
                             </Alert>
                         )}
                         {/* Event impacts removed from task card to increase challenge; view & resolve via Command Center */}
@@ -441,8 +442,8 @@ export default function Task({
             </CardContent>
 
             {/* Advanced Action Dialog */}
-            <Dialog 
-                open={actionDialog.open} 
+            <Dialog
+                open={actionDialog.open}
                 onClose={() => setActionDialog({ open: false, type: null })}
                 maxWidth="sm"
                 fullWidth
@@ -457,10 +458,7 @@ export default function Task({
                 </DialogTitle>
                 <DialogContent>
                     {actionResult && (
-                        <Alert 
-                            severity={actionResult.success ? 'success' : 'error'} 
-                            sx={{ mb: 2 }}
-                        >
+                        <Alert severity={actionResult.success ? 'success' : 'error'} sx={{ mb: 2 }}>
                             {actionResult.message}
                         </Alert>
                     )}
@@ -468,14 +466,20 @@ export default function Task({
                     {actionDialog.type === 'split_task' && (
                         <Stack spacing={2}>
                             <Typography variant="body2" color="text.secondary">
-                                Split this task into multiple smaller tasks for better management and parallel execution.
+                                Split this task into multiple smaller tasks for better management
+                                and parallel execution.
                             </Typography>
                             <TextField
                                 label="Number of Sub-tasks"
                                 type="number"
                                 size="small"
                                 value={actionParams.subtaskCount || 2}
-                                onChange={(e) => setActionParams({...actionParams, subtaskCount: parseInt(e.target.value)})}
+                                onChange={(e) =>
+                                    setActionParams({
+                                        ...actionParams,
+                                        subtaskCount: parseInt(e.target.value),
+                                    })
+                                }
                                 inputProps={{ min: 2, max: 5 }}
                             />
                             <TextField
@@ -483,7 +487,12 @@ export default function Task({
                                 select
                                 size="small"
                                 value={actionParams.splitStrategy || 'by_feature'}
-                                onChange={(e) => setActionParams({...actionParams, splitStrategy: e.target.value})}
+                                onChange={(e) =>
+                                    setActionParams({
+                                        ...actionParams,
+                                        splitStrategy: e.target.value,
+                                    })
+                                }
                             >
                                 <MenuItem value="by_feature">By Feature</MenuItem>
                                 <MenuItem value="by_complexity">By Complexity</MenuItem>
@@ -495,14 +504,20 @@ export default function Task({
                     {actionDialog.type === 'add_resources' && (
                         <Stack spacing={2}>
                             <Typography variant="body2" color="text.secondary">
-                                Add additional team members or external resources to accelerate task completion.
+                                Add additional team members or external resources to accelerate task
+                                completion.
                             </Typography>
                             <TextField
                                 label="Additional Team Members"
                                 type="number"
                                 size="small"
                                 value={actionParams.additionalMembers || 1}
-                                onChange={(e) => setActionParams({...actionParams, additionalMembers: parseInt(e.target.value)})}
+                                onChange={(e) =>
+                                    setActionParams({
+                                        ...actionParams,
+                                        additionalMembers: parseInt(e.target.value),
+                                    })
+                                }
                                 inputProps={{ min: 1, max: 3 }}
                             />
                             <TextField
@@ -510,14 +525,21 @@ export default function Task({
                                 select
                                 size="small"
                                 value={actionParams.resourceType || 'internal'}
-                                onChange={(e) => setActionParams({...actionParams, resourceType: e.target.value})}
+                                onChange={(e) =>
+                                    setActionParams({
+                                        ...actionParams,
+                                        resourceType: e.target.value,
+                                    })
+                                }
                             >
                                 <MenuItem value="internal">Internal Team Member</MenuItem>
                                 <MenuItem value="contractor">External Contractor</MenuItem>
                                 <MenuItem value="consultant">Subject Matter Expert</MenuItem>
                             </TextField>
                             <Typography variant="caption" color="warning.main">
-                                Estimated additional cost: ${(actionParams.additionalMembers || 1) * (actionParams.resourceType === 'internal' ? 2000 : 5000)}
+                                Estimated additional cost: $
+                                {(actionParams.additionalMembers || 1) *
+                                    (actionParams.resourceType === 'internal' ? 2000 : 5000)}
                             </Typography>
                         </Stack>
                     )}
@@ -532,7 +554,12 @@ export default function Task({
                                 select
                                 size="small"
                                 value={actionParams.scopeChange || 'reduce'}
-                                onChange={(e) => setActionParams({...actionParams, scopeChange: e.target.value})}
+                                onChange={(e) =>
+                                    setActionParams({
+                                        ...actionParams,
+                                        scopeChange: e.target.value,
+                                    })
+                                }
                             >
                                 <MenuItem value="reduce">Reduce Scope (-25% effort)</MenuItem>
                                 <MenuItem value="expand">Expand Scope (+40% effort)</MenuItem>
@@ -544,7 +571,12 @@ export default function Task({
                                 rows={2}
                                 size="small"
                                 value={actionParams.justification || ''}
-                                onChange={(e) => setActionParams({...actionParams, justification: e.target.value})}
+                                onChange={(e) =>
+                                    setActionParams({
+                                        ...actionParams,
+                                        justification: e.target.value,
+                                    })
+                                }
                                 placeholder="Explain the reason for scope change..."
                             />
                         </Stack>
@@ -553,25 +585,40 @@ export default function Task({
                     {actionDialog.type === 'rush_delivery' && (
                         <Stack spacing={2}>
                             <Typography variant="body2" color="text.secondary">
-                                Accelerate task delivery through overtime, additional resources, or quality trade-offs.
+                                Accelerate task delivery through overtime, additional resources, or
+                                quality trade-offs.
                             </Typography>
                             <TextField
                                 label="Rush Strategy"
                                 select
                                 size="small"
                                 value={actionParams.rushStrategy || 'overtime'}
-                                onChange={(e) => setActionParams({...actionParams, rushStrategy: e.target.value})}
+                                onChange={(e) =>
+                                    setActionParams({
+                                        ...actionParams,
+                                        rushStrategy: e.target.value,
+                                    })
+                                }
                             >
                                 <MenuItem value="overtime">Team Overtime (+50% cost)</MenuItem>
-                                <MenuItem value="parallel">Parallel Development (+30% risk)</MenuItem>
+                                <MenuItem value="parallel">
+                                    Parallel Development (+30% risk)
+                                </MenuItem>
                                 <MenuItem value="mvp">Deliver MVP First</MenuItem>
                             </TextField>
                             <TextField
                                 label="Target Completion"
                                 type="number"
                                 size="small"
-                                value={actionParams.targetWeeks || Math.max(1, (currentWeek || 1) + 1)}
-                                onChange={(e) => setActionParams({...actionParams, targetWeeks: parseInt(e.target.value)})}
+                                value={
+                                    actionParams.targetWeeks || Math.max(1, (currentWeek || 1) + 1)
+                                }
+                                onChange={(e) =>
+                                    setActionParams({
+                                        ...actionParams,
+                                        targetWeeks: parseInt(e.target.value),
+                                    })
+                                }
                                 inputProps={{ min: currentWeek || 1, max: (currentWeek || 1) + 4 }}
                                 helperText="Week number for completion"
                             />
@@ -581,14 +628,20 @@ export default function Task({
                     {actionDialog.type === 'request_budget' && (
                         <Stack spacing={2}>
                             <Typography variant="body2" color="text.secondary">
-                                Request additional budget allocation to accelerate critical path and add specialist capacity.
+                                Request additional budget allocation to accelerate critical path and
+                                add specialist capacity.
                             </Typography>
                             <TextField
                                 label="Budget Amount Requested"
                                 type="number"
                                 size="small"
                                 value={actionParams.budgetAmount || 10000}
-                                onChange={(e) => setActionParams({...actionParams, budgetAmount: parseInt(e.target.value)})}
+                                onChange={(e) =>
+                                    setActionParams({
+                                        ...actionParams,
+                                        budgetAmount: parseInt(e.target.value),
+                                    })
+                                }
                                 inputProps={{ min: 5000, max: 25000, step: 1000 }}
                                 helperText="Amount in USD"
                             />
@@ -598,11 +651,17 @@ export default function Task({
                                 rows={2}
                                 size="small"
                                 value={actionParams.justification || ''}
-                                onChange={(e) => setActionParams({...actionParams, justification: e.target.value})}
+                                onChange={(e) =>
+                                    setActionParams({
+                                        ...actionParams,
+                                        justification: e.target.value,
+                                    })
+                                }
                                 placeholder="Explain why additional budget is needed..."
                             />
                             <Typography variant="caption" color="info.main">
-                                Higher amounts may require executive approval but provide greater acceleration.
+                                Higher amounts may require executive approval but provide greater
+                                acceleration.
                             </Typography>
                         </Stack>
                     )}
@@ -610,14 +669,20 @@ export default function Task({
                     {actionDialog.type === 'handle_delays' && (
                         <Stack spacing={2}>
                             <Typography variant="body2" color="text.secondary">
-                                Address external dependencies and vendor delays that are impacting this task.
+                                Address external dependencies and vendor delays that are impacting
+                                this task.
                             </Typography>
                             <TextField
                                 label="Delay Mitigation Strategy"
                                 select
                                 size="small"
                                 value={actionParams.delayStrategy || 'expedite'}
-                                onChange={(e) => setActionParams({...actionParams, delayStrategy: e.target.value})}
+                                onChange={(e) =>
+                                    setActionParams({
+                                        ...actionParams,
+                                        delayStrategy: e.target.value,
+                                    })
+                                }
                             >
                                 <MenuItem value="expedite">Pay Expedited Fee</MenuItem>
                                 <MenuItem value="parallel">Start Parallel Contingency</MenuItem>
@@ -629,7 +694,12 @@ export default function Task({
                                 type="number"
                                 size="small"
                                 value={actionParams.costImpact || 1200}
-                                onChange={(e) => setActionParams({...actionParams, costImpact: parseInt(e.target.value)})}
+                                onChange={(e) =>
+                                    setActionParams({
+                                        ...actionParams,
+                                        costImpact: parseInt(e.target.value),
+                                    })
+                                }
                                 inputProps={{ min: 0, max: 5000, step: 100 }}
                                 helperText="Additional cost for mitigation"
                             />
@@ -637,13 +707,13 @@ export default function Task({
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button 
+                    <Button
                         onClick={() => setActionDialog({ open: false, type: null })}
                         disabled={!!actionResult?.success}
                     >
                         Cancel
                     </Button>
-                    <Button 
+                    <Button
                         onClick={executeAdvancedAction}
                         variant="contained"
                         disabled={!!actionResult}

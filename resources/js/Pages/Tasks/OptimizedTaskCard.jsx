@@ -344,9 +344,11 @@ const OptimizedTaskCard = memo(
                                     bgcolor: alpha(theme.palette.warning.main, 0.1),
                                     border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
                                     cursor: task.duplicate_of?.id ? 'pointer' : 'default',
-                                    '&:hover': task.duplicate_of?.id ? {
-                                        bgcolor: alpha(theme.palette.warning.main, 0.15),
-                                    } : {},
+                                    '&:hover': task.duplicate_of?.id
+                                        ? {
+                                              bgcolor: alpha(theme.palette.warning.main, 0.15),
+                                          }
+                                        : {},
                                 }}
                                 onClick={(e) => {
                                     if (task.duplicate_of?.id && onDuplicateClick) {
@@ -356,18 +358,20 @@ const OptimizedTaskCard = memo(
                                 }}
                             >
                                 <Stack direction="row" alignItems="center" spacing={1}>
-                                    <ContentCopyIcon 
-                                        sx={{ 
-                                            fontSize: '1rem', 
-                                            color: theme.palette.warning.main 
-                                        }} 
+                                    <ContentCopyIcon
+                                        sx={{
+                                            fontSize: '1rem',
+                                            color: theme.palette.warning.main,
+                                        }}
                                     />
-                                    <Typography 
-                                        variant="caption" 
-                                        sx={{ 
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
                                             fontWeight: 600,
                                             color: theme.palette.warning.dark,
-                                            textDecoration: task.duplicate_of?.id ? 'underline' : 'none',
+                                            textDecoration: task.duplicate_of?.id
+                                                ? 'underline'
+                                                : 'none',
                                         }}
                                     >
                                         Duplicate of: #{task.duplicate_of?.id || 'Unknown'}
@@ -406,9 +410,11 @@ const OptimizedTaskCard = memo(
                                     bgcolor: alpha(theme.palette.primary.main, 0.1),
                                     border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
                                     cursor: task.parent?.id ? 'pointer' : 'default',
-                                    '&:hover': task.parent?.id ? {
-                                        bgcolor: alpha(theme.palette.primary.main, 0.15),
-                                    } : {},
+                                    '&:hover': task.parent?.id
+                                        ? {
+                                              bgcolor: alpha(theme.palette.primary.main, 0.15),
+                                          }
+                                        : {},
                                 }}
                                 onClick={(e) => {
                                     if (task.parent?.id && onParentClick) {
@@ -418,15 +424,15 @@ const OptimizedTaskCard = memo(
                                 }}
                             >
                                 <Stack direction="row" alignItems="center" spacing={1}>
-                                    <SubdirectoryArrowRightIcon 
-                                        sx={{ 
-                                            fontSize: '1rem', 
-                                            color: theme.palette.primary.main 
-                                        }} 
+                                    <SubdirectoryArrowRightIcon
+                                        sx={{
+                                            fontSize: '1rem',
+                                            color: theme.palette.primary.main,
+                                        }}
                                     />
-                                    <Typography 
-                                        variant="caption" 
-                                        sx={{ 
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
                                             fontWeight: 600,
                                             color: theme.palette.primary.dark,
                                             textDecoration: task.parent?.id ? 'underline' : 'none',

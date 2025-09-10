@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AppSumoCode extends Model
 {
     protected $table = 'appsumo_codes';
-    
+
     protected $fillable = [
         'code',
         'status',
@@ -66,7 +66,7 @@ class AppSumoCode extends Model
     public static function generateCodes(int $count, string $campaign = 'appsumo_2025'): array
     {
         $codes = [];
-        
+
         for ($i = 0; $i < $count; $i++) {
             $codes[] = self::create([
                 'code' => self::generateUniqueCode(),
@@ -74,7 +74,7 @@ class AppSumoCode extends Model
                 'campaign' => $campaign,
             ]);
         }
-        
+
         return $codes;
     }
 

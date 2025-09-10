@@ -20,7 +20,7 @@ class ExpandedPMQuestionsSeeder extends Seeder
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         }
 
-    $questions = [
+        $questions = [
             // FUNDAMENTALS (30 questions)
             [
                 'category' => 'project_management',

@@ -62,7 +62,7 @@ class QuestionAnsweringServiceTest extends TestCase
         Task::factory()->for($project)->create(['title' => 'Check logs']);
 
         $svc = $this->makeService();
-        $history = [ ['role' => 'user', 'content' => 'List tasks'] ];
+        $history = [['role' => 'user', 'content' => 'List tasks']];
         $answer = $svc->answer($project, 'What about them?', $history, null);
 
         $this->assertStringContainsString('specify which task', strtolower($answer));

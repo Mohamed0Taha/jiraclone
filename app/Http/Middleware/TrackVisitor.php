@@ -19,12 +19,12 @@ class TrackVisitor
     {
         // Track visitor after processing the request
         $response = $next($request);
-        
+
         // Only track successful page loads (not API calls, assets, etc.)
         if ($response->getStatusCode() === 200 && $request->isMethod('GET')) {
             $this->trackVisitor($request);
         }
-        
+
         return $response;
     }
 
@@ -33,22 +33,22 @@ class TrackVisitor
         try {
             $ip = $request->ip();
             $userAgent = $request->userAgent();
-            
+
             // Skip if this is a bot or internal request
             if ($this->isBot($userAgent) || $this->isLocalIP($ip)) {
                 return;
             }
-            
+
             // Check if visitor already exists today
             $existingVisitor = DB::table('visitor_logs')
                 ->where('ip_address', $ip)
                 ->whereDate('created_at', today())
                 ->first();
 
-            if (!$existingVisitor) {
+            if (! $existingVisitor) {
                 // Get location data for new visitor
                 $locationData = $this->getLocationData($ip);
-                
+
                 DB::table('visitor_logs')->insert([
                     'ip_address' => $ip,
                     'user_agent' => $userAgent,
@@ -68,7 +68,7 @@ class TrackVisitor
             }
         } catch (\Exception $e) {
             // Silently fail to not break the user experience
-            \Log::warning('Visitor tracking failed: ' . $e->getMessage());
+            \Log::warning('Visitor tracking failed: '.$e->getMessage());
         }
     }
 
@@ -77,9 +77,10 @@ class TrackVisitor
         try {
             // Use a free IP geolocation service
             $response = Http::timeout(3)->get("http://ip-api.com/json/{$ip}");
-            
+
             if ($response->successful()) {
                 $data = $response->json();
+
                 return [
                     'city' => $data['city'] ?? null,
                     'region' => $data['regionName'] ?? null,
@@ -96,7 +97,7 @@ class TrackVisitor
 
     protected function isLocalIP($ip)
     {
-        return in_array($ip, ['127.0.0.1', '::1', '0.0.0.0']) || 
+        return in_array($ip, ['127.0.0.1', '::1', '0.0.0.0']) ||
                preg_match('/^192\.168\./', $ip) ||
                preg_match('/^10\./', $ip) ||
                preg_match('/^172\.(1[6-9]|2[0-9]|3[0-1])\./', $ip);
@@ -105,13 +106,13 @@ class TrackVisitor
     protected function isBot($userAgent)
     {
         $bots = ['bot', 'crawler', 'spider', 'scraper', 'facebook', 'twitter'];
-        
+
         foreach ($bots as $bot) {
             if (stripos($userAgent, $bot) !== false) {
                 return true;
             }
         }
-        
+
         return false;
     }
 }

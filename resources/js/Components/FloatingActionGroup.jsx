@@ -6,6 +6,7 @@ import {
     MoreVert as MoreVertIcon,
     Close as CloseIcon,
     Lock as LockIcon,
+    ViewList as ViewListIcon,
 } from '@mui/icons-material';
 import GetAppIcon from '@mui/icons-material/GetApp';
 import { useSubscription } from '../Hooks/useSubscription';
@@ -17,6 +18,7 @@ export default function FloatingActionGroup({
     methodStyles,
     assistantOpen,
     projectId,
+    onOpenCustomViews,
 }) {
     const [expanded, setExpanded] = useState(false);
     const { shouldShowOverlay, userPlan } = useSubscription();
@@ -51,6 +53,35 @@ export default function FloatingActionGroup({
             }}
         >
             <Stack spacing={2} alignItems="center">
+                {/* Custom Views Button */}
+                <Zoom
+                    in={expanded}
+                    timeout={200}
+                    style={{ transitionDelay: expanded ? '200ms' : '0ms' }}
+                >
+                    <Tooltip title="Custom Views" placement="left">
+                        <Fab
+                            size="medium"
+                            onClick={() => {
+                                setExpanded(false);
+                                onOpenCustomViews?.();
+                            }}
+                            sx={{
+                                bgcolor: 'primary.main',
+                                color: 'white',
+                                boxShadow: '0 8px 16px -8px rgba(0,0,0,.3)',
+                                '&:hover': {
+                                    bgcolor: 'primary.dark',
+                                    transform: 'scale(1.05)',
+                                },
+                                transition: 'all 0.2s ease',
+                            }}
+                        >
+                            <ViewListIcon />
+                        </Fab>
+                    </Tooltip>
+                </Zoom>
+
                 {/* Assistant Button */}
                 <Zoom
                     in={expanded}

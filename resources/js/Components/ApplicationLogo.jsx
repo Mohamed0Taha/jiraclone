@@ -61,8 +61,8 @@ export default function ApplicationLogo(props) {
             />
 
             {/* Goggle frames */}
-            <circle cx="75" cy="75" r="20" fill="none" stroke="#1B2631" strokeWidth="3"/>
-            <circle cx="125" cy="75" r="20" fill="none" stroke="#1B2631" strokeWidth="3"/>
+            <circle cx="75" cy="75" r="20" fill="none" stroke="#1B2631" strokeWidth="3" />
+            <circle cx="125" cy="75" r="20" fill="none" stroke="#1B2631" strokeWidth="3" />
 
             {/* Face/Beak area */}
             <ellipse
@@ -87,32 +87,25 @@ export default function ApplicationLogo(props) {
             />
 
             {/* Eye */}
-            <circle cx="110" cy="120" r="4" fill="#2C3E50"/>
-            <circle cx="111" cy="119" r="1" fill="#FFFFFF"/>
+            <circle cx="110" cy="120" r="4" fill="#2C3E50" />
+            <circle cx="111" cy="119" r="1" fill="#FFFFFF" />
 
             {/* TaskPilot badge on helmet */}
-            <circle cx="100" cy="55" r="15" fill="#E74C3C" stroke="#C0392B" strokeWidth="2"/>
-            <text 
-                x="100" 
-                y="62" 
-                fontFamily="system-ui, -apple-system, sans-serif" 
-                fontSize="12" 
-                fontWeight="800" 
-                textAnchor="middle" 
+            <circle cx="100" cy="55" r="15" fill="#E74C3C" stroke="#C0392B" strokeWidth="2" />
+            <text
+                x="100"
+                y="62"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                fontSize="12"
+                fontWeight="800"
+                textAnchor="middle"
                 fill="white"
             >
                 TP
             </text>
 
             {/* Helmet shine/highlight */}
-            <ellipse
-                cx="80"
-                cy="65"
-                rx="15"
-                ry="8"
-                fill="#FFFFFF"
-                opacity="0.3"
-            />
+            <ellipse cx="80" cy="65" rx="15" ry="8" fill="#FFFFFF" opacity="0.3" />
         </svg>
     );
 }

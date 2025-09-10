@@ -518,6 +518,7 @@ SYS;
                 try {
                     $qas = app(QuestionAnsweringService::class);
                     $ans = $qas->answer($project, 'Weekly progress report', [], null);
+
                     return $this->createResponse('information', $ans, false);
                 } catch (\Throwable $e) {
                     // fall through to suggestions if something fails

@@ -33,6 +33,7 @@ class OpenAIService
         if ($override) {
             return $override;
         }
+
         return (string) (config('openai.model') ?: env('OPENAI_MODEL', $default));
     }
 
@@ -45,6 +46,7 @@ class OpenAIService
         $env = env('OPENAI_ASSISTANT_MODEL');
         $m = $cfg ?: $env;
         $m = $m ? trim((string) $m) : null;
+
         return $m ?: null;
     }
 
@@ -166,8 +168,8 @@ class OpenAIService
         $userId = Auth::id();
 
         try {
-                $start = microtime(true);
-                $res = Http::timeout(25)->withHeaders([
+            $start = microtime(true);
+            $res = Http::timeout(25)->withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
             ])->post($this->baseUri().'/chat/completions', [
@@ -175,7 +177,7 @@ class OpenAIService
                 'temperature' => $temperature,
                 'messages' => $messages,
             ]);
-                $latencyMs = (int) ((microtime(true) - $start) * 1000);
+            $latencyMs = (int) ((microtime(true) - $start) * 1000);
 
             if (! $res->ok()) {
                 Log::error('OpenAI Text request failed', ['status' => $res->status(), 'body' => $res->body()]);
@@ -579,12 +581,12 @@ class OpenAIService
             $imageUrl = $payload['data'][0]['url'] ?? null;
             $revisedPrompt = $payload['data'][0]['revised_prompt'] ?? $prompt;
 
-            if (!$imageUrl) {
+            if (! $imageUrl) {
                 throw new Exception('No image URL returned from OpenAI');
             }
 
             // Calculate cost for DALL-E 3 (as of 2025: ~$0.04 per image for 1024x1024 standard quality)
-            $cost = match($size) {
+            $cost = match ($size) {
                 '1024x1024' => $quality === 'hd' ? 0.08 : 0.04,
                 '1792x1024', '1024x1792' => $quality === 'hd' ? 0.12 : 0.08,
                 default => 0.04,

@@ -8,7 +8,6 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Throwable;
 
 class ProjectContextService
@@ -32,20 +31,20 @@ class ProjectContextService
      */
     private const STATUS_ALIASES = [
         'todo' => [
-            'todo','to do','backlog','product backlog','sprint backlog','icebox','ideas','idea backlog',
-            'requirements','specification','specifications','analysis','planning','plan','pending','not started','open'
+            'todo', 'to do', 'backlog', 'product backlog', 'sprint backlog', 'icebox', 'ideas', 'idea backlog',
+            'requirements', 'specification', 'specifications', 'analysis', 'planning', 'plan', 'pending', 'not started', 'open',
         ],
         'inprogress' => [
-            'in progress','inprogress','doing','wip','work in progress','active','ongoing','started','progress',
-            'design','implementation','construction','build','building','development','dev','executing','execution'
+            'in progress', 'inprogress', 'doing', 'wip', 'work in progress', 'active', 'ongoing', 'started', 'progress',
+            'design', 'implementation', 'construction', 'build', 'building', 'development', 'dev', 'executing', 'execution',
         ],
         'review' => [
-            'review','code review','peer review','qa','quality assurance','testing','test','verification','validation',
-            'test phase','staging','approval','awaiting review','awaiting approval','ready for review'
+            'review', 'code review', 'peer review', 'qa', 'quality assurance', 'testing', 'test', 'verification', 'validation',
+            'test phase', 'staging', 'approval', 'awaiting review', 'awaiting approval', 'ready for review',
         ],
         'done' => [
-            'done','complete','completed','finished','closed','resolved','shipped','deployed','released','maintenance',
-            'live','accepted','closed out'
+            'done', 'complete', 'completed', 'finished', 'closed', 'resolved', 'shipped', 'deployed', 'released', 'maintenance',
+            'live', 'accepted', 'closed out',
         ],
     ];
 
@@ -54,10 +53,10 @@ class ProjectContextService
 
     /** Priority alias mapping (canonical -> list of synonyms) */
     private const PRIORITY_ALIASES = [
-        'low' => ['low','p3','minor','trivial','non urgent','later','defer','nice to have','lowest','minor priority'],
-        'medium' => ['medium','med','normal','standard','p2','regular','moderate','default','average'],
-        'high' => ['high','p1','important','major','significant','elevated','sev2','severity 2','higher'],
-        'urgent' => ['urgent','critical','blocker','p0','immediate','asap','sev1','severity 1','highest','emergency','hotfix','fire'],
+        'low' => ['low', 'p3', 'minor', 'trivial', 'non urgent', 'later', 'defer', 'nice to have', 'lowest', 'minor priority'],
+        'medium' => ['medium', 'med', 'normal', 'standard', 'p2', 'regular', 'moderate', 'default', 'average'],
+        'high' => ['high', 'p1', 'important', 'major', 'significant', 'elevated', 'sev2', 'severity 2', 'higher'],
+        'urgent' => ['urgent', 'critical', 'blocker', 'p0', 'immediate', 'asap', 'sev1', 'severity 1', 'highest', 'emergency', 'hotfix', 'fire'],
     ];
 
     private static array $priorityAliasLookup = [];
@@ -68,7 +67,9 @@ class ProjectContextService
     public function normalizeStatusAlias(string $phrase, ?string $methodology = null): ?string
     {
         $p = strtolower(trim(preg_replace('/\s+/', ' ', str_replace(['_', '-'], ' ', $phrase))));
-        if ($p === '') return null;
+        if ($p === '') {
+            return null;
+        }
 
         // Build lookup once
         if (empty(self::$aliasLookup)) {
@@ -91,9 +92,11 @@ class ProjectContextService
             }
         } else {
             // Try each methodology map if none supplied
-            foreach ([self::METH_KANBAN,self::METH_SCRUM,self::METH_AGILE,self::METH_WATERFALL,self::METH_LEAN] as $m) {
+            foreach ([self::METH_KANBAN, self::METH_SCRUM, self::METH_AGILE, self::METH_WATERFALL, self::METH_LEAN] as $m) {
                 $methodMap = $this->methodPhaseToServer($m);
-                if (isset($methodMap[$p])) return $methodMap[$p];
+                if (isset($methodMap[$p])) {
+                    return $methodMap[$p];
+                }
             }
         }
 
@@ -104,7 +107,9 @@ class ProjectContextService
     public function normalizePriorityAlias(string $phrase): ?string
     {
         $p = strtolower(trim(preg_replace('/\s+/', ' ', str_replace(['_', '-'], ' ', $phrase))));
-        if ($p === '') return null;
+        if ($p === '') {
+            return null;
+        }
         if (empty(self::$priorityAliasLookup)) {
             foreach (self::PRIORITY_ALIASES as $canonical => $list) {
                 foreach ($list as $alias) {
@@ -112,6 +117,7 @@ class ProjectContextService
                 }
             }
         }
+
         return self::$priorityAliasLookup[$p] ?? null;
     }
 
@@ -122,20 +128,33 @@ class ProjectContextService
         // Multi word first
         $multi = [];
         foreach (self::PRIORITY_ALIASES as $canonical => $aliases) {
-            foreach ($aliases as $a) if (str_contains($a,' ')) $multi[$a] = $canonical;
+            foreach ($aliases as $a) {
+                if (str_contains($a, ' ')) {
+                    $multi[$a] = $canonical;
+                }
+            }
         }
-        uksort($multi, fn($a,$b)=> strlen($b) <=> strlen($a));
+        uksort($multi, fn ($a, $b) => strlen($b) <=> strlen($a));
         foreach ($multi as $alias => $canonical) {
-            if (preg_match('/\b'.preg_quote($alias,'/').'\b/', $t)) return $canonical;
+            if (preg_match('/\b'.preg_quote($alias, '/').'\b/', $t)) {
+                return $canonical;
+            }
         }
         // Single words
         $single = [];
         foreach (self::PRIORITY_ALIASES as $canonical => $aliases) {
-            foreach ($aliases as $a) if (!str_contains($a,' ')) $single[$a] = $canonical;
+            foreach ($aliases as $a) {
+                if (! str_contains($a, ' ')) {
+                    $single[$a] = $canonical;
+                }
+            }
         }
         foreach ($single as $alias => $canonical) {
-            if (preg_match('/\b'.preg_quote($alias,'/').'\b/', $t)) return $canonical;
+            if (preg_match('/\b'.preg_quote($alias, '/').'\b/', $t)) {
+                return $canonical;
+            }
         }
+
         return null;
     }
 
@@ -148,27 +167,42 @@ class ProjectContextService
         // Check multi-word aliases first (sorted by length desc so longer phrases win)
         $multi = [];
         foreach (self::STATUS_ALIASES as $canonical => $aliases) {
-            foreach ($aliases as $a) { if (str_contains($a, ' ')) { $multi[$a] = $canonical; } }
+            foreach ($aliases as $a) {
+                if (str_contains($a, ' ')) {
+                    $multi[$a] = $canonical;
+                }
+            }
         }
-        uksort($multi, fn($a,$b)=> strlen($b) <=> strlen($a));
+        uksort($multi, fn ($a, $b) => strlen($b) <=> strlen($a));
         foreach ($multi as $alias => $canonical) {
-            $pattern = '/\b'.preg_quote($alias,'/').'\b/';
-            if (preg_match($pattern, $t)) return $canonical;
+            $pattern = '/\b'.preg_quote($alias, '/').'\b/';
+            if (preg_match($pattern, $t)) {
+                return $canonical;
+            }
         }
         // Single word aliases
         $single = [];
         foreach (self::STATUS_ALIASES as $canonical => $aliases) {
-            foreach ($aliases as $a) { if (!str_contains($a,' ')) { $single[$a] = $canonical; } }
+            foreach ($aliases as $a) {
+                if (! str_contains($a, ' ')) {
+                    $single[$a] = $canonical;
+                }
+            }
         }
         foreach ($single as $alias => $canonical) {
-            if (preg_match('/\b'.preg_quote($alias,'/').'\b/', $t)) return $canonical;
+            if (preg_match('/\b'.preg_quote($alias, '/').'\b/', $t)) {
+                return $canonical;
+            }
         }
         // Fallback to methodology map scanning
-    $method = $methodology ?? $this->getCurrentMethodologyFromTextContext($text) ?? self::METH_KANBAN;
+        $method = $methodology ?? $this->getCurrentMethodologyFromTextContext($text) ?? self::METH_KANBAN;
         $map = $this->methodPhaseToServer($method);
         foreach ($map as $phase => $canonical) {
-            if (preg_match('/\b'.preg_quote($phase,'/').'\b/', $t)) return $canonical;
+            if (preg_match('/\b'.preg_quote($phase, '/').'\b/', $t)) {
+                return $canonical;
+            }
         }
+
         return null;
     }
 
@@ -176,9 +210,12 @@ class ProjectContextService
     private function getCurrentMethodologyFromTextContext(string $text): ?string
     {
         $t = strtolower($text);
-        foreach ([self::METH_SCRUM,self::METH_AGILE,self::METH_WATERFALL,self::METH_LEAN,self::METH_KANBAN] as $m) {
-            if (str_contains($t, $m)) return $m;
+        foreach ([self::METH_SCRUM, self::METH_AGILE, self::METH_WATERFALL, self::METH_LEAN, self::METH_KANBAN] as $m) {
+            if (str_contains($t, $m)) {
+                return $m;
+            }
         }
+
         return null;
     }
 
@@ -594,24 +631,33 @@ class ProjectContextService
         $candidates = $this->getProjectMembers($project)->push($this->getProjectOwner($project))->filter()->unique('id');
 
         // Exact full-name match
-        $exact = $candidates->first(fn($u)=> mb_strtolower($u->name) === $needle);
-        if ($exact) return (int)$exact->id;
+        $exact = $candidates->first(fn ($u) => mb_strtolower($u->name) === $needle);
+        if ($exact) {
+            return (int) $exact->id;
+        }
 
         // Match if all tokens appear somewhere in candidate name (order agnostic)
-        if (!empty($tokens)) {
-            $multi = $candidates->first(function($u) use ($tokens) {
+        if (! empty($tokens)) {
+            $multi = $candidates->first(function ($u) use ($tokens) {
                 $ln = mb_strtolower($u->name);
                 foreach ($tokens as $t) {
-                    if (!str_contains($ln, $t)) return false;
+                    if (! str_contains($ln, $t)) {
+                        return false;
+                    }
                 }
+
                 return true;
             });
-            if ($multi) return (int)$multi->id;
+            if ($multi) {
+                return (int) $multi->id;
+            }
         }
 
         // Partial contains fallback (single token or substring)
-        $partial = $candidates->first(fn($u)=> str_contains(mb_strtolower($u->name), $needle));
-        if ($partial) return (int)$partial->id;
+        $partial = $candidates->first(fn ($u) => str_contains(mb_strtolower($u->name), $needle));
+        if ($partial) {
+            return (int) $partial->id;
+        }
 
         return null;
     }

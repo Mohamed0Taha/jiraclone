@@ -2,11 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\GenerateBlogFeaturedImage;
 use App\Models\Blog;
 use App\Models\User;
 use App\Services\BlogAIService;
 use Illuminate\Console\Command;
-use App\Jobs\GenerateBlogFeaturedImage;
 
 class GenerateAIBlogPost extends Command
 {
@@ -39,28 +39,29 @@ class GenerateAIBlogPost extends Command
         try {
             // Generate blog content
             $blogData = $blogAI->generateBlogPost($topic, $audience);
-            
+
             // Get admin user
             $admin = User::where('is_admin', true)->first();
-            if (!$admin) {
+            if (! $admin) {
                 $this->error('No admin user found. Please create an admin user first.');
+
                 return 1;
             }
 
             // Create blog post
             $blog = Blog::create([
                 'title' => $blogData['title'],
-                'slug' => $blogData['slug'] ?? \Illuminate\Support\Str::slug($blogData['title']) . '-' . substr(sha1(uniqid()), 0, 6),
+                'slug' => $blogData['slug'] ?? \Illuminate\Support\Str::slug($blogData['title']).'-'.substr(sha1(uniqid()), 0, 6),
                 'excerpt' => $blogData['excerpt'],
                 'content' => $blogData['content'],
                 'meta_title' => $blogData['meta_title'],
                 'meta_description' => $blogData['meta_description'],
                 'is_published' => $publish,
                 'published_at' => $publish ? now() : null,
-                'author_id' => $admin->id
+                'author_id' => $admin->id,
             ]);
 
-            if (empty($blog->featured_image) && (!empty($blogData['image_skipped']) || !empty($blogData['image_error']))) {
+            if (empty($blog->featured_image) && (! empty($blogData['image_skipped']) || ! empty($blogData['image_error']))) {
                 $this->info('⏳ Featured image queued for background generation...');
                 GenerateBlogFeaturedImage::dispatch($blog->id);
             } elseif ($blog->featured_image) {
@@ -82,14 +83,15 @@ class GenerateAIBlogPost extends Command
             );
 
             if ($publish) {
-                $this->info("🌐 Public URL: " . url("/blog/{$blog->slug}"));
+                $this->info('🌐 Public URL: '.url("/blog/{$blog->slug}"));
             } else {
-                $this->warn("📝 Blog post saved as draft. Publish it from the admin panel.");
+                $this->warn('📝 Blog post saved as draft. Publish it from the admin panel.');
             }
 
             return 0;
         } catch (\Exception $e) {
-            $this->error('Failed to generate blog post: ' . $e->getMessage());
+            $this->error('Failed to generate blog post: '.$e->getMessage());
+
             return 1;
         }
     }

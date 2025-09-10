@@ -5,8 +5,8 @@ namespace App\Services;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
@@ -83,9 +83,9 @@ class QuestionAnsweringService
             }
 
             // Fall back to LLM if not already tried
-    if (! $needsContext && $hasLLM) {
+            if (! $needsContext && $hasLLM) {
                 try {
-            $llmAnswer = $this->questionAnswerWithOpenAI($project, $normalized, $history, $rephrasedQuestion, true);
+                    $llmAnswer = $this->questionAnswerWithOpenAI($project, $normalized, $history, $rephrasedQuestion, true);
                     if ($llmAnswer) {
                         return $llmAnswer;
                     }
@@ -309,6 +309,7 @@ SYS;
             if (preg_match('/^(search|find)\s+(.{3,})$/i', $m, $km)) {
                 $needle = trim($km[2]);
                 $res = $this->keywordSearchTasks($project, $needle);
+
                 return $this->createResponse($res ?: "No tasks matched keyword: {$needle}");
             }
 
@@ -341,7 +342,8 @@ SYS;
             // Owner queries should resolve before generic 'who' task assignment logic
             if (preg_match('/\bwho\b.*\b(project\s+)?owner(s|ship)?\b/i', $m) || preg_match('/\bwho\s+owns\b/i', $m)) {
                 $owner = $this->contextService->getProjectOwner($project);
-                $info = $owner ? "Project owner: {$owner->name} (".($owner->email ?? 'no email').")" : 'Project owner not found.';
+                $info = $owner ? "Project owner: {$owner->name} (".($owner->email ?? 'no email').')' : 'Project owner not found.';
+
                 return $this->createResponse($info);
             }
 
@@ -487,10 +489,10 @@ SYS;
             }
             // first 2 / first two / last 3 tasks
             if (preg_match('/\b(first|last|latest)\s+(\d+|one|two|three|four|five)\s+tasks?\b/', $m, $lm)) {
-                $wordToNum = ['one'=>1,'two'=>2,'three'=>3,'four'=>4,'five'=>5];
+                $wordToNum = ['one' => 1, 'two' => 2, 'three' => 3, 'four' => 4, 'five' => 5];
                 $nRaw = strtolower($lm[2]);
-                $ordinalLimit = ctype_digit($nRaw) ? (int)$nRaw : ($wordToNum[$nRaw] ?? null);
-                $ordinalOrder = in_array($lm[1], ['last','latest']) ? 'desc' : 'asc';
+                $ordinalLimit = ctype_digit($nRaw) ? (int) $nRaw : ($wordToNum[$nRaw] ?? null);
+                $ordinalOrder = in_array($lm[1], ['last', 'latest']) ? 'desc' : 'asc';
             }
 
             // Natural language relative due date filters
@@ -516,7 +518,9 @@ SYS;
             // Check for priority filters
             if (preg_match('/\b(low|medium|high|urgent|critical)\b/i', $m, $matches)) {
                 $p = strtolower($matches[1]);
-                if ($p === 'critical') { $p = 'urgent'; }
+                if ($p === 'critical') {
+                    $p = 'urgent';
+                }
                 $filters['priority'] = $p;
             }
 
@@ -553,7 +557,7 @@ SYS;
             // Apply assignee name filter manually if present
             if (isset($filters['assignee_name'])) {
                 $name = strtolower($filters['assignee_name']);
-                $query->whereHas('assignee', function($q) use ($name) {
+                $query->whereHas('assignee', function ($q) use ($name) {
                     $q->whereRaw('LOWER(name) LIKE ?', ['%'.$name.'%']);
                 });
             }
@@ -588,12 +592,14 @@ SYS;
             if ($tasks->isEmpty()) {
                 // If a temporal (due date) filter caused zero matches, gracefully fall back to unfiltered list
                 if (isset($filters['due_between'])) {
-                    $fallbackTasks = Task::where('project_id', $project->id)->with(['assignee','creator'])->get();
+                    $fallbackTasks = Task::where('project_id', $project->id)->with(['assignee', 'creator'])->get();
                     if ($fallbackTasks->isNotEmpty()) {
                         $msg = 'No tasks matched the specified due date window – showing all tasks instead.\n\n';
+
                         return $this->createResponse($msg.$this->formatTaskList($fallbackTasks, $project));
                     }
                 }
+
                 return $this->createResponse('No tasks found matching your criteria.');
             }
 
@@ -749,6 +755,7 @@ SYS;
                 if ($aliasStatus && isset($snapshot['tasks']['by_status'][$aliasStatus])) {
                     $labels = $this->contextService->serverToMethodPhase($this->contextService->getCurrentMethodology($project));
                     $count = $snapshot['tasks']['by_status'][$aliasStatus] ?? 0;
+
                     return $this->createResponse("There are {$count} task(s) in {$labels[$aliasStatus]}.");
                 }
             }
@@ -757,6 +764,7 @@ SYS;
                 $aliasPriority = $this->contextService->extractPriorityFromText($m);
                 if ($aliasPriority && isset($snapshot['tasks']['by_priority'][$aliasPriority])) {
                     $count = $snapshot['tasks']['by_priority'][$aliasPriority] ?? 0;
+
                     return $this->createResponse("There are {$count} {$aliasPriority} priority task(s).");
                 }
             }
@@ -768,7 +776,8 @@ SYS;
                 $labels = $this->contextService->serverToMethodPhase($this->contextService->getCurrentMethodology($project));
                 $aCount = $snapshot['tasks']['by_status'][$a] ?? 0;
                 $bCount = $snapshot['tasks']['by_status'][$b] ?? 0;
-                return $this->createResponse("Comparison: {$labels[$a]} = {$aCount}; {$labels[$b]} = {$bCount} (difference: " . ($aCount - $bCount) . ")");
+
+                return $this->createResponse("Comparison: {$labels[$a]} = {$aCount}; {$labels[$b]} = {$bCount} (difference: ".($aCount - $bCount).')');
             }
 
             // Check for priority counts
@@ -795,8 +804,8 @@ SYS;
                 return $this->createResponse("There are {$snapshot['tasks']['overdue']} overdue task(s).");
             }
 
-
             $count = $snapshot['tasks']['total'] ?? 0;
+
             return $this->createResponse("There are a total of {$count} tasks in the project.");
 
         } catch (Throwable $e) {
@@ -816,16 +825,18 @@ SYS;
             $created = $tasks->whereBetween('created_at', [$weekStart, $weekEnd])->count();
             $completed = $tasks->where('status', 'done')->whereBetween('updated_at', [$weekStart, $weekEnd])->count();
             $inProgress = $tasks->where('status', 'inprogress')->count();
-            $overdue = $tasks->filter(fn($t)=> $t->end_date && $t->status !== 'done' && $t->end_date->isPast())->count();
+            $overdue = $tasks->filter(fn ($t) => $t->end_date && $t->status !== 'done' && $t->end_date->isPast())->count();
             $summary = "🗓 Weekly Progress Report\n";
-            $summary .= "Week: ".$weekStart->format('Y-m-d')." to ".$weekEnd->format('Y-m-d')."\n";
+            $summary .= 'Week: '.$weekStart->format('Y-m-d').' to '.$weekEnd->format('Y-m-d')."\n";
             $summary .= "Tasks created this week: {$created}\n";
             $summary .= "Tasks completed this week: {$completed}\n";
             $summary .= "Currently in progress: {$inProgress}\n";
             $summary .= "Overdue (not done): {$overdue}";
+
             return $this->createResponse($summary);
         } catch (Throwable $e) {
-            Log::error('[QnA] Weekly progress failed', ['error'=>$e->getMessage()]);
+            Log::error('[QnA] Weekly progress failed', ['error' => $e->getMessage()]);
+
             return $this->createResponse('Unable to generate weekly progress report.');
         }
     }
@@ -894,6 +905,7 @@ SYS;
         if (mb_strlen($t) > 1200) {
             $t = mb_substr($t, 0, 1200).'…';
         }
+
         return $t;
     }
 
@@ -913,17 +925,38 @@ SYS;
     {
         $m = strtolower($message);
         // Specific task pattern first (#123)
-        if (preg_match('/#\d+/', $m)) return 'task_specific';
-        if (preg_match('/\b(overview|snapshot|summary)\b/', $m)) return 'overview';
-        if (preg_match('/\bhow\s+many\b|\bcount\b/', $m)) return 'count_query';
-        if (preg_match('/\bassigned\s+to\s+(who|whom)\b/', $m)) return 'task_assignments';
-        if (preg_match('/\b(team|member|members)\b/', $m)) return 'team_info';
-        if (preg_match('/\b(task|tasks)\b.*\b(id|ids|list|show)\b/', $m)) return 'task_list';
-        if (preg_match('/\b(ids?)\b/', $m) && $this->wasDiscussingTasks($history)) return 'task_ids';
-    if (preg_match('/\b(weekly|progress)\b.*\b(report|summary)\b/', $m) || preg_match('/\bweekly\s+progress\b/', $m)) return 'weekly_progress';
-    if (preg_match('/\b(why|how\s+did\s+you|explain)\b/', $m)) return 'explanation';
+        if (preg_match('/#\d+/', $m)) {
+            return 'task_specific';
+        }
+        if (preg_match('/\b(overview|snapshot|summary)\b/', $m)) {
+            return 'overview';
+        }
+        if (preg_match('/\bhow\s+many\b|\bcount\b/', $m)) {
+            return 'count_query';
+        }
+        if (preg_match('/\bassigned\s+to\s+(who|whom)\b/', $m)) {
+            return 'task_assignments';
+        }
+        if (preg_match('/\b(team|member|members)\b/', $m)) {
+            return 'team_info';
+        }
+        if (preg_match('/\b(task|tasks)\b.*\b(id|ids|list|show)\b/', $m)) {
+            return 'task_list';
+        }
+        if (preg_match('/\b(ids?)\b/', $m) && $this->wasDiscussingTasks($history)) {
+            return 'task_ids';
+        }
+        if (preg_match('/\b(weekly|progress)\b.*\b(report|summary)\b/', $m) || preg_match('/\bweekly\s+progress\b/', $m)) {
+            return 'weekly_progress';
+        }
+        if (preg_match('/\b(why|how\s+did\s+you|explain)\b/', $m)) {
+            return 'explanation';
+        }
         // Potentially ambiguous pronoun referencing prior tasks
-        if ($this->isAmbiguous($message, $history)) return 'ambiguous';
+        if ($this->isAmbiguous($message, $history)) {
+            return 'ambiguous';
+        }
+
         return 'unknown';
     }
 
@@ -934,20 +967,32 @@ SYS;
     {
         $m = strtolower(trim($message));
         // If explicitly references a task (#id) it's not ambiguous
-        if (preg_match('/#\d+/', $m)) return false;
+        if (preg_match('/#\d+/', $m)) {
+            return false;
+        }
 
         $pronouns = ['it', 'they', 'them', 'that', 'this', 'those', 'these'];
         $hasPronoun = false;
         foreach ($pronouns as $p) {
-            if (preg_match('/\b'.$p.'\b/', $m)) { $hasPronoun = true; break; }
+            if (preg_match('/\b'.$p.'\b/', $m)) {
+                $hasPronoun = true;
+                break;
+            }
         }
-        if (! $hasPronoun) return false;
+        if (! $hasPronoun) {
+            return false;
+        }
 
         // If contains domain anchors, not considered ambiguous
-        if (preg_match('/\b(task|tasks|project|owner|team|member|id|ids|overview)\b/', $m)) return false;
+        if (preg_match('/\b(task|tasks|project|owner|team|member|id|ids|overview)\b/', $m)) {
+            return false;
+        }
 
         // Needs some prior history referencing tasks to treat as ambiguous follow-up
-        if ($this->wasDiscussingTasks($history)) return true;
+        if ($this->wasDiscussingTasks($history)) {
+            return true;
+        }
+
         return true; // pronoun without anchors
     }
 
@@ -963,10 +1008,13 @@ SYS;
                     $recentTasksMentioned[$id] = true;
                 }
             }
-            if (count($recentTasksMentioned) >= 5) break; // cap
+            if (count($recentTasksMentioned) >= 5) {
+                break;
+            } // cap
         }
         $ids = array_slice(array_keys($recentTasksMentioned), 0, 5);
-        $idHint = empty($ids) ? '' : ' Recently referenced task IDs: '.implode(', ', array_map(fn($i)=>'#'.$i, $ids)).'.';
+        $idHint = empty($ids) ? '' : ' Recently referenced task IDs: '.implode(', ', array_map(fn ($i) => '#'.$i, $ids)).'.';
+
         return "I want to be precise. Could you specify which task or detail you mean? You can say things like: 'Show #42', 'List overdue tasks', or 'Who is assigned to #42'.".$idHint;
     }
 
@@ -975,7 +1023,7 @@ SYS;
      */
     private function adaptiveHelp(Project $project, string $intent = 'unknown'): array
     {
-        if (in_array($intent, ['task_list','task_ids','task_specific','task_assignments','count_query','overview'])) {
+        if (in_array($intent, ['task_list', 'task_ids', 'task_specific', 'task_assignments', 'count_query', 'overview'])) {
             return $this->createResponse("I couldn't confidently answer that, but you can try a more specific phrasing. Examples: 'List all tasks', 'Show #12', 'How many tasks are done?', 'Project overview'.");
         }
         if ($intent === 'ambiguous') {
@@ -984,6 +1032,7 @@ SYS;
         if ($intent === 'error') {
             return $this->createResponse('Something went wrong internally. Please retry or rephrase.');
         }
+
         return $this->provideHelp($project); // default comprehensive help
     }
 
@@ -994,7 +1043,8 @@ SYS;
     private function getSnapshotCached(Project $project): array
     {
         $key = 'project_snapshot_v1_'.$project->id;
-        return Cache::remember($key, 5, function() use ($project) {
+
+        return Cache::remember($key, 5, function () use ($project) {
             return $this->contextService->buildSnapshot($project);
         });
     }
@@ -1009,6 +1059,7 @@ SYS;
                 return "Those numbers come from the current project snapshot in memory: we group tasks by status and priority, then count each group. You can refine by asking things like 'List high priority tasks' or 'done vs in progress'.";
             }
         }
+
         return null;
     }
 
@@ -1018,30 +1069,37 @@ SYS;
     private function keywordSearchTasks(Project $project, string $needle): ?string
     {
         $needle = trim($needle);
-        if ($needle === '') return null;
+        if ($needle === '') {
+            return null;
+        }
 
         $words = array_filter(preg_split('/\s+/', $needle));
-        if (empty($words)) return null;
+        if (empty($words)) {
+            return null;
+        }
 
         $query = Task::where('project_id', $project->id);
-        $query->where(function($q) use ($words) {
+        $query->where(function ($q) use ($words) {
             foreach ($words as $w) {
-                $like = '%'.str_replace(['%','_'], '', $w).'%';
-                $q->where(function($qq) use ($like) {
+                $like = '%'.str_replace(['%', '_'], '', $w).'%';
+                $q->where(function ($qq) use ($like) {
                     $qq->where('title', 'like', $like)
-                       ->orWhere('description', 'like', $like);
+                        ->orWhere('description', 'like', $like);
                 });
             }
         });
         $tasks = $query->limit(10)->get();
-        if ($tasks->isEmpty()) return null;
-        $out = "Matched ".$tasks->count()." task(s):\n\n";
+        if ($tasks->isEmpty()) {
+            return null;
+        }
+        $out = 'Matched '.$tasks->count()." task(s):\n\n";
         foreach ($tasks as $t) {
             $out .= "• #{$t->id}: {$t->title} ({$t->status}, {$t->priority})\n";
         }
         if ($tasks->count() === 10) {
-            $out .= "(Showing first 10 results)";
+            $out .= '(Showing first 10 results)';
         }
+
         return $out;
     }
 }

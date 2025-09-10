@@ -154,19 +154,19 @@ class BillingController extends Controller
 
         // Check if user came from Product Hunt (UTM source or referrer)
         $isProductHuntUser = $this->isProductHuntUser($request);
-        
+
         if ($isProductHuntUser) {
             // Apply Product Hunt coupon - replace 'PRODUCTHUNT30' with your actual Stripe coupon ID
             $checkoutOptions['discounts'] = [
-                ['coupon' => env('PRODUCT_HUNT_COUPON_ID', 'PRODUCTHUNT30')]
+                ['coupon' => env('PRODUCT_HUNT_COUPON_ID', 'PRODUCTHUNT30')],
             ];
-            
+
             // Log Product Hunt conversion for analytics
             \Log::info('Product Hunt user starting checkout', [
                 'user_id' => $user->id,
                 'plan' => $planKey,
                 'utm_source' => $request->session()->get('utm_source'),
-                'referrer' => $request->session()->get('original_referrer')
+                'referrer' => $request->session()->get('original_referrer'),
             ]);
         }
 

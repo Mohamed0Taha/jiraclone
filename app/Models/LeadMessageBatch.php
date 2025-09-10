@@ -10,7 +10,7 @@ class LeadMessageBatch extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id','name','template_hash','template_raw','total','sent','failed','status'
+        'user_id', 'name', 'template_hash', 'template_raw', 'total', 'sent', 'failed', 'status',
     ];
 
     public function messages()

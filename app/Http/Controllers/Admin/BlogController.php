@@ -8,11 +8,9 @@ use App\Services\BlogAIService;
 use App\Services\ImageKitService;
 use App\Services\OpenAIService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Jobs\GenerateBlogFeaturedImage;
+use Illuminate\Support\Str;
 
 class BlogController extends Controller
 {
@@ -72,7 +70,7 @@ class BlogController extends Controller
                 $upload = $imageKit->upload($request->file('featured_image_file'), 'blog-featured');
                 $validated['featured_image'] = $upload['url'] ?? null;
             } catch (\Exception $e) {
-                return back()->withErrors(['featured_image_file' => 'Image upload failed: ' . $e->getMessage()]);
+                return back()->withErrors(['featured_image_file' => 'Image upload failed: '.$e->getMessage()]);
             }
         }
 
@@ -134,7 +132,7 @@ class BlogController extends Controller
 
         // Handle publication status safely
         $isPublished = $request->boolean('is_published', false);
-        if ($isPublished && empty($validated['published_at']) && !$blog->is_published) {
+        if ($isPublished && empty($validated['published_at']) && ! $blog->is_published) {
             $validated['published_at'] = now();
         }
         $validated['is_published'] = $isPublished;
@@ -145,7 +143,7 @@ class BlogController extends Controller
                 $upload = $imageKit->upload($request->file('featured_image_file'), 'blog-featured');
                 $validated['featured_image'] = $upload['url'] ?? null;
             } catch (\Exception $e) {
-                return back()->withErrors(['featured_image_file' => 'Image upload failed: ' . $e->getMessage()]);
+                return back()->withErrors(['featured_image_file' => 'Image upload failed: '.$e->getMessage()]);
             }
         }
 
@@ -198,7 +196,7 @@ class BlogController extends Controller
                 ]),
                 'draft_saved' => false,
                 'image_job_dispatched' => false,
-                'note' => 'Content generated only; not yet saved.'
+                'note' => 'Content generated only; not yet saved.',
             ]);
         } catch (\Exception $e) {
             Log::error('Blog generation failed', [
@@ -206,10 +204,10 @@ class BlogController extends Controller
                 'topic' => $request->topic,
                 'target_audience' => $request->target_audience,
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate blog post: ' . $e->getMessage()
+                'message' => 'Failed to generate blog post: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -225,20 +223,20 @@ class BlogController extends Controller
 
         try {
             // Create services with proper dependency injection
-            $openAIService = new \App\Services\OpenAIService();
-            $imageKitService = new \App\Services\ImageKitService();
+            $openAIService = new \App\Services\OpenAIService;
+            $imageKitService = new \App\Services\ImageKitService;
             $blogAI = new \App\Services\BlogAIService($openAIService, $imageKitService);
-            
+
             $ideas = $blogAI->generateBlogIdeas($request->keywords);
 
             return response()->json([
                 'success' => true,
-                'ideas' => $ideas
+                'ideas' => $ideas,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate ideas: ' . $e->getMessage()
+                'message' => 'Failed to generate ideas: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -262,12 +260,12 @@ class BlogController extends Controller
 
             return response()->json([
                 'success' => true,
-                'optimized' => $optimized
+                'optimized' => $optimized,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to optimize content: ' . $e->getMessage()
+                'message' => 'Failed to optimize content: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -285,7 +283,7 @@ class BlogController extends Controller
 
         try {
             $blogAI = new BlogAIService($openAI, $imageKit);
-            
+
             $imageData = $blogAI->generateFeaturedImage(
                 $request->title,
                 $request->excerpt ?? '',
@@ -298,12 +296,12 @@ class BlogController extends Controller
                     'image_url' => $imageData['url'],
                     'file_id' => $imageData['file_id'] ?? null,
                     'thumbnail_url' => $imageData['thumbnail_url'] ?? null,
-                    'message' => 'Featured image generated and saved to ImageKit successfully!'
+                    'message' => 'Featured image generated and saved to ImageKit successfully!',
                 ]);
             } else {
                 return response()->json([
                     'success' => false,
-                    'error' => $imageData['error']
+                    'error' => $imageData['error'],
                 ], 422);
             }
         } catch (\Exception $e) {
@@ -313,14 +311,14 @@ class BlogController extends Controller
                 'excerpt' => $request->excerpt,
                 'topic' => $request->topic,
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate image: ' . $e->getMessage()
+                'message' => 'Failed to generate image: '.$e->getMessage(),
             ], 500);
         }
     }
-    
+
     /**
      * Publish a draft blog post
      */
@@ -331,33 +329,33 @@ class BlogController extends Controller
                 ->route('admin.blogs.index')
                 ->with('error', 'Blog post is already published.');
         }
-        
+
         $blog->update([
             'is_published' => true,
             'published_at' => now(),
         ]);
-        
+
         return redirect()
             ->route('admin.blogs.index')
             ->with('success', 'Blog post published successfully!');
     }
-    
+
     /**
      * Unpublish a published blog post (move to draft)
      */
     public function unpublish(Blog $blog)
     {
-        if (!$blog->is_published) {
+        if (! $blog->is_published) {
             return redirect()
                 ->route('admin.blogs.index')
                 ->with('error', 'Blog post is already a draft.');
         }
-        
+
         $blog->update([
             'is_published' => false,
             'published_at' => null,
         ]);
-        
+
         return redirect()
             ->route('admin.blogs.index')
             ->with('success', 'Blog post moved to draft successfully!');
