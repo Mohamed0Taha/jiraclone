@@ -38,6 +38,13 @@ class Project extends Model
             ->withTimestamps();
     }
 
+    public function team_members()
+    {
+        return $this->belongsToMany(User::class, 'project_members')
+            ->withPivot('role', 'joined_at')
+            ->withTimestamps();
+    }
+
     public function invitations()
     {
         return $this->hasMany(ProjectInvitation::class);
