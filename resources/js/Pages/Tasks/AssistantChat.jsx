@@ -116,6 +116,12 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
     const inputRef = useRef(null);
     const silenceTimerRef = useRef(null);
     const voiceTimeoutRef = useRef(null);
+    const sessionRef = useRef(null);
+
+    // Generate session ID if not exists
+    if (!sessionRef.current) {
+        sessionRef.current = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    }
 
     // Isolated speech recognition setup for this component
     const {

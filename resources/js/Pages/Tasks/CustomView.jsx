@@ -36,9 +36,15 @@ export default function CustomView({ auth, project, viewName }) {
             const data = await response.json();
             
             if (data.success && data.html) {
-                // Enhance the loaded HTML with additional JavaScript functionality
-                const enhancedHTML = enhanceGeneratedHTML(data.html);
-                setWorkingAreaContent(enhancedHTML);
+                try {
+                    // Enhance the loaded HTML with additional JavaScript functionality
+                    const enhancedHTML = enhanceGeneratedHTML ? enhanceGeneratedHTML(data.html) : data.html;
+                    setWorkingAreaContent(enhancedHTML);
+                } catch (error) {
+                    console.warn('Failed to enhance loaded HTML, using original:', error);
+                    setWorkingAreaContent(data.html);
+                }
+                
                 setCustomViewId(data.custom_view_id);
                 setSnackbar({
                     open: true,
@@ -116,9 +122,14 @@ export default function CustomView({ auth, project, viewName }) {
     };
 
     const handleSpaGenerated = (htmlContent, responseData = {}) => {
-        // Enhance the HTML with additional JavaScript functionality
-        const enhancedHTML = enhanceGeneratedHTML(htmlContent);
-        setWorkingAreaContent(enhancedHTML);
+        try {
+            // Enhance the HTML with additional JavaScript functionality
+            const enhancedHTML = enhanceGeneratedHTML ? enhanceGeneratedHTML(htmlContent) : htmlContent;
+            setWorkingAreaContent(enhancedHTML);
+        } catch (error) {
+            console.warn('Failed to enhance HTML, using original:', error);
+            setWorkingAreaContent(htmlContent);
+        }
         
         // Update custom view ID if provided
         if (responseData.custom_view_id) {
