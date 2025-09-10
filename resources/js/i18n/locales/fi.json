@@ -29,6 +29,47 @@
     "warning": "Varoitus",
     "info": "Tieto"
   },
+  "landing": {
+    "heroTitle": "Moderni projektin työtila,",
+    "heroSubtitle": "jossa tuottavuus kohtaa yksinkertaisuuden",
+    "heroDescription": "Yksi paikka projekteille, tehtäville, keskusteluille, dokumenteille ja muulle. Tehosta työnkulkuasi ja edistä tiimityötä.",
+    "loginButton": "Kirjaudu sisään",
+    "signUpFree": "Rekisteröidy ilmaiseksi",
+    "getStarted": "Aloita",
+    "learnMore": "Lue lisää",
+    "productivityJourney": "Aloita tuottavuusmatkasi tänään",
+    "methodologiesSupport": "Tukee kaikkia projektinhallintamenetelmiä",
+    "features": {
+      "collaborate": {
+        "title": "Työskentele yhdessä",
+        "description": "Tee yhteistyötä projekteissa reaaliajassa, jaa tiedostoja ja kommunikoi tiimisi kanssa yhdessä paikassa."
+      },
+      "customize": {
+        "title": "Mukauta yhdellä klikkauksella",
+        "description": "TaskPilotin konfigurointi eri työtyyppeihin on yhtä helppoa kuin kytkimen kääntäminen."
+      },
+      "integrate": {
+        "title": "Toimii hyvin muiden kanssa",
+        "description": "Yhdistä TaskPilot suosikkityökaluihisi ja tehosta työnkulkuasi."
+      },
+      "search": {
+        "title": "Etsi kaikkea",
+        "description": "Löydä mikä tahansa tiedosto TaskPilotista, yhdistetystä sovelluksesta tai paikalliselta asemalta yhdestä paikasta."
+      },
+      "aiProductivity": {
+        "title": "AI-käyttöinen tuottavuus",
+        "description": "Tee työtä nopeammin ainoan AI-käyttöisen assistentin kanssa, joka on räätälöity roolillesi."
+      },
+      "streamline": {
+        "title": "Tehosta työnkulkuja",
+        "description": "Poista toistuvat tehtävät ja keskity tärkeimpään."
+      },
+      "stayAhead": {
+        "title": "Pysy edellä",
+        "description": "Järjestä työsi, muistutuksesi ja kalenteritapahtumasi henkilökohtaisesta kodistasi."
+      }
+    }
+  },
   "navigation": {
     "home": "Koti",
     "about": "Tietoja",

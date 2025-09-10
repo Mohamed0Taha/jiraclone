@@ -29,6 +29,47 @@
     "warning": "Warnung",
     "info": "Information"
   },
+  "landing": {
+    "heroTitle": "Der moderne Projektarbeitsbereich,",
+    "heroSubtitle": "wo Produktivität auf Einfachheit trifft",
+    "heroDescription": "Ein einziger Ort für Projekte, Aufgaben, Chat, Dokumente und mehr. Optimieren Sie Ihren Workflow und fördern Sie die Teamzusammenarbeit.",
+    "loginButton": "Anmelden",
+    "signUpFree": "Kostenlos registrieren",
+    "getStarted": "Loslegen",
+    "learnMore": "Mehr erfahren",
+    "productivityJourney": "Starten Sie heute Ihre Produktivitätsreise",
+    "methodologiesSupport": "Unterstützt alle Projektmanagement-Methoden",
+    "features": {
+      "collaborate": {
+        "title": "Zusammenarbeiten",
+        "description": "Arbeiten Sie in Echtzeit an Projekten zusammen, teilen Sie Dateien und kommunizieren Sie mit Ihrem Team an einem Ort."
+      },
+      "customize": {
+        "title": "Mit einem Klick anpassen",
+        "description": "TaskPilot für verschiedene Arbeitstypen zu konfigurieren ist so einfach wie ein Schalter umzulegen."
+      },
+      "integrate": {
+        "title": "Spielt gut mit anderen",
+        "description": "Verbinden Sie TaskPilot mit Ihren Lieblings-Tools und optimieren Sie Ihren Workflow."
+      },
+      "search": {
+        "title": "Alles durchsuchen",
+        "description": "Finden Sie jede Datei in TaskPilot, einer verbundenen App oder Ihrem lokalen Laufwerk an einem Ort."
+      },
+      "aiProductivity": {
+        "title": "KI-gestützte Produktivität",
+        "description": "Arbeiten Sie schneller mit dem einzigen KI-gestützten Assistenten, der auf Ihre Rolle zugeschnitten ist."
+      },
+      "streamline": {
+        "title": "Workflows optimieren",
+        "description": "Eliminieren Sie sich wiederholende Aufgaben und konzentrieren Sie sich auf das Wesentliche."
+      },
+      "stayAhead": {
+        "title": "Bleiben Sie voraus",
+        "description": "Organisieren Sie Ihre Arbeit, Erinnerungen und Kalenderereignisse von Ihrem personalisierten Home aus."
+      }
+    }
+  },
   "navigation": {
     "home": "Startseite",
     "about": "Über",

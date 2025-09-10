@@ -29,6 +29,47 @@
     "warning": "Varning",
     "info": "Information"
   },
+  "landing": {
+    "heroTitle": "Den moderna projektarbetsytan,",
+    "heroSubtitle": "där produktivitet möter enkelhet",
+    "heroDescription": "En enda plats för projekt, uppgifter, chatt, dokument och mer. Effektivisera ditt arbetsflöde och främja teamsamarbete.",
+    "loginButton": "Logga in",
+    "signUpFree": "Registrera dig gratis",
+    "getStarted": "Kom igång",
+    "learnMore": "Lär dig mer",
+    "productivityJourney": "Börja din produktivitetsresa idag",
+    "methodologiesSupport": "Stöder alla projektledningsmetoder",
+    "features": {
+      "collaborate": {
+        "title": "Arbeta tillsammans",
+        "description": "Samarbeta på projekt i realtid, dela filer och kommunicera med ditt team på en plats."
+      },
+      "customize": {
+        "title": "Anpassa med ett klick",
+        "description": "Att konfigurera TaskPilot för olika typer av arbete är lika enkelt som att växla en omkopplare."
+      },
+      "integrate": {
+        "title": "Fungerar bra med andra",
+        "description": "Anslut TaskPilot till dina favoritverktyg och effektivisera ditt arbetsflöde."
+      },
+      "search": {
+        "title": "Sök allt",
+        "description": "Hitta vilken fil som helst i TaskPilot, en ansluten app eller din lokala enhet från en plats."
+      },
+      "aiProductivity": {
+        "title": "AI-driven produktivitet",
+        "description": "Arbeta snabbare med den enda AI-drivna assistenten som är skräddarsydd för din roll."
+      },
+      "streamline": {
+        "title": "Effektivisera arbetsflöden",
+        "description": "Eliminera repetitiva uppgifter och fokusera på det som betyder mest."
+      },
+      "stayAhead": {
+        "title": "Håll dig före",
+        "description": "Organisera ditt arbete, påminnelser och kalenderhändelser från din personaliserade hemma."
+      }
+    }
+  },
   "navigation": {
     "home": "Hem",
     "about": "Om",
