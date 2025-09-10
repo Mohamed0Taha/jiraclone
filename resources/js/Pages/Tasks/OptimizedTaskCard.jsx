@@ -716,7 +716,7 @@ const OptimizedTaskCard = memo(
                 )}
 
                 {/* CSS for spinning animation */}
-                <style jsx>{`
+                <style>{`
                     @keyframes spin {
                         from {
                             transform: rotate(0deg);

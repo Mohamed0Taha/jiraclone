@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Box, Fab, IconButton, Tooltip, Alert, Snackbar } from '@mui/material';
@@ -7,12 +7,72 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AssistantChat from './AssistantChat';
+import { enhanceGeneratedHTML } from '@/utils/htmlEnhancer';
+import { csrfFetch } from '@/utils/csrf';
 
 export default function CustomView({ auth, project, viewName }) {
     const [assistantOpen, setAssistantOpen] = useState(false);
     const [isLocked, setIsLocked] = useState(true);
     const [workingAreaContent, setWorkingAreaContent] = useState('');
+    const [customViewId, setCustomViewId] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+
+    // Load existing custom view on component mount
+    useEffect(() => {
+        loadExistingCustomView();
+    }, [project?.id, viewName]);
+
+    const loadExistingCustomView = async () => {
+        if (!project?.id) return;
+
+        try {
+            setIsLoading(true);
+            const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${viewName || 'default'}`);
+            
+            // Check if response is actually JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server returned non-JSON response. Check server configuration.');
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.html) {
+                try {
+                    // Enhance the loaded HTML with additional JavaScript functionality
+                    const enhancedHTML = enhanceGeneratedHTML ? enhanceGeneratedHTML(data.html) : data.html;
+                    setWorkingAreaContent(enhancedHTML);
+                } catch (error) {
+                    console.warn('Failed to enhance loaded HTML, using original:', error);
+                    setWorkingAreaContent(data.html);
+                }
+                
+                setCustomViewId(data.custom_view_id);
+                setSnackbar({
+                    open: true,
+                    message: 'Custom view loaded successfully!',
+                    severity: 'success'
+                });
+            } else if (data.success === false && data.message) {
+                // Custom view doesn't exist, this is normal for first-time users
+                console.log('No existing custom view found:', data.message);
+            }
+        } catch (error) {
+            console.error('Failed to load custom view:', error);
+            
+            // Only show error message if it's not a "no view found" case
+            if (error.message && !error.message.includes('No custom view found')) {
+                setSnackbar({
+                    open: true,
+                    message: 'Failed to load existing custom view. You can still create a new one.',
+                    severity: 'info'
+                });
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const toggleLock = () => {
         setIsLocked(!isLocked);
@@ -23,24 +83,78 @@ export default function CustomView({ auth, project, viewName }) {
         });
     };
 
-    const clearWorkingArea = () => {
-        setWorkingAreaContent('');
-        setSnackbar({
-            open: true,
-            message: 'Working area cleared',
-            severity: 'success'
-        });
+    const clearWorkingArea = async () => {
+        if (!customViewId) {
+            // Just clear the local state if no saved view
+            setWorkingAreaContent('');
+            setSnackbar({
+                open: true,
+                message: 'Working area cleared',
+                severity: 'success'
+            });
+            return;
+        }
+
+        try {
+            const response = await csrfFetch(`/projects/${project.id}/custom-views/delete?view_name=${viewName || 'default'}`, {
+                method: 'DELETE',
+            });
+            
+            // Check if response is actually JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server returned non-JSON response. Check server configuration.');
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                setWorkingAreaContent('');
+                setCustomViewId(null);
+                setSnackbar({
+                    open: true,
+                    message: 'Custom view deleted permanently',
+                    severity: 'success'
+                });
+            } else {
+                throw new Error(data.message || 'Failed to delete custom view');
+            }
+        } catch (error) {
+            console.error('Failed to delete custom view:', error);
+            setSnackbar({
+                open: true,
+                message: 'Failed to delete custom view from server',
+                severity: 'error'
+            });
+        }
     };
 
     const handleCloseSnackbar = () => {
         setSnackbar({ ...snackbar, open: false });
     };
 
-    const handleSpaGenerated = (htmlContent) => {
-        setWorkingAreaContent(htmlContent);
+    const handleSpaGenerated = (htmlContent, responseData = {}) => {
+        try {
+            // Enhance the HTML with additional JavaScript functionality
+            const enhancedHTML = enhanceGeneratedHTML ? enhanceGeneratedHTML(htmlContent) : htmlContent;
+            setWorkingAreaContent(enhancedHTML);
+        } catch (error) {
+            console.warn('Failed to enhance HTML, using original:', error);
+            setWorkingAreaContent(htmlContent);
+        }
+        
+        // Update custom view ID if provided
+        if (responseData.custom_view_id) {
+            setCustomViewId(responseData.custom_view_id);
+        }
+        
+        const message = responseData.is_update 
+            ? 'Custom application updated successfully!' 
+            : 'Custom application generated successfully!';
+            
         setSnackbar({
             open: true,
-            message: 'Custom application generated successfully!',
+            message,
             severity: 'success'
         });
     };
@@ -116,6 +230,19 @@ export default function CustomView({ auth, project, viewName }) {
                                 dangerouslySetInnerHTML={{ __html: workingAreaContent }}
                                 sx={{ width: '100%', height: '100%' }}
                             />
+                        ) : isLoading ? (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '100%',
+                                    flexDirection: 'column',
+                                    color: 'text.secondary',
+                                }}
+                            >
+                                <div>Loading custom view...</div>
+                            </Box>
                         ) : (
                             <Box
                                 sx={{
@@ -132,6 +259,9 @@ export default function CustomView({ auth, project, viewName }) {
                                     <div>Open the chat to generate a custom SPA application</div>
                                     <div style={{ fontSize: '0.9em', marginTop: '8px' }}>
                                         Try: "Create an expense tracker", "Build a vendor phonebook", "Make a project wiki"
+                                    </div>
+                                    <div style={{ fontSize: '0.8em', marginTop: '16px', fontStyle: 'italic' }}>
+                                        {customViewId ? 'Your previous custom view will be updated' : 'A new custom application will be created'}
                                     </div>
                                 </Box>
                             </Box>
