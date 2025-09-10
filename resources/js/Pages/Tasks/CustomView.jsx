@@ -28,11 +28,19 @@ export default function CustomView({ auth, project, viewName }) {
 
         try {
             setIsLoading(true);
-            const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${viewName || 'default'}`);
+            // Use API endpoint with proper CSRF handling
+            const response = await csrfFetch(`/api/projects/${project.id}/custom-views/get?view_name=${viewName || 'default'}`);
             
             // Check if response is actually JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
+                const responseText = await response.text();
+                console.error('Non-JSON response received:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    contentType: contentType,
+                    responsePreview: responseText.substring(0, 500)
+                });
                 throw new Error('Server returned non-JSON response. Check server configuration.');
             }
             
@@ -96,13 +104,21 @@ export default function CustomView({ auth, project, viewName }) {
         }
 
         try {
-            const response = await csrfFetch(`/projects/${project.id}/custom-views/delete?view_name=${viewName || 'default'}`, {
+            // Use API endpoint with proper CSRF handling
+            const response = await csrfFetch(`/api/projects/${project.id}/custom-views/delete?view_name=${viewName || 'default'}`, {
                 method: 'DELETE',
             });
             
             // Check if response is actually JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
+                const responseText = await response.text();
+                console.error('Non-JSON response received:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    contentType: contentType,
+                    responsePreview: responseText.substring(0, 500)
+                });
                 throw new Error('Server returned non-JSON response. Check server configuration.');
             }
             

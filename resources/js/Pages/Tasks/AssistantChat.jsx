@@ -396,7 +396,7 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
 
             // Route to different endpoints based on context
             const endpoint = isCustomView 
-                ? `/projects/${project.id}/custom-views/chat`
+                ? `/api/projects/${project.id}/custom-views/chat`
                 : `/projects/${project.id}/assistant/chat`;
 
             // Update progress for custom view
