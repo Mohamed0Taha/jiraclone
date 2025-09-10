@@ -8,6 +8,7 @@ import LockOpenIcon from '@mui/icons-material/LockOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AssistantChat from './AssistantChat';
 import { enhanceGeneratedHTML } from '@/utils/htmlEnhancer';
+import { csrfFetch } from '@/utils/csrf';
 
 export default function CustomView({ auth, project, viewName }) {
     const [assistantOpen, setAssistantOpen] = useState(false);
@@ -27,11 +28,7 @@ export default function CustomView({ auth, project, viewName }) {
 
         try {
             setIsLoading(true);
-            const response = await fetch(`/projects/${project.id}/custom-views/get?view_name=${viewName || 'default'}`, {
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-            });
+            const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${viewName || 'default'}`);
             
             const data = await response.json();
             
@@ -86,12 +83,8 @@ export default function CustomView({ auth, project, viewName }) {
         }
 
         try {
-            const response = await fetch(`/projects/${project.id}/custom-views/delete?view_name=${viewName || 'default'}`, {
+            const response = await csrfFetch(`/projects/${project.id}/custom-views/delete?view_name=${viewName || 'default'}`, {
                 method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'Content-Type': 'application/json',
-                },
             });
             
             const data = await response.json();
