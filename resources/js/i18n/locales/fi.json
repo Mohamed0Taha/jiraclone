@@ -27,7 +27,11 @@
     "error": "Virhe",
     "success": "Onnistui",
     "warning": "Varoitus",
-    "info": "Tieto"
+    "info": "Tieto",
+    "user": "Käyttäjä",
+    "signedInAs": "Kirjautunut sisään",
+    "subscriptions": "Tilaukset",
+    "getCertified": "Hanki sertifikaatti"
   },
   "landing": {
     "heroTitle": "Moderni projektin työtila,",

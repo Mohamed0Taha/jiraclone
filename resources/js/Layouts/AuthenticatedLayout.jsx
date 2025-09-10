@@ -4,8 +4,10 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import CookieConsent from '@/Components/CookieConsent';
 import TailwindThemeLanguageSwitcher from '@/Components/TailwindThemeLanguageSwitcher';
 import { Link, usePage } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 
 export default function AuthenticatedLayout({ header, children }) {
+    const { t } = useTranslation();
     // CACHE BUST: Admin button completely removed - build 002
     const { props } = usePage();
     const user = props?.auth?.user || {};
@@ -31,13 +33,13 @@ export default function AuthenticatedLayout({ header, children }) {
     const onDashboard = route().current('dashboard');
 
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
             <nav
                 className="
           sticky top-0 z-40
           backdrop-blur-md
-          bg-white/75
-          border-b border-gray-200
+          bg-white/75 dark:bg-gray-800/75
+          border-b border-gray-200 dark:border-gray-700
           shadow-[0_4px_16px_-6px_rgba(0,0,0,0.15)]
         "
                 role="navigation"
@@ -83,7 +85,7 @@ export default function AuthenticatedLayout({ header, children }) {
                   ${
                       onDashboard
                           ? 'bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white shadow hover:from-indigo-500 hover:to-fuchsia-500'
-                          : 'bg-white/80 text-gray-700 border border-gray-300 hover:bg-white'
+                          : 'bg-white/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-600'
                   }
                 `}
                             >
@@ -93,7 +95,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         aria-hidden="true"
                                     />
                                 )}
-                                <span className="relative">Dashboard</span>
+                                <span className="relative">{t('common.dashboard')}</span>
                             </Link>
                         </div>
 
@@ -110,9 +112,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                             className="
                         group inline-flex items-center gap-2
                         rounded-full pl-1 pr-3 py-1
-                        bg-white/80
-                        border border-gray-300
-                        hover:bg-white
+                        bg-white/80 dark:bg-gray-700/80
+                        border border-gray-300 dark:border-gray-600
+                        hover:bg-white dark:hover:bg-gray-600
                         transition
                         focus:outline-none focus-visible:ring-2 ring-indigo-500
                       "
@@ -127,11 +129,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                             >
                                                 {initials}
                                             </span>
-                                            <span className="text-sm font-medium text-gray-700">
-                                                {user.name || 'User'}
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                {user.name || t('common.user')}
                                             </span>
                                             <svg
-                                                className="h-4 w-4 text-gray-500 transition-transform group-data-[open=true]:rotate-180"
+                                                className="h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform group-data-[open=true]:rotate-180"
                                                 viewBox="0 0 20 20"
                                                 fill="currentColor"
                                             >
@@ -144,19 +146,19 @@ export default function AuthenticatedLayout({ header, children }) {
                                         </button>
                                     </Dropdown.Trigger>
                                     <Dropdown.Content className="w-52">
-                                        <div className="px-3 py-2 border-b border-gray-200">
-                                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                                Signed in as
+                                        <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                                {t('common.signedInAs')}
                                             </p>
-                                            <p className="text-sm font-medium text-gray-800 truncate">
+                                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                                                 {user.email}
                                             </p>
                                         </div>
                                         <Dropdown.Link href={route('profile.edit')}>
-                                            Profile
+                                            {t('common.profile')}
                                         </Dropdown.Link>
                                         <Dropdown.Link href={route('billing.show')}>
-                                            Subscriptions
+                                            {t('common.subscriptions')}
                                         </Dropdown.Link>
                                         <Dropdown.Link
                                             href={route('certification.index')}
@@ -165,17 +167,17 @@ export default function AuthenticatedLayout({ header, children }) {
                                                 window.location.href = route('certification.index');
                                             }}
                                         >
-                                            Get Certified
+                                            {t('common.getCertified')}
                                         </Dropdown.Link>
                                         <Dropdown.Link href={route('contact.show')}>
-                                            Contact Us
+                                            {t('navigation.contact')}
                                         </Dropdown.Link>
                                         <Dropdown.Link
                                             href={route('logout')}
                                             method="post"
                                             as="button"
                                         >
-                                            Log Out
+                                            {t('common.logout')}
                                         </Dropdown.Link>
                                     </Dropdown.Content>
                                 </Dropdown>

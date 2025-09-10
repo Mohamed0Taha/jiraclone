@@ -27,7 +27,11 @@
     "error": "Fel",
     "success": "Framgång",
     "warning": "Varning",
-    "info": "Information"
+    "info": "Information",
+    "user": "Användare",
+    "signedInAs": "Inloggad som",
+    "subscriptions": "Prenumerationer",
+    "getCertified": "Bli certifierad"
   },
   "landing": {
     "heroTitle": "Den moderna projektarbetsytan,",

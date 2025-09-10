@@ -27,7 +27,11 @@
     "error": "Error",
     "success": "Éxito",
     "warning": "Advertencia",
-    "info": "Información"
+    "info": "Información",
+    "user": "Usuario",
+    "signedInAs": "Conectado como",
+    "subscriptions": "Suscripciones",
+    "getCertified": "Obtener certificación"
   },
   "landing": {
     "heroTitle": "El espacio de trabajo moderno para proyectos,",
