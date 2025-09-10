@@ -726,6 +726,33 @@ Route::middleware('auth')->group(function () {
         /* TIMELINE */
         Route::get('/timeline', [TaskController::class, 'timeline'])->name('tasks.timeline');
 
+        /* CUSTOM VIEWS */
+        Route::get('/custom-views/{name}', function (Request $request, Project $project, $name) {
+            // Get project tasks for the custom view
+            $tasks = $project->tasks()
+                ->with(['assignee:id,name,email', 'user:id,name'])
+                ->get()
+                ->groupBy('status');
+
+            // Transform to the expected format
+            $tasksByStatus = [
+                'todo' => $tasks->get('todo', collect())->values(),
+                'inprogress' => $tasks->get('inprogress', collect())->values(),
+                'review' => $tasks->get('review', collect())->values(),
+                'done' => $tasks->get('done', collect())->values(),
+            ];
+
+            $users = $project->users()->select('id', 'name', 'email')->get();
+
+            return Inertia::render('Tasks/CustomView', [
+                'project' => $project,
+                'tasks' => $tasksByStatus,
+                'users' => $users,
+                'viewName' => $name,
+                'isPro' => $request->user()?->isPro() ?? false,
+            ]);
+        })->name('custom-views.show');
+
         /* AUTOMATIONS (premium feature - automation) */
         // Allow all authenticated users to view automations index (overlay handles upsell)
         Route::get('/automations', [AutomationController::class, 'index'])->name('automations.index');
