@@ -1,5 +1,6 @@
 import React from 'react';
 import { Head, useForm, Link as InertiaLink } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Button,
@@ -45,9 +46,11 @@ import {
     Lightbulb,
     Shield,
 } from '@mui/icons-material';
+import ThemeLanguageSwitcher from '@/Components/ThemeLanguageSwitcher';
 
 export default function Landing({ errors }) {
     const theme = useTheme();
+    const { t } = useTranslation();
 
     // Video autoplay handling – try to start with sound; if blocked, fallback to muted
     const videoRef = React.useRef(null);
@@ -108,63 +111,58 @@ export default function Landing({ errors }) {
 
     const features = [
         {
-            icon: <AutoAwesome sx={{ fontSize: 48, color: '#FF6B6B' }} />,
-            title: 'AI-powered productivity',
-            description:
-                'Get work done faster with the only AI-powered assistant tailored to your role.',
-            color: '#FF6B6B',
+            icon: <AutoAwesome sx={{ fontSize: 48, color: '#E53E3E' }} />,
+            title: t('landing.features.aiProductivity.title'),
+            description: t('landing.features.aiProductivity.description'),
+            color: '#E53E3E',
         },
         {
-            icon: <ViewModule sx={{ fontSize: 48, color: '#4ECDC4' }} />,
-            title: 'View work your way',
-            description:
-                'Instantly switch between 15 views including list, board, gantt, and more.',
-            color: '#4ECDC4',
+            icon: <ViewModule sx={{ fontSize: 48, color: '#319795' }} />,
+            title: t('landing.features.collaborate.title'),
+            description: t('landing.features.collaborate.description'),
+            color: '#319795',
         },
         {
-            icon: <Settings sx={{ fontSize: 48, color: '#45B7D1' }} />,
-            title: 'Customize in a click',
-            description:
-                'Configuring TaskPilot for different types of work is as easy as flipping a switch.',
-            color: '#45B7D1',
+            icon: <Settings sx={{ fontSize: 48, color: '#3182CE' }} />,
+            title: t('landing.features.customize.title'),
+            description: t('landing.features.customize.description'),
+            color: '#3182CE',
         },
         {
-            icon: <IntegrationInstructions sx={{ fontSize: 48, color: '#96CEB4' }} />,
-            title: 'Plays well with others',
-            description: 'Easily integrates with the tools you already use.',
-            color: '#96CEB4',
+            icon: <IntegrationInstructions sx={{ fontSize: 48, color: '#38A169' }} />,
+            title: t('landing.features.integrate.title'),
+            description: t('landing.features.integrate.description'),
+            color: '#38A169',
         },
         {
-            icon: <AutoFixHigh sx={{ fontSize: 48, color: '#FFEAA7' }} />,
-            title: 'Streamline workflows',
-            description: 'Eliminate repetitive tasks and focus on what matters most.',
-            color: '#FFEAA7',
+            icon: <AutoFixHigh sx={{ fontSize: 48, color: '#D69E2E' }} />,
+            title: t('landing.features.streamline.title'),
+            description: t('landing.features.streamline.description'),
+            color: '#D69E2E',
         },
         {
-            icon: <Search sx={{ fontSize: 48, color: '#DDA0DD' }} />,
-            title: 'Search everything',
-            description:
-                'Find any file in TaskPilot, a connected app, or your local drive, from one place.',
-            color: '#DDA0DD',
+            icon: <Search sx={{ fontSize: 48, color: '#805AD5' }} />,
+            title: t('landing.features.search.title'),
+            description: t('landing.features.search.description'),
+            color: '#805AD5',
         },
         {
-            icon: <Home sx={{ fontSize: 48, color: '#F7DC6F' }} />,
-            title: "Stay ahead of what's next",
-            description:
-                'Organize your work, reminders, and calendar events all from your personalized Home.',
-            color: '#F7DC6F',
+            icon: <Home sx={{ fontSize: 48, color: '#2F855A' }} />,
+            title: t('landing.features.stayAhead.title'),
+            description: t('landing.features.stayAhead.description'),
+            color: '#2F855A',
         },
     ];
 
     const methodologies = [
-        { name: 'Agile', color: '#FF6B6B' },
-        { name: 'Scrum', color: '#4ECDC4' },
-        { name: 'Kanban', color: '#45B7D1' },
-        { name: 'Waterfall', color: '#96CEB4' },
-        { name: 'Lean', color: '#FFEAA7' },
-        { name: 'DevOps', color: '#DDA0DD' },
-        { name: 'Hybrid', color: '#98D8C8' },
-        { name: 'SAFe', color: '#F7DC6F' },
+        { name: 'Agile', color: '#E53E3E' },
+        { name: 'Scrum', color: '#319795' },
+        { name: 'Kanban', color: '#3182CE' },
+        { name: 'Waterfall', color: '#38A169' },
+        { name: 'Lean', color: '#D69E2E' },
+        { name: 'DevOps', color: '#805AD5' },
+        { name: 'Hybrid', color: '#2F855A' },
+        { name: 'SAFe', color: '#E53E3E' },
     ];
 
     return (
@@ -271,6 +269,9 @@ export default function Landing({ errors }) {
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', gap: 2 }}>
+                                {/* Theme and Language Switcher */}
+                                <ThemeLanguageSwitcher />
+                                
                                 <Button
                                     variant="outlined"
                                     size="small"
@@ -296,7 +297,7 @@ export default function Landing({ errors }) {
                                             .scrollIntoView({ behavior: 'smooth' });
                                     }}
                                 >
-                                    Log in
+                                    {t('landing.loginButton')}
                                 </Button>
                                 <Button
                                     variant="contained"
@@ -317,7 +318,7 @@ export default function Landing({ errors }) {
                                         },
                                     }}
                                 >
-                                    Sign up
+                                    {t('landing.signUpFree')}
                                 </Button>
                             </Box>
                         </Box>
@@ -413,9 +414,9 @@ export default function Landing({ errors }) {
                                     mx: 'auto',
                                 }}
                             >
-                                The modern project workspace,{' '}
+                                {t('landing.heroTitle')}{' '}
                                 <Box component="span" sx={{ color: '#7C6AE8' }}>
-                                    where productivity meets simplicity
+                                    {t('landing.heroSubtitle')}
                                 </Box>
                             </Typography>
 
@@ -430,8 +431,7 @@ export default function Landing({ errors }) {
                                     lineHeight: 1.4,
                                 }}
                             >
-                                A single place for projects, tasks, chat, docs, and more. Where
-                                teams collaborate and AI helps you work smarter.
+                                {t('landing.heroDescription')}
                             </Typography>
 
                             <Stack
@@ -465,12 +465,12 @@ export default function Landing({ errors }) {
                                         },
                                     }}
                                 >
-                                    Get Started
+                                    {t('landing.getStarted')}
                                 </Button>
                             </Stack>
 
                             <Typography variant="body2" sx={{ color: 'grey.600', fontWeight: 500 }}>
-                                Start your productivity journey today
+                                {t('landing.productivityJourney')}
                             </Typography>
                         </Box>
 
@@ -480,7 +480,7 @@ export default function Landing({ errors }) {
                                 variant="body2"
                                 sx={{ mb: 4, color: 'grey.600', fontWeight: 500 }}
                             >
-                                Supports all project management methodologies
+                                {t('landing.methodologiesSupport')}
                             </Typography>
 
                             <Grid container spacing={3} justifyContent="center" alignItems="center">
@@ -2040,7 +2040,7 @@ export default function Landing({ errors }) {
                         },
                     }}
                 >
-                    🚀 Get Started
+                    🚀 {t('landing.getStarted')}
                 </Button>
             </Box>
 

@@ -1,0 +1,145 @@
+{
+  "common": {
+    "welcome": "Välkommen",
+    "dashboard": "Instrumentpanel",
+    "projects": "Projekt",
+    "tasks": "Uppgifter",
+    "timeline": "Tidslinje",
+    "board": "Tavla",
+    "profile": "Profil",
+    "settings": "Inställningar",
+    "logout": "Logga ut",
+    "login": "Logga in",
+    "register": "Registrera",
+    "email": "E-post",
+    "password": "Lösenord",
+    "submit": "Skicka",
+    "cancel": "Avbryt",
+    "save": "Spara",
+    "delete": "Radera",
+    "edit": "Redigera",
+    "create": "Skapa",
+    "close": "Stäng",
+    "search": "Sök",
+    "filter": "Filtrera",
+    "sort": "Sortera",
+    "loading": "Laddar...",
+    "error": "Fel",
+    "success": "Framgång",
+    "warning": "Varning",
+    "info": "Information"
+  },
+  "landing": {
+    "heroTitle": "Den moderna projektarbetsytan,",
+    "heroSubtitle": "där produktivitet möter enkelhet",
+    "heroDescription": "En enda plats för projekt, uppgifter, chatt, dokument och mer. Effektivisera ditt arbetsflöde och främja teamsamarbete.",
+    "loginButton": "Logga in",
+    "signUpFree": "Registrera dig gratis",
+    "getStarted": "Kom igång",
+    "learnMore": "Lär dig mer",
+    "productivityJourney": "Börja din produktivitetsresa idag",
+    "methodologiesSupport": "Stöder alla projektledningsmetoder",
+    "features": {
+      "collaborate": {
+        "title": "Arbeta tillsammans",
+        "description": "Samarbeta på projekt i realtid, dela filer och kommunicera med ditt team på en plats."
+      },
+      "customize": {
+        "title": "Anpassa med ett klick",
+        "description": "Att konfigurera TaskPilot för olika typer av arbete är lika enkelt som att växla en omkopplare."
+      },
+      "integrate": {
+        "title": "Fungerar bra med andra",
+        "description": "Anslut TaskPilot till dina favoritverktyg och effektivisera ditt arbetsflöde."
+      },
+      "search": {
+        "title": "Sök allt",
+        "description": "Hitta vilken fil som helst i TaskPilot, en ansluten app eller din lokala enhet från en plats."
+      },
+      "aiProductivity": {
+        "title": "AI-driven produktivitet",
+        "description": "Arbeta snabbare med den enda AI-drivna assistenten som är skräddarsydd för din roll."
+      },
+      "streamline": {
+        "title": "Effektivisera arbetsflöden",
+        "description": "Eliminera repetitiva uppgifter och fokusera på det som betyder mest."
+      },
+      "stayAhead": {
+        "title": "Håll dig före",
+        "description": "Organisera ditt arbete, påminnelser och kalenderhändelser från din personaliserade hemma."
+      }
+    }
+  },
+  "navigation": {
+    "home": "Hem",
+    "about": "Om",
+    "contact": "Kontakt",
+    "help": "Hjälp",
+    "documentation": "Dokumentation"
+  },
+  "project": {
+    "title": "Projekttitel",
+    "description": "Beskrivning",
+    "status": "Status",
+    "priority": "Prioritet",
+    "assignee": "Tilldelad",
+    "dueDate": "Förfallodatum",
+    "created": "Skapad",
+    "updated": "Uppdaterad",
+    "completed": "Slutförd",
+    "inProgress": "Pågående",
+    "pending": "Väntande",
+    "archived": "Arkiverad"
+  },
+  "task": {
+    "title": "Uppgiftstitel",
+    "description": "Beskrivning",
+    "status": "Status",
+    "priority": "Prioritet",
+    "assignee": "Tilldelad",
+    "dueDate": "Förfallodatum",
+    "created": "Skapad",
+    "updated": "Uppdaterad",
+    "high": "Hög",
+    "medium": "Medium",
+    "low": "Låg",
+    "urgent": "Brådskande"
+  },
+  "theme": {
+    "light": "Ljust läge",
+    "dark": "Mörkt läge",
+    "toggle": "Växla tema"
+  },
+  "language": {
+    "english": "English",
+    "spanish": "Español",
+    "german": "Deutsch",
+    "finnish": "Suomi",
+    "swedish": "Svenska",
+    "dutch": "Nederlands",
+    "french": "Français",
+    "select": "Välj språk"
+  },
+  "messages": {
+    "welcomeBack": "Välkommen tillbaka!",
+    "loginSuccess": "Inloggning lyckades",
+    "loginError": "Inloggning misslyckades. Kontrollera dina uppgifter.",
+    "registrationSuccess": "Registrering lyckades",
+    "registrationError": "Registrering misslyckades. Försök igen.",
+    "profileUpdated": "Profil uppdaterad framgångsrikt",
+    "projectCreated": "Projekt skapat framgångsrikt",
+    "projectUpdated": "Projekt uppdaterat framgångsrikt",
+    "projectDeleted": "Projekt raderat framgångsrikt",
+    "taskCreated": "Uppgift skapad framgångsrikt",
+    "taskUpdated": "Uppgift uppdaterad framgångsrikt",
+    "taskDeleted": "Uppgift raderad framgångsrikt"
+  },
+  "accessibility": {
+    "toggleNavigation": "Växla navigeringsmeny",
+    "skipToContent": "Hoppa till huvudinnehåll",
+    "openInNewWindow": "Öppnas i nytt fönster",
+    "closeDialog": "Stäng dialog",
+    "expandMenu": "Expandera meny",
+    "collapseMenu": "Kollapsa meny"
+  }
+}

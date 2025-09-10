@@ -1,0 +1,145 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "tasks": "Tasks",
+    "timeline": "Timeline",
+    "board": "Board",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Logout",
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information"
+  },
+  "navigation": {
+    "home": "Home",
+    "about": "About",
+    "contact": "Contact",
+    "help": "Help",
+    "documentation": "Documentation"
+  },
+  "landing": {
+    "heroTitle": "The modern project workspace,",
+    "heroSubtitle": "where productivity meets simplicity",
+    "heroDescription": "A single place for projects, tasks, chat, docs, and more. Streamline your workflow and boost team collaboration.",
+    "loginButton": "Log in",
+    "signUpFree": "Sign up for free",
+    "getStarted": "Get Started",
+    "learnMore": "Learn More",
+    "productivityJourney": "Start your productivity journey today",
+    "methodologiesSupport": "Supports all project management methodologies",
+    "features": {
+      "collaborate": {
+        "title": "Work together",
+        "description": "Collaborate on projects in real time, share files, and communicate with your team all in one place."
+      },
+      "customize": {
+        "title": "Customize in a click",
+        "description": "Configuring TaskPilot for different types of work is as easy as flipping a switch."
+      },
+      "integrate": {
+        "title": "Plays well with others",
+        "description": "Connect TaskPilot to your favorite tools and streamline your workflow."
+      },
+      "search": {
+        "title": "Search everything",
+        "description": "Find any file in TaskPilot, a connected app, or your local drive, from one place."
+      },
+      "aiProductivity": {
+        "title": "AI-powered productivity",
+        "description": "Get work done faster with the only AI-powered assistant tailored to your role."
+      },
+      "streamline": {
+        "title": "Streamline workflows",
+        "description": "Eliminate repetitive tasks and focus on what matters most."
+      },
+      "stayAhead": {
+        "title": "Stay ahead of what's next",
+        "description": "Organize your work, reminders, and calendar events all from your personalized Home."
+      }
+    }
+  },
+  "project": {
+    "title": "Project Title",
+    "description": "Description",
+    "status": "Status",
+    "priority": "Priority",
+    "assignee": "Assignee",
+    "dueDate": "Due Date",
+    "created": "Created",
+    "updated": "Updated",
+    "completed": "Completed",
+    "inProgress": "In Progress",
+    "pending": "Pending",
+    "archived": "Archived"
+  },
+  "task": {
+    "title": "Task Title",
+    "description": "Description",
+    "status": "Status",
+    "priority": "Priority",
+    "assignee": "Assignee",
+    "dueDate": "Due Date",
+    "created": "Created",
+    "updated": "Updated",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "urgent": "Urgent"
+  },
+  "theme": {
+    "light": "Light Mode",
+    "dark": "Dark Mode",
+    "toggle": "Toggle Theme"
+  },
+  "language": {
+    "english": "English",
+    "spanish": "Español",
+    "german": "Deutsch",
+    "finnish": "Suomi",
+    "swedish": "Svenska",
+    "dutch": "Nederlands",
+    "french": "Français",
+    "select": "Select Language"
+  },
+  "messages": {
+    "welcomeBack": "Welcome back!",
+    "loginSuccess": "Login successful",
+    "loginError": "Login failed. Please check your credentials.",
+    "registrationSuccess": "Registration successful",
+    "registrationError": "Registration failed. Please try again.",
+    "profileUpdated": "Profile updated successfully",
+    "projectCreated": "Project created successfully",
+    "projectUpdated": "Project updated successfully",
+    "projectDeleted": "Project deleted successfully",
+    "taskCreated": "Task created successfully",
+    "taskUpdated": "Task updated successfully",
+    "taskDeleted": "Task deleted successfully"
+  },
+  "accessibility": {
+    "toggleNavigation": "Toggle navigation menu",
+    "skipToContent": "Skip to main content",
+    "openInNewWindow": "Opens in a new window",
+    "closeDialog": "Close dialog",
+    "expandMenu": "Expand menu",
+    "collapseMenu": "Collapse menu"
+  }
+}

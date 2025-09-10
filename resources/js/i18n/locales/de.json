@@ -1,0 +1,145 @@
+{
+  "common": {
+    "welcome": "Willkommen",
+    "dashboard": "Dashboard",
+    "projects": "Projekte",
+    "tasks": "Aufgaben",
+    "timeline": "Zeitachse",
+    "board": "Board",
+    "profile": "Profil",
+    "settings": "Einstellungen",
+    "logout": "Abmelden",
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "submit": "Senden",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "close": "Schließen",
+    "search": "Suchen",
+    "filter": "Filtern",
+    "sort": "Sortieren",
+    "loading": "Lädt...",
+    "error": "Fehler",
+    "success": "Erfolg",
+    "warning": "Warnung",
+    "info": "Information"
+  },
+  "landing": {
+    "heroTitle": "Der moderne Projektarbeitsbereich,",
+    "heroSubtitle": "wo Produktivität auf Einfachheit trifft",
+    "heroDescription": "Ein einziger Ort für Projekte, Aufgaben, Chat, Dokumente und mehr. Optimieren Sie Ihren Workflow und fördern Sie die Teamzusammenarbeit.",
+    "loginButton": "Anmelden",
+    "signUpFree": "Kostenlos registrieren",
+    "getStarted": "Loslegen",
+    "learnMore": "Mehr erfahren",
+    "productivityJourney": "Starten Sie heute Ihre Produktivitätsreise",
+    "methodologiesSupport": "Unterstützt alle Projektmanagement-Methoden",
+    "features": {
+      "collaborate": {
+        "title": "Zusammenarbeiten",
+        "description": "Arbeiten Sie in Echtzeit an Projekten zusammen, teilen Sie Dateien und kommunizieren Sie mit Ihrem Team an einem Ort."
+      },
+      "customize": {
+        "title": "Mit einem Klick anpassen",
+        "description": "TaskPilot für verschiedene Arbeitstypen zu konfigurieren ist so einfach wie ein Schalter umzulegen."
+      },
+      "integrate": {
+        "title": "Spielt gut mit anderen",
+        "description": "Verbinden Sie TaskPilot mit Ihren Lieblings-Tools und optimieren Sie Ihren Workflow."
+      },
+      "search": {
+        "title": "Alles durchsuchen",
+        "description": "Finden Sie jede Datei in TaskPilot, einer verbundenen App oder Ihrem lokalen Laufwerk an einem Ort."
+      },
+      "aiProductivity": {
+        "title": "KI-gestützte Produktivität",
+        "description": "Arbeiten Sie schneller mit dem einzigen KI-gestützten Assistenten, der auf Ihre Rolle zugeschnitten ist."
+      },
+      "streamline": {
+        "title": "Workflows optimieren",
+        "description": "Eliminieren Sie sich wiederholende Aufgaben und konzentrieren Sie sich auf das Wesentliche."
+      },
+      "stayAhead": {
+        "title": "Bleiben Sie voraus",
+        "description": "Organisieren Sie Ihre Arbeit, Erinnerungen und Kalenderereignisse von Ihrem personalisierten Home aus."
+      }
+    }
+  },
+  "navigation": {
+    "home": "Startseite",
+    "about": "Über",
+    "contact": "Kontakt",
+    "help": "Hilfe",
+    "documentation": "Dokumentation"
+  },
+  "project": {
+    "title": "Projekttitel",
+    "description": "Beschreibung",
+    "status": "Status",
+    "priority": "Priorität",
+    "assignee": "Beauftragte",
+    "dueDate": "Fälligkeitsdatum",
+    "created": "Erstellt",
+    "updated": "Aktualisiert",
+    "completed": "Abgeschlossen",
+    "inProgress": "In Bearbeitung",
+    "pending": "Ausstehend",
+    "archived": "Archiviert"
+  },
+  "task": {
+    "title": "Aufgabentitel",
+    "description": "Beschreibung",
+    "status": "Status",
+    "priority": "Priorität",
+    "assignee": "Beauftragte",
+    "dueDate": "Fälligkeitsdatum",
+    "created": "Erstellt",
+    "updated": "Aktualisiert",
+    "high": "Hoch",
+    "medium": "Mittel",
+    "low": "Niedrig",
+    "urgent": "Dringend"
+  },
+  "theme": {
+    "light": "Heller Modus",
+    "dark": "Dunkler Modus",
+    "toggle": "Design wechseln"
+  },
+  "language": {
+    "english": "English",
+    "spanish": "Español",
+    "german": "Deutsch",
+    "finnish": "Suomi",
+    "swedish": "Svenska",
+    "dutch": "Nederlands",
+    "french": "Français",
+    "select": "Sprache auswählen"
+  },
+  "messages": {
+    "welcomeBack": "Willkommen zurück!",
+    "loginSuccess": "Anmeldung erfolgreich",
+    "loginError": "Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Zugangsdaten.",
+    "registrationSuccess": "Registrierung erfolgreich",
+    "registrationError": "Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "profileUpdated": "Profil erfolgreich aktualisiert",
+    "projectCreated": "Projekt erfolgreich erstellt",
+    "projectUpdated": "Projekt erfolgreich aktualisiert",
+    "projectDeleted": "Projekt erfolgreich gelöscht",
+    "taskCreated": "Aufgabe erfolgreich erstellt",
+    "taskUpdated": "Aufgabe erfolgreich aktualisiert",
+    "taskDeleted": "Aufgabe erfolgreich gelöscht"
+  },
+  "accessibility": {
+    "toggleNavigation": "Navigationsmenü umschalten",
+    "skipToContent": "Zum Hauptinhalt springen",
+    "openInNewWindow": "Öffnet sich in einem neuen Fenster",
+    "closeDialog": "Dialog schließen",
+    "expandMenu": "Menü erweitern",
+    "collapseMenu": "Menü einklappen"
+  }
+}

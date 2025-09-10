@@ -1,0 +1,145 @@
+{
+  "common": {
+    "welcome": "Welkom",
+    "dashboard": "Dashboard",
+    "projects": "Projecten",
+    "tasks": "Taken",
+    "timeline": "Tijdlijn",
+    "board": "Bord",
+    "profile": "Profiel",
+    "settings": "Instellingen",
+    "logout": "Uitloggen",
+    "login": "Inloggen",
+    "register": "Registreren",
+    "email": "E-mail",
+    "password": "Wachtwoord",
+    "submit": "Verzenden",
+    "cancel": "Annuleren",
+    "save": "Opslaan",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "create": "Aanmaken",
+    "close": "Sluiten",
+    "search": "Zoeken",
+    "filter": "Filteren",
+    "sort": "Sorteren",
+    "loading": "Laden...",
+    "error": "Fout",
+    "success": "Succes",
+    "warning": "Waarschuwing",
+    "info": "Informatie"
+  },
+  "landing": {
+    "heroTitle": "De moderne projectwerkruimte,",
+    "heroSubtitle": "waar productiviteit eenvoud ontmoet",
+    "heroDescription": "Één plaats voor projecten, taken, chat, documenten en meer. Stroomlijn je workflow en bevorder teamcollaboratie.",
+    "loginButton": "Inloggen",
+    "signUpFree": "Gratis aanmelden",
+    "getStarted": "Aan de slag",
+    "learnMore": "Meer leren",
+    "productivityJourney": "Begin vandaag je productiviteitsreis",
+    "methodologiesSupport": "Ondersteunt alle projectmanagementmethodologieën",
+    "features": {
+      "collaborate": {
+        "title": "Werk samen",
+        "description": "Werk in realtime samen aan projecten, deel bestanden en communiceer met je team op één plaats."
+      },
+      "customize": {
+        "title": "Aanpassen met één klik",
+        "description": "TaskPilot configureren voor verschillende soorten werk is zo eenvoudig als een schakelaar omzetten."
+      },
+      "integrate": {
+        "title": "Werkt goed samen met anderen",
+        "description": "Verbind TaskPilot met je favoriete tools en stroomlijn je workflow."
+      },
+      "search": {
+        "title": "Zoek alles",
+        "description": "Vind elk bestand in TaskPilot, een verbonden app of je lokale schijf, vanaf één plaats."
+      },
+      "aiProductivity": {
+        "title": "AI-aangedreven productiviteit",
+        "description": "Werk sneller met de enige AI-aangedreven assistent die is afgestemd op jouw rol."
+      },
+      "streamline": {
+        "title": "Stroomlijn workflows",
+        "description": "Elimineer repetitieve taken en focus op wat het belangrijkst is."
+      },
+      "stayAhead": {
+        "title": "Blijf voorop",
+        "description": "Organiseer je werk, herinneringen en agenda-evenementen allemaal vanuit je gepersonaliseerde Home."
+      }
+    }
+  },
+  "navigation": {
+    "home": "Home",
+    "about": "Over",
+    "contact": "Contact",
+    "help": "Hulp",
+    "documentation": "Documentatie"
+  },
+  "project": {
+    "title": "Projecttitel",
+    "description": "Beschrijving",
+    "status": "Status",
+    "priority": "Prioriteit",
+    "assignee": "Toegewezen",
+    "dueDate": "Vervaldatum",
+    "created": "Aangemaakt",
+    "updated": "Bijgewerkt",
+    "completed": "Voltooid",
+    "inProgress": "In uitvoering",
+    "pending": "In behandeling",
+    "archived": "Gearchiveerd"
+  },
+  "task": {
+    "title": "Taaknaam",
+    "description": "Beschrijving",
+    "status": "Status",
+    "priority": "Prioriteit",
+    "assignee": "Toegewezen",
+    "dueDate": "Vervaldatum",
+    "created": "Aangemaakt",
+    "updated": "Bijgewerkt",
+    "high": "Hoog",
+    "medium": "Gemiddeld",
+    "low": "Laag",
+    "urgent": "Urgent"
+  },
+  "theme": {
+    "light": "Lichte modus",
+    "dark": "Donkere modus",
+    "toggle": "Thema wisselen"
+  },
+  "language": {
+    "english": "English",
+    "spanish": "Español",
+    "german": "Deutsch",
+    "finnish": "Suomi",
+    "swedish": "Svenska",
+    "dutch": "Nederlands",
+    "french": "Français",
+    "select": "Taal selecteren"
+  },
+  "messages": {
+    "welcomeBack": "Welkom terug!",
+    "loginSuccess": "Inloggen gelukt",
+    "loginError": "Inloggen mislukt. Controleer uw gegevens.",
+    "registrationSuccess": "Registratie gelukt",
+    "registrationError": "Registratie mislukt. Probeer opnieuw.",
+    "profileUpdated": "Profiel succesvol bijgewerkt",
+    "projectCreated": "Project succesvol aangemaakt",
+    "projectUpdated": "Project succesvol bijgewerkt",
+    "projectDeleted": "Project succesvol verwijderd",
+    "taskCreated": "Taak succesvol aangemaakt",
+    "taskUpdated": "Taak succesvol bijgewerkt",
+    "taskDeleted": "Taak succesvol verwijderd"
+  },
+  "accessibility": {
+    "toggleNavigation": "Navigatiemenu in-/uitschakelen",
+    "skipToContent": "Naar hoofdinhoud springen",
+    "openInNewWindow": "Opent in nieuw venster",
+    "closeDialog": "Dialoog sluiten",
+    "expandMenu": "Menu uitklappen",
+    "collapseMenu": "Menu inklappen"
+  }
+}
