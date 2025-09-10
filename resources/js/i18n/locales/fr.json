@@ -29,6 +29,47 @@
     "warning": "Avertissement",
     "info": "Information"
   },
+  "landing": {
+    "heroTitle": "L'espace de travail de projet moderne,",
+    "heroSubtitle": "où la productivité rencontre la simplicité",
+    "heroDescription": "Un seul endroit pour les projets, les tâches, le chat, les documents et plus. Rationalisez votre flux de travail et boostez la collaboration d'équipe.",
+    "loginButton": "Se connecter",
+    "signUpFree": "S'inscrire gratuitement",
+    "getStarted": "Commencer",
+    "learnMore": "En savoir plus",
+    "productivityJourney": "Commencez votre parcours de productivité aujourd'hui",
+    "methodologiesSupport": "Prend en charge toutes les méthodologies de gestion de projet",
+    "features": {
+      "collaborate": {
+        "title": "Travaillez ensemble",
+        "description": "Collaborez sur des projets en temps réel, partagez des fichiers et communiquez avec votre équipe en un seul endroit."
+      },
+      "customize": {
+        "title": "Personnalisez en un clic",
+        "description": "Configurer TaskPilot pour différents types de travail est aussi simple qu'appuyer sur un interrupteur."
+      },
+      "integrate": {
+        "title": "S'intègre bien avec les autres",
+        "description": "Connectez TaskPilot à vos outils favoris et rationalisez votre flux de travail."
+      },
+      "search": {
+        "title": "Recherchez tout",
+        "description": "Trouvez n'importe quel fichier dans TaskPilot, une application connectée ou votre disque local, depuis un seul endroit."
+      },
+      "aiProductivity": {
+        "title": "Productivité alimentée par l'IA",
+        "description": "Travaillez plus rapidement avec le seul assistant alimenté par l'IA adapté à votre rôle."
+      },
+      "streamline": {
+        "title": "Rationalisez les flux de travail",
+        "description": "Éliminez les tâches répétitives et concentrez-vous sur ce qui compte le plus."
+      },
+      "stayAhead": {
+        "title": "Gardez une longueur d'avance",
+        "description": "Organisez votre travail, vos rappels et vos événements de calendrier depuis votre Accueil personnalisé."
+      }
+    }
+  },
   "navigation": {
     "home": "Accueil",
     "about": "À propos",

@@ -2,22 +2,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useThemeMode } from '../contexts/ThemeContext';
-
-const languages = [
-    { code: 'en', name: 'language.english', flag: '🇺🇸' },
-    { code: 'es', name: 'language.spanish', flag: '🇪🇸' },
-    { code: 'de', name: 'language.german', flag: '🇩🇪' },
-    { code: 'fi', name: 'language.finnish', flag: '🇫🇮' },
-    { code: 'se', name: 'language.swedish', flag: '🇸🇪' },
-    { code: 'nl', name: 'language.dutch', flag: '🇳🇱' },
-    { code: 'fr', name: 'language.french', flag: '🇫🇷' },
-];
+import { languages, getCurrentLanguage, setLanguage } from '../utils/languageUtils';
 
 export default function TailwindThemeLanguageSwitcher() {
     const { mode, toggleMode } = useThemeMode();
     const { t, i18n } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+    const [isChangingLanguage, setIsChangingLanguage] = useState(false);
     const dropdownRef = useRef(null);
     const languageDropdownRef = useRef(null);
 
@@ -36,13 +28,42 @@ export default function TailwindThemeLanguageSwitcher() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleLanguageChange = (languageCode) => {
-        i18n.changeLanguage(languageCode);
-        setIsLanguageOpen(false);
-        setIsOpen(false);
+    // Handle keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (isLanguageOpen) {
+                if (event.key === 'Escape') {
+                    setIsLanguageOpen(false);
+                }
+            }
+            if (isOpen) {
+                if (event.key === 'Escape') {
+                    setIsOpen(false);
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, isLanguageOpen]);
+
+    const handleLanguageChange = async (languageCode) => {
+        setIsChangingLanguage(true);
+        
+        const success = await setLanguage(i18n, languageCode);
+        
+        if (success) {
+            setIsLanguageOpen(false);
+            setIsOpen(false);
+        } else {
+            // Show error message or fallback behavior
+            console.error('Failed to change language to:', languageCode);
+        }
+        
+        setIsChangingLanguage(false);
     };
 
-    const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
+    const currentLanguage = getCurrentLanguage(i18n);
 
     return (
         <div className="relative" ref={dropdownRef}>
@@ -158,28 +179,60 @@ export default function TailwindThemeLanguageSwitcher() {
 
                         {isLanguageOpen && (
                             <div className="border-t border-gray-100">
-                                {languages.map((language) => (
-                                    <button
-                                        key={language.code}
-                                        onClick={() => handleLanguageChange(language.code)}
-                                        className={`
-                                            w-full px-6 py-2 text-left text-sm
-                                            hover:bg-gray-50 transition-colors duration-200
-                                            focus:outline-none focus:bg-gray-50
-                                            ${i18n.language === language.code ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'}
-                                        `}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-base">{language.flag}</span>
-                                            <span>{t(language.name)}</span>
-                                            {i18n.language === language.code && (
-                                                <svg className="w-4 h-4 ml-auto text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                </svg>
-                                            )}
-                                        </div>
-                                    </button>
-                                ))}
+                                {languages.map((language) => {
+                                    const isSelected = currentLanguage.code === language.code;
+                                    return (
+                                        <button
+                                            key={language.code}
+                                            onClick={() => handleLanguageChange(language.code)}
+                                            disabled={isChangingLanguage}
+                                            className={`
+                                                w-full px-6 py-2 text-left text-sm
+                                                hover:bg-gray-50 transition-colors duration-200
+                                                focus:outline-none focus:bg-gray-50
+                                                disabled:opacity-50 disabled:cursor-not-allowed
+                                                ${isSelected ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'}
+                                            `}
+                                            aria-label={`Switch to ${language.nativeName}`}
+                                            role="menuitem"
+                                            tabIndex={isLanguageOpen ? 0 : -1}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-base" role="img" aria-label={`${language.nativeName} flag`}>
+                                                    {language.flag}
+                                                </span>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{t(language.name)}</span>
+                                                    {t(language.name) !== language.nativeName && (
+                                                        <span className="text-xs opacity-75">{language.nativeName}</span>
+                                                    )}
+                                                </div>
+                                                {isChangingLanguage && currentLanguage.code === language.code ? (
+                                                    <div className="ml-auto">
+                                                        <svg 
+                                                            className="w-4 h-4 animate-spin text-indigo-600" 
+                                                            fill="none" 
+                                                            viewBox="0 0 24 24"
+                                                            aria-hidden="true"
+                                                        >
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                    </div>
+                                                ) : isSelected ? (
+                                                    <svg 
+                                                        className="w-4 h-4 ml-auto text-indigo-600" 
+                                                        fill="currentColor" 
+                                                        viewBox="0 0 20 20"
+                                                        aria-hidden="true"
+                                                    >
+                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                    </svg>
+                                                ) : null}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

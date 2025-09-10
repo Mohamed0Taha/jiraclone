@@ -22,6 +22,9 @@ const resources = {
     fr: { translation: frTranslations },
 };
 
+// List of supported languages for validation
+export const supportedLanguages = ['en', 'es', 'de', 'fi', 'se', 'nl', 'fr'];
+
 i18n
     .use(LanguageDetector)
     .use(initReactI18next)
@@ -30,11 +33,20 @@ i18n
         fallbackLng: 'en',
         debug: false,
         
+        // Enhanced language detection order
         detection: {
-            order: ['localStorage', 'navigator', 'htmlTag'],
+            order: ['localStorage', 'navigator', 'htmlTag', 'path', 'subdomain'],
             caches: ['localStorage'],
             lookupLocalStorage: 'jiraclone-language',
+            lookupFromPathIndex: 0,
+            lookupFromSubdomainIndex: 0,
+            excludeCacheFor: ['cimode'], // cimode is for testing
+            checkWhitelist: true,
         },
+
+        // Add whitelist to ensure only supported languages are used
+        supportedLngs: supportedLanguages,
+        nonExplicitSupportedLngs: true,
 
         interpolation: {
             escapeValue: false, // React already does escaping
@@ -43,6 +55,13 @@ i18n
         react: {
             useSuspense: false,
         },
+
+        // Load missing keys to fallback language
+        saveMissing: false,
+        
+        // Return keys if translation is missing in debug mode
+        returnNull: false,
+        returnEmptyString: false,
     });
 
 export default i18n;
