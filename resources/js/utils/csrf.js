@@ -83,7 +83,8 @@ export function withCsrf(init = {}) {
     return {
         ...init,
         headers,
-        credentials: 'same-origin',
+        // Include cookies for cross-origin dev (Vite 5173 -> Laravel 8000)
+        credentials: 'include',
     };
 }
 

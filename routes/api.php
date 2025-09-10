@@ -30,19 +30,21 @@ Route::get('/test-dashboard', function () {
 });
 
 // Dashboard Chat API - LLM Integration
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::post('/dashboard/chat', [DashboardChatController::class, 'chat']);
-});
+// Disabled for now: controller not present in repo, causes route:list to fail
+// Route::middleware(['auth:sanctum'])->group(function () {
+//     Route::post('/dashboard/chat', [DashboardChatController::class, 'chat']);
+// });
 
 // Project Data API
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('/project/{id}/tasks', [ProjectDataController::class, 'getTasks']);
-    Route::get('/project/{id}/dashboard-data', [ProjectDataController::class, 'getDashboardData']);
-});
+// Disabled for now: controller not present in repo, causes route:list to fail
+// Route::middleware(['auth:sanctum'])->group(function () {
+//     Route::get('/project/{id}/tasks', [ProjectDataController::class, 'getTasks']);
+//     Route::get('/project/{id}/dashboard-data', [ProjectDataController::class, 'getDashboardData']);
+// });
 
 // Custom Views API - Properly separated from web routes to avoid Inertia middleware interference
-// Using web authentication since the frontend uses session-based auth
-Route::middleware(['auth'])->prefix('projects/{project}')->group(function () {
+// Use session-based auth by explicitly enabling the web middleware (session + CSRF)
+Route::middleware(['web', 'auth'])->prefix('projects/{project}')->group(function () {
     // Get existing custom view
     Route::get('/custom-views/get', function (Request $request, Project $project) {
         try {

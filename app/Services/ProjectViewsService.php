@@ -42,12 +42,28 @@ class ProjectViewsService
             
             // Build prompt for OpenAI with context awareness
             $prompt = $this->buildCustomViewPrompt($message, $projectContext, $existingView);
-            
-            // Get OpenAI response
-            $aiResponse = $this->openAIService->generateCustomView($prompt);
-            
-            // Extract HTML and JavaScript from response
-            $parsedResponse = $this->parseAIResponse($aiResponse);
+
+            // Try LLM generation; if it fails, fall back to a local template so UX still works
+            $fallbackUsed = false;
+            try {
+                $aiResponse = $this->openAIService->generateCustomView($prompt);
+                // Extract HTML and JavaScript from response
+                $parsedResponse = $this->parseAIResponse($aiResponse);
+            } catch (\Throwable $genEx) {
+                $fallbackUsed = true;
+                Log::warning('[ProjectViewsService] OpenAI generation failed, using fallback', [
+                    'project_id' => $project->id,
+                    'user_id' => $userId,
+                    'view_name' => $viewName,
+                    'error' => $genEx->getMessage(),
+                ]);
+
+                $fallbackHtml = $this->buildFallbackHtml($message, $projectContext, $existingView);
+                $parsedResponse = [
+                    'html' => $fallbackHtml,
+                    'javascript' => null,
+                ];
+            }
             
             // Save to database if user is provided
             $customView = null;
@@ -57,6 +73,7 @@ class ProjectViewsService
                     'session_id' => $sessionId,
                     'generated_at' => now()->toISOString(),
                     'is_update' => $existingView !== null,
+                    'fallback_used' => $fallbackUsed,
                 ];
                 
                 $customView = CustomView::createOrUpdate(
@@ -76,7 +93,7 @@ class ProjectViewsService
             
             return [
                 'type' => 'spa_generated',
-                'message' => $existingView ? 'Updated your custom application!' : 'Generated your custom application!',
+                'message' => ($existingView ? 'Updated your custom application!' : 'Generated your custom application!') . ($fallbackUsed ? ' (local template)' : ''),
                 'html' => $parsedResponse['html'],
                 'javascript' => $parsedResponse['javascript'] ?? null,
                 'success' => true,
@@ -92,11 +109,17 @@ class ProjectViewsService
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            // As a last resort (unexpected failure elsewhere), still return a minimal fallback so UI isn't blocked
+            $html = $this->buildFallbackHtml($message ?? 'Custom app', ['project' => ['id' => $project->id, 'name' => $project->name], 'members' => [], 'tasks' => [], 'task_count' => 0], null);
             return [
-                'type' => 'error',
-                'message' => 'I encountered an error generating your custom application. Please try again with a different request.',
-                'html' => null,
-                'success' => false,
+                'type' => 'spa_generated',
+                'message' => 'Generated a minimal application (offline fallback).',
+                'html' => $html,
+                'javascript' => null,
+                'success' => true,
+                'session_id' => $sessionId ?? null,
+                'custom_view_id' => null,
+                'is_update' => false,
             ];
         }
     }
@@ -265,6 +288,101 @@ Create a complete, functional application based on the user's request.";
 
         return $prompt;
     }
+
+        /**
+         * Local fallback HTML in case LLM generation is unavailable.
+         * Simple, self-contained SPA with CRUD list and optional notes.
+         */
+        private function buildFallbackHtml(string $userRequest, array $projectContext, ?CustomView $existingView = null): string
+        {
+                $projectName = e($projectContext['project']['name'] ?? 'Project');
+                $title = htmlspecialchars(ucfirst($userRequest ?: 'Custom Application'), ENT_QUOTES, 'UTF-8');
+
+                // Basic responsive SPA with a list manager and notes widget
+                return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{$title} — {$projectName}</title>
+    <style>
+        :root { --bg:#0b1020; --panel:#121a33; --muted:#9aa4c2; --text:#e6ecff; --primary:#7c5cff; --accent:#26c6da; }
+        *{box-sizing:border-box} html,body{height:100%} body{margin:0;background:linear-gradient(180deg,#0b1020,#0e1630);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
+        .container{max-width:1100px;margin:24px auto;padding:24px}
+        .hero{background:linear-gradient(135deg,rgba(124,92,255,.15),rgba(38,198,218,.15));border:1px solid rgba(124,92,255,.25);box-shadow: 0 10px 30px rgba(0,0,0,.25);border-radius:16px;padding:24px}
+        .hero h1{margin:0 0 6px 0;font-size:26px}
+        .hero p{margin:0;color:var(--muted)}
+        .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+        @media (max-width:800px){.grid{grid-template-columns:1fr}}
+        .card{background:var(--panel);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px}
+        .card h2{margin:0 0 10px;font-size:16px;color:#cfd8ff}
+        .row{display:flex;gap:8px}
+        input,textarea,button{border-radius:10px;border:1px solid rgba(255,255,255,.12);background:#0e152b;color:var(--text)}
+        input,textarea{padding:10px;width:100%}
+        button{padding:10px 14px;background:linear-gradient(135deg,var(--primary),#5e3df7);border:none;cursor:pointer;color:white;font-weight:600}
+        button.secondary{background:#0e152b}
+        .list{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+        .item{display:flex;align-items:center;justify-content:space-between;background:#0e152b;border:1px solid rgba(255,255,255,.08);padding:10px;border-radius:10px}
+        .muted{color:var(--muted);font-size:12px}
+        .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(124,92,255,.15);border:1px solid rgba(124,92,255,.35);color:#cfd8ff;font-size:12px}
+    </style>
+    <script>
+        // Minimal SPA state
+        const state = {
+            items: JSON.parse(localStorage.getItem('cv_items')||'[]'),
+            notes: JSON.parse(localStorage.getItem('cv_notes')||'[]')
+        };
+        function save(){ localStorage.setItem('cv_items', JSON.stringify(state.items)); localStorage.setItem('cv_notes', JSON.stringify(state.notes)); }
+        function addItem(){ const input = document.getElementById('newItem'); const v = (input.value||'').trim(); if(!v) return; state.items.push({ id: Date.now(), title: v }); input.value=''; render(); save(); }
+        function delItem(id){ state.items = state.items.filter(i=>i.id!==id); render(); save(); }
+        function addNote(){ const ta = document.getElementById('newNote'); const v = (ta.value||'').trim(); if(!v) return; state.notes.push({ id: Date.now(), text: v }); ta.value=''; render(); save(); }
+        function delNote(id){ state.notes = state.notes.filter(n=>n.id!==id); render(); save(); }
+        function exportJSON(){
+            const blob = new Blob([JSON.stringify({items:state.items, notes:state.notes}, null, 2)], {type:'application/json'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='custom-view-data.json'; a.click(); URL.revokeObjectURL(a.href);
+        }
+        function render(){
+            const list = document.getElementById('list'); list.innerHTML = state.items.map(i=>`<div class="item"><span>\${i.title}</span><div class="row"><button class="secondary" onclick="delItem(\${i.id})">Delete</button></div></div>`).join('') || '<div class="muted">No items yet</div>';
+            const notes = document.getElementById('notes'); notes.innerHTML = state.notes.map(n=>`<div class="item"><span>\${n.text}</span><div class="row"><button class="secondary" onclick="delNote(\${n.id})">Delete</button></div></div>`).join('') || '<div class="muted">No notes yet</div>';
+        }
+        window.addEventListener('DOMContentLoaded', render);
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <h1>{$title}</h1>
+            <p>Project: <span class="pill">{$projectName}</span></p>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Items</h2>
+                <div class="row">
+                    <input id="newItem" placeholder="Add an item (e.g., 'Create wiki page')" />
+                    <button onclick="addItem()">Add</button>
+                </div>
+                <div id="list" class="list" aria-live="polite"></div>
+            </div>
+
+            <div class="card">
+                <h2>Notes</h2>
+                <div class="row">
+                    <textarea id="newNote" placeholder="Quick note..."></textarea>
+                    <button onclick="addNote()">Save</button>
+                </div>
+                <div id="notes" class="list" aria-live="polite"></div>
+                <div class="row" style="margin-top:8px">
+                    <button class="secondary" onclick="exportJSON()">Export JSON</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+        }
 
     /**
      * Parse AI response to extract HTML and JavaScript
