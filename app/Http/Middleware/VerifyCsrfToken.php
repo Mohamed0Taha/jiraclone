@@ -22,6 +22,9 @@ class VerifyCsrfToken extends Middleware
         'projects/*/tasks/ai/accept',
         'projects/*/tasks/ai/reject',
 
+        // API routes for custom views (these use session auth instead)
+        'api/projects/*/custom-views/*',
+
         // Assistant endpoints now properly use CSRF tokens
         // 'projects/*/assistant/chat',
         // 'projects/*/assistant/execute',

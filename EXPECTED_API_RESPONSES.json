@@ -1,0 +1,45 @@
+// Example API responses that should now work correctly
+// This file demonstrates the expected behavior after the fix
+
+// 1. GET /api/projects/{id}/custom-views/get
+// Expected successful response:
+{
+  "success": true,
+  "html": "<!DOCTYPE html><html>...</html>",
+  "custom_view_id": 123
+}
+
+// Expected empty response (no existing view):
+{
+  "success": false,
+  "message": "No custom view found"
+}
+
+// 2. POST /api/projects/{id}/custom-views/chat
+// Expected successful response:
+{
+  "type": "spa_generated",
+  "message": "Generated your custom application!",
+  "html": "<!DOCTYPE html><html>...</html>",
+  "javascript": null,
+  "success": true,
+  "session_id": null,
+  "custom_view_id": 124,
+  "is_update": false
+}
+
+// 3. DELETE /api/projects/{id}/custom-views/delete
+// Expected successful response:
+{
+  "success": true,
+  "message": "Custom view deleted successfully"
+}
+
+// Error response (if something goes wrong):
+{
+  "success": false,
+  "message": "Error message here"
+}
+
+// All responses will have proper Content-Type: application/json headers
+// and will not be processed by Inertia middleware
