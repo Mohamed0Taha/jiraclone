@@ -44,6 +44,8 @@
     "signUpFree": "Sign up for free",
     "getStarted": "Get Started",
     "learnMore": "Learn More",
+    "productivityJourney": "Start your productivity journey today",
+    "methodologiesSupport": "Supports all project management methodologies",
     "features": {
       "collaborate": {
         "title": "Work together",
@@ -60,6 +62,18 @@
       "search": {
         "title": "Search everything",
         "description": "Find any file in TaskPilot, a connected app, or your local drive, from one place."
+      },
+      "aiProductivity": {
+        "title": "AI-powered productivity",
+        "description": "Get work done faster with the only AI-powered assistant tailored to your role."
+      },
+      "streamline": {
+        "title": "Streamline workflows",
+        "description": "Eliminate repetitive tasks and focus on what matters most."
+      },
+      "stayAhead": {
+        "title": "Stay ahead of what's next",
+        "description": "Organize your work, reminders, and calendar events all from your personalized Home."
       }
     }
   },

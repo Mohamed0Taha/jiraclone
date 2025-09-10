@@ -1,29 +1,55 @@
 // resources/js/theme/colors.js
-// TaskPilot Brand Colors - Based on Landing Page Design
+// TaskPilot Brand Colors - Improved for accessibility and readability
 
 export const colors = {
-    // Primary palette from Landing page
-    primary: '#FF6B6B', // Coral red - main brand color
-    secondary: '#4ECDC4', // Turquoise - secondary brand color
-    accent: '#45B7D1', // Blue - accent color
-    support: '#96CEB4', // Mint green - supporting color
-    warm: '#FFEAA7', // Light yellow - warm accent
-    purple: '#DDA0DD', // Plum - additional accent
+    // Primary palette - improved for better contrast and readability
+    primary: '#E53E3E', // Deeper red - better contrast than #FF6B6B
+    secondary: '#319795', // Deeper teal - better contrast than #4ECDC4
+    accent: '#3182CE', // Professional blue - better contrast than #45B7D1
+    support: '#38A169', // Forest green - better contrast than #96CEB4
+    warm: '#DD6B20', // Warm orange - better contrast than #FFEAA7
+    purple: '#805AD5', // Professional purple - better contrast than #DDA0DD
 
-    // Additional colors for variety
-    emerald: '#98D8C8', // Additional green
-    golden: '#F7DC6F', // Golden yellow
+    // Additional colors with improved contrast
+    emerald: '#2F855A', // Darker emerald for better readability
+    golden: '#D69E2E', // Darker golden for better contrast
 
-    // Gradients
-    gradient: 'linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #45B7D1 100%)',
-    gradientReverse: 'linear-gradient(135deg, #45B7D1 0%, #4ECDC4 50%, #FF6B6B 100%)',
+    // Gradients with improved colors
+    gradient: 'linear-gradient(135deg, #E53E3E 0%, #319795 50%, #3182CE 100%)',
+    gradientReverse: 'linear-gradient(135deg, #3182CE 0%, #319795 50%, #E53E3E 100%)',
     gradientSubtle:
-        'linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(78, 205, 196, 0.1) 50%, rgba(69, 183, 209, 0.1) 100%)',
+        'linear-gradient(135deg, rgba(229, 62, 62, 0.08) 0%, rgba(49, 151, 149, 0.08) 50%, rgba(49, 130, 206, 0.08) 100%)',
 
-    // Background variants
-    bgWhite: 'white',
-    bgGradient: 'linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #45B7D1 100%)',
-    bgSubtle: 'linear-gradient(135deg, #F8F9FF 0%, #F0F9FF 50%, #FFF8F0 100%)',
+    // Background variants with better contrast
+    bgWhite: '#FFFFFF',
+    bgGradient: 'linear-gradient(135deg, #E53E3E 0%, #319795 50%, #3182CE 100%)',
+    bgSubtle: 'linear-gradient(135deg, #F7FAFC 0%, #EDF2F7 50%, #E2E8F0 100%)',
+    
+    // Text colors for better readability
+    textPrimary: '#1A202C', // Dark gray for primary text
+    textSecondary: '#4A5568', // Medium gray for secondary text
+    textLight: '#718096', // Light gray for tertiary text
+    
+    // Background colors for light theme
+    backgroundPrimary: '#FFFFFF',
+    backgroundSecondary: '#F7FAFC',
+    backgroundTertiary: '#EDF2F7',
+    
+    // Background colors for dark theme
+    backgroundDarkPrimary: '#1A202C',
+    backgroundDarkSecondary: '#2D3748',
+    backgroundDarkTertiary: '#4A5568',
+    
+    // Border colors
+    borderLight: '#E2E8F0',
+    borderMedium: '#CBD5E0',
+    borderDark: '#A0AEC0',
+    
+    // Status colors with better accessibility
+    success: '#38A169', // Green
+    warning: '#D69E2E', // Orange  
+    error: '#E53E3E', // Red
+    info: '#3182CE', // Blue
 };
 
 // Utility function to create alpha variants

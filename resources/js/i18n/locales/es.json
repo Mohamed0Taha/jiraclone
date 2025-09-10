@@ -37,6 +37,8 @@
     "signUpFree": "Registrarse gratis",
     "getStarted": "Comenzar",
     "learnMore": "Saber más",
+    "productivityJourney": "Comienza tu viaje de productividad hoy",
+    "methodologiesSupport": "Soporta todas las metodologías de gestión de proyectos",
     "features": {
       "collaborate": {
         "title": "Trabajar juntos",
@@ -53,6 +55,18 @@
       "search": {
         "title": "Buscar todo",
         "description": "Encuentra cualquier archivo en TaskPilot, una aplicación conectada o tu disco local, desde un lugar."
+      },
+      "aiProductivity": {
+        "title": "Productividad impulsada por IA",
+        "description": "Realiza el trabajo más rápido con el único asistente de IA adaptado a tu rol."
+      },
+      "streamline": {
+        "title": "Optimizar flujos de trabajo",
+        "description": "Elimina tareas repetitivas y enfócate en lo que más importa."
+      },
+      "stayAhead": {
+        "title": "Mantente adelante de lo siguiente",
+        "description": "Organiza tu trabajo, recordatorios y eventos de calendario todo desde tu Inicio personalizado."
       }
     }
   },

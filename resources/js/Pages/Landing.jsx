@@ -111,60 +111,58 @@ export default function Landing({ errors }) {
 
     const features = [
         {
-            icon: <AutoAwesome sx={{ fontSize: 48, color: '#FF6B6B' }} />,
-            title: 'AI-powered productivity',
-            description:
-                'Get work done faster with the only AI-powered assistant tailored to your role.',
-            color: '#FF6B6B',
+            icon: <AutoAwesome sx={{ fontSize: 48, color: '#E53E3E' }} />,
+            title: t('landing.features.aiProductivity.title'),
+            description: t('landing.features.aiProductivity.description'),
+            color: '#E53E3E',
         },
         {
-            icon: <ViewModule sx={{ fontSize: 48, color: '#4ECDC4' }} />,
+            icon: <ViewModule sx={{ fontSize: 48, color: '#319795' }} />,
             title: t('landing.features.collaborate.title'),
             description: t('landing.features.collaborate.description'),
-            color: '#4ECDC4',
+            color: '#319795',
         },
         {
-            icon: <Settings sx={{ fontSize: 48, color: '#45B7D1' }} />,
+            icon: <Settings sx={{ fontSize: 48, color: '#3182CE' }} />,
             title: t('landing.features.customize.title'),
             description: t('landing.features.customize.description'),
-            color: '#45B7D1',
+            color: '#3182CE',
         },
         {
-            icon: <IntegrationInstructions sx={{ fontSize: 48, color: '#96CEB4' }} />,
+            icon: <IntegrationInstructions sx={{ fontSize: 48, color: '#38A169' }} />,
             title: t('landing.features.integrate.title'),
             description: t('landing.features.integrate.description'),
-            color: '#96CEB4',
+            color: '#38A169',
         },
         {
-            icon: <AutoFixHigh sx={{ fontSize: 48, color: '#FFEAA7' }} />,
-            title: 'Streamline workflows',
-            description: 'Eliminate repetitive tasks and focus on what matters most.',
-            color: '#FFEAA7',
+            icon: <AutoFixHigh sx={{ fontSize: 48, color: '#D69E2E' }} />,
+            title: t('landing.features.streamline.title'),
+            description: t('landing.features.streamline.description'),
+            color: '#D69E2E',
         },
         {
-            icon: <Search sx={{ fontSize: 48, color: '#DDA0DD' }} />,
+            icon: <Search sx={{ fontSize: 48, color: '#805AD5' }} />,
             title: t('landing.features.search.title'),
             description: t('landing.features.search.description'),
-            color: '#DDA0DD',
+            color: '#805AD5',
         },
         {
-            icon: <Home sx={{ fontSize: 48, color: '#F7DC6F' }} />,
-            title: "Stay ahead of what's next",
-            description:
-                'Organize your work, reminders, and calendar events all from your personalized Home.',
-            color: '#F7DC6F',
+            icon: <Home sx={{ fontSize: 48, color: '#2F855A' }} />,
+            title: t('landing.features.stayAhead.title'),
+            description: t('landing.features.stayAhead.description'),
+            color: '#2F855A',
         },
     ];
 
     const methodologies = [
-        { name: 'Agile', color: '#FF6B6B' },
-        { name: 'Scrum', color: '#4ECDC4' },
-        { name: 'Kanban', color: '#45B7D1' },
-        { name: 'Waterfall', color: '#96CEB4' },
-        { name: 'Lean', color: '#FFEAA7' },
-        { name: 'DevOps', color: '#DDA0DD' },
-        { name: 'Hybrid', color: '#98D8C8' },
-        { name: 'SAFe', color: '#F7DC6F' },
+        { name: 'Agile', color: '#E53E3E' },
+        { name: 'Scrum', color: '#319795' },
+        { name: 'Kanban', color: '#3182CE' },
+        { name: 'Waterfall', color: '#38A169' },
+        { name: 'Lean', color: '#D69E2E' },
+        { name: 'DevOps', color: '#805AD5' },
+        { name: 'Hybrid', color: '#2F855A' },
+        { name: 'SAFe', color: '#E53E3E' },
     ];
 
     return (
@@ -320,7 +318,7 @@ export default function Landing({ errors }) {
                                         },
                                     }}
                                 >
-                                    Sign up
+                                    {t('landing.signUpFree')}
                                 </Button>
                             </Box>
                         </Box>
@@ -467,12 +465,12 @@ export default function Landing({ errors }) {
                                         },
                                     }}
                                 >
-                                    Get Started
+                                    {t('landing.getStarted')}
                                 </Button>
                             </Stack>
 
                             <Typography variant="body2" sx={{ color: 'grey.600', fontWeight: 500 }}>
-                                Start your productivity journey today
+                                {t('landing.productivityJourney')}
                             </Typography>
                         </Box>
 
@@ -482,7 +480,7 @@ export default function Landing({ errors }) {
                                 variant="body2"
                                 sx={{ mb: 4, color: 'grey.600', fontWeight: 500 }}
                             >
-                                Supports all project management methodologies
+                                {t('landing.methodologiesSupport')}
                             </Typography>
 
                             <Grid container spacing={3} justifyContent="center" alignItems="center">
@@ -2042,7 +2040,7 @@ export default function Landing({ errors }) {
                         },
                     }}
                 >
-                    🚀 Get Started
+                    🚀 {t('landing.getStarted')}
                 </Button>
             </Box>
 
