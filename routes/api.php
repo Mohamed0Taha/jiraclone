@@ -29,11 +29,11 @@ Route::get('/test-dashboard', function () {
 
 // Dashboard Chat API - LLM Integration
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::post('/dashboard/chat', [DashboardChatController::class, 'chat']);
+    Route::post('/dashboard/chat', [\App\Http\Controllers\DashboardChatController::class, 'chat']);
 });
 
 // Project Data API
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('/project/{id}/tasks', [ProjectDataController::class, 'getTasks']);
-    Route::get('/project/{id}/dashboard-data', [ProjectDataController::class, 'getDashboardData']);
+    Route::get('/project/{id}/tasks', [\App\Http\Controllers\ProjectDataController::class, 'getTasks']);
+    Route::get('/project/{id}/dashboard-data', [\App\Http\Controllers\ProjectDataController::class, 'getDashboardData']);
 });

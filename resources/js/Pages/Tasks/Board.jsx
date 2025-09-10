@@ -50,6 +50,7 @@ import HeaderBanner from '../Board/HeaderBanner';
 import Column from '../Board/Column';
 import UpgradeDialog from '../Board/UpgradeDialog';
 import FloatingActionGroup from '@/Components/FloatingActionGroup';
+import DynamicViewManager from '@/Components/DynamicViewManager';
 
 import { METHODOLOGIES, DEFAULT_METHOD, getStatusMeta, getStatusOrder } from '../Board/meta.jsx';
 
@@ -330,6 +331,7 @@ export default function Board({
     const [upgradeOpen, setUpgradeOpen] = useState(false);
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [assistantOpen, setAssistantOpen] = useState(false);
+    const [dynamicViewOpen, setDynamicViewOpen] = useState(false);
 
     const buildColumnsFromServer = (incomingTasksObj) => {
         const cols = {};
@@ -836,6 +838,7 @@ export default function Board({
                 !openForm &&
                 !processing &&
                 !assistantOpen &&
+                !dynamicViewOpen &&
                 !isTypingInInput
             ) {
                 showCreate(STATUS_ORDER[0]);
@@ -844,7 +847,7 @@ export default function Board({
 
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [openForm, processing, STATUS_ORDER, assistantOpen]);
+    }, [openForm, processing, STATUS_ORDER, assistantOpen, dynamicViewOpen]);
 
     const requirePro = (openFn) => (isPro ? openFn(true) : setUpgradeOpen(true));
 
@@ -1348,6 +1351,7 @@ export default function Board({
                             setTimeout(() => titleRef.current?.focus(), 60);
                         }}
                         onOpenAssistant={() => setAssistantOpen(true)}
+                        onOpenDynamicView={() => setDynamicViewOpen(true)}
                         methodStyles={methodStyles}
                         assistantOpen={assistantOpen}
                         projectId={project.id}
@@ -1818,6 +1822,11 @@ export default function Board({
                         project={project}
                         open={assistantOpen}
                         onClose={() => setAssistantOpen(false)}
+                    />
+                    <DynamicViewManager
+                        project={project}
+                        isOpen={dynamicViewOpen}
+                        onClose={() => setDynamicViewOpen(false)}
                     />
                 </Box>
             </AuthenticatedLayout>

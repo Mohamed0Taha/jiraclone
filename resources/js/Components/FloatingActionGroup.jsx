@@ -6,6 +6,7 @@ import {
     MoreVert as MoreVertIcon,
     Close as CloseIcon,
     Lock as LockIcon,
+    ViewModule as ViewModuleIcon,
 } from '@mui/icons-material';
 import GetAppIcon from '@mui/icons-material/GetApp';
 import { useSubscription } from '../Hooks/useSubscription';
@@ -14,6 +15,7 @@ import { router } from '@inertiajs/react';
 export default function FloatingActionGroup({
     onAddTask,
     onOpenAssistant,
+    onOpenDynamicView,
     methodStyles,
     assistantOpen,
     projectId,
@@ -37,6 +39,11 @@ export default function FloatingActionGroup({
         onOpenAssistant();
     };
 
+    const handleOpenDynamicView = () => {
+        setExpanded(false);
+        onOpenDynamicView();
+    };
+
     const handleExportJira = () => {
         window.location.href = route('projects.export.jira', projectId);
     };
@@ -51,6 +58,32 @@ export default function FloatingActionGroup({
             }}
         >
             <Stack spacing={2} alignItems="center">
+                {/* Dynamic View Manager Button */}
+                <Zoom
+                    in={expanded}
+                    timeout={200}
+                    style={{ transitionDelay: expanded ? '200ms' : '0ms' }}
+                >
+                    <Tooltip title="Custom Views & LLM Chat" placement="left">
+                        <Fab
+                            size="medium"
+                            onClick={handleOpenDynamicView}
+                            sx={{
+                                bgcolor: 'purple',
+                                color: 'white',
+                                boxShadow: '0 8px 16px -8px rgba(0,0,0,.3)',
+                                '&:hover': {
+                                    bgcolor: 'darkviolet',
+                                    transform: 'scale(1.05)',
+                                },
+                                transition: 'all 0.2s ease',
+                            }}
+                        >
+                            <ViewModuleIcon />
+                        </Fab>
+                    </Tooltip>
+                </Zoom>
+
                 {/* Assistant Button */}
                 <Zoom
                     in={expanded}
