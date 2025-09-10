@@ -29,9 +29,9 @@ class ProjectDataApiTest extends TestCase
             'status' => 'done'
         ]);
 
-        // Act as the authenticated user and call the API
-        $response = $this->actingAs($user, 'sanctum')
-                         ->getJson("/api/project/{$project->id}/tasks");
+        // Act as the authenticated user and call the web route
+        $response = $this->actingAs($user)
+                         ->get("/projects/{$project->id}/data/tasks");
 
         // Assert the response
         $response->assertStatus(200);
@@ -54,7 +54,7 @@ class ProjectDataApiTest extends TestCase
         $this->assertEquals(5, $responseData['meta']['total_tasks']);
         $this->assertEquals(3, $responseData['meta']['by_status']['todo']);
         $this->assertEquals(2, $responseData['meta']['by_status']['done']);
-        $this->assertStringContains("/api/project/{$project->id}/tasks", $responseData['meta']['endpoint']);
+        $this->assertStringContains("/projects/{$project->id}/data/tasks", $responseData['meta']['endpoint']);
     }
 
     public function test_project_tasks_api_denies_access_to_unauthorized_user()
@@ -64,9 +64,9 @@ class ProjectDataApiTest extends TestCase
         $unauthorizedUser = User::factory()->create();
         $project = Project::factory()->create(['user_id' => $owner->id]);
 
-        // Try to access the API as the unauthorized user
-        $response = $this->actingAs($unauthorizedUser, 'sanctum')
-                         ->getJson("/api/project/{$project->id}/tasks");
+        // Try to access the route as the unauthorized user
+        $response = $this->actingAs($unauthorizedUser)
+                         ->get("/projects/{$project->id}/data/tasks");
 
         // Assert access is denied
         $response->assertStatus(403);
@@ -84,9 +84,9 @@ class ProjectDataApiTest extends TestCase
         Task::factory()->create(['project_id' => $project->id, 'priority' => 'medium', 'status' => 'todo']);
         Task::factory()->create(['project_id' => $project->id, 'priority' => 'low', 'status' => 'inprogress']);
 
-        // Act as the authenticated user and call the API
-        $response = $this->actingAs($user, 'sanctum')
-                         ->getJson("/api/project/{$project->id}/dashboard-data");
+        // Act as the authenticated user and call the web route
+        $response = $this->actingAs($user)
+                         ->get("/projects/{$project->id}/data/dashboard");
 
         // Assert the response
         $response->assertStatus(200);
@@ -111,8 +111,8 @@ class ProjectDataApiTest extends TestCase
         $this->assertEquals(1, $stats['tasks_by_priority']['low']);
         
         // Check endpoints are included
-        $this->assertStringContains("/api/project/{$project->id}/tasks", $responseData['endpoints']['tasks']);
-        $this->assertStringContains("/api/project/{$project->id}/dashboard-data", $responseData['endpoints']['dashboard']);
+        $this->assertStringContains("/projects/{$project->id}/data/tasks", $responseData['endpoints']['tasks']);
+        $this->assertStringContains("/projects/{$project->id}/data/dashboard", $responseData['endpoints']['dashboard']);
     }
 
     public function test_api_requires_authentication()
@@ -120,9 +120,9 @@ class ProjectDataApiTest extends TestCase
         $project = Project::factory()->create();
 
         // Try to access without authentication
-        $response = $this->getJson("/api/project/{$project->id}/tasks");
+        $response = $this->get("/projects/{$project->id}/data/tasks");
         
-        // Should return 401 Unauthorized
-        $response->assertStatus(401);
+        // Should redirect to login (302) since it's a web route
+        $response->assertStatus(302);
     }
 }
