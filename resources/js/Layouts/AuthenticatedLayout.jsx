@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import Dropdown from '@/Components/Dropdown';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import CookieConsent from '@/Components/CookieConsent';
+import TailwindThemeLanguageSwitcher from '@/Components/TailwindThemeLanguageSwitcher';
 import { Link, usePage } from '@inertiajs/react';
 
 export default function AuthenticatedLayout({ header, children }) {
@@ -98,6 +99,9 @@ export default function AuthenticatedLayout({ header, children }) {
 
                         {/* Right / User (desktop) */}
                         <div className="hidden sm:flex items-center gap-4">
+                            {/* Theme and Language Switcher */}
+                            <TailwindThemeLanguageSwitcher />
+                            
                             <div className="relative">
                                 <Dropdown>
                                     <Dropdown.Trigger>

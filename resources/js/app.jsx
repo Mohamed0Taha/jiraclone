@@ -5,33 +5,31 @@ import React, { Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { CircularProgress, Box, Typography } from '@mui/material';
 
-/* Try to load the MUI theme; if it fails we'll warn and keep going. */
-let ThemeProvider = React.Fragment;
-let CssBaseline = React.Fragment;
-let CircularProgress = () => <div>Loading...</div>;
-let theme = null;
-
-// Removed Material-UI theme loading to avoid 404 errors
-console.log('Material-UI theme disabled for simulator');
+// Import our enhanced theme and i18n setup
+import { ThemeProvider } from './contexts/ThemeContext';
+import './i18n';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
-// Loading component for Suspense
+// Enhanced loading component for Suspense
 const LoadingSpinner = () => (
-    <div
-        style={{
+    <Box
+        sx={{
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
             height: '100vh',
             flexDirection: 'column',
-            gap: '16px',
+            gap: 2,
         }}
     >
-        <CircularProgress />
-        <span>Loading...</span>
-    </div>
+        <CircularProgress size={40} />
+        <Typography variant="body2" color="text.secondary">
+            Loading...
+        </Typography>
+    </Box>
 );
 
 createInertiaApp({
@@ -44,23 +42,15 @@ createInertiaApp({
         const root = createRoot(el);
 
         root.render(
-            theme ? (
-                /*  🚫 NO React.StrictMode — prevents double-mount that breaks DnD */
-                <ThemeProvider theme={theme}>
-                    <CssBaseline />
-                    <Suspense fallback={<LoadingSpinner />}>
-                        <App {...props} />
-                    </Suspense>
-                </ThemeProvider>
-            ) : (
-                <Suspense fallback={<div>Loading...</div>}>
+            <ThemeProvider>
+                <Suspense fallback={<LoadingSpinner />}>
                     <App {...props} />
                 </Suspense>
-            )
+            </ThemeProvider>
         );
     },
 
     progress: {
-        color: theme?.palette.primary.main || '#4B5563',
+        color: '#1976d2', // Use our professional blue
     },
 });

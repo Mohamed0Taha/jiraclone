@@ -1,5 +1,6 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import CookieConsent from '@/Components/CookieConsent';
+import ThemeLanguageSwitcher from '@/Components/ThemeLanguageSwitcher';
 import { Link } from '@inertiajs/react';
 import { Box, Container, Paper, Avatar, Typography } from '@mui/material';
 
@@ -11,10 +12,22 @@ export default function GuestLayout({ children }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'linear-gradient(135deg, #F0F4FF 0%, #E0E7FF 50%, #F0F9FF 100%)',
                 p: 2,
+                position: 'relative',
             }}
         >
+            {/* Theme and Language Switcher */}
+            <Box
+                sx={{
+                    position: 'absolute',
+                    top: 16,
+                    right: 16,
+                    zIndex: 10,
+                }}
+            >
+                <ThemeLanguageSwitcher />
+            </Box>
+
             <Container maxWidth="sm">
                 {/* Brand Header */}
                 <Box textAlign="center" mb={4}>
