@@ -266,26 +266,6 @@ Create a complete, functional application based on the user's request.";
         return $prompt;
     }
 
-RESPONSE FORMAT:
-Return ONLY the complete HTML code including <style> and <script> tags. Do not include any explanations or markdown formatting.
-
-EXAMPLES OF WHAT YOU CAN CREATE:
-- Expense tracker with categorization and charts
-- Vendor/contact phonebook with search and filtering
-- Project wiki with editable sections
-- Task analytics dashboard with charts
-- Team workload overview
-- Milestone timeline visualization
-- Budget tracking with expense categories
-- Time tracking interface
-- Resource allocation planner
-- Risk assessment tracker
-
-Create a complete, functional application based on the user's request.";
-
-        return $prompt;
-    }
-
     /**
      * Parse AI response to extract HTML and JavaScript
      */

@@ -18,8 +18,8 @@ use App\Models\CertificationAttempt;
 use App\Models\Project;
 use App\Models\User;
 use App\Notifications\CustomVerifyEmail;
-use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -47,10 +47,9 @@ Route::get('/admin-test', function () {
 Route::get('/test-email-logs', function () {
     try {
         $emails = \App\Models\EmailLog::take(5)->get();
-
-        return 'Email logs working! Found '.$emails->count().' email logs.';
+        return 'Email logs working! Found ' . $emails->count() . ' email logs.';
     } catch (\Exception $e) {
-        return 'Email logs error: '.$e->getMessage();
+        return 'Email logs error: ' . $e->getMessage();
     }
 });
 
@@ -68,9 +67,7 @@ Route::middleware([])->group(function () {
     Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
     // Backwards compatibility: redirect legacy /blogs and /blogs/{slug}
     Route::redirect('/blogs', '/blog', 301);
-    Route::get('/blogs/{slug}', function ($slug) {
-        return redirect()->route('blog.show', $slug);
-    })->where('slug', '[a-zA-Z0-9\-_]+');
+    Route::get('/blogs/{slug}', function($slug){ return redirect()->route('blog.show', $slug); })->where('slug', '[a-zA-Z0-9\-_]+');
     // Public show route
     Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show')->where('blog', '[a-zA-Z0-9\-_]+');
 });
@@ -85,50 +82,49 @@ Route::get('/terms_of_service', function () {
 })->name('terms.service');
 
 // DEBUG: Test public route (remove after testing)
-Route::get('/test-public', function () {
+Route::get('/test-public', function() {
     return response()->json(['message' => 'Public route works', 'user' => Auth::check() ? Auth::user()->email : 'Not authenticated']);
 });
 
 // Public Simulator (no authentication required) - renamed to /practice to avoid auth conflict
 Route::middleware([])->group(function () {
     // Landing page for practice simulator
-    Route::get('/practice', function () {
+    Route::get('/practice', function() {
         Log::info('Practice landing page accessed');
-
         return Inertia::render('PublicSimulator/Index', [
             'title' => 'Project Management Simulator - Practice for Free',
             'description' => 'Practice project management skills with realistic scenarios. No signup required.',
         ]);
     })->name('public-simulator.index');
-
+    
     // Generate and start simulation
-    Route::post('/practice/start', function (\Illuminate\Http\Request $request) {
+    Route::post('/practice/start', function(\Illuminate\Http\Request $request) {
         Log::info('Practice simulation started');
-
+        
         // Generate simulation like in certification flow
         $mockUser = new \App\Models\User([
             'name' => 'Practice User',
-            'email' => 'practice@simulator.local',
+            'email' => 'practice@simulator.local'
         ]);
-
+        
         $simulationGenerator = app(\App\Services\SimpleSimulationGenerator::class);
         $simulation = $simulationGenerator->generate($mockUser);
-
+        
         // Store in session for the simulator
         $request->session()->put('simulator_payload', $simulation);
-
+        
         // Redirect to simulator instead of JSON response
         return redirect()->route('public-simulator.simulator');
     })->name('public-simulator.start');
-
+    
     // Simulator view (accessed after generation)
-    Route::get('/practice/simulator', function (\Illuminate\Http\Request $request) {
+    Route::get('/practice/simulator', function(\Illuminate\Http\Request $request) {
         $simulation = $request->session()->get('simulator_payload');
-
-        if (! $simulation) {
+        
+        if (!$simulation) {
             return redirect()->route('public-simulator.index')->with('error', 'Please start a new simulation.');
         }
-
+        
         // Use the EXACT same component as certification but with no auth context
         return \Inertia\Inertia::render('Simulator/Index', [
             'simulation' => $simulation,
@@ -136,7 +132,7 @@ Route::middleware([])->group(function () {
             'auth' => ['user' => null], // Override auth to show no user
         ]);
     })->name('public-simulator.simulator');
-
+    
     // Use existing simulator endpoints (they work with the main simulator component)
     Route::post('/practice/evaluate-action', [App\Http\Controllers\SimulatorController::class, 'evaluateAction'])->name('public-simulator.evaluate-action');
     Route::post('/practice/evaluate-task-action', [App\Http\Controllers\SimulatorController::class, 'evaluateTaskAction'])->name('public-simulator.evaluate-task-action');
@@ -552,14 +548,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
 
     // Blog management routes
     Route::resource('blogs', \App\Http\Controllers\Admin\BlogController::class);
-
+    
     // Blog AI routes
     Route::post('/blogs/generate', [\App\Http\Controllers\Admin\BlogController::class, 'generate'])->name('blogs.generate');
     Route::post('/blogs/ideas', [\App\Http\Controllers\Admin\BlogController::class, 'ideas'])->name('blogs.ideas');
     Route::post('/blogs/optimize', [\App\Http\Controllers\Admin\BlogController::class, 'optimize'])->name('blogs.optimize');
     Route::post('/blogs/generate-image', [\App\Http\Controllers\Admin\BlogController::class, 'generateImage'])->name('blogs.generate-image');
     Route::get('/blogs/{blog}/status', [\App\Http\Controllers\Admin\BlogController::class, 'status'])->name('blogs.status');
-
+    
     // Blog publish/unpublish routes
     Route::post('/blogs/{blog}/publish', [\App\Http\Controllers\Admin\BlogController::class, 'publish'])->name('blogs.publish');
     Route::post('/blogs/{blog}/unpublish', [\App\Http\Controllers\Admin\BlogController::class, 'unpublish'])->name('blogs.unpublish');
@@ -673,28 +669,28 @@ Route::middleware('auth')->group(function () {
         /* TASKS: AI generator flow (premium feature - ai_task_generation) */
         Route::get('/tasks/ai', function (Request $request, Project $project) {
             $prefillData = $request->all();
-
+            
             // Debug log the incoming data
             Log::info('AI Form Route - Incoming request data:', [
                 'pinnedTasks_count' => isset($prefillData['pinnedTasks']) ? count($prefillData['pinnedTasks']) : 0,
                 'pinnedTasks_sample' => isset($prefillData['pinnedTasks']) ? array_slice($prefillData['pinnedTasks'], 0, 3) : [],
             ]);
-
+            
             // Clean and validate pinnedTasks to prevent data accumulation issues
             if (isset($prefillData['pinnedTasks']) && is_array($prefillData['pinnedTasks'])) {
                 // Filter out any invalid or malformed pinned tasks
-                $prefillData['pinnedTasks'] = array_filter($prefillData['pinnedTasks'], function ($task) {
-                    return is_array($task) && isset($task['title']) && ! empty($task['title']);
+                $prefillData['pinnedTasks'] = array_filter($prefillData['pinnedTasks'], function($task) {
+                    return is_array($task) && isset($task['title']) && !empty($task['title']);
                 });
-
+                
                 // Limit to reasonable number to prevent UI issues
                 $prefillData['pinnedTasks'] = array_slice($prefillData['pinnedTasks'], 0, 20);
-
+                
                 Log::info('AI Form Route - After cleaning:', [
                     'cleaned_pinnedTasks_count' => count($prefillData['pinnedTasks']),
                 ]);
             }
-
+            
             return Inertia::render('Tasks/AITasksGenerator', [
                 'project' => $project,
                 'prefill' => $prefillData,
@@ -732,11 +728,6 @@ Route::middleware('auth')->group(function () {
 
         /* CUSTOM VIEWS */
         Route::get('/custom-views/{name}', function (Request $request, Project $project, $name) {
-            // Check if user can view the project
-            if (!$request->user()->can('view', $project)) {
-                abort(403);
-            }
-            
             // Get project tasks for the custom view
             $tasks = $project->tasks()
                 ->with(['creator:id,name', 'assignee:id,name'])
@@ -762,12 +753,34 @@ Route::middleware('auth')->group(function () {
             ]);
         })->name('custom-views.show');
 
-        /* CUSTOM VIEWS API */
-        Route::post('/custom-views/chat', [App\Http\Controllers\ProjectViewsController::class, 'chat'])->name('custom-views.chat');
-        Route::get('/custom-views/get', [App\Http\Controllers\ProjectViewsController::class, 'getCustomView'])->name('custom-views.get');
-        Route::delete('/custom-views/delete', [App\Http\Controllers\ProjectViewsController::class, 'deleteCustomView'])->name('custom-views.delete');
-        Route::get('/custom-views/list', [App\Http\Controllers\ProjectViewsController::class, 'listCustomViews'])->name('custom-views.list');
-        Route::delete('/custom-views/clear', [App\Http\Controllers\ProjectViewsController::class, 'clearWorkingArea'])->name('custom-views.clear');
+        // API route to get custom view data (for AJAX loading)
+        Route::get('/custom-views/get', function (Request $request, Project $project) {
+            $viewName = $request->query('view_name', 'default');
+            $userId = $request->user()->id;
+            
+            try {
+                $projectViewsService = app(\App\Services\ProjectViewsService::class);
+                $customView = $projectViewsService->getCustomView($project, $userId, $viewName);
+                
+                if ($customView) {
+                    return response()->json([
+                        'success' => true,
+                        'html' => $customView->html_content,
+                        'custom_view_id' => $customView->id,
+                    ]);
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No custom view found',
+                    ]);
+                }
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error loading custom view: ' . $e->getMessage(),
+                ], 500);
+            }
+        })->name('custom-views.get');
 
         /* AUTOMATIONS (premium feature - automation) */
         // Allow all authenticated users to view automations index (overlay handles upsell)
