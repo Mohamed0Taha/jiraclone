@@ -123,10 +123,22 @@ What kind of view would you like to create?`,
 
         } catch (error) {
             console.error('Chat error:', error);
+            
+            let errorContent = 'Sorry, I encountered an error while processing your request. Please try again.';
+            
+            // Handle specific error types
+            if (error.response?.status === 404) {
+                errorContent = 'Chat service is currently unavailable. Please check your configuration or contact support.';
+            } else if (error.response?.status >= 500) {
+                errorContent = 'Server error occurred. Please try again later.';
+            } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+                errorContent = 'Network error. Please check your connection and try again.';
+            }
+            
             const errorMessage = {
                 id: Date.now() + 1,
                 type: 'error',
-                content: 'Sorry, I encountered an error while processing your request. Please try again.',
+                content: errorContent,
                 timestamp: new Date(),
             };
             setMessages(prev => [...prev, errorMessage]);
