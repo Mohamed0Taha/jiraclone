@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Saved Views Functionality</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 40px auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section { 
+            background: white; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button { 
+            background: #1976d2; 
+            color: white; 
+            border: none; 
+            padding: 10px 15px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        button:hover { background: #1565c0; }
+        .view-chip {
+            display: inline-block;
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            padding: 6px 12px;
+            border-radius: 16px;
+            margin: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .view-chip:hover {
+            background: #bbdefb;
+        }
+        #output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Saved Views Functionality Test</h1>
+    <p>This page tests the localStorage-based saved views functionality used in the JiraClone application.</p>
+
+    <div class="test-section">
+        <h3>Test Mock Data Creation</h3>
+        <button onclick="createTestViews()">Create Test Views</button>
+        <button onclick="clearAllViews()">Clear All Views</button>
+        <p>Creates sample views in localStorage to simulate the DynamicViewManager saving views.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>Current Saved Views for Project 1</h3>
+        <div id="savedViews"></div>
+        <button onclick="loadViews()">Refresh Views</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Simulate View Creation</h3>
+        <input type="text" id="viewTitle" placeholder="View Title" value="My Custom Report">
+        <input type="text" id="viewType" placeholder="View Type" value="chart">
+        <button onclick="saveNewView()">Save New View</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Output</h3>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const PROJECT_ID = 1; // Test project ID
+        const STORAGE_KEY = `saved_views_${PROJECT_ID}`;
+
+        function log(message) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function createTestViews() {
+            const testViews = [
+                {
+                    id: Date.now(),
+                    title: "Task Status Dashboard",
+                    type: "dashboard",
+                    saved_at: new Date(),
+                    project_id: PROJECT_ID,
+                    config: { type: "dashboard", charts: ["status", "priority"] }
+                },
+                {
+                    id: Date.now() + 1,
+                    title: "Priority Report",
+                    type: "report",
+                    saved_at: new Date(),
+                    project_id: PROJECT_ID,
+                    config: { type: "report", filters: ["high", "urgent"] }
+                },
+                {
+                    id: Date.now() + 2,
+                    title: "Team Performance Chart",
+                    type: "chart",
+                    saved_at: new Date(),
+                    project_id: PROJECT_ID,
+                    config: { type: "chart", chartType: "bar", groupBy: "assignee" }
+                }
+            ];
+
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(testViews));
+                log(`✅ Created ${testViews.length} test views in localStorage`);
+                loadViews();
+            } catch (error) {
+                log(`❌ Failed to create test views: ${error.message}`);
+            }
+        }
+
+        function clearAllViews() {
+            try {
+                localStorage.removeItem(STORAGE_KEY);
+                log('🗑️ Cleared all saved views from localStorage');
+                loadViews();
+            } catch (error) {
+                log(`❌ Failed to clear views: ${error.message}`);
+            }
+        }
+
+        function loadViews() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                const views = saved ? JSON.parse(saved) : [];
+                
+                const container = document.getElementById('savedViews');
+                if (views.length === 0) {
+                    container.innerHTML = '<p><em>No saved views found</em></p>';
+                    log('📭 No saved views found');
+                } else {
+                    container.innerHTML = `
+                        <p><strong>Found ${views.length} saved views:</strong></p>
+                        ${views.map(view => `
+                            <div class="view-chip" onclick="selectView(${view.id})">
+                                📊 ${view.title || view.type}
+                            </div>
+                        `).join('')}
+                    `;
+                    log(`📊 Loaded ${views.length} saved views`);
+                }
+            } catch (error) {
+                log(`❌ Failed to load views: ${error.message}`);
+            }
+        }
+
+        function selectView(viewId) {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                const views = saved ? JSON.parse(saved) : [];
+                const view = views.find(v => v.id === viewId);
+                
+                if (view) {
+                    log(`🎯 Selected view: "${view.title || view.type}" (ID: ${viewId})`);
+                    log(`   Configuration: ${JSON.stringify(view.config, null, 2)}`);
+                } else {
+                    log(`❌ View with ID ${viewId} not found`);
+                }
+            } catch (error) {
+                log(`❌ Failed to select view: ${error.message}`);
+            }
+        }
+
+        function saveNewView() {
+            const title = document.getElementById('viewTitle').value;
+            const type = document.getElementById('viewType').value;
+            
+            if (!title || !type) {
+                log('❌ Please provide both title and type');
+                return;
+            }
+
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                const existingViews = saved ? JSON.parse(saved) : [];
+                
+                const newView = {
+                    id: Date.now(),
+                    title: title,
+                    type: type,
+                    saved_at: new Date(),
+                    project_id: PROJECT_ID,
+                    config: { type: type, customField: "test" }
+                };
+
+                const updatedViews = [...existingViews, newView];
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedViews));
+                
+                log(`✅ Saved new view: "${title}" (Type: ${type})`);
+                loadViews();
+                
+                // Clear form
+                document.getElementById('viewTitle').value = '';
+                document.getElementById('viewType').value = '';
+            } catch (error) {
+                log(`❌ Failed to save new view: ${error.message}`);
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Saved Views Test Page Loaded');
+            log(`📂 Testing localStorage key: ${STORAGE_KEY}`);
+            loadViews();
+        });
+    </script>
+</body>
+</html>

@@ -37,7 +37,7 @@ import {
 import { router } from '@inertiajs/react';
 import axios from 'axios';
 
-const DynamicViewManager = ({ project, isOpen, onClose, onViewSaved }) => {
+const DynamicViewManager = ({ project, isOpen, onClose, onViewSaved, selectedView = null }) => {
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -197,6 +197,13 @@ What kind of view would you like to create?`,
         }
     }, [project?.id]);
 
+    // Load the selected view when provided
+    useEffect(() => {
+        if (selectedView && isOpen) {
+            setCurrentView(selectedView);
+        }
+    }, [selectedView, isOpen]);
+
     const renderMessage = (message) => {
         const isUser = message.type === 'user';
         const isError = message.type === 'error';
@@ -348,6 +355,14 @@ What kind of view would you like to create?`,
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <ViewModuleIcon />
                         <Typography variant="h6">Dynamic View Generator</Typography>
+                        {selectedView && (
+                            <Chip 
+                                size="small" 
+                                label={`Viewing: ${selectedView.title || selectedView.type}`}
+                                color="secondary"
+                                sx={{ ml: 1 }}
+                            />
+                        )}
                     </Box>
                     <IconButton onClick={onClose} size="small">
                         <CloseIcon />

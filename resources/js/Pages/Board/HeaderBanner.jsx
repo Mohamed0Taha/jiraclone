@@ -133,6 +133,9 @@ export default function HeaderBanner({
                     {/* Saved Views Chips */}
                     {savedViews.length > 0 && (
                         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                Saved Views ({savedViews.length}):
+                            </Typography>
                             {savedViews.map((view) => (
                                 <Chip
                                     key={view.id}
@@ -141,13 +144,14 @@ export default function HeaderBanner({
                                     onClick={() => onViewChipClick && onViewChipClick(view)}
                                     sx={{
                                         fontWeight: 600,
-                                        height: 30,
+                                        height: 28,
                                         background: `linear-gradient(120deg, ${alpha(theme.palette.secondary.main, 0.15)}, ${alpha(theme.palette.secondary.light, 0.1)})`,
                                         border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
                                         cursor: 'pointer',
                                         '&:hover': {
                                             background: `linear-gradient(120deg, ${alpha(theme.palette.secondary.main, 0.25)}, ${alpha(theme.palette.secondary.light, 0.15)})`,
                                             transform: 'scale(1.02)',
+                                            borderColor: theme.palette.secondary.main,
                                         },
                                         transition: 'all 0.2s ease',
                                     }}

@@ -936,10 +936,11 @@ export default function Board({
     }, [loadSavedViews]);
 
     // Handle clicking on a saved view chip
+    const [selectedViewForManager, setSelectedViewForManager] = useState(null);
+    
     const handleViewChipClick = useCallback((view) => {
+        setSelectedViewForManager(view);
         setDynamicViewOpen(true);
-        // Note: The DynamicViewManager will need to handle loading the specific view
-        // We'll pass the selected view through a callback or state
     }, []);
 
     const ProjectSummaryBar = () => {
@@ -1859,8 +1860,12 @@ export default function Board({
                     <DynamicViewManager
                         project={project}
                         isOpen={dynamicViewOpen}
-                        onClose={() => setDynamicViewOpen(false)}
+                        onClose={() => {
+                            setDynamicViewOpen(false);
+                            setSelectedViewForManager(null);
+                        }}
                         onViewSaved={loadSavedViews}
+                        selectedView={selectedViewForManager}
                     />
                 </Box>
             </AuthenticatedLayout>
