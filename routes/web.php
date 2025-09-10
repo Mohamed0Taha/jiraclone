@@ -634,6 +634,9 @@ Route::middleware('auth')->group(function () {
     /* Usage Summary API */
     Route::get('/api/usage-summary', [\App\Http\Controllers\Api\UsageController::class, 'summary'])->name('api.usage-summary');
 
+    /* Dashboard Chat API (moved from api.php) */
+    Route::post('/dashboard/chat', [\App\Http\Controllers\DashboardChatController::class, 'chat'])->name('dashboard.chat');
+
     /* Projects */
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
@@ -742,6 +745,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/assistant/suggestions', [ProjectAssistantController::class, 'suggestions'])->name('projects.assistant.suggestions'); // Remove middleware
         Route::post('/assistant/execute', [ProjectAssistantController::class, 'execute'])->middleware('subscription:ai_chat')->name('projects.assistant.execute'); // Keep middleware for actual execution
         Route::get('/assistant/test', [ProjectAssistantController::class, 'test'])->name('projects.assistant.test'); // Remove middleware
+
+        /* Project Data API endpoints (moved from api.php) */
+        Route::get('/data/tasks', [\App\Http\Controllers\ProjectDataController::class, 'getTasks'])->name('projects.data.tasks');
+        Route::get('/data/dashboard', [\App\Http\Controllers\ProjectDataController::class, 'getDashboardData'])->name('projects.data.dashboard');
     });
 });
 
