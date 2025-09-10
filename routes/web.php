@@ -732,6 +732,11 @@ Route::middleware('auth')->group(function () {
 
         /* CUSTOM VIEWS */
         Route::get('/custom-views/{name}', function (Request $request, Project $project, $name) {
+            // Check if user can view the project
+            if (!$request->user()->can('view', $project)) {
+                abort(403);
+            }
+            
             // Get project tasks for the custom view
             $tasks = $project->tasks()
                 ->with(['creator:id,name', 'assignee:id,name'])

@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Services\ProjectViewsService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class ProjectViewsController extends Controller
 {
+    use AuthorizesRequests;
     private ProjectViewsService $projectViewsService;
 
     public function __construct(ProjectViewsService $projectViewsService)
@@ -23,6 +25,9 @@ class ProjectViewsController extends Controller
     public function chat(Request $request, Project $project): JsonResponse
     {
         try {
+            // Check authorization
+            $this->authorize('view', $project);
+            
             $request->validate([
                 'message' => 'required|string|max:2000',
                 'session_id' => 'nullable|string',
@@ -65,6 +70,9 @@ class ProjectViewsController extends Controller
     public function clearWorkingArea(Request $request, Project $project): JsonResponse
     {
         try {
+            // Check authorization
+            $this->authorize('view', $project);
+            
             Log::info('[ProjectViewsController] Clearing working area', [
                 'project_id' => $project->id,
                 'user_id' => auth()->id(),
