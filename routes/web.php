@@ -775,6 +775,13 @@ Route::middleware('auth')->group(function () {
                     ]);
                 }
             } catch (\Exception $e) {
+                Log::error('Custom view load error', [
+                    'project_id' => $project->id,
+                    'user_id' => $userId,
+                    'view_name' => $viewName,
+                    'error' => $e->getMessage()
+                ]);
+                
                 return response()->json([
                     'success' => false,
                     'message' => 'Error loading custom view: ' . $e->getMessage(),
@@ -782,13 +789,48 @@ Route::middleware('auth')->group(function () {
             }
         })->name('custom-views.get');
 
-        // API route for custom view SPA generation chat
-        Route::post('/custom-views/chat', function (Request $request, Project $project) {
+        // API route for deleting custom views
+        Route::delete('/custom-views/delete', function (Request $request, Project $project) {
+            $viewName = $request->query('view_name', 'default');
             $userId = $request->user()->id;
-            $message = $request->input('message', '');
-            $conversationHistory = $request->input('conversation_history', []);
             
             try {
+                $projectViewsService = app(\App\Services\ProjectViewsService::class);
+                $deleted = $projectViewsService->deleteCustomView($project, $userId, $viewName);
+                
+                return response()->json([
+                    'success' => $deleted,
+                    'message' => $deleted ? 'Custom view deleted successfully' : 'Custom view not found',
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Custom view delete error', [
+                    'project_id' => $project->id,
+                    'user_id' => $userId,
+                    'view_name' => $viewName,
+                    'error' => $e->getMessage()
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error deleting custom view: ' . $e->getMessage(),
+                ], 500);
+            }
+        })->name('custom-views.delete');
+
+        // API route for custom view SPA generation chat
+        Route::post('/custom-views/chat', function (Request $request, Project $project) {
+            try {
+                $userId = $request->user()->id;
+                $message = $request->input('message', '');
+                $conversationHistory = $request->input('conversation_history', []);
+                
+                if (empty($message)) {
+                    return response()->json([
+                        'type' => 'error',
+                        'message' => 'Message cannot be empty.',
+                    ], 400);
+                }
+                
                 $projectViewsService = app(\App\Services\ProjectViewsService::class);
                 $response = $projectViewsService->processCustomViewRequest(
                     $project, 
@@ -800,9 +842,18 @@ Route::middleware('auth')->group(function () {
                 
                 return response()->json($response);
             } catch (\Exception $e) {
+                Log::error('Custom view chat error', [
+                    'project_id' => $project->id,
+                    'user_id' => $request->user()->id ?? null,
+                    'message' => $request->input('message', ''),
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                
                 return response()->json([
                     'type' => 'error',
-                    'message' => 'Error generating custom view: ' . $e->getMessage(),
+                    'message' => 'I encountered an error generating your custom application. Please try again with a different request.',
+                    'success' => false,
                 ], 500);
             }
         })->name('custom-views.chat');

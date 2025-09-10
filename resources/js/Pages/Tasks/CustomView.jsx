@@ -30,6 +30,12 @@ export default function CustomView({ auth, project, viewName }) {
             setIsLoading(true);
             const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${viewName || 'default'}`);
             
+            // Check if response is actually JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server returned non-JSON response. Check server configuration.');
+            }
+            
             const data = await response.json();
             
             if (data.success && data.html) {
@@ -48,14 +54,21 @@ export default function CustomView({ auth, project, viewName }) {
                     message: 'Custom view loaded successfully!',
                     severity: 'success'
                 });
+            } else if (data.success === false && data.message) {
+                // Custom view doesn't exist, this is normal for first-time users
+                console.log('No existing custom view found:', data.message);
             }
         } catch (error) {
             console.error('Failed to load custom view:', error);
-            setSnackbar({
-                open: true,
-                message: 'Failed to load existing custom view.',
-                severity: 'warning'
-            });
+            
+            // Only show error message if it's not a "no view found" case
+            if (error.message && !error.message.includes('No custom view found')) {
+                setSnackbar({
+                    open: true,
+                    message: 'Failed to load existing custom view. You can still create a new one.',
+                    severity: 'info'
+                });
+            }
         } finally {
             setIsLoading(false);
         }
@@ -86,6 +99,12 @@ export default function CustomView({ auth, project, viewName }) {
             const response = await csrfFetch(`/projects/${project.id}/custom-views/delete?view_name=${viewName || 'default'}`, {
                 method: 'DELETE',
             });
+            
+            // Check if response is actually JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server returned non-JSON response. Check server configuration.');
+            }
             
             const data = await response.json();
             

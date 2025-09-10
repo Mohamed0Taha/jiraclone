@@ -107,6 +107,7 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
     const [suggestions, setSuggestions] = useState([]);
     const [copiedIndex, setCopiedIndex] = useState(null);
     const [pendingCommand, setPendingCommand] = useState(null);
+    const [generationProgress, setGenerationProgress] = useState(null); // New state for SPA generation progress
 
     // Voice interaction state
     const [voiceMode, setVoiceMode] = useState(false);
@@ -372,6 +373,16 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
         }
 
         setBusy(true);
+        
+        // For custom view mode, show detailed progress
+        if (isCustomView) {
+            setGenerationProgress({
+                step: 1,
+                total: 4,
+                message: '🔍 Analyzing your request...'
+            });
+        }
+
         try {
             const payload = {
                 message: text,
@@ -388,14 +399,46 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
                 ? `/projects/${project.id}/custom-views/chat`
                 : `/projects/${project.id}/assistant/chat`;
 
+            // Update progress for custom view
+            if (isCustomView) {
+                setGenerationProgress({
+                    step: 2,
+                    total: 4,
+                    message: '🤖 Generating custom application with AI...'
+                });
+            }
+
             const response = await csrfFetch(endpoint, {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });
+
+            // Check if response is actually JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server returned non-JSON response. Please check your connection and try again.');
+            }
+
             const data = await response.json();
 
             // Handle custom view SPA generation
             if (isCustomView && data?.type === 'spa_generated' && data?.html) {
+                // Update progress
+                setGenerationProgress({
+                    step: 3,
+                    total: 4,
+                    message: '✨ Enhancing your application...'
+                });
+
+                // Short delay to show progress
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                setGenerationProgress({
+                    step: 4,
+                    total: 4,
+                    message: '🎉 Your custom application is ready!'
+                });
+
                 const asstMsg = {
                     role: 'assistant',
                     text: data?.message || 'Generated your custom application!',
@@ -410,6 +453,8 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
                     onSpaGenerated(data.html, data);
                 }
                 
+                // Clear progress after a moment
+                setTimeout(() => setGenerationProgress(null), 2000);
                 setBusy(false);
                 return;
             }
@@ -461,6 +506,7 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
             ]);
         } finally {
             setBusy(false);
+            setGenerationProgress(null);
         }
     };
 
@@ -1251,8 +1297,8 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
                         );
                     })}
 
-                    {/* Loading indicator */}
-                    {busy &&
+                    {/* Loading indicator with progress */}
+                    {(busy || generationProgress) &&
                         messages.length > 0 &&
                         messages[messages.length - 1].role === 'user' && (
                             <Stack
@@ -1318,26 +1364,66 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
                                             })}
                                         </Typography>
                                     </Stack>
-                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                        <Box
-                                            component="img"
-                                            src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXZ6OXcxajF5aGIxZHB3dm5xdm95aWUzanJtaWljb2Y2M3VvcGY4aCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LHZyixOnHwDDy/giphy.gif"
-                                            alt="Thinking..."
-                                            sx={{
-                                                height: 60,
-                                                width: 60,
-                                                borderRadius: 1.5,
-                                                mr: 1.5,
-                                                border: '1px solid rgba(255,255,255,0.4)',
-                                            }}
-                                        />
-                                        <Typography
-                                            variant="body2"
-                                            sx={{ fontWeight: 700, color: '#ecfeff' }}
-                                        >
-                                            Thinking...
-                                        </Typography>
-                                    </Box>
+
+                                    {/* Enhanced progress display for custom view generation */}
+                                    {generationProgress ? (
+                                        <Box sx={{ textAlign: 'left' }}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{ fontWeight: 700, color: '#ecfeff', mb: 1 }}
+                                            >
+                                                {generationProgress.message}
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Box
+                                                    sx={{
+                                                        width: '100%',
+                                                        height: 4,
+                                                        backgroundColor: 'rgba(255,255,255,0.2)',
+                                                        borderRadius: 2,
+                                                        overflow: 'hidden',
+                                                    }}
+                                                >
+                                                    <Box
+                                                        sx={{
+                                                            width: `${(generationProgress.step / generationProgress.total) * 100}%`,
+                                                            height: '100%',
+                                                            backgroundColor: colors.secondary,
+                                                            borderRadius: 2,
+                                                            transition: 'width 0.5s ease',
+                                                        }}
+                                                    />
+                                                </Box>
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{ color: 'rgba(255,255,255,0.9)', minWidth: '40px' }}
+                                                >
+                                                    {generationProgress.step}/{generationProgress.total}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    ) : (
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Box
+                                                component="img"
+                                                src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXZ6OXcxajF5aGIxZHB3dm5xdm95aWUzanJtaWljb2Y2M3VvcGY4aCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LHZyixOnHwDDy/giphy.gif"
+                                                alt="Thinking..."
+                                                sx={{
+                                                    height: 60,
+                                                    width: 60,
+                                                    borderRadius: 1.5,
+                                                    mr: 1.5,
+                                                    border: '1px solid rgba(255,255,255,0.4)',
+                                                }}
+                                            />
+                                            <Typography
+                                                variant="body2"
+                                                sx={{ fontWeight: 700, color: '#ecfeff' }}
+                                            >
+                                                Thinking...
+                                            </Typography>
+                                        </Box>
+                                    )}
                                 </Box>
                             </Stack>
                         )}
