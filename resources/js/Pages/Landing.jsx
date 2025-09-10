@@ -1,5 +1,6 @@
 import React from 'react';
 import { Head, useForm, Link as InertiaLink } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Button,
@@ -45,9 +46,11 @@ import {
     Lightbulb,
     Shield,
 } from '@mui/icons-material';
+import ThemeLanguageSwitcher from '@/Components/ThemeLanguageSwitcher';
 
 export default function Landing({ errors }) {
     const theme = useTheme();
+    const { t } = useTranslation();
 
     // Video autoplay handling – try to start with sound; if blocked, fallback to muted
     const videoRef = React.useRef(null);
@@ -116,22 +119,20 @@ export default function Landing({ errors }) {
         },
         {
             icon: <ViewModule sx={{ fontSize: 48, color: '#4ECDC4' }} />,
-            title: 'View work your way',
-            description:
-                'Instantly switch between 15 views including list, board, gantt, and more.',
+            title: t('landing.features.collaborate.title'),
+            description: t('landing.features.collaborate.description'),
             color: '#4ECDC4',
         },
         {
             icon: <Settings sx={{ fontSize: 48, color: '#45B7D1' }} />,
-            title: 'Customize in a click',
-            description:
-                'Configuring TaskPilot for different types of work is as easy as flipping a switch.',
+            title: t('landing.features.customize.title'),
+            description: t('landing.features.customize.description'),
             color: '#45B7D1',
         },
         {
             icon: <IntegrationInstructions sx={{ fontSize: 48, color: '#96CEB4' }} />,
-            title: 'Plays well with others',
-            description: 'Easily integrates with the tools you already use.',
+            title: t('landing.features.integrate.title'),
+            description: t('landing.features.integrate.description'),
             color: '#96CEB4',
         },
         {
@@ -142,9 +143,8 @@ export default function Landing({ errors }) {
         },
         {
             icon: <Search sx={{ fontSize: 48, color: '#DDA0DD' }} />,
-            title: 'Search everything',
-            description:
-                'Find any file in TaskPilot, a connected app, or your local drive, from one place.',
+            title: t('landing.features.search.title'),
+            description: t('landing.features.search.description'),
             color: '#DDA0DD',
         },
         {
@@ -271,6 +271,9 @@ export default function Landing({ errors }) {
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', gap: 2 }}>
+                                {/* Theme and Language Switcher */}
+                                <ThemeLanguageSwitcher />
+                                
                                 <Button
                                     variant="outlined"
                                     size="small"
@@ -296,7 +299,7 @@ export default function Landing({ errors }) {
                                             .scrollIntoView({ behavior: 'smooth' });
                                     }}
                                 >
-                                    Log in
+                                    {t('landing.loginButton')}
                                 </Button>
                                 <Button
                                     variant="contained"
@@ -413,9 +416,9 @@ export default function Landing({ errors }) {
                                     mx: 'auto',
                                 }}
                             >
-                                The modern project workspace,{' '}
+                                {t('landing.heroTitle')}{' '}
                                 <Box component="span" sx={{ color: '#7C6AE8' }}>
-                                    where productivity meets simplicity
+                                    {t('landing.heroSubtitle')}
                                 </Box>
                             </Typography>
 
@@ -430,8 +433,7 @@ export default function Landing({ errors }) {
                                     lineHeight: 1.4,
                                 }}
                             >
-                                A single place for projects, tasks, chat, docs, and more. Where
-                                teams collaborate and AI helps you work smarter.
+                                {t('landing.heroDescription')}
                             </Typography>
 
                             <Stack

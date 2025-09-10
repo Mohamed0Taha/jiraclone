@@ -36,6 +36,33 @@
     "help": "Help",
     "documentation": "Documentation"
   },
+  "landing": {
+    "heroTitle": "The modern project workspace,",
+    "heroSubtitle": "where productivity meets simplicity",
+    "heroDescription": "A single place for projects, tasks, chat, docs, and more. Streamline your workflow and boost team collaboration.",
+    "loginButton": "Log in",
+    "signUpFree": "Sign up for free",
+    "getStarted": "Get Started",
+    "learnMore": "Learn More",
+    "features": {
+      "collaborate": {
+        "title": "Work together",
+        "description": "Collaborate on projects in real time, share files, and communicate with your team all in one place."
+      },
+      "customize": {
+        "title": "Customize in a click",
+        "description": "Configuring TaskPilot for different types of work is as easy as flipping a switch."
+      },
+      "integrate": {
+        "title": "Plays well with others",
+        "description": "Connect TaskPilot to your favorite tools and streamline your workflow."
+      },
+      "search": {
+        "title": "Search everything",
+        "description": "Find any file in TaskPilot, a connected app, or your local drive, from one place."
+      }
+    }
+  },
   "project": {
     "title": "Project Title",
     "description": "Description",

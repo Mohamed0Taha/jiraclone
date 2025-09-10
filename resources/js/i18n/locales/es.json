@@ -29,6 +29,33 @@
     "warning": "Advertencia",
     "info": "Información"
   },
+  "landing": {
+    "heroTitle": "El espacio de trabajo moderno para proyectos,",
+    "heroSubtitle": "donde la productividad se encuentra con la simplicidad",
+    "heroDescription": "Un solo lugar para proyectos, tareas, chat, documentos y más. Optimiza tu flujo de trabajo y mejora la colaboración del equipo.",
+    "loginButton": "Iniciar sesión",
+    "signUpFree": "Registrarse gratis",
+    "getStarted": "Comenzar",
+    "learnMore": "Saber más",
+    "features": {
+      "collaborate": {
+        "title": "Trabajar juntos",
+        "description": "Colabora en proyectos en tiempo real, comparte archivos y comunícate con tu equipo todo en un lugar."
+      },
+      "customize": {
+        "title": "Personalizar con un clic",
+        "description": "Configurar TaskPilot para diferentes tipos de trabajo es tan fácil como presionar un interruptor."
+      },
+      "integrate": {
+        "title": "Se integra bien con otros",
+        "description": "Conecta TaskPilot con tus herramientas favoritas y optimiza tu flujo de trabajo."
+      },
+      "search": {
+        "title": "Buscar todo",
+        "description": "Encuentra cualquier archivo en TaskPilot, una aplicación conectada o tu disco local, desde un lugar."
+      }
+    }
+  },
   "navigation": {
     "home": "Inicio",
     "about": "Acerca de",
