@@ -46,33 +46,52 @@ export const enhanceGeneratedHTML = (htmlContent) => {
         <script>
             // Enhanced form handling for SPA
             (function() {
+                console.log('[SPA Enhancement] Initializing form handling');
+                
                 const handleSpaFormSubmission = async (event) => {
                     event.preventDefault();
+                    console.log('[SPA Form] Form submission intercepted');
                     const form = event.target;
                     const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
                     
                     if (submitButton) {
                         submitButton.disabled = true;
-                        const originalText = submitButton.textContent;
-                        submitButton.textContent = 'Saving...';
+                        const originalText = submitButton.textContent || submitButton.value;
+                        if (submitButton.textContent) {
+                            submitButton.textContent = 'Saving...';
+                        } else {
+                            submitButton.value = 'Saving...';
+                        }
                         
                         setTimeout(() => {
                             submitButton.disabled = false;
-                            submitButton.textContent = originalText;
+                            if (submitButton.textContent && originalText) {
+                                submitButton.textContent = originalText;
+                            } else if (submitButton.value && originalText) {
+                                submitButton.value = originalText;
+                            }
                             showNotification('Data saved locally!', 'success');
+                            console.log('[SPA Form] Form data saved locally');
                         }, 1000);
                     }
                     
                     try {
                         const formData = new FormData(form);
                         const data = Object.fromEntries(formData);
+                        console.log('[SPA Form] Form data collected:', data);
                         
-                        // Store in local storage
-                        const storageKey = form.dataset.storageKey || 'spa-form-' + Date.now();
-                        localStorage.setItem(storageKey, JSON.stringify(data));
+                        // Store in local storage with better key and metadata
+                        const storageKey = form.dataset.storageKey || \`spa-form-\${window.location.pathname}-\${Date.now()}\`;
+                        const storageData = {
+                            ...data,
+                            timestamp: new Date().toISOString(),
+                            url: window.location.href
+                        };
+                        localStorage.setItem(storageKey, JSON.stringify(storageData));
+                        console.log('[SPA Form] Data stored with key:', storageKey);
                         
                     } catch (error) {
-                        console.error('Form submission error:', error);
+                        console.error('[SPA Form] Form submission error:', error);
                         showNotification('Failed to save data. Please try again.', 'error');
                     }
                 };
@@ -97,14 +116,18 @@ export const enhanceGeneratedHTML = (htmlContent) => {
                                 // Handle delete operations
                                 if (this.classList.contains('delete-btn') || this.textContent.toLowerCase().includes('delete')) {
                                     e.preventDefault();
+                                    console.log('[SPA Button] Delete button clicked');
                                     if (confirm('Are you sure you want to delete this item?')) {
                                         const row = this.closest('tr, .card, .item, .entry');
                                         if (row) {
+                                            console.log('[SPA Button] Deleting item');
                                             row.style.transition = 'opacity 0.3s';
                                             row.style.opacity = '0';
                                             setTimeout(() => row.remove(), 300);
                                             showNotification('Item deleted!', 'success');
                                         }
+                                    } else {
+                                        console.log('[SPA Button] Delete cancelled by user');
                                     }
                                 }
                             });
@@ -114,10 +137,58 @@ export const enhanceGeneratedHTML = (htmlContent) => {
                 
                 // Enhanced form handling
                 const enhanceSpeForms = () => {
+                    console.log('[SPA Enhancement] Enhancing forms');
                     document.querySelectorAll('[data-spa-form]').forEach(form => {
                         if (!form.hasAttribute('data-enhanced')) {
                             form.setAttribute('data-enhanced', 'true');
                             form.addEventListener('submit', handleSpaFormSubmission);
+                            
+                            // Also enhance individual form inputs for better UX
+                            const inputs = form.querySelectorAll('input, textarea, select');
+                            inputs.forEach(input => {
+                                if (!input.hasAttribute('data-enhanced')) {
+                                    input.setAttribute('data-enhanced', 'true');
+                                    
+                                    // Auto-save on change for better persistence
+                                    input.addEventListener('change', (e) => {
+                                        console.log('[SPA Input] Input changed:', e.target.name, e.target.value);
+                                        // Save to local storage immediately
+                                        const formData = new FormData(form);
+                                        const data = Object.fromEntries(formData);
+                                        const storageKey = form.dataset.storageKey || \`spa-form-\${window.location.pathname}-autosave\`;
+                                        const storageData = {
+                                            ...data,
+                                            timestamp: new Date().toISOString(),
+                                            url: window.location.href,
+                                            autoSaved: true
+                                        };
+                                        localStorage.setItem(storageKey, JSON.stringify(storageData));
+                                    });
+                                    
+                                    // Restore data on page load
+                                    const storageKey = form.dataset.storageKey || \`spa-form-\${window.location.pathname}-autosave\`;
+                                    const savedData = localStorage.getItem(storageKey);
+                                    if (savedData) {
+                                        try {
+                                            const data = JSON.parse(savedData);
+                                            if (data[input.name] !== undefined) {
+                                                if (input.type === 'checkbox') {
+                                                    input.checked = data[input.name] === 'on' || data[input.name] === true;
+                                                } else if (input.type === 'radio') {
+                                                    input.checked = input.value === data[input.name];
+                                                } else {
+                                                    input.value = data[input.name];
+                                                }
+                                                console.log('[SPA Input] Restored value for:', input.name, data[input.name]);
+                                            }
+                                        } catch (e) {
+                                            console.warn('[SPA Input] Failed to restore data:', e);
+                                        }
+                                    }
+                                }
+                            });
+                            
+                            console.log('[SPA Enhancement] Form enhanced with', inputs.length, 'inputs');
                         }
                     });
                 };
