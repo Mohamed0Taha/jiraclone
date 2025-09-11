@@ -213,6 +213,319 @@ class CustomViewsTest extends TestCase
         $this->assertNotNull($savedView);
     }
 
+    public function test_template_type_determination()
+    {
+        $service = new ProjectViewsService(Mockery::mock(OpenAIService::class));
+        
+        // Use reflection to test private method
+        $reflection = new \ReflectionClass($service);
+        $method = $reflection->getMethod('determineTemplateType');
+        $method->setAccessible(true);
+        
+        // Test analytics requests
+        $this->assertEquals('analytics', $method->invoke($service, 'Create a dashboard with charts and analytics'));
+        $this->assertEquals('analytics', $method->invoke($service, 'Build a data visualization tool'));
+        
+        // Test expense tracking
+        $this->assertEquals('expense_tracker', $method->invoke($service, 'Create an expense tracker for my budget'));
+        $this->assertEquals('expense_tracker', $method->invoke($service, 'Build a financial management tool'));
+        
+        // Test contact management
+        $this->assertEquals('contact_manager', $method->invoke($service, 'Create a team member directory'));
+        $this->assertEquals('contact_manager', $method->invoke($service, 'Build a contact phonebook'));
+        
+        // Test project management
+        $this->assertEquals('project_management', $method->invoke($service, 'Create a task management board'));
+        $this->assertEquals('project_management', $method->invoke($service, 'Build a kanban workflow'));
+        
+        // Test default case
+        $this->assertEquals('general_purpose', $method->invoke($service, 'Create something random'));
+    }
+
+    public function test_enhanced_fallback_html_structure()
+    {
+        $openAIMock = Mockery::mock(OpenAIService::class);
+        $openAIMock->shouldReceive('generateCustomView')
+            ->once()
+            ->andThrow(new \Exception('AI service unavailable'));
+
+        $service = new ProjectViewsService($openAIMock);
+
+        $response = $service->processCustomViewRequest(
+            $this->project,
+            'Create an analytics dashboard',
+            'test-session',
+            $this->user->id,
+            'analytics-view'
+        );
+
+        // Verify enhanced HTML structure
+        $this->assertEquals('spa_generated', $response['type']);
+        $this->assertStringContainsString('(local template)', $response['message']);
+        $this->assertTrue($response['success']);
+        
+        $html = $response['html'];
+        
+        // Check for enhanced structure elements
+        $this->assertStringContainsString('app-header', $html);
+        $this->assertStringContainsString('sidebar', $html);
+        $this->assertStringContainsString('main-content', $html);
+        $this->assertStringContainsString('modal', $html);
+        
+        // Check for professional CSS
+        $this->assertStringContainsString('Inter', $html); // Professional font
+        $this->assertStringContainsString('css custom properties', $html); // CSS variables
+        $this->assertStringContainsString('responsive', $html); // Responsive design
+        
+        // Check for enhanced JavaScript
+        $this->assertStringContainsString('ApplicationManager', $html);
+        $this->assertStringContainsString('setupKeyboardShortcuts', $html);
+        $this->assertStringContainsString('exportData', $html);
+        
+        // Check for template-specific content (analytics)
+        $this->assertStringContainsString('Analytics Dashboard', $html);
+        $this->assertStringContainsString('canvas', $html); // Charts
+        $this->assertStringContainsString('insight', $html); // AI insights
+    }
+
+    public function test_expense_tracker_template_content()
+    {
+        $openAIMock = Mockery::mock(OpenAIService::class);
+        $openAIMock->shouldReceive('generateCustomView')
+            ->once()
+            ->andThrow(new \Exception('AI service unavailable'));
+
+        $service = new ProjectViewsService($openAIMock);
+
+        $response = $service->processCustomViewRequest(
+            $this->project,
+            'Create an expense tracker for project budget',
+            'test-session',
+            $this->user->id,
+            'expense-view'
+        );
+
+        $html = $response['html'];
+        
+        // Check for expense tracker specific elements
+        $this->assertStringContainsString('Expense Tracker', $html);
+        $this->assertStringContainsString('Total Budget', $html);
+        $this->assertStringContainsString('Total Spent', $html);
+        $this->assertStringContainsString('Remaining', $html);
+        $this->assertStringContainsString('expense-chart', $html);
+        $this->assertStringContainsString('quick-expense-form', $html);
+        $this->assertStringContainsString('category', $html);
+        
+        // Check for expense management JavaScript
+        $this->assertStringContainsString('expenseManager', $html);
+        $this->assertStringContainsString('addExpense', $html);
+        $this->assertStringContainsString('updateExpenseSummary', $html);
+    }
+
+    public function test_contact_manager_template_with_project_members()
+    {
+        // Add members to the project
+        $member1 = User::factory()->create(['name' => 'John Doe', 'email' => 'john@example.com']);
+        $member2 = User::factory()->create(['name' => 'Jane Smith', 'email' => 'jane@example.com']);
+        
+        $this->project->members()->attach([$member1->id, $member2->id]);
+
+        $openAIMock = Mockery::mock(OpenAIService::class);
+        $openAIMock->shouldReceive('generateCustomView')
+            ->once()
+            ->andThrow(new \Exception('AI service unavailable'));
+
+        $service = new ProjectViewsService($openAIMock);
+
+        $response = $service->processCustomViewRequest(
+            $this->project,
+            'Create a team contact directory',
+            'test-session',
+            $this->user->id,
+            'contact-view'
+        );
+
+        $html = $response['html'];
+        
+        // Check for contact manager specific elements
+        $this->assertStringContainsString('Contact Manager', $html);
+        $this->assertStringContainsString('contact-grid', $html);
+        $this->assertStringContainsString('search-box', $html);
+        $this->assertStringContainsString('filter-section', $html);
+        $this->assertStringContainsString('contact-details', $html);
+        
+        // Check for contact management JavaScript
+        $this->assertStringContainsString('contactManager', $html);
+        $this->assertStringContainsString('loadContacts', $html);
+        $this->assertStringContainsString('renderContactGrid', $html);
+    }
+
+    public function test_general_purpose_template_functionality()
+    {
+        $openAIMock = Mockery::mock(OpenAIService::class);
+        $openAIMock->shouldReceive('generateCustomView')
+            ->once()
+            ->andThrow(new \Exception('AI service unavailable'));
+
+        $service = new ProjectViewsService($openAIMock);
+
+        $response = $service->processCustomViewRequest(
+            $this->project,
+            'Create a flexible data manager',
+            'test-session',
+            $this->user->id,
+            'general-view'
+        );
+
+        $html = $response['html'];
+        
+        // Check for general purpose elements
+        $this->assertStringContainsString('Multi-Purpose Manager', $html);
+        $this->assertStringContainsString('grid-view', $html);
+        $this->assertStringContainsString('list-view', $html);
+        $this->assertStringContainsString('kanban-view', $html);
+        $this->assertStringContainsString('view-toggles', $html);
+        $this->assertStringContainsString('global-search', $html);
+        
+        // Check for multi-view JavaScript functionality
+        $this->assertStringContainsString('switchView', $html);
+        $this->assertStringContainsString('renderGridView', $html);
+        $this->assertStringContainsString('renderListView', $html);
+        $this->assertStringContainsString('renderKanbanView', $html);
+        $this->assertStringContainsString('setupDragAndDrop', $html);
+    }
+
+    public function test_enhanced_javascript_functionality()
+    {
+        $openAIMock = Mockery::mock(OpenAIService::class);
+        $openAIMock->shouldReceive('generateCustomView')
+            ->once()
+            ->andThrow(new \Exception('AI service unavailable'));
+
+        $service = new ProjectViewsService($openAIMock);
+
+        $response = $service->processCustomViewRequest(
+            $this->project,
+            'Create any application',
+            'test-session',
+            $this->user->id,
+            'test-view'
+        );
+
+        $html = $response['html'];
+        
+        // Check for enhanced JavaScript features
+        $this->assertStringContainsString('class ApplicationManager', $html);
+        $this->assertStringContainsString('setupKeyboardShortcuts', $html);
+        $this->assertStringContainsString('startAutoSave', $html);
+        $this->assertStringContainsString('exportData', $html);
+        $this->assertStringContainsString('showNotification', $html);
+        $this->assertStringContainsString('toggleTheme', $html);
+        $this->assertStringContainsString('debounce', $html);
+        $this->assertStringContainsString('escapeHtml', $html);
+        
+        // Check for CRUD operations
+        $this->assertStringContainsString('createItem', $html);
+        $this->assertStringContainsString('editItem', $html);
+        $this->assertStringContainsString('deleteItem', $html);
+        $this->assertStringContainsString('updateItemStatus', $html);
+        
+        // Check for advanced features
+        $this->assertStringContainsString('localStorage', $html);
+        $this->assertStringContainsString('addEventListener', $html);
+        $this->assertStringContainsString('querySelector', $html);
+    }
+
+    public function test_responsive_css_and_accessibility()
+    {
+        $openAIMock = Mockery::mock(OpenAIService::class);
+        $openAIMock->shouldReceive('generateCustomView')
+            ->once()
+            ->andThrow(new \Exception('AI service unavailable'));
+
+        $service = new ProjectViewsService($openAIMock);
+
+        $response = $service->processCustomViewRequest(
+            $this->project,
+            'Create an accessible application',
+            'test-session',
+            $this->user->id,
+            'accessible-view'
+        );
+
+        $html = $response['html'];
+        
+        // Check for CSS custom properties (theme support)
+        $this->assertStringContainsString('--primary-500', $html);
+        $this->assertStringContainsString('--bg-primary', $html);
+        $this->assertStringContainsString('[data-theme="dark"]', $html);
+        
+        // Check for responsive breakpoints
+        $this->assertStringContainsString('@media (max-width: 1024px)', $html);
+        $this->assertStringContainsString('@media (max-width: 768px)', $html);
+        
+        // Check for accessibility features
+        $this->assertStringContainsString('aria-live', $html);
+        $this->assertStringContainsString('role=', $html);
+        $this->assertStringContainsString('tabindex=', $html);
+        $this->assertStringContainsString('@media (prefers-reduced-motion', $html);
+        $this->assertStringContainsString('@media (prefers-contrast', $html);
+        
+        // Check for semantic HTML
+        $this->assertStringContainsString('<main', $html);
+        $this->assertStringContainsString('<nav', $html);
+        $this->assertStringContainsString('<header', $html);
+        $this->assertStringContainsString('<section', $html);
+    }
+
+    public function test_project_context_integration()
+    {
+        // Create tasks for the project
+        $task1 = Task::factory()->create([
+            'project_id' => $this->project->id,
+            'title' => 'Test Task 1',
+            'status' => 'todo',
+            'priority' => 'high'
+        ]);
+        $task2 = Task::factory()->create([
+            'project_id' => $this->project->id,
+            'title' => 'Test Task 2', 
+            'status' => 'done',
+            'priority' => 'medium'
+        ]);
+
+        $openAIMock = Mockery::mock(OpenAIService::class);
+        $openAIMock->shouldReceive('generateCustomView')
+            ->once()
+            ->andThrow(new \Exception('AI service unavailable'));
+
+        $service = new ProjectViewsService($openAIMock);
+
+        $response = $service->processCustomViewRequest(
+            $this->project,
+            'Create analytics dashboard',
+            'test-session',
+            $this->user->id,
+            'context-view'
+        );
+
+        $html = $response['html'];
+        
+        // Check that project context is embedded
+        $this->assertStringContainsString('PROJECT_CONTEXT', $html);
+        $this->assertStringContainsString('tasks', $html);
+        $this->assertStringContainsString('members', $html);
+        $this->assertStringContainsString('project', $html);
+        
+        // Check that the context includes our test data
+        $this->assertStringContainsString($this->project->name, $html);
+        
+        // Verify JavaScript uses project context
+        $this->assertStringContainsString('window.PROJECT_CONTEXT', $html);
+        $this->assertStringContainsString('this.projectData', $html);
+        $this->assertStringContainsString('loadProjectData', $html);
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();
