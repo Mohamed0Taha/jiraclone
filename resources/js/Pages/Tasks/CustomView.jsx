@@ -6,18 +6,20 @@ import ChatIcon from '@mui/icons-material/Chat';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import AssistantChat from './AssistantChat';
-import { enhanceGeneratedHTML } from '@/utils/htmlEnhancer';
+import ReactComponentRenderer from '@/utils/ReactComponentRenderer';
 import { csrfFetch } from '@/utils/csrf';
 
 export default function CustomView({ auth, project, viewName }) {
     const [assistantOpen, setAssistantOpen] = useState(false);
     const [isLocked, setIsLocked] = useState(true);
-    const [workingAreaContent, setWorkingAreaContent] = useState('');
+    const [componentCode, setComponentCode] = useState('');
     const [customViewId, setCustomViewId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [componentError, setComponentError] = useState(null);
 
     // Development logging helper
     const devLog = (message, data = null) => {
@@ -26,21 +28,21 @@ export default function CustomView({ auth, project, viewName }) {
         }
     };
 
-    // Periodic save to prevent data loss
+    // Auto-save component code to prevent data loss
     useEffect(() => {
-        if (workingAreaContent && !isLocked) {
-            devLog('Setting up periodic save for working area content');
+        if (componentCode && !isLocked) {
+            devLog('Setting up periodic save for component code');
             const saveInterval = setInterval(() => {
-                const backupKey = `spa-backup-${project?.id || 'unknown'}-${viewName || 'default'}`;
+                const backupKey = `microapp-backup-${project?.id || 'unknown'}-${viewName || 'default'}`;
                 const backupData = {
-                    content: workingAreaContent,
+                    componentCode,
                     timestamp: new Date().toISOString(),
                     customViewId,
                     projectId: project?.id,
                     viewName: viewName || 'default'
                 };
                 localStorage.setItem(backupKey, JSON.stringify(backupData));
-                devLog('Auto-saved working area content to local storage');
+                devLog('Auto-saved component code to local storage');
             }, 30000); // Save every 30 seconds
 
             return () => {
@@ -48,7 +50,7 @@ export default function CustomView({ auth, project, viewName }) {
                 devLog('Cleared periodic save interval');
             };
         }
-    }, [workingAreaContent, isLocked, project?.id, viewName, customViewId]);
+    }, [componentCode, isLocked, project?.id, viewName, customViewId]);
 
     // Load existing custom view on component mount
     useEffect(() => {
@@ -59,6 +61,7 @@ export default function CustomView({ auth, project, viewName }) {
     const loadExistingCustomView = async () => {
         if (!project?.id) {
             devLog('No project ID available, skipping load');
+            setIsLoading(false);
             return;
         }
 
@@ -66,8 +69,8 @@ export default function CustomView({ auth, project, viewName }) {
             setIsLoading(true);
             devLog('Loading custom view from API', { projectId: project.id, viewName: viewName || 'default' });
             
-            // Use API endpoint with proper CSRF handling
-            const response = await csrfFetch(`/api/projects/${project.id}/custom-views/get?view_name=${viewName || 'default'}`);
+            // Use the web route for custom views (not API)
+            const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${viewName || 'default'}`);
             
             // Check if response is actually JSON
             const contentType = response.headers.get('content-type');
@@ -79,113 +82,86 @@ export default function CustomView({ auth, project, viewName }) {
                     contentType: contentType,
                     responsePreview: responseText.substring(0, 500)
                 });
-                console.error('Non-JSON response received:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    contentType: contentType,
-                    responsePreview: responseText.substring(0, 500)
-                });
                 throw new Error('Server returned non-JSON response. Check server configuration.');
             }
             
             const data = await response.json();
-            devLog('API response received', { success: data.success, hasHtml: !!data.html, customViewId: data.custom_view_id });
+            devLog('API response received', { success: data.success, hasComponent: !!data.html, customViewId: data.custom_view_id });
             
             if (data.success && data.html) {
-                try {
-                    // Enhance the loaded HTML with additional JavaScript functionality
-                    const enhancedHTML = enhanceGeneratedHTML ? enhanceGeneratedHTML(data.html) : data.html;
-                    setWorkingAreaContent(enhancedHTML);
-                    devLog('HTML content set and enhanced');
-                } catch (error) {
-                    devLog('Failed to enhance loaded HTML, using original', error);
-                    console.warn('Failed to enhance loaded HTML, using original:', error);
-                    setWorkingAreaContent(data.html);
-                }
-                
+                // data.html now contains React component code instead of HTML
+                setComponentCode(data.html);
                 setCustomViewId(data.custom_view_id);
-                setSnackbar({
-                    open: true,
-                    message: 'Custom view loaded successfully!',
-                    severity: 'success'
-                });
-                devLog('Custom view loaded successfully', { customViewId: data.custom_view_id });
-            } else if (data.success === false && data.message) {
-                // Custom view doesn't exist, check for local backup
-                devLog('No existing custom view found, checking for local backup');
-                const backupKey = `spa-backup-${project.id}-${viewName || 'default'}`;
-                const backup = localStorage.getItem(backupKey);
+                devLog('React component code loaded successfully');
                 
-                if (backup) {
-                    try {
-                        const backupData = JSON.parse(backup);
-                        if (backupData.content) {
-                            setWorkingAreaContent(backupData.content);
-                            setSnackbar({
-                                open: true,
-                                message: 'Restored from local backup. Consider saving your work.',
-                                severity: 'warning'
-                            });
-                            devLog('Restored content from local backup', { 
-                                timestamp: backupData.timestamp,
-                                hasCustomViewId: !!backupData.customViewId 
-                            });
-                        }
-                    } catch (e) {
-                        devLog('Failed to parse backup data', e);
-                    }
-                } else {
-                    devLog('No backup found either');
-                    console.log('No existing custom view found:', data.message);
-                }
+                showSnackbar('Micro-application loaded successfully', 'success');
+            } else {
+                devLog('No existing custom view found');
+                setComponentCode('');
+                setCustomViewId(null);
             }
         } catch (error) {
-            devLog('Failed to load custom view', error);
-            console.error('Failed to load custom view:', error);
+            console.error('Error loading custom view:', error);
+            devLog('Error loading custom view', { error: error.message });
             
-            // Try to restore from backup on error
-            const backupKey = `spa-backup-${project.id}-${viewName || 'default'}`;
+            // Try to load from backup
+            const backupKey = `microapp-backup-${project.id}-${viewName || 'default'}`;
             const backup = localStorage.getItem(backupKey);
-            
             if (backup) {
                 try {
                     const backupData = JSON.parse(backup);
-                    if (backupData.content) {
-                        setWorkingAreaContent(backupData.content);
-                        setSnackbar({
-                            open: true,
-                            message: 'Server unavailable. Restored from local backup.',
-                            severity: 'warning'
-                        });
-                        devLog('Restored content from backup due to server error');
-                    }
-                } catch (e) {
-                    devLog('Failed to restore from backup', e);
+                    setComponentCode(backupData.componentCode || '');
+                    setCustomViewId(backupData.customViewId);
+                    devLog('Loaded from local backup');
+                    showSnackbar('Loaded from local backup due to server error', 'warning');
+                } catch (backupError) {
+                    devLog('Backup parsing failed', { error: backupError.message });
                 }
-            }
-            
-            // Only show error message if it's not a "no view found" case
-            if (error.message && !error.message.includes('No custom view found') && !backup) {
-                setSnackbar({
-                    open: true,
-                    message: 'Failed to load existing custom view. You can still create a new one.',
-                    severity: 'info'
-                });
+            } else {
+                showSnackbar('Error loading custom view: ' + error.message, 'error');
             }
         } finally {
             setIsLoading(false);
-            devLog('Loading process completed');
         }
+    };
+    // Handle AI-generated component
+    const handleSpaGenerated = (response) => {
+        devLog('SPA generated via assistant', response);
+        
+        if (response && response.component_code) {
+            setComponentCode(response.component_code);
+            setCustomViewId(response.custom_view_id);
+            showSnackbar('Micro-application generated successfully!', 'success');
+            setAssistantOpen(false);
+        } else if (response && response.html) {
+            // Fallback for old HTML responses - convert to component
+            setComponentCode(response.html);
+            setCustomViewId(response.custom_view_id);
+            showSnackbar('Application generated successfully!', 'success');
+            setAssistantOpen(false);
+        }
+    };
+
+    // Handle component rendering errors
+    const handleComponentError = (error) => {
+        setComponentError(error);
+        showSnackbar(`Component error: ${error}`, 'error');
+    };
+
+    // Refresh/reload the component
+    const handleRefreshComponent = () => {
+        setComponentError(null);
+        loadExistingCustomView();
+    };
+    // Utility functions
+    const showSnackbar = (message, severity = 'info') => {
+        setSnackbar({ open: true, message, severity });
     };
 
     const toggleLock = () => {
         devLog('Toggling lock state', { currentlyLocked: isLocked });
         setIsLocked(!isLocked);
-        setSnackbar({
-            open: true,
-            message: isLocked ? 'Working area unlocked' : 'Working area locked',
-            severity: 'info'
-        });
+        showSnackbar(isLocked ? 'Micro-application unlocked for editing' : 'Micro-application locked', 'info');
     };
 
     const handleDeleteClick = () => {
@@ -204,12 +180,8 @@ export default function CustomView({ auth, project, viewName }) {
         
         if (!customViewId) {
             // Just clear the local state if no saved view
-            setWorkingAreaContent('');
-            setSnackbar({
-                open: true,
-                message: 'Working area cleared',
-                severity: 'success'
-            });
+            setComponentCode('');
+            showSnackbar('Working area cleared', 'success');
             devLog('Local working area cleared (no saved view)');
             return;
         }
@@ -217,8 +189,8 @@ export default function CustomView({ auth, project, viewName }) {
         try {
             devLog('Deleting custom view from server', { projectId: project.id, viewName: viewName || 'default', customViewId });
             
-            // Use API endpoint with proper CSRF handling
-            const response = await csrfFetch(`/api/projects/${project.id}/custom-views/delete?view_name=${viewName || 'default'}`, {
+            // Use web route for deleting custom views
+            const response = await csrfFetch(`/projects/${project.id}/custom-views/delete?view_name=${viewName || 'default'}`, {
                 method: 'DELETE',
             });
             
@@ -232,12 +204,6 @@ export default function CustomView({ auth, project, viewName }) {
                     contentType: contentType,
                     responsePreview: responseText.substring(0, 500)
                 });
-                console.error('Non-JSON response received:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    contentType: contentType,
-                    responsePreview: responseText.substring(0, 500)
-                });
                 throw new Error('Server returned non-JSON response. Check server configuration.');
             }
             
@@ -245,13 +211,10 @@ export default function CustomView({ auth, project, viewName }) {
             devLog('Delete API response', { success: data.success, message: data.message });
             
             if (data.success) {
-                setWorkingAreaContent('');
+                setComponentCode('');
                 setCustomViewId(null);
-                setSnackbar({
-                    open: true,
-                    message: 'Custom view deleted permanently',
-                    severity: 'success'
-                });
+                setComponentError(null);
+                showSnackbar('Micro-application deleted permanently', 'success');
                 devLog('Custom view deleted successfully');
             } else {
                 throw new Error(data.message || 'Failed to delete custom view');
@@ -259,53 +222,12 @@ export default function CustomView({ auth, project, viewName }) {
         } catch (error) {
             devLog('Failed to delete custom view', error);
             console.error('Failed to delete custom view:', error);
-            setSnackbar({
-                open: true,
-                message: 'Failed to delete custom view from server',
-                severity: 'error'
-            });
+            showSnackbar('Failed to delete micro-application from server', 'error');
         }
     };
 
     const handleCloseSnackbar = () => {
         setSnackbar({ ...snackbar, open: false });
-    };
-
-    const handleSpaGenerated = (htmlContent, responseData = {}) => {
-        devLog('SPA generated, processing content', { 
-            contentLength: htmlContent?.length, 
-            hasResponseData: !!responseData,
-            isUpdate: responseData.is_update,
-            customViewId: responseData.custom_view_id 
-        });
-        
-        try {
-            // Enhance the HTML with additional JavaScript functionality
-            const enhancedHTML = enhanceGeneratedHTML ? enhanceGeneratedHTML(htmlContent) : htmlContent;
-            setWorkingAreaContent(enhancedHTML);
-            devLog('HTML content enhanced and set');
-        } catch (error) {
-            devLog('Failed to enhance HTML, using original', error);
-            console.warn('Failed to enhance HTML, using original:', error);
-            setWorkingAreaContent(htmlContent);
-        }
-        
-        // Update custom view ID if provided
-        if (responseData.custom_view_id) {
-            setCustomViewId(responseData.custom_view_id);
-            devLog('Custom view ID updated', { customViewId: responseData.custom_view_id });
-        }
-        
-        const message = responseData.is_update 
-            ? 'Custom application updated successfully!' 
-            : 'Custom application generated successfully!';
-            
-        setSnackbar({
-            open: true,
-            message,
-            severity: 'success'
-        });
-        devLog('SPA generation completed successfully', { isUpdate: responseData.is_update });
     };
 
     return (
@@ -326,6 +248,21 @@ export default function CustomView({ auth, project, viewName }) {
                             gap: 1,
                         }}
                     >
+                        <Tooltip title="Refresh micro-application">
+                            <IconButton
+                                onClick={handleRefreshComponent}
+                                sx={{
+                                    backgroundColor: '#2196f3',
+                                    color: 'white',
+                                    '&:hover': {
+                                        backgroundColor: '#1976d2',
+                                    },
+                                }}
+                            >
+                                <RefreshIcon />
+                            </IconButton>
+                        </Tooltip>
+                        
                         <Tooltip title={isLocked ? 'Unlock working area' : 'Lock working area'}>
                             <IconButton
                                 onClick={toggleLock}
@@ -340,9 +277,10 @@ export default function CustomView({ auth, project, viewName }) {
                                 {isLocked ? <LockIcon /> : <LockOpenIcon />}
                             </IconButton>
                         </Tooltip>
+                        </Tooltip>
 
                         {!isLocked && (
-                            <Tooltip title="Clear working area">
+                            <Tooltip title="Clear micro-application">
                                 <IconButton
                                     onClick={handleDeleteClick}
                                     sx={{
@@ -359,6 +297,7 @@ export default function CustomView({ auth, project, viewName }) {
                         )}
                     </Box>
 
+                    {/* Main Working Area - React Component Renderer */}
                     <Box
                         id="working-area"
                         sx={{
@@ -367,17 +306,19 @@ export default function CustomView({ auth, project, viewName }) {
                             border: isLocked ? '2px solid #4caf50' : '2px dotted #ffcccb',
                             borderRadius: 3,
                             minHeight: 'calc(100vh - 64px - 12%)',
-                            p: 3,
+                            p: componentCode ? 0 : 3, // No padding for components, padding for placeholder
                             backgroundColor: '#fff',
                             boxSizing: 'border-box',
                             position: 'relative',
                             overflow: 'auto',
                         }}
                     >
-                        {workingAreaContent ? (
-                            <Box
-                                dangerouslySetInnerHTML={{ __html: workingAreaContent }}
-                                sx={{ width: '100%', height: '100%' }}
+                        {componentCode ? (
+                            <ReactComponentRenderer
+                                componentCode={componentCode}
+                                project={project}
+                                auth={auth}
+                                onError={handleComponentError}
                             />
                         ) : isLoading ? (
                             <Box
@@ -390,7 +331,8 @@ export default function CustomView({ auth, project, viewName }) {
                                     color: 'text.secondary',
                                 }}
                             >
-                                <div>Loading custom view...</div>
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
+                                <div>Loading micro-application...</div>
                             </Box>
                         ) : (
                             <Box
@@ -405,12 +347,12 @@ export default function CustomView({ auth, project, viewName }) {
                             >
                                 <ChatIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
                                 <Box sx={{ textAlign: 'center' }}>
-                                    <div>Open the chat to generate a custom SPA application</div>
+                                    <div>Open the chat to generate a custom micro-application</div>
                                     <div style={{ fontSize: '0.9em', marginTop: '8px' }}>
-                                        Try: "Create an expense tracker", "Build a vendor phonebook", "Make a project wiki"
+                                        Try: "Create an expense tracker", "Build a notice board", "Make a timesheet"
                                     </div>
                                     <div style={{ fontSize: '0.8em', marginTop: '16px', fontStyle: 'italic' }}>
-                                        {customViewId ? 'Your previous custom view will be updated' : 'A new custom application will be created'}
+                                        {customViewId ? 'Your previous micro-application will be updated' : 'A new micro-application will be created'}
                                     </div>
                                 </Box>
                             </Box>
