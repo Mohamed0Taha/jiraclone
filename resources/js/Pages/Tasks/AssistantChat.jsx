@@ -421,6 +421,31 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
 
             const data = await response.json();
 
+            // Handle enhanced conversation flow responses
+            if (data?.type === 'conversation_continue') {
+                // AI is asking questions or needs clarification
+                setGenerationProgress({
+                    step: 2,
+                    total: 4,
+                    message: '🤔 AI needs more information...'
+                });
+                
+                setTimeout(() => setGenerationProgress(null), 2000);
+                
+                const asstMsg = {
+                    role: 'assistant',
+                    text: data?.message || 'I need some clarification to provide you with the best solution.',
+                    response: data,
+                    conversation_type: data?.response_type,
+                    requires_response: data?.requires_user_response,
+                    ts: Date.now(),
+                };
+                
+                setMessages((prev) => [...prev, asstMsg]);
+                setBusy(false);
+                return;
+            }
+
             // Handle custom view SPA generation
             if (isCustomView && data?.type === 'spa_generated' && data?.html) {
                 // Update progress
@@ -1043,6 +1068,71 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
                                             </Tooltip>
                                         )}
                                     </Stack>
+
+                                    {/* Enhanced conversation flow indicators */}
+                                    {!isUser && m?.conversation_type && (
+                                        <Box
+                                            sx={{
+                                                mb: 1,
+                                                p: 1,
+                                                borderRadius: 1.5,
+                                                background: alpha(
+                                                    m.conversation_type === 'question' ? colors.warning :
+                                                    m.conversation_type === 'clarification' ? colors.info :
+                                                    m.conversation_type === 'solution' ? colors.success :
+                                                    colors.secondary,
+                                                    0.2
+                                                ),
+                                                border: `1px solid ${alpha(
+                                                    m.conversation_type === 'question' ? colors.warning :
+                                                    m.conversation_type === 'clarification' ? colors.info :
+                                                    m.conversation_type === 'solution' ? colors.success :
+                                                    colors.secondary,
+                                                    0.4
+                                                )}`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1,
+                                            }}
+                                        >
+                                            <Box
+                                                sx={{
+                                                    fontSize: '0.8rem',
+                                                }}
+                                            >
+                                                {m.conversation_type === 'question' ? '🤔' :
+                                                 m.conversation_type === 'clarification' ? '❓' :
+                                                 m.conversation_type === 'solution' ? '✨' : '💬'}
+                                            </Box>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    fontWeight: 600,
+                                                    color: 'white',
+                                                    opacity: 0.9,
+                                                }}
+                                            >
+                                                {m.conversation_type === 'question' ? 'Asking for details' :
+                                                 m.conversation_type === 'clarification' ? 'Seeking clarification' :
+                                                 m.conversation_type === 'solution' ? 'Solution ready' : 'Continuing conversation'}
+                                            </Typography>
+                                            {m?.requires_response && (
+                                                <Chip
+                                                    size="small"
+                                                    label="Response needed"
+                                                    sx={{
+                                                        ml: 'auto',
+                                                        height: 20,
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: 700,
+                                                        background: alpha(colors.warning, 0.3),
+                                                        color: colors.warning,
+                                                        animation: `${pulse} 2s infinite`,
+                                                    }}
+                                                />
+                                            )}
+                                        </Box>
+                                    )}
 
                                     <Typography
                                         variant="body2"
