@@ -17,33 +17,131 @@ class ComponentLibraryService
                 'contact_form' => 'Contact/Feedback Form',
                 'search_form' => 'Search/Filter Form',
                 'login_form' => 'Login/Authentication Form',
-                'survey_form' => 'Survey/Questionnaire Form'
+                'survey_form' => 'Survey/Questionnaire Form',
+                'registration_form' => 'User Registration Form',
+                'booking_form' => 'Booking/Reservation Form',
+                'payment_form' => 'Payment/Checkout Form',
+                'multi_step_form' => 'Multi-Step Wizard Form',
+                'feedback_form' => 'Feedback/Review Form',
+                'application_form' => 'Job/Application Form',
+                'order_form' => 'Order/Request Form',
+                'subscription_form' => 'Newsletter/Subscription Form',
+                'event_form' => 'Event Registration Form',
+                'profile_form' => 'Profile/Settings Form'
             ],
             'data_display' => [
                 'data_table' => 'Interactive Data Table',
                 'card_list' => 'Card-based List Display',
                 'dashboard_grid' => 'Dashboard with Stats Grid',
                 'timeline' => 'Timeline/Activity Feed',
-                'kanban_board' => 'Kanban-style Board'
+                'kanban_board' => 'Kanban-style Board',
+                'grid_view' => 'Grid/Masonry Layout',
+                'list_view' => 'Simple List View',
+                'tree_view' => 'Hierarchical Tree View',
+                'calendar_view' => 'Calendar/Schedule View',
+                'comparison_table' => 'Comparison/Feature Table',
+                'invoice_display' => 'Invoice/Receipt Display',
+                'product_catalog' => 'Product/Service Catalog',
+                'directory_listing' => 'Directory/Contact Listing',
+                'portfolio_display' => 'Portfolio/Gallery Display',
+                'pricing_table' => 'Pricing/Plan Comparison',
+                'news_feed' => 'News/Article Feed',
+                'testimonial_display' => 'Testimonial/Review Display',
+                'team_display' => 'Team/Staff Display',
+                'event_listing' => 'Event/Schedule Listing',
+                'faq_display' => 'FAQ/Help Display'
             ],
             'charts' => [
                 'bar_chart' => 'Bar/Column Chart',
                 'line_chart' => 'Line/Area Chart',
                 'pie_chart' => 'Pie/Doughnut Chart',
-                'progress_chart' => 'Progress/Gauge Chart'
+                'progress_chart' => 'Progress/Gauge Chart',
+                'scatter_chart' => 'Scatter/Bubble Chart',
+                'histogram' => 'Histogram/Distribution Chart',
+                'heatmap' => 'Heatmap/Matrix Chart',
+                'gantt_chart' => 'Gantt/Project Timeline Chart',
+                'funnel_chart' => 'Funnel/Conversion Chart',
+                'radar_chart' => 'Radar/Spider Chart',
+                'sankey_diagram' => 'Sankey/Flow Diagram',
+                'treemap' => 'Treemap/Nested Chart',
+                'candlestick_chart' => 'Candlestick/Financial Chart',
+                'waterfall_chart' => 'Waterfall/Bridge Chart',
+                'network_diagram' => 'Network/Relationship Diagram'
             ],
             'interactive' => [
                 'calculator' => 'Calculator/Computation Tool',
                 'counter' => 'Counter/Tracker',
                 'timer' => 'Timer/Stopwatch',
                 'file_uploader' => 'File Upload Manager',
-                'image_gallery' => 'Image Gallery/Viewer'
+                'image_gallery' => 'Image Gallery/Viewer',
+                'drawing_canvas' => 'Drawing/Sketch Canvas',
+                'code_editor' => 'Code/Text Editor',
+                'color_picker' => 'Color/Palette Picker',
+                'date_picker' => 'Date/Time Picker',
+                'rating_system' => 'Rating/Review System',
+                'quiz_engine' => 'Quiz/Assessment Engine',
+                'poll_widget' => 'Poll/Voting Widget',
+                'chat_interface' => 'Chat/Messaging Interface',
+                'video_player' => 'Video/Media Player',
+                'audio_player' => 'Audio/Music Player',
+                'map_viewer' => 'Map/Location Viewer',
+                'qr_generator' => 'QR Code Generator',
+                'barcode_scanner' => 'Barcode Scanner',
+                'signature_pad' => 'Digital Signature Pad',
+                'drag_drop_builder' => 'Drag & Drop Builder'
             ],
             'navigation' => [
                 'tabs' => 'Tabbed Interface',
                 'sidebar' => 'Sidebar Navigation',
                 'breadcrumbs' => 'Breadcrumb Navigation',
-                'pagination' => 'Pagination Controls'
+                'pagination' => 'Pagination Controls',
+                'mega_menu' => 'Mega/Dropdown Menu',
+                'mobile_menu' => 'Mobile/Hamburger Menu',
+                'footer_nav' => 'Footer Navigation',
+                'floating_nav' => 'Floating/Sticky Navigation',
+                'wizard_steps' => 'Step/Progress Navigation',
+                'accordion_nav' => 'Accordion/Collapsible Navigation'
+            ],
+            'business' => [
+                'crm_dashboard' => 'CRM/Customer Dashboard',
+                'sales_tracker' => 'Sales/Revenue Tracker',
+                'inventory_manager' => 'Inventory/Stock Manager',
+                'expense_tracker' => 'Expense/Budget Tracker',
+                'project_manager' => 'Project/Task Manager',
+                'time_tracker' => 'Time/Productivity Tracker',
+                'employee_directory' => 'Employee/Staff Directory',
+                'meeting_scheduler' => 'Meeting/Appointment Scheduler',
+                'document_manager' => 'Document/File Manager',
+                'knowledge_base' => 'Knowledge Base/Wiki',
+                'help_desk' => 'Help Desk/Support System',
+                'booking_system' => 'Booking/Reservation System',
+                'pos_system' => 'Point of Sale System',
+                'warehouse_manager' => 'Warehouse/Logistics Manager',
+                'hr_dashboard' => 'HR/Personnel Dashboard'
+            ],
+            'ecommerce' => [
+                'product_browser' => 'Product Browser/Catalog',
+                'shopping_cart' => 'Shopping Cart/Basket',
+                'checkout_process' => 'Checkout/Payment Process',
+                'order_tracker' => 'Order/Shipment Tracker',
+                'wishlist_manager' => 'Wishlist/Favorites Manager',
+                'review_system' => 'Product Review System',
+                'coupon_manager' => 'Coupon/Discount Manager',
+                'loyalty_program' => 'Loyalty/Points Program',
+                'vendor_portal' => 'Vendor/Seller Portal',
+                'analytics_dashboard' => 'Sales Analytics Dashboard'
+            ],
+            'utilities' => [
+                'search_engine' => 'Search/Filter Engine',
+                'notification_center' => 'Notification/Alert Center',
+                'settings_panel' => 'Settings/Configuration Panel',
+                'backup_manager' => 'Backup/Export Manager',
+                'import_wizard' => 'Data Import Wizard',
+                'audit_log' => 'Audit/Activity Log',
+                'performance_monitor' => 'Performance/System Monitor',
+                'error_tracker' => 'Error/Issue Tracker',
+                'version_control' => 'Version/Change Control',
+                'api_tester' => 'API/Service Tester'
             ]
         ];
     }
@@ -58,6 +156,111 @@ class ComponentLibraryService
         $inputTypes = [];
         $outputTypes = [];
 
+        // Analyze for business components
+        if (preg_match('/\b(crm|customer|client|lead)\b/', $request)) {
+            $requiredComponents[] = 'crm_dashboard';
+            $inputTypes[] = 'form_validation';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(sales|revenue|profit|income)\b/', $request)) {
+            $requiredComponents[] = 'sales_tracker';
+            $requiredComponents[] = 'bar_chart';
+            $outputTypes[] = 'chart_visualization';
+        }
+        
+        if (preg_match('/\b(inventory|stock|warehouse|product)\b/', $request)) {
+            $requiredComponents[] = 'inventory_manager';
+            $requiredComponents[] = 'data_table';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(expense|budget|cost|spending|financial)\b/', $request)) {
+            $requiredComponents[] = 'expense_tracker';
+            $requiredComponents[] = 'pie_chart';
+            $outputTypes[] = 'chart_visualization';
+        }
+        
+        if (preg_match('/\b(project|task|todo|assignment)\b/', $request)) {
+            $requiredComponents[] = 'project_manager';
+            $requiredComponents[] = 'kanban_board';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(time|productivity|hour|timesheet)\b/', $request)) {
+            $requiredComponents[] = 'time_tracker';
+            $requiredComponents[] = 'timer';
+            $outputTypes[] = 'time_display';
+        }
+        
+        if (preg_match('/\b(employee|staff|personnel|team)\b/', $request)) {
+            $requiredComponents[] = 'employee_directory';
+            $requiredComponents[] = 'team_display';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(meeting|appointment|schedule|calendar)\b/', $request)) {
+            $requiredComponents[] = 'meeting_scheduler';
+            $requiredComponents[] = 'calendar_view';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(document|file|folder|storage)\b/', $request)) {
+            $requiredComponents[] = 'document_manager';
+            $requiredComponents[] = 'file_uploader';
+            $inputTypes[] = 'file_input';
+            $outputTypes[] = 'file_display';
+        }
+        
+        if (preg_match('/\b(knowledge|wiki|help|faq)\b/', $request)) {
+            $requiredComponents[] = 'knowledge_base';
+            $requiredComponents[] = 'faq_display';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(support|helpdesk|ticket|issue)\b/', $request)) {
+            $requiredComponents[] = 'help_desk';
+            $requiredComponents[] = 'error_tracker';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(booking|reservation|appointment)\b/', $request)) {
+            $requiredComponents[] = 'booking_system';
+            $requiredComponents[] = 'booking_form';
+            $inputTypes[] = 'form_validation';
+        }
+
+        // Analyze for ecommerce components
+        if (preg_match('/\b(shop|store|ecommerce|product|catalog)\b/', $request)) {
+            $requiredComponents[] = 'product_browser';
+            $requiredComponents[] = 'product_catalog';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(cart|basket|checkout|purchase)\b/', $request)) {
+            $requiredComponents[] = 'shopping_cart';
+            $requiredComponents[] = 'checkout_process';
+            $inputTypes[] = 'form_validation';
+        }
+        
+        if (preg_match('/\b(order|shipment|delivery|tracking)\b/', $request)) {
+            $requiredComponents[] = 'order_tracker';
+            $requiredComponents[] = 'timeline';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(wishlist|favorite|bookmark|save)\b/', $request)) {
+            $requiredComponents[] = 'wishlist_manager';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(review|rating|feedback|testimonial)\b/', $request)) {
+            $requiredComponents[] = 'review_system';
+            $requiredComponents[] = 'rating_system';
+            $requiredComponents[] = 'testimonial_display';
+            $inputTypes[] = 'form_validation';
+        }
+
         // Analyze for form components
         if (preg_match('/\b(form|input|submit|enter|add|create|register|login)\b/', $request)) {
             if (preg_match('/\b(contact|feedback|message)\b/', $request)) {
@@ -68,6 +271,14 @@ class ComponentLibraryService
                 $requiredComponents[] = 'login_form';
             } elseif (preg_match('/\b(survey|quiz|question)\b/', $request)) {
                 $requiredComponents[] = 'survey_form';
+            } elseif (preg_match('/\b(registration|signup|join)\b/', $request)) {
+                $requiredComponents[] = 'registration_form';
+            } elseif (preg_match('/\b(payment|checkout|billing)\b/', $request)) {
+                $requiredComponents[] = 'payment_form';
+            } elseif (preg_match('/\b(application|job|apply)\b/', $request)) {
+                $requiredComponents[] = 'application_form';
+            } elseif (preg_match('/\b(multi|step|wizard)\b/', $request)) {
+                $requiredComponents[] = 'multi_step_form';
             } else {
                 $requiredComponents[] = 'basic_form';
             }
@@ -85,6 +296,24 @@ class ComponentLibraryService
                 $requiredComponents[] = 'timeline';
             } elseif (preg_match('/\b(kanban|board|column)\b/', $request)) {
                 $requiredComponents[] = 'kanban_board';
+            } elseif (preg_match('/\b(tree|hierarchy|nested)\b/', $request)) {
+                $requiredComponents[] = 'tree_view';
+            } elseif (preg_match('/\b(calendar|schedule|date)\b/', $request)) {
+                $requiredComponents[] = 'calendar_view';
+            } elseif (preg_match('/\b(comparison|compare|vs)\b/', $request)) {
+                $requiredComponents[] = 'comparison_table';
+            } elseif (preg_match('/\b(invoice|receipt|bill)\b/', $request)) {
+                $requiredComponents[] = 'invoice_display';
+            } elseif (preg_match('/\b(directory|contact|phonebook)\b/', $request)) {
+                $requiredComponents[] = 'directory_listing';
+            } elseif (preg_match('/\b(portfolio|gallery|showcase)\b/', $request)) {
+                $requiredComponents[] = 'portfolio_display';
+            } elseif (preg_match('/\b(pricing|price|plan|subscription)\b/', $request)) {
+                $requiredComponents[] = 'pricing_table';
+            } elseif (preg_match('/\b(news|article|blog|feed)\b/', $request)) {
+                $requiredComponents[] = 'news_feed';
+            } elseif (preg_match('/\b(event|schedule|listing)\b/', $request)) {
+                $requiredComponents[] = 'event_listing';
             } else {
                 $requiredComponents[] = 'data_table';
             }
@@ -102,6 +331,28 @@ class ComponentLibraryService
                 $requiredComponents[] = 'pie_chart';
             } elseif (preg_match('/\b(progress|gauge|meter)\b/', $request)) {
                 $requiredComponents[] = 'progress_chart';
+            } elseif (preg_match('/\b(scatter|bubble|correlation)\b/', $request)) {
+                $requiredComponents[] = 'scatter_chart';
+            } elseif (preg_match('/\b(histogram|distribution|frequency)\b/', $request)) {
+                $requiredComponents[] = 'histogram';
+            } elseif (preg_match('/\b(heatmap|matrix|grid)\b/', $request)) {
+                $requiredComponents[] = 'heatmap';
+            } elseif (preg_match('/\b(gantt|project|timeline)\b/', $request)) {
+                $requiredComponents[] = 'gantt_chart';
+            } elseif (preg_match('/\b(funnel|conversion|sales)\b/', $request)) {
+                $requiredComponents[] = 'funnel_chart';
+            } elseif (preg_match('/\b(radar|spider|multi)\b/', $request)) {
+                $requiredComponents[] = 'radar_chart';
+            } elseif (preg_match('/\b(flow|sankey|stream)\b/', $request)) {
+                $requiredComponents[] = 'sankey_diagram';
+            } elseif (preg_match('/\b(treemap|nested|hierarchical)\b/', $request)) {
+                $requiredComponents[] = 'treemap';
+            } elseif (preg_match('/\b(financial|stock|candlestick)\b/', $request)) {
+                $requiredComponents[] = 'candlestick_chart';
+            } elseif (preg_match('/\b(waterfall|bridge|step)\b/', $request)) {
+                $requiredComponents[] = 'waterfall_chart';
+            } elseif (preg_match('/\b(network|relationship|connection)\b/', $request)) {
+                $requiredComponents[] = 'network_diagram';
             } else {
                 $requiredComponents[] = 'bar_chart'; // Default chart type
             }
@@ -136,12 +387,179 @@ class ComponentLibraryService
             $inputTypes[] = 'file_input';
             $outputTypes[] = 'file_display';
         }
+        
+        if (preg_match('/\b(draw|sketch|canvas|paint)\b/', $request)) {
+            $requiredComponents[] = 'drawing_canvas';
+            $inputTypes[] = 'click_actions';
+            $outputTypes[] = 'file_display';
+        }
+        
+        if (preg_match('/\b(code|editor|text|programming)\b/', $request)) {
+            $requiredComponents[] = 'code_editor';
+            $inputTypes[] = 'text_input';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(color|palette|picker|theme)\b/', $request)) {
+            $requiredComponents[] = 'color_picker';
+            $inputTypes[] = 'click_actions';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(date|calendar|picker|schedule)\b/', $request)) {
+            $requiredComponents[] = 'date_picker';
+            $inputTypes[] = 'click_actions';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(rating|star|review|score)\b/', $request)) {
+            $requiredComponents[] = 'rating_system';
+            $inputTypes[] = 'click_actions';
+            $outputTypes[] = 'numeric_display';
+        }
+        
+        if (preg_match('/\b(quiz|test|assessment|exam)\b/', $request)) {
+            $requiredComponents[] = 'quiz_engine';
+            $inputTypes[] = 'form_validation';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(poll|vote|voting|survey)\b/', $request)) {
+            $requiredComponents[] = 'poll_widget';
+            $inputTypes[] = 'click_actions';
+            $outputTypes[] = 'chart_visualization';
+        }
+        
+        if (preg_match('/\b(chat|message|messaging|communication)\b/', $request)) {
+            $requiredComponents[] = 'chat_interface';
+            $inputTypes[] = 'text_input';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(video|player|media|streaming)\b/', $request)) {
+            $requiredComponents[] = 'video_player';
+            $inputTypes[] = 'click_actions';
+            $outputTypes[] = 'file_display';
+        }
+        
+        if (preg_match('/\b(audio|music|sound|player)\b/', $request)) {
+            $requiredComponents[] = 'audio_player';
+            $inputTypes[] = 'click_actions';
+            $outputTypes[] = 'file_display';
+        }
+        
+        if (preg_match('/\b(map|location|gps|geography)\b/', $request)) {
+            $requiredComponents[] = 'map_viewer';
+            $inputTypes[] = 'click_actions';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(qr|barcode|code|generator)\b/', $request)) {
+            if (preg_match('/\b(scan|scanner|read)\b/', $request)) {
+                $requiredComponents[] = 'barcode_scanner';
+            } else {
+                $requiredComponents[] = 'qr_generator';
+            }
+            $inputTypes[] = 'text_input';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(signature|sign|digital|pad)\b/', $request)) {
+            $requiredComponents[] = 'signature_pad';
+            $inputTypes[] = 'click_actions';
+            $outputTypes[] = 'file_display';
+        }
+        
+        if (preg_match('/\b(drag|drop|builder|visual)\b/', $request)) {
+            $requiredComponents[] = 'drag_drop_builder';
+            $inputTypes[] = 'click_actions';
+            $outputTypes[] = 'data_display';
+        }
 
         // Analyze for navigation needs
         if (preg_match('/\b(tab|section|page|navigate)\b/', $request)) {
-            $requiredComponents[] = 'tabs';
+            if (preg_match('/\b(mega|dropdown|menu)\b/', $request)) {
+                $requiredComponents[] = 'mega_menu';
+            } elseif (preg_match('/\b(mobile|hamburger|responsive)\b/', $request)) {
+                $requiredComponents[] = 'mobile_menu';
+            } elseif (preg_match('/\b(sidebar|side|left|right)\b/', $request)) {
+                $requiredComponents[] = 'sidebar';
+            } elseif (preg_match('/\b(breadcrumb|trail|path)\b/', $request)) {
+                $requiredComponents[] = 'breadcrumbs';
+            } elseif (preg_match('/\b(pagination|page|next|previous)\b/', $request)) {
+                $requiredComponents[] = 'pagination';
+            } elseif (preg_match('/\b(step|wizard|progress)\b/', $request)) {
+                $requiredComponents[] = 'wizard_steps';
+            } elseif (preg_match('/\b(accordion|collapsible|expand)\b/', $request)) {
+                $requiredComponents[] = 'accordion_nav';
+            } elseif (preg_match('/\b(floating|sticky|fixed)\b/', $request)) {
+                $requiredComponents[] = 'floating_nav';
+            } else {
+                $requiredComponents[] = 'tabs';
+            }
             $inputTypes[] = 'navigation_clicks';
         }
+        
+        // Analyze for utility components
+        if (preg_match('/\b(search|filter|find|query)\b/', $request)) {
+            $requiredComponents[] = 'search_engine';
+            $inputTypes[] = 'text_input';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(notification|alert|message|popup)\b/', $request)) {
+            $requiredComponents[] = 'notification_center';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(settings|config|preferences|options)\b/', $request)) {
+            $requiredComponents[] = 'settings_panel';
+            $inputTypes[] = 'form_validation';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(backup|export|download|save)\b/', $request)) {
+            $requiredComponents[] = 'backup_manager';
+            $inputTypes[] = 'click_actions';
+            $outputTypes[] = 'file_display';
+        }
+        
+        if (preg_match('/\b(import|upload|load|import)\b/', $request)) {
+            $requiredComponents[] = 'import_wizard';
+            $inputTypes[] = 'file_input';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(audit|log|activity|history)\b/', $request)) {
+            $requiredComponents[] = 'audit_log';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(performance|monitor|metrics|stats)\b/', $request)) {
+            $requiredComponents[] = 'performance_monitor';
+            $outputTypes[] = 'chart_visualization';
+        }
+        
+        if (preg_match('/\b(error|issue|bug|problem)\b/', $request)) {
+            $requiredComponents[] = 'error_tracker';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(version|change|control|git)\b/', $request)) {
+            $requiredComponents[] = 'version_control';
+            $outputTypes[] = 'data_display';
+        }
+        
+        if (preg_match('/\b(api|service|test|endpoint)\b/', $request)) {
+            $requiredComponents[] = 'api_tester';
+            $inputTypes[] = 'text_input';
+            $outputTypes[] = 'data_display';
+        }
+
+        // Remove duplicates
+        $requiredComponents = array_unique($requiredComponents);
+        $inputTypes = array_unique($inputTypes);
+        $outputTypes = array_unique($outputTypes);
 
         // Default fallback
         if (empty($requiredComponents)) {

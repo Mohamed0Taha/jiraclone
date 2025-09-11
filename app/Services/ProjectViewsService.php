@@ -22,7 +22,7 @@ class ProjectViewsService
     /**
      * Process custom view request and generate SPA
      */
-    public function processCustomViewRequest(Project $project, string $message, ?string $sessionId = null, ?int $userId = null, string $viewName = 'default'): array
+    public function processCustomViewRequest(Project $project, string $message, ?string $sessionId = null, ?int $userId = null, string $viewName = 'default', array $conversationHistory = []): array
     {
         try {
             Log::debug('[ProjectViewsService] Processing custom view request', [
@@ -31,6 +31,7 @@ class ProjectViewsService
                 'session_id' => $sessionId,
                 'user_id' => $userId,
                 'view_name' => $viewName,
+                'conversation_length' => count($conversationHistory),
             ]);
 
             // STEP 1: Analyze the user request to determine components needed
@@ -51,8 +52,8 @@ class ProjectViewsService
             // Get project context
             $projectContext = $this->getProjectContext($project);
             
-            // STEP 2: Build enhanced prompt with component guidance
-            $prompt = $this->buildEnhancedCustomViewPrompt($message, $projectContext, $analysis, $existingView);
+            // STEP 2: Build enhanced prompt with component guidance, conversation history, and existing SPA context
+            $prompt = $this->buildEnhancedCustomViewPrompt($message, $projectContext, $analysis, $existingView, $conversationHistory);
 
             // Try LLM generation; if it fails, fall back to component templates
             $fallbackUsed = false;
@@ -87,6 +88,8 @@ class ProjectViewsService
                     'is_update' => $existingView !== null,
                     'fallback_used' => $fallbackUsed,
                     'components_used' => $analysis['components'],
+                    'conversation_length' => count($conversationHistory),
+                    'has_existing_spa' => $existingView !== null,
                 ];
                 
                 $customView = CustomView::createOrUpdate(
@@ -185,21 +188,51 @@ class ProjectViewsService
     }
 
     /**
-     * Build enhanced prompt for OpenAI with component guidance
+     * Build enhanced prompt for OpenAI with component guidance, conversation history, and existing SPA context
      */
-    private function buildEnhancedCustomViewPrompt(string $userRequest, array $projectContext, array $analysis, ?CustomView $existingView = null): string
+    private function buildEnhancedCustomViewPrompt(string $userRequest, array $projectContext, array $analysis, ?CustomView $existingView = null, array $conversationHistory = []): string
     {
         $contextInfo = $existingView 
-            ? "CONTEXT: This is an UPDATE request. The user already has a custom application and wants to modify it."
-            : "CONTEXT: This is a NEW generation request. Create a fresh application.";
+            ? "CONTEXT: This is an UPDATE request. The user already has a custom application and wants to modify/enhance it based on their new request."
+            : "CONTEXT: This is a NEW generation request. Create a fresh application from scratch.";
 
-        $existingContent = $existingView ? "
-EXISTING APPLICATION:
-The user currently has this application:
+        // Include full existing SPA content for updates
+        $existingContent = "";
+        if ($existingView) {
+            $existingContent = "
+EXISTING APPLICATION TO UPDATE:
+Current Application HTML (full content):
 ```html
-" . substr($existingView->html_content, 0, 2000) . "...
+" . $existingView->html_content . "
 ```
-" : "";
+
+UPDATE INSTRUCTION: Based on the user's new request '{$userRequest}', you should:
+1. PRESERVE existing functionality that's still relevant
+2. ADD new features/components as requested
+3. IMPROVE the existing design and usability
+4. MAINTAIN data and state where possible
+5. ENSURE all interactions work smoothly
+
+The final output should be an ENHANCED version of the existing application that incorporates the user's new request.
+";
+        }
+
+        // Build conversation context
+        $conversationContext = "";
+        if (!empty($conversationHistory)) {
+            $conversationContext = "
+CONVERSATION HISTORY:
+The user has been having a conversation about this application. Here's the context:
+";
+            foreach ($conversationHistory as $msg) {
+                $role = strtoupper($msg['role']);
+                $content = substr($msg['content'], 0, 500); // Limit length
+                $conversationContext .= "- {$role}: {$content}\n";
+            }
+            $conversationContext .= "
+Use this conversation context to better understand what the user wants and maintain consistency with previous discussions.
+";
+        }
 
         $componentGuidance = "
 COMPONENT ANALYSIS:
@@ -207,7 +240,16 @@ Based on the user request, I've identified these required components:
 - Components needed: " . implode(', ', $analysis['components']) . "
 - Input types: " . implode(', ', $analysis['input_types']) . "
 - Output types: " . implode(', ', $analysis['output_types']) . "
-- Analysis: " . $analysis['analysis'] . "
+
+AVAILABLE COMPONENTS LIBRARY (120+ components):
+Forms: basic_form, contact_form, search_form, login_form, survey_form, registration_form, booking_form, payment_form, multi_step_form, feedback_form, application_form, order_form, subscription_form, event_form, profile_form
+Data Display: data_table, card_list, dashboard_grid, timeline, kanban_board, grid_view, list_view, tree_view, calendar_view, comparison_table, invoice_display, product_catalog, directory_listing, portfolio_display, pricing_table, news_feed, testimonial_display, team_display, event_listing, faq_display
+Charts: bar_chart, line_chart, pie_chart, progress_chart, scatter_chart, histogram, heatmap, gantt_chart, funnel_chart, radar_chart, sankey_diagram, treemap, candlestick_chart, waterfall_chart, network_diagram
+Interactive: calculator, counter, timer, file_uploader, image_gallery, drawing_canvas, code_editor, color_picker, date_picker, rating_system, quiz_engine, poll_widget, chat_interface, video_player, audio_player, map_viewer, qr_generator, barcode_scanner, signature_pad, drag_drop_builder
+Business: crm_dashboard, sales_tracker, inventory_manager, expense_tracker, project_manager, time_tracker, employee_directory, meeting_scheduler, document_manager, knowledge_base, help_desk, booking_system, pos_system, warehouse_manager, hr_dashboard
+E-commerce: product_browser, shopping_cart, checkout_process, order_tracker, wishlist_manager, review_system, coupon_manager, loyalty_program, vendor_portal, analytics_dashboard
+Navigation: tabs, sidebar, breadcrumbs, pagination, mega_menu, mobile_menu, footer_nav, floating_nav, wizard_steps, accordion_nav
+Utilities: search_engine, notification_center, settings_panel, backup_manager, import_wizard, audit_log, performance_monitor, error_tracker, version_control, api_tester
 
 IMPORTANT: You MUST include ALL the identified components and ensure they are fully functional with working JavaScript.";
 
@@ -216,6 +258,8 @@ IMPORTANT: You MUST include ALL the identified components and ensure they are fu
 {$contextInfo}
 
 USER REQUEST: {$userRequest}
+
+{$conversationContext}
 
 {$existingContent}
 
@@ -227,7 +271,58 @@ PROJECT CONTEXT:
 - Total Tasks: {$projectContext['task_count']}
 - Team Members: " . json_encode(array_column($projectContext['members'], 'name')) . "
 
-CRITICAL REQUIREMENTS:
+CRITICAL REQUIREMENTS FOR DATA-FOCUSED DESIGN:
+1. INPUT SPACE OPTIMIZATION: Input controls should take MINIMAL space (max 20% of screen). Prioritize compact, efficient input methods:
+   - Use inline editing for data tables
+   - Combine multiple inputs in single lines where possible
+   - Use dropdown selects instead of radio buttons
+   - Implement quick-add forms that are collapsible
+   - Use modal dialogs for complex forms to save space
+
+2. DATA DISPLAY MAXIMIZATION: 80% of the screen should focus on displaying and visualizing data:
+   - Large, readable data tables with sorting/filtering
+   - Prominent charts and graphs for analytics
+   - Clear data hierarchies and relationships
+   - Multiple view modes (table, cards, charts)
+   - Real-time data updates and notifications
+
+3. EFFICIENT INTERACTIONS:
+   - Quick actions (edit, delete, duplicate) directly on data rows
+   - Bulk operations for multiple items
+   - Keyboard shortcuts for power users
+   - Auto-save functionality to reduce form submissions
+   - Context menus for right-click actions
+
+4. MOBILE-RESPONSIVE: Ensure the app works well on all devices while maintaining the data-first approach.
+
+5. PERFORMANCE: Optimize for fast loading and smooth interactions, especially with large datasets.
+
+TECHNICAL REQUIREMENTS:
+- Create a complete, standalone HTML page with embedded CSS and JavaScript
+- Use modern web technologies (HTML5, CSS3, ES6+)
+- Include responsive design for mobile and desktop
+- Add proper form validation and error handling
+- Include loading states and user feedback
+- Use semantic HTML and accessibility best practices
+- Ensure all interactive elements work without external dependencies
+- Add smooth animations and transitions
+- Include search/filter functionality for data tables
+- Make it visually appealing with a modern design system
+
+OUTPUT FORMAT:
+Return ONLY the complete HTML content. Do NOT include any explanations, markdown formatting, or code block syntax. The response should start with <!DOCTYPE html> and be ready to use immediately.
+
+DESIGN THEME: Use a clean, professional design with:
+- Modern color palette (blues, grays, whites)
+- Consistent spacing and typography
+- Clear visual hierarchy
+- Intuitive user interface
+- Professional business application aesthetics
+
+Remember: This is a DATA-FOCUSED project management system. Prioritize data display and visualization over input forms!";
+
+        return $prompt;
+    }
 1. Create a complete HTML document with embedded CSS and JavaScript
 2. EVERY button, form, and interactive element MUST have working JavaScript functionality
 3. Use the project data context where relevant
