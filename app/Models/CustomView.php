@@ -12,7 +12,7 @@ class CustomView extends Model
         'user_id', 
         'name',
         'description',
-        'html_content',
+        'html_content', // Now stores React component code instead of HTML
         'metadata',
         'is_active',
         'last_accessed_at',
@@ -61,9 +61,9 @@ class CustomView extends Model
     }
 
     /**
-     * Create or update a custom view
+     * Create or update a custom view with React component code
      */
-    public static function createOrUpdate(int $projectId, int $userId, string $name, string $htmlContent, array $metadata = []): self
+    public static function createOrUpdate(int $projectId, int $userId, string $name, string $componentCode, array $metadata = []): self
     {
         return static::updateOrCreate(
             [
@@ -72,11 +72,27 @@ class CustomView extends Model
                 'name' => $name,
             ],
             [
-                'html_content' => $htmlContent,
-                'metadata' => $metadata,
+                'html_content' => $componentCode, // Now stores React component code
+                'metadata' => array_merge($metadata, ['type' => 'react_component']),
                 'is_active' => true,
                 'last_accessed_at' => now(),
             ]
         );
+    }
+
+    /**
+     * Get the React component code
+     */
+    public function getComponentCode(): string
+    {
+        return $this->html_content;
+    }
+
+    /**
+     * Check if this is a React component view
+     */
+    public function isReactComponent(): bool
+    {
+        return $this->metadata['type'] ?? null === 'react_component';
     }
 }
