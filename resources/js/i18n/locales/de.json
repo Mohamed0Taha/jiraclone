@@ -27,7 +27,11 @@
     "error": "Fehler",
     "success": "Erfolg",
     "warning": "Warnung",
-    "info": "Information"
+    "info": "Information",
+    "user": "Benutzer",
+    "signedInAs": "Angemeldet als",
+    "subscriptions": "Abonnements",
+    "getCertified": "Zertifizierung erhalten"
   },
   "landing": {
     "heroTitle": "Der moderne Projektarbeitsbereich,",

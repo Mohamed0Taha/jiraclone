@@ -242,13 +242,37 @@ export const ThemeProvider = ({ children }) => {
     const [mode, setMode] = useState(() => {
         // Check localStorage first, then system preference
         const savedMode = localStorage.getItem('theme-mode');
-        if (savedMode) return savedMode;
+        if (savedMode) {
+            // Set initial HTML class for Tailwind
+            if (savedMode === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            return savedMode;
+        }
         
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const initialMode = systemPrefersDark ? 'dark' : 'light';
+        
+        // Set initial HTML class for Tailwind
+        if (initialMode === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        
+        return initialMode;
     });
 
     useEffect(() => {
         localStorage.setItem('theme-mode', mode);
+        // Update HTML class for Tailwind dark mode
+        if (mode === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
     }, [mode]);
 
     const toggleMode = () => {

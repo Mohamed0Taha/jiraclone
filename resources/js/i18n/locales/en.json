@@ -27,7 +27,12 @@
     "error": "Error",
     "success": "Success",
     "warning": "Warning",
-    "info": "Information"
+    "info": "Information",
+    "user": "User",
+    "signedInAs": "Signed in as",
+    "subscriptions": "Subscriptions",
+    "getCertified": "Get Certified",
+    "upgradeNow": "Upgrade Now"
   },
   "navigation": {
     "home": "Home",
@@ -141,5 +146,23 @@
     "closeDialog": "Close dialog",
     "expandMenu": "Expand menu",
     "collapseMenu": "Collapse menu"
+  },
+  "features": {
+    "aiTasks": "AI Tasks",
+    "aiChat": "AI Chat",
+    "reports": "Reports",
+    "automation": "Automations",
+    "aiAssistant": "AI Assistant",
+    "aiAssistantDesc": "Upgrade to interact with our intelligent project assistant",
+    "automationDesc": "Automate your workflow with smart triggers and actions",
+    "teamCollaboration": "Team Collaboration",
+    "teamCollaborationDesc": "Invite team members and collaborate on projects",
+    "reportsDesc": "Generate detailed project reports and analytics",
+    "premiumFeature": "Premium Feature",
+    "premiumFeatureDesc": "This feature is available on paid plans"
+  },
+  "usage": {
+    "remainingThisMonth": "{{count}} remaining this month",
+    "limitReached": "Limit reached - Upgrade for more access"
   }
 }

@@ -27,7 +27,11 @@
     "error": "Fout",
     "success": "Succes",
     "warning": "Waarschuwing",
-    "info": "Informatie"
+    "info": "Informatie",
+    "user": "Gebruiker",
+    "signedInAs": "Ingelogd als",
+    "subscriptions": "Abonnementen",
+    "getCertified": "Certificaat behalen"
   },
   "landing": {
     "heroTitle": "De moderne projectwerkruimte,",

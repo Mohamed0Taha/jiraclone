@@ -72,8 +72,8 @@ export default function TailwindThemeLanguageSwitcher() {
                 className="
                     inline-flex items-center justify-center
                     w-8 h-8 rounded-full
-                    bg-white/80 hover:bg-white
-                    border border-gray-300
+                    bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-700
+                    border border-gray-300 dark:border-gray-600
                     transition-colors duration-200
                     focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2
                 "
@@ -81,7 +81,7 @@ export default function TailwindThemeLanguageSwitcher() {
                 aria-expanded={isOpen}
                 aria-haspopup="menu"
             >
-                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path 
                         strokeLinecap="round" 
                         strokeLinejoin="round" 
@@ -96,7 +96,7 @@ export default function TailwindThemeLanguageSwitcher() {
                 <div 
                     className="
                         absolute right-0 mt-2 w-64 
-                        bg-white rounded-lg shadow-lg border border-gray-200
+                        bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700
                         py-2 z-50
                         transform transition-all duration-200 ease-out origin-top-right
                     "
@@ -104,7 +104,7 @@ export default function TailwindThemeLanguageSwitcher() {
                     aria-orientation="vertical"
                 >
                     {/* Theme Toggle */}
-                    <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 {mode === 'light' ? (
@@ -116,7 +116,7 @@ export default function TailwindThemeLanguageSwitcher() {
                                         <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
                                     </svg>
                                 )}
-                                <span className="text-sm font-medium text-gray-700">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                     {t('theme.toggle')}
                                 </span>
                             </div>
@@ -148,9 +148,9 @@ export default function TailwindThemeLanguageSwitcher() {
                             onClick={() => setIsLanguageOpen(!isLanguageOpen)}
                             className="
                                 w-full px-4 py-3 text-left 
-                                hover:bg-gray-50 
+                                hover:bg-gray-50 dark:hover:bg-gray-700
                                 transition-colors duration-200
-                                focus:outline-none focus:bg-gray-50
+                                focus:outline-none focus:bg-gray-50 dark:focus:bg-gray-700
                             "
                             aria-label={t('language.select')}
                             aria-expanded={isLanguageOpen}
@@ -158,10 +158,10 @@ export default function TailwindThemeLanguageSwitcher() {
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
                                     </svg>
-                                    <span className="text-sm font-medium text-gray-700">
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                         {t('language.select')}
                                     </span>
                                     <span className="text-sm">{currentLanguage.flag}</span>
@@ -178,7 +178,7 @@ export default function TailwindThemeLanguageSwitcher() {
                         </button>
 
                         {isLanguageOpen && (
-                            <div className="border-t border-gray-100">
+                            <div className="border-t border-gray-100 dark:border-gray-700">
                                 {languages.map((language) => {
                                     const isSelected = currentLanguage.code === language.code;
                                     return (
@@ -188,10 +188,10 @@ export default function TailwindThemeLanguageSwitcher() {
                                             disabled={isChangingLanguage}
                                             className={`
                                                 w-full px-6 py-2 text-left text-sm
-                                                hover:bg-gray-50 transition-colors duration-200
-                                                focus:outline-none focus:bg-gray-50
+                                                hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200
+                                                focus:outline-none focus:bg-gray-50 dark:focus:bg-gray-700
                                                 disabled:opacity-50 disabled:cursor-not-allowed
-                                                ${isSelected ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'}
+                                                ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}
                                             `}
                                             aria-label={`Switch to ${language.nativeName}`}
                                             role="menuitem"
