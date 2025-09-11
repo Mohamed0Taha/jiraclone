@@ -22,161 +22,217 @@ export const enhanceGeneratedHTML = (htmlContent) => {
         }
     }
     
-    // Enhance forms with proper submission handling
+    // Mark forms for enhancement (event listeners will be attached after DOM insertion)
     const forms = tempDiv.querySelectorAll('form');
     forms.forEach(form => {
-        if (!form.hasAttribute('data-enhanced')) {
-            form.setAttribute('data-enhanced', 'true');
-            form.addEventListener('submit', handleFormSubmission);
-        }
+        form.setAttribute('data-spa-form', 'true');
+        form.setAttribute('onsubmit', 'return false;'); // Prevent default submission
     });
     
-    // Add keyboard shortcuts
-    addKeyboardShortcuts(tempDiv);
-    
-    // Add loading states to buttons
-    enhanceButtons(tempDiv);
-    
-    // Add search functionality to tables
-    enhanceTables(tempDiv);
-    
-    // Add local storage persistence
-    addLocalStoragePersistence(tempDiv);
-    
-    return tempDiv.innerHTML;
-};
-
-const handleFormSubmission = async (event) => {
-    event.preventDefault();
-    const form = event.target;
-    const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
-    
-    if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.textContent = submitButton.textContent.replace(/^/, 'Saving... ');
-    }
-    
-    try {
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData);
-        
-        // Store in local storage as well
-        const storageKey = form.dataset.storageKey || 'custom-view-form-data';
-        localStorage.setItem(storageKey, JSON.stringify(data));
-        
-        // Show success message
-        showNotification('Data saved successfully!', 'success');
-        
-    } catch (error) {
-        console.error('Form submission error:', error);
-        showNotification('Failed to save data. Please try again.', 'error');
-    } finally {
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent = submitButton.textContent.replace('Saving... ', '');
-        }
-    }
-};
-
-const addKeyboardShortcuts = (container) => {
-    document.addEventListener('keydown', (event) => {
-        // Ctrl+S to save forms
-        if (event.ctrlKey && event.key === 's') {
-            event.preventDefault();
-            const form = container.querySelector('form');
-            if (form) {
-                form.dispatchEvent(new Event('submit'));
-            }
-        }
-        
-        // Esc to close modals
-        if (event.key === 'Escape') {
-            const modals = container.querySelectorAll('.modal, .dialog');
-            modals.forEach(modal => {
-                if (modal.style.display !== 'none') {
-                    modal.style.display = 'none';
-                }
-            });
-        }
-    });
-};
-
-const enhanceButtons = (container) => {
-    const buttons = container.querySelectorAll('button:not([data-enhanced])');
+    // Mark buttons for enhancement
+    const buttons = tempDiv.querySelectorAll('button:not([data-enhanced])');
     buttons.forEach(button => {
-        button.setAttribute('data-enhanced', 'true');
-        
-        button.addEventListener('click', function() {
-            // Add ripple effect
-            const ripple = document.createElement('span');
-            ripple.className = 'ripple';
-            ripple.style.cssText = `
-                position: absolute;
-                border-radius: 50%;
-                background: rgba(255,255,255,0.6);
-                animation: ripple 0.6s linear;
-                pointer-events: none;
-            `;
-            
-            this.style.position = 'relative';
-            this.style.overflow = 'hidden';
-            this.appendChild(ripple);
-            
-            setTimeout(() => ripple.remove(), 600);
-        });
+        button.setAttribute('data-spa-button', 'true');
     });
-};
-
-const enhanceTables = (container) => {
-    const tables = container.querySelectorAll('table:not([data-enhanced])');
+    
+    // Mark tables for enhancement
+    const tables = tempDiv.querySelectorAll('table:not([data-enhanced])');
     tables.forEach(table => {
-        table.setAttribute('data-enhanced', 'true');
-        
-        // Add search functionality
-        const searchInput = document.createElement('input');
-        searchInput.type = 'text';
-        searchInput.placeholder = 'Search table...';
-        searchInput.style.cssText = `
-            margin-bottom: 10px;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            width: 100%;
-            max-width: 300px;
-        `;
-        
-        table.parentNode.insertBefore(searchInput, table);
-        
-        searchInput.addEventListener('input', debounce((event) => {
-            const searchTerm = event.target.value.toLowerCase();
-            const rows = table.querySelectorAll('tbody tr');
-            
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
-            });
-        }, 300));
+        table.setAttribute('data-spa-table', 'true');
     });
+    
+    // Add inline script to handle form submissions and interactions
+    const enhancementScript = `
+        <script>
+            // Enhanced form handling for SPA
+            (function() {
+                const handleSpaFormSubmission = async (event) => {
+                    event.preventDefault();
+                    const form = event.target;
+                    const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+                    
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        const originalText = submitButton.textContent;
+                        submitButton.textContent = 'Saving...';
+                        
+                        setTimeout(() => {
+                            submitButton.disabled = false;
+                            submitButton.textContent = originalText;
+                            showNotification('Data saved locally!', 'success');
+                        }, 1000);
+                    }
+                    
+                    try {
+                        const formData = new FormData(form);
+                        const data = Object.fromEntries(formData);
+                        
+                        // Store in local storage
+                        const storageKey = form.dataset.storageKey || 'spa-form-' + Date.now();
+                        localStorage.setItem(storageKey, JSON.stringify(data));
+                        
+                    } catch (error) {
+                        console.error('Form submission error:', error);
+                        showNotification('Failed to save data. Please try again.', 'error');
+                    }
+                };
+                
+                // Enhanced button interactions
+                const enhanceSpaButtons = () => {
+                    document.querySelectorAll('[data-spa-button]').forEach(button => {
+                        if (!button.hasAttribute('data-enhanced')) {
+                            button.setAttribute('data-enhanced', 'true');
+                            
+                            button.addEventListener('click', function(e) {
+                                // Add ripple effect
+                                const ripple = document.createElement('span');
+                                ripple.style.cssText = 'position: absolute; border-radius: 50%; background: rgba(255,255,255,0.6); animation: ripple 0.6s linear; pointer-events: none; width: 20px; height: 20px; top: 50%; left: 50%; transform: translate(-50%, -50%);';
+                                
+                                this.style.position = 'relative';
+                                this.style.overflow = 'hidden';
+                                this.appendChild(ripple);
+                                
+                                setTimeout(() => ripple.remove(), 600);
+                                
+                                // Handle delete operations
+                                if (this.classList.contains('delete-btn') || this.textContent.toLowerCase().includes('delete')) {
+                                    e.preventDefault();
+                                    if (confirm('Are you sure you want to delete this item?')) {
+                                        const row = this.closest('tr, .card, .item, .entry');
+                                        if (row) {
+                                            row.style.transition = 'opacity 0.3s';
+                                            row.style.opacity = '0';
+                                            setTimeout(() => row.remove(), 300);
+                                            showNotification('Item deleted!', 'success');
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
+                };
+                
+                // Enhanced form handling
+                const enhanceSpeForms = () => {
+                    document.querySelectorAll('[data-spa-form]').forEach(form => {
+                        if (!form.hasAttribute('data-enhanced')) {
+                            form.setAttribute('data-enhanced', 'true');
+                            form.addEventListener('submit', handleSpaFormSubmission);
+                        }
+                    });
+                };
+                
+                // Enhanced table functionality
+                const enhanceSpaTables = () => {
+                    document.querySelectorAll('[data-spa-table]').forEach(table => {
+                        if (!table.hasAttribute('data-enhanced')) {
+                            table.setAttribute('data-enhanced', 'true');
+                            
+                            // Add search if not present
+                            if (!table.previousElementSibling || !table.previousElementSibling.classList.contains('spa-search')) {
+                                const searchContainer = document.createElement('div');
+                                searchContainer.className = 'spa-search';
+                                searchContainer.style.cssText = 'margin-bottom: 10px;';
+                                
+                                const searchInput = document.createElement('input');
+                                searchInput.type = 'text';
+                                searchInput.placeholder = 'Search table...';
+                                searchInput.style.cssText = 'padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%; max-width: 300px;';
+                                
+                                searchContainer.appendChild(searchInput);
+                                table.parentNode.insertBefore(searchContainer, table);
+                                
+                                // Add search functionality
+                                let debounceTimer;
+                                searchInput.addEventListener('input', (event) => {
+                                    clearTimeout(debounceTimer);
+                                    debounceTimer = setTimeout(() => {
+                                        const searchTerm = event.target.value.toLowerCase();
+                                        const rows = table.querySelectorAll('tbody tr');
+                                        
+                                        rows.forEach(row => {
+                                            const text = row.textContent.toLowerCase();
+                                            row.style.display = text.includes(searchTerm) ? '' : 'none';
+                                        });
+                                    }, 300);
+                                });
+                            }
+                        }
+                    });
+                };
+                
+                // Show notification function
+                window.showNotification = function(message, type = 'info') {
+                    const notification = document.createElement('div');
+                    notification.style.cssText = \`
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        padding: 12px 20px;
+                        border-radius: 4px;
+                        color: white;
+                        font-weight: 500;
+                        z-index: 10000;
+                        transition: all 0.3s ease;
+                        background: \${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3'};
+                    \`;
+                    notification.textContent = message;
+                    
+                    document.body.appendChild(notification);
+                    
+                    setTimeout(() => {
+                        notification.style.opacity = '0';
+                        notification.style.transform = 'translateY(-20px)';
+                        setTimeout(() => document.body.removeChild(notification), 300);
+                    }, 3000);
+                };
+                
+                // Initialize enhancements
+                const initializeEnhancements = () => {
+                    enhanceSpeForms();
+                    enhanceSpaButtons();
+                    enhanceSpaTables();
+                };
+                
+                // Run immediately and set up observer for dynamic content
+                initializeEnhancements();
+                
+                // Set up mutation observer to handle dynamically added content
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                            initializeEnhancements();
+                        }
+                    });
+                });
+                
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+                
+                // Add CSS for ripple animation
+                if (!document.querySelector('#spa-animations')) {
+                    const style = document.createElement('style');
+                    style.id = 'spa-animations';
+                    style.textContent = \`
+                        @keyframes ripple {
+                            to {
+                                transform: scale(4);
+                                opacity: 0;
+                            }
+                        }
+                    \`;
+                    document.head.appendChild(style);
+                }
+            })();
+        </script>
+    `;
+    
+    return tempDiv.innerHTML + enhancementScript;
 };
 
-const addLocalStoragePersistence = (container) => {
-    const inputs = container.querySelectorAll('input, textarea, select');
-    inputs.forEach(input => {
-        const storageKey = `custom-view-${input.name || input.id}`;
-        
-        // Load saved value
-        const savedValue = localStorage.getItem(storageKey);
-        if (savedValue && !input.value) {
-            input.value = savedValue;
-        }
-        
-        // Save on change
-        input.addEventListener('change', () => {
-            localStorage.setItem(storageKey, input.value);
-        });
-    });
-};
-
+// Legacy utility functions - kept for backward compatibility
 const debounce = (func, wait) => {
     let timeout;
     return function executedFunction(...args) {
@@ -188,60 +244,3 @@ const debounce = (func, wait) => {
         timeout = setTimeout(later, wait);
     };
 };
-
-const showNotification = (message, type = 'info') => {
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 12px 20px;
-        background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3'};
-        color: white;
-        border-radius: 4px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-    `;
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-};
-
-// Add CSS animations
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes ripple {
-        to {
-            transform: scale(4);
-            opacity: 0;
-        }
-    }
-    
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);

@@ -168,7 +168,8 @@ Route::middleware(['web', 'auth'])->prefix('projects/{project}')->group(function
                 $message, 
                 null, // sessionId
                 $userId,
-                'default' // viewName
+                'default', // viewName
+                $conversationHistory // Add conversation history
             );
             
             return response()->json($response, 200, [
