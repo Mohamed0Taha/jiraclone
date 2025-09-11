@@ -156,45 +156,45 @@ class ComponentLibraryService
         $inputTypes = [];
         $outputTypes = [];
 
-        // Analyze for business components
+        // Analyze for business components (enhanced with Vue.js patterns)
         if (preg_match('/\b(crm|customer|client|lead)\b/', $request)) {
-            $requiredComponents[] = 'crm_dashboard';
+            $requiredComponents[] = 'advanced_crud'; // Use advanced CRUD for CRM
             $inputTypes[] = 'form_validation';
             $outputTypes[] = 'data_display';
         }
         
         if (preg_match('/\b(sales|revenue|profit|income)\b/', $request)) {
-            $requiredComponents[] = 'sales_tracker';
+            $requiredComponents[] = 'vue_reactive'; // Use reactive for sales tracking
             $requiredComponents[] = 'bar_chart';
             $outputTypes[] = 'chart_visualization';
         }
         
         if (preg_match('/\b(inventory|stock|warehouse|product)\b/', $request)) {
-            $requiredComponents[] = 'inventory_manager';
+            $requiredComponents[] = 'advanced_crud'; // Advanced CRUD for inventory
             $requiredComponents[] = 'data_table';
             $outputTypes[] = 'data_display';
         }
         
         if (preg_match('/\b(expense|budget|cost|spending|financial)\b/', $request)) {
-            $requiredComponents[] = 'expense_tracker';
+            $requiredComponents[] = 'vue_reactive'; // Reactive for expense tracking
             $requiredComponents[] = 'pie_chart';
             $outputTypes[] = 'chart_visualization';
         }
         
         if (preg_match('/\b(project|task|todo|assignment)\b/', $request)) {
-            $requiredComponents[] = 'project_manager';
+            $requiredComponents[] = 'advanced_crud'; // Advanced CRUD for project management
             $requiredComponents[] = 'kanban_board';
             $outputTypes[] = 'data_display';
         }
         
         if (preg_match('/\b(time|productivity|hour|timesheet)\b/', $request)) {
-            $requiredComponents[] = 'time_tracker';
+            $requiredComponents[] = 'vue_reactive'; // Reactive for time tracking
             $requiredComponents[] = 'timer';
             $outputTypes[] = 'time_display';
         }
         
         if (preg_match('/\b(employee|staff|personnel|team)\b/', $request)) {
-            $requiredComponents[] = 'employee_directory';
+            $requiredComponents[] = 'advanced_crud'; // Advanced CRUD for employee directory
             $requiredComponents[] = 'team_display';
             $outputTypes[] = 'data_display';
         }
@@ -359,7 +359,21 @@ class ComponentLibraryService
             $outputTypes[] = 'chart_visualization';
         }
 
-        // Analyze for interactive components
+        // Analyze for interactive and reactive patterns
+        if (preg_match('/\b(reactive|live|real[\s-]?time|dynamic|interactive)\b/', $request)) {
+            $requiredComponents[] = 'vue_reactive';
+            $inputTypes[] = 'reactive_input';
+            $outputTypes[] = 'reactive_display';
+        }
+        
+        // Advanced CRUD detection
+        if (preg_match('/\b(manage|crud|create|read|update|delete|edit|admin|management)\b/', $request)) {
+            $requiredComponents[] = 'advanced_crud';
+            $inputTypes[] = 'crud_operations';
+            $outputTypes[] = 'data_management';
+        }
+
+        // Analyze for calculator functionality
         if (preg_match('/\b(calculator|calculate|compute)\b/', $request)) {
             $requiredComponents[] = 'calculator';
             $inputTypes[] = 'numeric_input';
@@ -594,6 +608,15 @@ class ComponentLibraryService
             'timer' => $this->getTimerTemplate(),
             'bar_chart' => $this->getBarChartTemplate(),
             'tabs' => $this->getTabsTemplate(),
+            // Enhanced Vue.js-inspired templates
+            'vue_reactive' => $this->getVueStyleReactiveTemplate(),
+            'advanced_crud' => $this->getAdvancedCrudTemplate(),
+            // Business templates with Vue.js patterns
+            'crm_dashboard' => $this->getAdvancedCrudTemplate(),
+            'inventory_manager' => $this->getAdvancedCrudTemplate(),
+            'expense_tracker' => $this->getVueStyleReactiveTemplate(),
+            'project_manager' => $this->getAdvancedCrudTemplate(),
+            'employee_directory' => $this->getAdvancedCrudTemplate(),
         ];
 
         return $templates[$componentType] ?? $this->getBasicFormTemplate();
@@ -1268,6 +1291,644 @@ function exportStats() {
 
 // Initialize with random data
 refreshStats();
+</script>';
+    }
+
+    /**
+     * Get Vue.js-inspired reactive component template
+     */
+    private function getVueStyleReactiveTemplate(): string
+    {
+        return '
+<div class="vue-style-app" id="reactive-app">
+    <h3>{{ APP_TITLE }}</h3>
+    <div class="reactive-controls">
+        <button onclick="appState.addItem()" class="btn btn-primary">Add Item</button>
+        <input type="text" v-model="searchFilter" placeholder="Search items..." id="search-filter">
+        <select v-model="statusFilter" id="status-filter">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="completed">Completed</option>
+            <option value="pending">Pending</option>
+        </select>
+    </div>
+    
+    <div class="reactive-content">
+        <div v-if="filteredItems.length === 0" class="empty-state">
+            <p>No items found. Add some items to get started!</p>
+        </div>
+        <div v-else class="items-grid">
+            <!-- Items will be rendered here -->
+        </div>
+    </div>
+    
+    <div class="reactive-stats">
+        <span>Total: {{ totalItems }}</span>
+        <span>Active: {{ activeItems }}</span>
+        <span>Completed: {{ completedItems }}</span>
+    </div>
+</div>
+
+<script>
+// Vue.js-inspired reactive system
+class ReactiveApp {
+    constructor() {
+        this.data = {
+            items: JSON.parse(localStorage.getItem("reactive-items") || "[]"),
+            searchFilter: "",
+            statusFilter: "",
+        };
+        
+        this.computed = {};
+        this.watchers = {};
+        this.methods = {};
+        
+        this.setupComputed();
+        this.setupMethods();
+        this.setupWatchers();
+        this.mount();
+    }
+    
+    setupComputed() {
+        Object.defineProperty(this.computed, "filteredItems", {
+            get: () => {
+                return this.data.items.filter(item => {
+                    const matchesSearch = !this.data.searchFilter || 
+                        item.name.toLowerCase().includes(this.data.searchFilter.toLowerCase());
+                    const matchesStatus = !this.data.statusFilter || 
+                        item.status === this.data.statusFilter;
+                    return matchesSearch && matchesStatus;
+                });
+            }
+        });
+        
+        Object.defineProperty(this.computed, "totalItems", {
+            get: () => this.data.items.length
+        });
+        
+        Object.defineProperty(this.computed, "activeItems", {
+            get: () => this.data.items.filter(item => item.status === "active").length
+        });
+        
+        Object.defineProperty(this.computed, "completedItems", {
+            get: () => this.data.items.filter(item => item.status === "completed").length
+        });
+    }
+    
+    setupMethods() {
+        this.methods.addItem = () => {
+            const name = prompt("Item name:");
+            if (name) {
+                const newItem = {
+                    id: Date.now(),
+                    name: name,
+                    status: "active",
+                    createdAt: new Date().toISOString()
+                };
+                this.data.items.push(newItem);
+                this.saveData();
+                this.render();
+            }
+        };
+        
+        this.methods.updateItem = (id, updates) => {
+            const index = this.data.items.findIndex(item => item.id === id);
+            if (index !== -1) {
+                Object.assign(this.data.items[index], updates);
+                this.saveData();
+                this.render();
+            }
+        };
+        
+        this.methods.deleteItem = (id) => {
+            if (confirm("Delete this item?")) {
+                this.data.items = this.data.items.filter(item => item.id !== id);
+                this.saveData();
+                this.render();
+            }
+        };
+    }
+    
+    setupWatchers() {
+        // Watch search filter
+        let searchTimeout;
+        document.getElementById("search-filter").addEventListener("input", (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                this.data.searchFilter = e.target.value;
+                this.render();
+            }, 300);
+        });
+        
+        // Watch status filter
+        document.getElementById("status-filter").addEventListener("change", (e) => {
+            this.data.statusFilter = e.target.value;
+            this.render();
+        });
+    }
+    
+    saveData() {
+        localStorage.setItem("reactive-items", JSON.stringify(this.data.items));
+    }
+    
+    render() {
+        const container = document.querySelector(".items-grid");
+        const emptyState = document.querySelector(".empty-state");
+        const filteredItems = this.computed.filteredItems;
+        
+        if (filteredItems.length === 0) {
+            emptyState.style.display = "block";
+            container.style.display = "none";
+        } else {
+            emptyState.style.display = "none";
+            container.style.display = "grid";
+            
+            container.innerHTML = filteredItems.map(item => `
+                <div class="item-card" data-id="${item.id}">
+                    <h4>${item.name}</h4>
+                    <p>Status: <span class="status-${item.status}">${item.status}</span></p>
+                    <p>Created: ${new Date(item.createdAt).toLocaleDateString()}</p>
+                    <div class="item-actions">
+                        <select onchange="appState.methods.updateItem(${item.id}, {status: this.value})" value="${item.status}">
+                            <option value="active">Active</option>
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                        <button onclick="appState.methods.deleteItem(${item.id})" class="btn-danger">Delete</button>
+                    </div>
+                </div>
+            `).join("");
+        }
+        
+        // Update stats
+        document.querySelector(".reactive-stats").innerHTML = `
+            <span>Total: ${this.computed.totalItems}</span>
+            <span>Active: ${this.computed.activeItems}</span>
+            <span>Completed: ${this.computed.completedItems}</span>
+        `;
+    }
+    
+    mount() {
+        // Expose methods globally
+        window.appState = this;
+        
+        // Initial render
+        this.render();
+        
+        console.log("Vue-style reactive app mounted successfully");
+    }
+}
+
+// Initialize the reactive app
+document.addEventListener("DOMContentLoaded", () => {
+    new ReactiveApp();
+});
+</script>';
+    }
+
+    /**
+     * Get advanced CRUD manager template
+     */
+    private function getAdvancedCrudTemplate(): string
+    {
+        return '
+<div class="advanced-crud-container">
+    <h3>{{ CRUD_TITLE }}</h3>
+    
+    <!-- Advanced Toolbar -->
+    <div class="crud-toolbar">
+        <div class="toolbar-section">
+            <button onclick="crudManager.showCreateDialog()" class="btn btn-primary">
+                <span>➕</span> Add New
+            </button>
+            <button onclick="crudManager.exportData()" class="btn btn-secondary">
+                <span>📥</span> Export
+            </button>
+            <button onclick="crudManager.importData()" class="btn btn-secondary">
+                <span>📤</span> Import
+            </button>
+        </div>
+        
+        <div class="toolbar-section">
+            <input type="text" id="crud-search" placeholder="🔍 Search..." class="search-input">
+            <select id="crud-filter" class="filter-select">
+                <option value="">All Items</option>
+                <option value="active">Active</option>
+                <option value="archived">Archived</option>
+            </select>
+            <button onclick="crudManager.toggleView()" class="btn btn-secondary view-toggle">
+                <span id="view-icon">📋</span> <span id="view-text">Table</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Data View Container -->
+    <div class="crud-view-container">
+        <!-- Table View -->
+        <div id="table-view" class="view-active">
+            <div class="table-container">
+                <table class="advanced-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="select-all"></th>
+                            <th onclick="crudManager.sortBy(\'name\')">Name <span class="sort-indicator">↕️</span></th>
+                            <th onclick="crudManager.sortBy(\'status\')">Status <span class="sort-indicator">↕️</span></th>
+                            <th onclick="crudManager.sortBy(\'date\')">Date <span class="sort-indicator">↕️</span></th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Card View -->
+        <div id="card-view" class="view-hidden">
+            <div id="cards-container" class="cards-grid">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bulk Actions Bar -->
+    <div id="bulk-actions" class="bulk-actions-bar" style="display: none;">
+        <span id="selection-count">0 selected</span>
+        <button onclick="crudManager.bulkEdit()" class="btn btn-secondary">Edit Selected</button>
+        <button onclick="crudManager.bulkDelete()" class="btn btn-danger">Delete Selected</button>
+        <button onclick="crudManager.clearSelection()" class="btn btn-outline">Clear</button>
+    </div>
+    
+    <!-- Pagination -->
+    <div class="pagination-container">
+        <div class="pagination-info">
+            <span id="pagination-info">Showing 0-0 of 0 items</span>
+        </div>
+        <div class="pagination-controls">
+            <button onclick="crudManager.previousPage()" class="btn btn-small" id="prev-btn" disabled>Previous</button>
+            <span id="page-numbers"></span>
+            <button onclick="crudManager.nextPage()" class="btn btn-small" id="next-btn" disabled>Next</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div id="crud-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h4 id="modal-title">Add New Item</h4>
+            <button onclick="crudManager.closeModal()" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+            <form id="crud-form">
+                <div class="form-group">
+                    <label for="item-name">Name</label>
+                    <input type="text" id="item-name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="item-status">Status</label>
+                    <select id="item-status" name="status">
+                        <option value="active">Active</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="item-description">Description</label>
+                    <textarea id="item-description" name="description" rows="3"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button onclick="crudManager.closeModal()" class="btn btn-secondary">Cancel</button>
+            <button onclick="crudManager.saveItem()" class="btn btn-primary" id="save-btn">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+class AdvancedCRUDManager {
+    constructor() {
+        this.data = JSON.parse(localStorage.getItem("crud-data") || "[]");
+        this.currentView = "table";
+        this.currentPage = 1;
+        this.itemsPerPage = 10;
+        this.sortField = null;
+        this.sortDirection = "asc";
+        this.searchFilter = "";
+        this.statusFilter = "";
+        this.selectedItems = new Set();
+        this.editingId = null;
+        
+        this.init();
+    }
+    
+    init() {
+        this.setupEventListeners();
+        this.render();
+        console.log("Advanced CRUD Manager initialized");
+    }
+    
+    setupEventListeners() {
+        // Search
+        document.getElementById("crud-search").addEventListener("input", (e) => {
+            this.searchFilter = e.target.value;
+            this.currentPage = 1;
+            this.render();
+        });
+        
+        // Filter
+        document.getElementById("crud-filter").addEventListener("change", (e) => {
+            this.statusFilter = e.target.value;
+            this.currentPage = 1;
+            this.render();
+        });
+        
+        // Select all
+        document.getElementById("select-all").addEventListener("change", (e) => {
+            const checkboxes = document.querySelectorAll("tbody input[type=checkbox]");
+            checkboxes.forEach(cb => {
+                cb.checked = e.target.checked;
+                if (cb.checked) {
+                    this.selectedItems.add(parseInt(cb.dataset.id));
+                } else {
+                    this.selectedItems.delete(parseInt(cb.dataset.id));
+                }
+            });
+            this.updateBulkActions();
+        });
+    }
+    
+    getFilteredData() {
+        return this.data.filter(item => {
+            const matchesSearch = !this.searchFilter || 
+                item.name.toLowerCase().includes(this.searchFilter.toLowerCase()) ||
+                (item.description && item.description.toLowerCase().includes(this.searchFilter.toLowerCase()));
+            const matchesStatus = !this.statusFilter || item.status === this.statusFilter;
+            return matchesSearch && matchesStatus;
+        });
+    }
+    
+    getSortedData() {
+        const filtered = this.getFilteredData();
+        if (!this.sortField) return filtered;
+        
+        return filtered.sort((a, b) => {
+            let aVal = a[this.sortField];
+            let bVal = b[this.sortField];
+            
+            if (this.sortField === "date") {
+                aVal = new Date(aVal);
+                bVal = new Date(bVal);
+            }
+            
+            if (aVal < bVal) return this.sortDirection === "asc" ? -1 : 1;
+            if (aVal > bVal) return this.sortDirection === "asc" ? 1 : -1;
+            return 0;
+        });
+    }
+    
+    getPaginatedData() {
+        const sorted = this.getSortedData();
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        const end = start + this.itemsPerPage;
+        return sorted.slice(start, end);
+    }
+    
+    render() {
+        if (this.currentView === "table") {
+            this.renderTable();
+        } else {
+            this.renderCards();
+        }
+        this.renderPagination();
+        this.updateBulkActions();
+    }
+    
+    renderTable() {
+        const tbody = document.getElementById("table-body");
+        const data = this.getPaginatedData();
+        
+        tbody.innerHTML = data.map(item => `
+            <tr>
+                <td><input type="checkbox" data-id="${item.id}" onchange="crudManager.toggleSelection(${item.id})"></td>
+                <td>${item.name}</td>
+                <td><span class="status-badge status-${item.status}">${item.status}</span></td>
+                <td>${new Date(item.date).toLocaleDateString()}</td>
+                <td>
+                    <button onclick="crudManager.editItem(${item.id})" class="btn btn-small">Edit</button>
+                    <button onclick="crudManager.deleteItem(${item.id})" class="btn btn-small btn-danger">Delete</button>
+                </td>
+            </tr>
+        `).join("");
+    }
+    
+    renderCards() {
+        const container = document.getElementById("cards-container");
+        const data = this.getPaginatedData();
+        
+        container.innerHTML = data.map(item => `
+            <div class="crud-card">
+                <div class="card-header">
+                    <input type="checkbox" data-id="${item.id}" onchange="crudManager.toggleSelection(${item.id})">
+                    <h4>${item.name}</h4>
+                    <span class="status-badge status-${item.status}">${item.status}</span>
+                </div>
+                <div class="card-body">
+                    <p>${item.description || "No description"}</p>
+                    <small>Created: ${new Date(item.date).toLocaleDateString()}</small>
+                </div>
+                <div class="card-actions">
+                    <button onclick="crudManager.editItem(${item.id})" class="btn btn-small">Edit</button>
+                    <button onclick="crudManager.deleteItem(${item.id})" class="btn btn-small btn-danger">Delete</button>
+                </div>
+            </div>
+        `).join("");
+    }
+    
+    renderPagination() {
+        const filtered = this.getFilteredData();
+        const totalPages = Math.ceil(filtered.length / this.itemsPerPage);
+        const start = (this.currentPage - 1) * this.itemsPerPage + 1;
+        const end = Math.min(start + this.itemsPerPage - 1, filtered.length);
+        
+        document.getElementById("pagination-info").textContent = 
+            `Showing ${start}-${end} of ${filtered.length} items`;
+        
+        document.getElementById("prev-btn").disabled = this.currentPage === 1;
+        document.getElementById("next-btn").disabled = this.currentPage === totalPages || totalPages === 0;
+        
+        // Render page numbers
+        const pageNumbers = document.getElementById("page-numbers");
+        let pages = "";
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === this.currentPage) {
+                pages += `<span class="page-number active">${i}</span>`;
+            } else {
+                pages += `<span class="page-number" onclick="crudManager.goToPage(${i})">${i}</span>`;
+            }
+        }
+        pageNumbers.innerHTML = pages;
+    }
+    
+    // CRUD Operations
+    showCreateDialog() {
+        this.editingId = null;
+        document.getElementById("modal-title").textContent = "Add New Item";
+        document.getElementById("save-btn").textContent = "Create";
+        document.getElementById("crud-form").reset();
+        document.getElementById("crud-modal").style.display = "flex";
+    }
+    
+    editItem(id) {
+        const item = this.data.find(item => item.id === id);
+        if (!item) return;
+        
+        this.editingId = id;
+        document.getElementById("modal-title").textContent = "Edit Item";
+        document.getElementById("save-btn").textContent = "Update";
+        document.getElementById("item-name").value = item.name;
+        document.getElementById("item-status").value = item.status;
+        document.getElementById("item-description").value = item.description || "";
+        document.getElementById("crud-modal").style.display = "flex";
+    }
+    
+    saveItem() {
+        const form = document.getElementById("crud-form");
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+        
+        if (this.editingId) {
+            // Update existing
+            const index = this.data.findIndex(item => item.id === this.editingId);
+            if (index !== -1) {
+                this.data[index] = { ...this.data[index], ...data };
+            }
+        } else {
+            // Create new
+            const newItem = {
+                id: Date.now(),
+                ...data,
+                date: new Date().toISOString()
+            };
+            this.data.push(newItem);
+        }
+        
+        this.saveData();
+        this.closeModal();
+        this.render();
+    }
+    
+    deleteItem(id) {
+        if (confirm("Delete this item?")) {
+            this.data = this.data.filter(item => item.id !== id);
+            this.selectedItems.delete(id);
+            this.saveData();
+            this.render();
+        }
+    }
+    
+    // Utility methods
+    toggleView() {
+        this.currentView = this.currentView === "table" ? "card" : "table";
+        document.getElementById("table-view").className = this.currentView === "table" ? "view-active" : "view-hidden";
+        document.getElementById("card-view").className = this.currentView === "card" ? "view-active" : "view-hidden";
+        document.getElementById("view-icon").textContent = this.currentView === "table" ? "📋" : "🗃️";
+        document.getElementById("view-text").textContent = this.currentView === "table" ? "Table" : "Cards";
+        this.render();
+    }
+    
+    sortBy(field) {
+        if (this.sortField === field) {
+            this.sortDirection = this.sortDirection === "asc" ? "desc" : "asc";
+        } else {
+            this.sortField = field;
+            this.sortDirection = "asc";
+        }
+        this.render();
+    }
+    
+    toggleSelection(id) {
+        if (this.selectedItems.has(id)) {
+            this.selectedItems.delete(id);
+        } else {
+            this.selectedItems.add(id);
+        }
+        this.updateBulkActions();
+    }
+    
+    updateBulkActions() {
+        const bulkActions = document.getElementById("bulk-actions");
+        const count = this.selectedItems.size;
+        
+        if (count > 0) {
+            bulkActions.style.display = "flex";
+            document.getElementById("selection-count").textContent = `${count} selected`;
+        } else {
+            bulkActions.style.display = "none";
+        }
+    }
+    
+    bulkDelete() {
+        if (confirm(`Delete ${this.selectedItems.size} selected items?`)) {
+            this.data = this.data.filter(item => !this.selectedItems.has(item.id));
+            this.selectedItems.clear();
+            this.saveData();
+            this.render();
+        }
+    }
+    
+    clearSelection() {
+        this.selectedItems.clear();
+        document.querySelectorAll("input[type=checkbox]").forEach(cb => cb.checked = false);
+        this.updateBulkActions();
+    }
+    
+    exportData() {
+        const dataStr = JSON.stringify(this.data, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `crud-export-${new Date().toISOString().split("T")[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    
+    closeModal() {
+        document.getElementById("crud-modal").style.display = "none";
+    }
+    
+    goToPage(page) {
+        this.currentPage = page;
+        this.render();
+    }
+    
+    previousPage() {
+        if (this.currentPage > 1) {
+            this.currentPage--;
+            this.render();
+        }
+    }
+    
+    nextPage() {
+        const filtered = this.getFilteredData();
+        const totalPages = Math.ceil(filtered.length / this.itemsPerPage);
+        if (this.currentPage < totalPages) {
+            this.currentPage++;
+            this.render();
+        }
+    }
+    
+    saveData() {
+        localStorage.setItem("crud-data", JSON.stringify(this.data));
+    }
+}
+
+// Initialize CRUD manager
+document.addEventListener("DOMContentLoaded", () => {
+    window.crudManager = new AdvancedCRUDManager();
+});
 </script>';
     }
 }
