@@ -7,6 +7,7 @@ use App\Models\Task;
 use App\Models\CustomView;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use App\Services\ComponentLibraryService;
 
 class ProjectViewsService
 {
@@ -319,26 +320,13 @@ DESIGN THEME: Use a clean, professional design with:
 - Intuitive user interface
 - Professional business application aesthetics
 
-Remember: This is a DATA-FOCUSED project management system. Prioritize data display and visualization over input forms!";
-
-        return $prompt;
-    }
-1. Create a complete HTML document with embedded CSS and JavaScript
-2. EVERY button, form, and interactive element MUST have working JavaScript functionality
-3. Use the project data context where relevant
-4. Include ALL components identified in the analysis above
-5. Make it responsive and visually appealing with modern design
-6. Add proper error handling and loading states
-7. Include accessibility features (ARIA labels, semantic HTML)
-8. Add local storage persistence where appropriate
-9. Include search/filter capabilities for data displays
-10. Add keyboard shortcuts for power users
+Remember: This is a DATA-FOCUSED project management system. Prioritize data display and visualization over input forms!
 
 SPECIFIC COMPONENT REQUIREMENTS:
 ";
 
-        // Add specific requirements for each component type
-        foreach ($analysis['components'] as $component) {
+    // Add specific requirements for each component type
+    foreach ($analysis['components'] as $component) {
             switch ($component) {
                 case 'basic_form':
                     $prompt .= "- BASIC FORM: Must have working form submission, validation, and result display\n";
