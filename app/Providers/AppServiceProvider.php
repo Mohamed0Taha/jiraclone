@@ -27,6 +27,9 @@ class AppServiceProvider extends ServiceProvider
         if (class_exists(\Laravel\Socialite\SocialiteServiceProvider::class)) {
             $this->app->register(\Laravel\Socialite\SocialiteServiceProvider::class);
         }
+
+        // Bind ComponentLibraryService for dependency injection
+        $this->app->singleton(\App\Services\ComponentLibraryService::class);
     }
 
     public function boot(): void
