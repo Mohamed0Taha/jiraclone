@@ -277,7 +277,6 @@ export default function CustomView({ auth, project, viewName }) {
                                 {isLocked ? <LockIcon /> : <LockOpenIcon />}
                             </IconButton>
                         </Tooltip>
-                        </Tooltip>
 
                         {!isLocked && (
                             <Tooltip title="Clear micro-application">
