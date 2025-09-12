@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { 
@@ -96,6 +96,17 @@ const shimmer = keyframes`
 
 export default function CustomView({ auth, project, tasks, allTasks, users, methodology, viewName }) {
     
+    // Debug: Log all props received by CustomView
+    console.log('[CustomView] All props received:', {
+        auth: auth ? 'present' : 'missing',
+        project: project ? { id: project.id, name: project.name } : 'missing',
+        tasks: tasks ? Object.keys(tasks) : 'missing',
+        allTasks: allTasks ? `array of ${allTasks.length} items` : 'missing',
+        users: users ? `array of ${users.length} items` : 'missing', 
+        methodology: methodology || 'missing',
+        viewName: viewName || 'missing'
+    });
+    
     const theme = useTheme();
     const [assistantOpen, setAssistantOpen] = useState(false);
     const [isLocked, setIsLocked] = useState(true);
@@ -160,45 +171,65 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         }
     };
 
-    // Auto-save component code to prevent data loss (optimized)
+    // Auto-save component code to prevent data loss
     useEffect(() => {
-        if (!componentCode || isLocked || !autoSaveEnabled) return;
-        
-        // Debounce auto-save to prevent excessive saves
-        const timeoutId = setTimeout(() => {
-            const backupKey = `microapp-backup-${project?.id || 'unknown'}-${viewName || 'default'}`;
-            const backupData = {
-                componentCode,
-                timestamp: new Date().toISOString(),
-                customViewId,
-                projectId: project?.id,
-                viewName: viewName || 'default'
-            };
-            localStorage.setItem(backupKey, JSON.stringify(backupData));
-        }, 5000); // Save after 5 seconds of inactivity
+        if (componentCode && !isLocked && autoSaveEnabled) {
+            console.log('[CustomView Debug] Setting up periodic save for component code');
+            const saveInterval = setInterval(() => {
+                const backupKey = `microapp-backup-${project?.id || 'unknown'}-${viewName || 'default'}`;
+                const backupData = {
+                    componentCode,
+                    timestamp: new Date().toISOString(),
+                    customViewId,
+                    projectId: project?.id,
+                    viewName: viewName || 'default'
+                };
+                localStorage.setItem(backupKey, JSON.stringify(backupData));
+                console.log('[CustomView Debug] Auto-saved component code to local storage');
+            }, 30000); // Save every 30 seconds
 
-        return () => {
-            clearTimeout(timeoutId);
-        };
+            return () => {
+                clearInterval(saveInterval);
+                console.log('[CustomView Debug] Cleared periodic save interval');
+            };
+        }
     }, [componentCode, isLocked, autoSaveEnabled, project?.id, viewName, customViewId]);
 
-    // Load existing custom view on mount (optimized)
+    // Load existing custom view on mount
     useEffect(() => {
         const loadCustomView = async () => {
+            console.log('[CustomView Debug] Component mounting, loading existing custom view', {
+                projectId: project?.id,
+                viewName: viewName
+            });
+
             if (!project?.id || !viewName) {
                 setIsLoading(false);
                 return;
             }
 
             try {
+                console.log('[CustomView Debug] Loading custom view from API', {
+                    projectId: project.id,
+                    viewName: viewName
+                });
+
                 const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${encodeURIComponent(viewName)}`);
                 const data = await response.json();
+
+                console.log('[CustomView Debug] API response received', {
+                    success: data.success,
+                    hasComponent: !!data.html,
+                    customViewId: data.customViewId
+                });
 
                 if (data.success && data.html && data.html.trim()) {
                     setComponentCode(data.html);
                     setCustomViewId(data.customViewId);
                     showSnackbar('Micro-application loaded successfully', 'success');
                 } else {
+                    console.log('[CustomView Debug] No existing custom view found or server returned empty component');
+                    
                     // Try to load from local backup
                     const backupKey = `microapp-backup-${project.id}-${viewName}`;
                     const backup = localStorage.getItem(backupKey);
@@ -208,19 +239,22 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             if (backupData.componentCode && backupData.componentCode.trim()) {
                                 setComponentCode(backupData.componentCode || '');
                                 setCustomViewId(backupData.customViewId);
+                                console.log('[CustomView Debug] Loaded from local backup (no server component)');
                             } else {
                                 setComponentCode('');
+                                console.log('[CustomView Debug] Local backup was empty');
                             }
                         } catch (e) {
                             setComponentCode('');
-                            console.error('[CustomView] Failed to parse backup:', e);
+                            console.error('[CustomView Debug] Failed to parse backup:', e);
                         }
                     } else {
                         setComponentCode('');
+                        console.log('[CustomView Debug] No local backup found');
                     }
                 }
             } catch (error) {
-                console.error('[CustomView] Error loading custom view:', error);
+                console.error('[CustomView Debug] Error loading custom view:', error);
                 
                 // Fallback to local backup
                 const backupKey = `microapp-backup-${project.id}-${viewName}`;
@@ -230,9 +264,10 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         const backupData = JSON.parse(backup);
                         setComponentCode(backupData.componentCode || '');
                         setCustomViewId(backupData.customViewId);
+                        console.log('[CustomView Debug] Loaded from local backup after API error');
                     } catch (e) {
                         setComponentCode('');
-                        console.error('[CustomView] Failed to parse backup after API error:', e);
+                        console.error('[CustomView Debug] Failed to parse backup after API error:', e);
                     }
                 } else {
                     setComponentCode('');
@@ -247,13 +282,10 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         loadCustomView();
     }, [project?.id, viewName]);
 
-    // Memoize component code for AssistantChat to prevent unnecessary re-renders
-    const memoizedComponentCode = useMemo(() => {
-        return componentCode && componentCode.trim() ? componentCode : null;
-    }, [componentCode]);
-
-    // Enhanced generation handling (optimized with useCallback)
-    const handleSpaGenerated = useCallback((payload) => {
+    // Enhanced generation handling
+    const handleSpaGenerated = (payload) => {
+        console.log('[CustomView Debug] SPA generated via assistant', payload);
+        
         if (typeof payload === 'string') {
             setComponentCode(payload);
             setGenerationProgress(null);
@@ -283,11 +315,19 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         console.warn('Unexpected payload format:', payload);
         setGenerationProgress(null);
         showSnackbar('Generation completed but format was unexpected', 'warning');
-    }, []);
+    };
 
-    // Development logging helper (removed - was causing performance issues)
+    // Development logging helper
+    const devLog = (message, data = null) => {
+        if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
+            console.log(`[CustomView Debug] ${message}`, data || '');
+        }
+    };
 
     const handleToggleLock = () => {
+        console.log('[CustomView Debug] Toggling lock state', {
+            currentlyLocked: isLocked
+        });
         setIsLocked(!isLocked);
         showSnackbar(isLocked ? 'Micro-application unlocked for editing' : 'Micro-application locked', 'info');
     };
@@ -297,6 +337,10 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     };
 
     const handleClearWorkingArea = async () => {
+        console.log('[CustomView Debug] Clearing working area confirmed', {
+            hasCustomViewId: !!customViewId
+        });
+
         // Clear local storage backups and any micro-app data
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -306,6 +350,9 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             }
         }
         keysToRemove.forEach(key => localStorage.removeItem(key));
+        console.log('[CustomView Debug] Cleared local storage backups and data', {
+            removedKeys: keysToRemove.length
+        });
 
         // If there's a saved custom view, try to delete it from server
         if (customViewId) {
@@ -320,6 +367,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('[CustomView Debug] Server delete response:', data);
                     if (data.success) {
                         showSnackbar('Micro-application deleted permanently', 'success');
                     } else {
@@ -329,10 +377,11 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     showSnackbar('Micro-application cleared locally (server deletion failed)', 'warning');
                 }
             } catch (error) {
-                console.error('[CustomView] Error deleting from server:', error);
+                console.error('[CustomView Debug] Error deleting from server:', error);
                 showSnackbar('Micro-application cleared locally (server unreachable)', 'warning');
             }
         } else {
+            console.log('[CustomView Debug] Local working area cleared (no saved view)');
             showSnackbar('Working area cleared', 'info');
         }
 
@@ -341,6 +390,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         setCustomViewId(null);
         setIsLocked(true);
         setDeleteConfirmOpen(false);
+        console.log('[CustomView Debug] Cleared periodic save interval');
     };
 
     const handleComponentError = (error) => {
@@ -359,6 +409,53 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     return (
         <AuthenticatedLayout
             user={auth.user}
+            header={
+                <Box sx={{ 
+                    background: designTokens.gradients.primary,
+                    borderBottom: `1px solid ${alpha(designTokens.colors.primary, 0.1)}`,
+                    py: 2
+                }}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 3 }}>
+                        <Stack direction="row" alignItems="center" spacing={2}>
+                            <Box sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: designTokens.radii.lg,
+                                background: designTokens.gradients.accent,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                animation: `${pulseGlow} 2s infinite`
+                            }}>
+                                <AutoAwesomeIcon />
+                            </Box>
+                            <Box>
+                                <Typography variant="h5" fontWeight="600" color="text.primary">
+                                    Custom Application Studio
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    {project.name} • {viewName}
+                                </Typography>
+                            </Box>
+                        </Stack>
+                        
+                        <Chip 
+                            label={isLocked ? "View Mode" : "Edit Mode"}
+                            color={isLocked ? "default" : "primary"}
+                            variant="outlined"
+                            sx={{
+                                borderRadius: designTokens.radii.lg,
+                                fontWeight: 500,
+                                ...(isLocked ? {} : {
+                                    background: alpha(designTokens.colors.primary, 0.1),
+                                    borderColor: designTokens.colors.primary,
+                                })
+                            }}
+                        />
+                    </Stack>
+                </Box>
+            }
         >
             <Head title={`Custom View: ${viewName} - ${project.name}`} />
 
@@ -438,7 +535,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     elevation={0}
                     sx={{
                         position: 'fixed',
-                        bottom: 24,
+                        top: 100,
                         right: 24,
                         zIndex: 1200,
                         borderRadius: designTokens.radii.xl,
@@ -452,7 +549,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 >
                     <Stack direction="column" spacing={0}>
                         {/* Generate Button */}
-                        <Tooltip title={componentCode ? "Update Application" : "Generate New Application"} placement="left">
+                        <Tooltip title="Generate New Application" placement="left">
                             <IconButton
                                 onClick={() => setAssistantOpen(true)}
                                 sx={{
@@ -560,7 +657,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     sx={{
                         mt: 2,
                         mr: 10, // Space for floating controls
-                        borderRadius: 3,
+                        borderRadius: designTokens.radii.xl,
                         overflow: 'hidden',
                         background: alpha(theme.palette.background.paper, 0.8),
                         backdropFilter: 'blur(12px)',
@@ -574,46 +671,17 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     }}
                 >
                     {componentCode ? (
-                        <Box sx={{ position: 'relative' }}>
-                            {/* Update Available Indicator */}
-                            <Box sx={{
-                                position: 'absolute',
-                                top: 16,
-                                right: 16,
-                                zIndex: 10,
-                                opacity: 0.8,
-                            }}>
-                                <Chip 
-                                    label="Updateable"
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{
-                                        borderRadius: designTokens.radii.lg,
-                                        fontSize: '0.75rem',
-                                        fontWeight: 500,
-                                        color: designTokens.colors.accent,
-                                        borderColor: designTokens.colors.accent,
-                                        background: alpha(designTokens.colors.accent, 0.1),
-                                        '&:hover': {
-                                            background: alpha(designTokens.colors.accent, 0.2),
-                                        }
-                                    }}
-                                />
-                            </Box>
-                            {componentCode && componentCode.trim() && (
-                                <ReactComponentRenderer
-                                    componentCode={componentCode}
-                                    project={project}
-                                    auth={auth}
-                                    viewName={viewName}
-                                    onError={handleComponentError}
-                                    tasks={tasks}
-                                    allTasks={allTasks}
-                                    users={users}
-                                    methodology={methodology}
-                                />
-                            )}
-                        </Box>
+                        <ReactComponentRenderer
+                            componentCode={componentCode}
+                            project={project}
+                            auth={auth}
+                            viewName={viewName}
+                            onError={handleComponentError}
+                            tasks={tasks}
+                            allTasks={allTasks}
+                            users={users}
+                            methodology={methodology}
+                        />
                     ) : isLoading ? (
                         <Box sx={{
                             display: 'flex',
@@ -741,7 +809,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 onClose={() => setDeleteConfirmOpen(false)}
                 PaperProps={{
                     sx: {
-                        borderRadius: 2,
+                        borderRadius: designTokens.radii.xl,
                         background: designTokens.gradients.primary,
                     }
                 }}
@@ -805,7 +873,6 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 isCustomView={true}
                 onSpaGenerated={handleSpaGenerated}
                 onProgressUpdate={setGenerationProgress}
-                currentComponentCode={memoizedComponentCode}
             />
 
             {/* Enhanced Snackbar */}
