@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { generateCustomView } from '@/lib/ai-actions';
 import { router, usePage } from '@inertiajs/react';
 import { csrfFetch } from '@/utils/csrf';
 import { useIsolatedSpeechRecognition } from '@/hooks/useIsolatedSpeechRecognition';
@@ -100,17 +101,6 @@ const palette = {
 };
 
 export default function AssistantChat({ project, tasks, allTasks, users, methodology, open, onClose, isCustomView = false, onSpaGenerated = null, viewName, currentComponentCode = null }) {
-    
-    // Debug logging for context data
-    console.log('[AssistantChat] Component mounted/updated with props:', {
-        project: project,
-        tasks: tasks,
-        allTasks: allTasks,
-        users: users,
-        methodology: methodology,
-        isCustomView: isCustomView,
-        open: open
-    });
     
     useEffect(() => {
         if (open && isCustomView) {
@@ -475,7 +465,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             status: t.status, 
                             description: t.description,
                             priority: t.priority,
-                            due_date: t.due_date,
+                            due_date: t.due_date || t.end_date || null,
                             assignee: t.assignee?.name || null,
                             creator: t.creator?.name || null,
                         })),
@@ -485,7 +475,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             status: t.status, 
                             description: t.description,
                             priority: t.priority,
-                            due_date: t.due_date,
+                            due_date: t.due_date || t.end_date || null,
                             assignee: t.assignee?.name || null,
                             creator: t.creator?.name || null,
                         })),
@@ -495,7 +485,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             status: t.status, 
                             description: t.description,
                             priority: t.priority,
-                            due_date: t.due_date,
+                            due_date: t.due_date || t.end_date || null,
                             assignee: t.assignee?.name || null,
                             creator: t.creator?.name || null,
                         })),
@@ -505,7 +495,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             status: t.status, 
                             description: t.description,
                             priority: t.priority,
-                            due_date: t.due_date,
+                            due_date: t.due_date || t.end_date || null,
                             assignee: t.assignee?.name || null,
                             creator: t.creator?.name || null,
                         })),
@@ -516,7 +506,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             status: t.status, 
                             description: t.description,
                             priority: t.priority,
-                            due_date: t.due_date,
+                            due_date: t.due_date || t.end_date || null,
                             assignee: t.assignee?.name || null,
                             creator: t.creator?.name || null,
                         })),
@@ -526,7 +516,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             status: t.status, 
                             description: t.description,
                             priority: t.priority,
-                            due_date: t.due_date,
+                            due_date: t.due_date || t.end_date || null,
                             assignee: t.assignee?.name || null,
                             creator: t.creator?.name || null,
                         })),
@@ -540,7 +530,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                         status: t.status,
                         description: t.description,
                         priority: t.priority,
-                        due_date: t.due_date,
+                        due_date: t.due_date || t.end_date || null,
                         assignee: t.assignee?.name || null,
                         creator: t.creator?.name || null,
                         created_at: t.created_at,
@@ -552,16 +542,21 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                         email: u.email,
                     })) : [],
                 } : null,
-                // Include current component code for updates/modifications
-                current_component_code: isCustomView && currentComponentCode ? currentComponentCode : null,
+                // ALWAYS CREATE NEW COMPONENT: Include current component only as reference for understanding context
+                // but don't ask AI to modify it directly - instead create entirely new component with full conversation history
+                current_component_reference: isCustomView && currentComponentCode ? {
+                    code: currentComponentCode,
+                    length: currentComponentCode.length,
+                    note: "This is the current component for reference only. Create a completely new component that incorporates both the previous functionality and the new request."
+                } : null,
             };
 
             // Debug the payload being sent
             console.log('[AssistantChat Debug] Payload being sent to API:', {
                 isCustomView: isCustomView,
                 hasProjectContext: !!payload.project_context,
-                hasCurrentComponent: !!payload.current_component_code,
-                currentComponentLength: payload.current_component_code ? payload.current_component_code.length : 0,
+                hasCurrentComponentReference: !!payload.current_component_reference,
+                currentComponentLength: payload.current_component_reference ? payload.current_component_reference.length : 0,
                 projectContextSummary: payload.project_context ? {
                     project_name: payload.project_context.project?.name,
                     methodology: payload.project_context.methodology?.name,
@@ -574,7 +569,8 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     all_tasks_count: payload.project_context.all_tasks?.length || 0,
                     users_count: payload.project_context.users?.length || 0,
                 } : null,
-                full_payload: payload
+                conversationLength: payload.conversation_history?.length || 0,
+                approach: "Creating new component with full conversation history instead of modifying existing"
             });
 
             // Route to different endpoints based on context
@@ -591,17 +587,51 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                 });
             }
 
+            // Use streaming client for custom view mode to align with AI SDK-like structure
+            if (isCustomView) {
+                await generateCustomView({
+                    projectId: project.id,
+                    viewName: payload.view_name,
+                    message: payload.message,
+                    conversationHistory: payload.conversation_history,
+                    projectContext: payload.project_context,
+                    currentComponentCode: payload.current_component_reference?.code || null,
+                    onEvent: (evt) => {
+                        if (!evt) return;
+                        if (evt.type === 'status') {
+                            setGenerationProgress({ step: evt.stage || 1, total: evt.total || 4, message: evt.message || 'Processing...' });
+                        } else if (evt.type === 'spa_generated' && evt.html) {
+                            setGenerationProgress({ step: 4, total: 4, message: '🎉 Your custom application is ready!' });
+                            const asstMsg = {
+                                role: 'assistant',
+                                text: evt.message || 'Generated your custom application!',
+                                response: evt,
+                                ts: Date.now(),
+                            };
+                            setMessages((prev) => [...prev, asstMsg]);
+                            if (onSpaGenerated) onSpaGenerated(evt.html, evt);
+                            setTimeout(() => setGenerationProgress(null), 1500);
+                        } else if (evt.type === 'error') {
+                            setMessages((prev) => [
+                                ...prev,
+                                { role: 'assistant', text: `Error: ${evt.message || 'Generation failed'}`, error: true, ts: Date.now(), response: { type: 'error' } },
+                            ]);
+                        }
+                    },
+                });
+                setBusy(false);
+                return;
+            }
+
+            // Non-custom view path: keep existing JSON-based assistant chat
             const response = await csrfFetch(endpoint, {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });
-
-            // Check if response is actually JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
                 throw new Error('Server returned non-JSON response. Please check your connection and try again.');
             }
-
             const data = await response.json();
 
             // Handle enhanced conversation flow responses

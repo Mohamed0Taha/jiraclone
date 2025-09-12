@@ -54,18 +54,42 @@ class GenerativeUIService
                 'current_component_length' => $currentComponentCode ? strlen($currentComponentCode) : 0,
                 'has_project_context' => !is_null($projectContext),
                 'project_context_keys' => $projectContext ? array_keys($projectContext) : [],
-                'project_context_summary' => $projectContext ? [
-                    'has_tasks' => isset($projectContext['tasks']),
-                    'task_count' => isset($projectContext['tasks']['total_count']) ? $projectContext['tasks']['total_count'] : 0,
-                    'has_all_tasks' => isset($projectContext['all_tasks']),
-                    'all_tasks_count' => isset($projectContext['all_tasks']) ? count($projectContext['all_tasks']) : 0,
-                    'has_users' => isset($projectContext['users']),
-                    'users_count' => isset($projectContext['users']) ? count($projectContext['users']) : 0,
-                ] : null,
+                'project_context_summary' => $projectContext ? (function($ctx) {
+                    $summary = [
+                        'has_tasks' => isset($ctx['tasks']),
+                        'has_all_tasks' => isset($ctx['all_tasks']),
+                        'all_tasks_count' => isset($ctx['all_tasks']) && is_array($ctx['all_tasks']) ? count($ctx['all_tasks']) : 0,
+                        'has_users' => isset($ctx['users']),
+                        'users_count' => isset($ctx['users']) && is_array($ctx['users']) ? count($ctx['users']) : 0,
+                    ];
+                    if (isset($ctx['tasks']) && is_array($ctx['tasks'])) {
+                        $t = $ctx['tasks'];
+                        $statuses = ['todo','inprogress','review','done','backlog','testing'];
+                        $total = isset($t['total_count']) ? (int)$t['total_count'] : 0;
+                        if ($total === 0) {
+                            foreach ($statuses as $s) {
+                                $total += isset($t[$s]) && is_array($t[$s]) ? count($t[$s]) : 0;
+                            }
+                        }
+                        $summary['task_count'] = $total;
+                    } else {
+                        $summary['task_count'] = 0;
+                    }
+                    return $summary;
+                })($projectContext) : null,
                 'prompt_preview' => substr($prompt, 0, 500) . '...'
             ]);
             
-            $generatedComponent = $this->openAIService->generateCustomView($prompt);
+            $generatedComponent = $this->openAIService->chatText([
+                [
+                    'role' => 'system',
+                    'content' => 'You are an expert React developer. You create ONLY React/JSX components. Return ONLY valid React component code with NO explanations, NO markdown formatting, NO code blocks. The code should start with imports and end with the export default statement.'
+                ],
+                [
+                    'role' => 'user', 
+                    'content' => $prompt
+                ]
+            ], 0.2, false);
 
             // Defensive fallback: if generation is empty, provide a minimal working component for dev
             if (!is_string($generatedComponent) || trim($generatedComponent) === '') {
@@ -227,11 +251,13 @@ CONVERSATION HISTORY:
 " . (!empty($conversationHistory) ? json_encode(array_slice($conversationHistory, -3), JSON_PRETTY_PRINT) : "No previous conversation") . "
 
 RESPONSE FORMAT:
-Provide ONLY the UPDATED complete React component code that:
+Provide ONLY the UPDATED complete React component code (TSX/JSX) that:
 - Incorporates the user's requested changes
 - Preserves all working functionality not mentioned in the request
 - Continues to use the REAL DATA from project context
 - Maintains the same data initialization patterns
+- Exports a default component via `export default function Name() { ... }`
+- Persists user data changes using the provided helpers: `saveViewData(key, data)` and `loadViewData(key)`
 - No explanations, no markdown - just the working JSX component ready for immediate use
 
 Remember: This is an UPDATE, not a complete rewrite. Preserve what works, modify only what's requested.";
@@ -243,11 +269,89 @@ CRITICAL REQUIREMENTS:
 2. Use React hooks (useState, useEffect) for state management  
 3. **NEVER use API calls like csrfFetch('/api/tasks') - USE THE PROVIDED REAL DATA instead**
 4. Initialize state with the ACTUAL project data provided in the context below AND via props injected by the host renderer
-5. Input controls must take LESS THAN 13% of the workspace - focus 87%+ on data display
-6. Use modern CSS-in-JS or Tailwind classes for styling
-7. Include proper TypeScript types if applicable
-8. Add loading states, error handling, and user feedback
-9. Ensure mobile-responsive design
+5. **MANDATORY: Include FULL CRUD OPERATIONS (Create, Read, Update, Delete) for all data entities**
+6. Input controls must take LESS THAN 13% of the workspace - focus 87%+ on data display
+7. Use modern CSS-in-JS or Tailwind classes for styling
+8. Include proper TypeScript types if applicable
+9. Add loading states, error handling, and user feedback
+10. Ensure mobile-responsive design
+11. Export a default component: `export default function Name() { ... }`
+12. Persist user data using the helpers available in scope: `saveViewData(key, data)` and `loadViewData(key)`
+13. **CRITICAL: ALL React hooks (useState, useEffect, etc.) MUST be at the TOP LEVEL - NEVER inside conditions, loops, or functions**
+14. **CRITICAL: Follow the Rules of Hooks - hooks must always be called in the same order on every render**
+
+MANDATORY CRUD OPERATIONS:
+- **CREATE**: Always include forms/inputs to add new items (modals, inline forms, or dedicated sections)
+- **READ**: Display data in tables, cards, or lists with search/filter capabilities
+- **UPDATE**: Enable editing existing items (inline editing, edit modals, or edit forms)
+- **DELETE**: Provide delete functionality with confirmation dialogs
+- **VALIDATION**: Add input validation and error handling for all operations
+- **PERSISTENCE**: Use saveViewData() to persist all changes immediately
+
+AVAILABLE CHART LIBRARIES:
+For data visualization, you have access to Recharts components (NO IMPORT NEEDED):
+- **Bar Charts**: <BarChart width={600} height={300} data={data}><Bar dataKey=\"value\" /></BarChart>
+- **Pie Charts**: <PieChart width={400} height={300}><Pie data={data} dataKey=\"value\" nameKey=\"name\" /></PieChart>
+- **Line Charts**: <LineChart width={600} height={300} data={data}><Line dataKey=\"value\" /></LineChart>
+- **Area Charts**: <AreaChart width={600} height={300} data={data}><Area dataKey=\"value\" /></AreaChart>
+- **Chart Components**: ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell
+- **DO NOT use react-chartjs-2 or Chart.js** - use Recharts syntax only
+- **Example**: <ResponsiveContainer width=\"100%\" height={300}><BarChart data={tasksByStatus}><XAxis dataKey=\"name\" /><YAxis /><Tooltip /><Bar dataKey=\"count\" fill=\"#8884d8\" /></BarChart></ResponsiveContainer>
+
+REQUIRED DATA PERSISTENCE PATTERN (COPY THIS EXACTLY):
+```tsx
+const [items, setItems] = useState(() => []);
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState(null);
+
+// CRITICAL: ALL hooks must be at the top level - NEVER inside conditions, loops, or nested functions
+// MANDATORY: Load persisted data on mount using localStorage
+useEffect(() => {
+  try {
+    const storageKey = 'microapp-data-' + Date.now(); // Or use a meaningful key
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setItems(parsed.items || []);
+    }
+  } catch (error) {
+    console.warn('Failed to load persisted data:', error);
+    setError('Failed to load data');
+  }
+}, []);
+
+// MANDATORY: Save when items change
+useEffect(() => {
+  if (items.length > 0) { // Only save when there's data to save
+    try {
+      const storageKey = 'microapp-data-' + Date.now(); // Or use a meaningful key
+      localStorage.setItem(storageKey, JSON.stringify({ 
+        items, 
+        lastUpdated: new Date().toISOString() 
+      }));
+    } catch (error) {
+      console.warn('Failed to save data:', error);
+    }
+  }
+}, [items]);
+
+// CRITICAL RULE: ALL useState and useEffect calls must be at the TOP LEVEL
+// NEVER put hooks inside if statements, loops, or functions
+
+// Example CRUD operations that update items and trigger auto-save
+const addItem = (newItem) => {
+  const item = { id: Date.now(), ...newItem };
+  setItems(prev => [...prev, item]);
+};
+
+const updateItem = (id, updates) => {
+  setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+};
+
+const deleteItem = (id) => {
+  setItems(prev => prev.filter(item => item.id !== id));
+};
+```
 
 DATA-FOCUSED DESIGN PRINCIPLES:
 - Minimize input forms - use inline editing, modals, or compact controls
@@ -256,16 +360,105 @@ DATA-FOCUSED DESIGN PRINCIPLES:
 - Add search, filtering, and sorting capabilities
 - Include data export/import functionality where relevant
 - **START WITH REAL DATA - no empty states or API loading**
+- **ALWAYS INCLUDE CRUD OPERATIONS - Create forms, Edit buttons, Delete confirmations**
+
+CRUD IMPLEMENTATION EXAMPLES:
+- **Add New Item**: Modal form, inline form, or floating action button
+- **Edit Item**: Inline editing (click to edit), edit button with modal/form
+- **Delete Item**: Delete button with confirmation dialog
+- **Bulk Operations**: Select multiple items, bulk delete/edit
 
 IMPORTANT: Instead of API calls or hardcoded arrays, initialize your state with the real data like this:
 ```jsx
-// ✅ CORRECT: Use provided real data (prefer props injected by host)
-const [tasks, setTasks] = useState(() => (tasksDataFromProps || allTasksDataFromProps || []));
+// ✅ CORRECT: Use provided real data (variables auto-injected by the host renderer)
+const [tasks, setTasks] = useState(() => {
+  // These variables are automatically available in your component scope:
+  // projectData - Full project object with details, metadata, methodology
+  // tasksDataFromProps - Array of all project tasks with status, priority, dates
+  // allTasksDataFromProps - Same as tasksDataFromProps (alias for consistency)
+  // usersDataFromProps - Array of project team members
+  // methodologyDataFromProps - Object with workflow details and status labels
+  // __flatTasks - Flattened array of all tasks (processed for easy use)
+  
+  return tasksDataFromProps || allTasksDataFromProps || __flatTasks || [];
+});
+
+const [users, setUsers] = useState(() => usersDataFromProps || __users || []);
+const [project, setProject] = useState(() => projectData || __project || {});
+
+// Alternative approach: Use direct access to injected variables
+const [expenses, setExpenses] = useState(() => __flatTasks || []); // Use tasks as base data
+const [teamMembers, setTeamMembers] = useState(() => __users || []);
 
 // ❌ WRONG: Don't make API calls or hardcode arrays  
-// const tasksData = [{ id: 1, title: 'Fake' }];
-// const [tasks, setTasks] = useState(tasksData);
-// useEffect(() => { fetch('/api/tasks')... }, []);
+// const expensesData = [{ id: 1, title: 'Fake' }];
+// const [expenses, setExpenses] = useState(expensesData);
+// useEffect(() => { fetch('/api/expenses')... }, []);
+```
+
+AVAILABLE DATA VARIABLES (auto-injected into your component):
+- `projectData`: Full project object with name, description, methodology, dates, metadata
+- `tasksDataFromProps`: Array of tasks with properties: id, title, description, status, priority, due_date, creator, assignee
+- `allTasksDataFromProps`: Same as tasksDataFromProps (alias)
+- `__flatTasks`: Pre-processed flattened array of all tasks
+- `usersDataFromProps`: Array of team members with id, name, email
+- `methodologyDataFromProps`: Object with workflow configuration and status labels
+- `__project`, `__tasks`, `__allTasks`, `__users`, `__methodology`: Direct access to raw context data
+
+TASK OBJECT STRUCTURE (when using tasksDataFromProps):
+```tsx
+interface Task {
+  id: number;
+  title: string;
+  description?: string;
+  status: 'todo' | 'inprogress' | 'review' | 'done' | 'backlog' | 'testing';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  due_date?: string; // ISO date string
+  created_at: string;
+  updated_at: string;
+  creator: { id: number; name: string; } | null;
+  assignee: { id: number; name: string; } | null;
+}
+```
+
+VISUALIZATION EXAMPLES:
+- **Task Dashboard**: Status distribution charts, progress bars, timeline views
+- **Team Analytics**: User assignment charts, workload distribution, productivity metrics  
+- **Project Reports**: Completion rates, overdue tasks, milestone tracking
+- **Custom Tables**: Sortable/filterable task lists with custom columns
+- **Calendar Views**: Task deadlines, project timeline, sprint planning
+- **Kanban Boards**: Custom status flows with drag-drop (if needed)
+- **Charts & Graphs**: Burn-down charts, velocity tracking, status trends
+
+PERSISTENCE HELPERS (available in runtime; use them to save UI state/data):
+```tsx
+// MANDATORY: Load any previously-saved data on mount
+useEffect(() => {
+  (async () => {
+    try {
+      const persisted = await loadViewData('main');
+      if (persisted && persisted.data) {
+        // Update your state with persisted data
+        setItems(persisted.data.items || []);
+        setExpenses(persisted.data.expenses || []);
+        // etc. for your specific data
+      }
+    } catch (error) {
+      console.warn('Failed to load persisted data:', error);
+    }
+  })();
+}, []);
+
+// MANDATORY: Save when data changes
+useEffect(() => {
+  // Save all relevant state data
+  saveViewData('main', { 
+    items, 
+    expenses, 
+    // etc. for your specific data
+    lastUpdated: new Date().toISOString() 
+  });
+}, [items, expenses]); // Include all state variables that should persist
 ```
 
 COMPONENT STRUCTURE:
@@ -285,9 +478,11 @@ CONVERSATION HISTORY:
 " . (!empty($conversationHistory) ? json_encode(array_slice($conversationHistory, -3), JSON_PRETTY_PRINT) : "No previous conversation") . "
 
 RESPONSE FORMAT:
-Provide ONLY the complete React component code that uses the REAL DATA from the project context above. 
+Provide ONLY the complete React component code (TSX/JSX) that uses the REAL DATA from the project context above. 
 - Initialize state with the provided tasks, users, and project data
 - No API calls, no empty states - use the real data immediately
+- Must include `export default function Name()` as the default export
+- Use the provided `saveViewData` and `loadViewData` helpers for persistence
 - No explanations, no markdown - just the working JSX component ready for immediate use.
 
 Remember: Focus on DATA DISPLAY (87% of space) with minimal input controls (13% max) and USE THE PROVIDED REAL DATA.";
@@ -438,28 +633,6 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
     }
 
     /**
-     * Get existing custom view
-     */
-    public function getCustomView(Project $project, int $userId, string $viewName = 'default'): ?CustomView
-    {
-        return CustomView::getActiveForProject($project->id, $userId, $viewName);
-    }
-
-    /**
-     * Delete custom view
-     */
-    public function deleteCustomView(Project $project, int $userId, string $viewName = 'default'): bool
-    {
-        $view = CustomView::getActiveForProject($project->id, $userId, $viewName);
-        
-        if ($view) {
-            return $view->delete();
-        }
-        
-        return false;
-    }
-
-    /**
      * Build enhanced project context with live tasks and user data
      */
     private function buildEnhancedProjectContext(Project $project, array $projectContext): string
@@ -468,7 +641,6 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
         $context .= "Description: {$project->description}\n";
         $context .= "Key: {$project->key}\n";
         
-        // Add methodology information
         $methodology = $projectContext['methodology']['name'] ?? $project->meta['methodology'] ?? 'kanban';
         $context .= "Methodology: {$methodology}\n";
         
@@ -479,7 +651,6 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
             $context .= "End Date: {$project->end_date}\n";
         }
         
-        // Add methodology-specific status labels
         if (isset($projectContext['methodology']['status_labels'])) {
             $context .= "\nMETHODOLOGY STATUS LABELS (use these in your component):\n";
             foreach ($projectContext['methodology']['status_labels'] as $internal => $display) {
@@ -487,79 +658,290 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
             }
         }
         
-        // Add metadata if available
         if ($project->meta && !empty($project->meta)) {
             $context .= "Metadata: " . json_encode($project->meta, JSON_PRETTY_PRINT) . "\n";
         }
         
-        // Add live tasks data if provided
-        if (isset($projectContext['tasks']) && $projectContext['tasks']) {
-            $tasks = $projectContext['tasks'];
+        // Use the corrected keys from the project context
+        if (!empty($projectContext['all_tasks'])) {
+            $allTasks = $projectContext['all_tasks'];
+            $totalCount = count($allTasks);
+            $statusCounts = $projectContext['tasks_by_status_count'] ?? [];
+            $doneCount = $statusCounts['done'] ?? 0;
+            $completionRate = $totalCount > 0 ? round(($doneCount / $totalCount) * 100, 1) : 0;
+
             $context .= "\nTASKS SUMMARY:\n";
-            $context .= "Total Tasks: {$tasks['total_count']}\n";
-            $context .= "Completion Rate: {$tasks['completion_rate']}%\n";
+            $context .= "Total Tasks: {$totalCount}\n";
+            $context .= "Completion Rate: {$completionRate}%\n";
             
-            // Add detailed task data for AI to use
-            $context .= "\nDETAILED TASK DATA FOR COMPONENT INITIALIZATION:\n";
-            $context .= "// Use this exact data structure in your React component:\n";
-            $context .= "const initialTasks = {\n";
-            $context .= "  todo: " . json_encode($tasks['todo'], JSON_PRETTY_PRINT) . ",\n";
-            $context .= "  inprogress: " . json_encode($tasks['inprogress'], JSON_PRETTY_PRINT) . ",\n";
-            $context .= "  review: " . json_encode($tasks['review'], JSON_PRETTY_PRINT) . ",\n";
-            $context .= "  done: " . json_encode($tasks['done'], JSON_PRETTY_PRINT) . "\n";
-            $context .= "};\n\n";
-            
-            // Also provide flat array if available
-            if (isset($projectContext['all_tasks']) && !empty($projectContext['all_tasks'])) {
-                $context .= "// Alternative: All tasks as flat array:\n";
-                $context .= "const allTasks = " . json_encode($projectContext['all_tasks'], JSON_PRETTY_PRINT) . ";\n\n";
+            if (!empty($statusCounts)) {
+                $context .= "Tasks by Status:\n";
+                foreach ($statusCounts as $status => $count) {
+                    $context .= "- " . ucfirst($status) . ": {$count}\n";
+                }
             }
-            
-            $context .= "TASK BREAKDOWN:\n";
-            $context .= "\nTODO TASKS (" . count($tasks['todo']) . "):\n";
-            foreach (array_slice($tasks['todo'], 0, 10) as $task) {
-                $context .= "- #{$task['id']}: {$task['title']}";
-                if ($task['priority']) $context .= " [Priority: {$task['priority']}]";
-                if ($task['due_date']) $context .= " [Due: {$task['due_date']}]";
+
+            $context .= "\nALL TASKS (sample of up to 25):\n";
+            $tasksSample = array_slice($allTasks, 0, 25);
+            foreach ($tasksSample as $task) {
+                $context .= "- ID: {$task['id']}, Title: {$task['title']}, Status: {$task['status']}";
+                if (!empty($task['due_date'])) {
+                    $context .= ", Due: " . substr($task['due_date'], 0, 10);
+                }
                 $context .= "\n";
             }
-            
-            $context .= "\nIN PROGRESS TASKS (" . count($tasks['inprogress']) . "):\n";
-            foreach (array_slice($tasks['inprogress'], 0, 10) as $task) {
-                $context .= "- #{$task['id']}: {$task['title']}";
-                if ($task['assignee']) $context .= " [Assignee: {$task['assignee']}]";
-                $context .= "\n";
-            }
-            
-            $context .= "\nREVIEW TASKS (" . count($tasks['review']) . "):\n";
-            foreach (array_slice($tasks['review'], 0, 5) as $task) {
-                $context .= "- #{$task['id']}: {$task['title']}\n";
-            }
-            
-            $context .= "\nCOMPLETED TASKS (" . count($tasks['done']) . "):\n";
-            foreach (array_slice($tasks['done'], 0, 5) as $task) {
-                $context .= "- #{$task['id']}: {$task['title']}\n";
-            }
-        } else {
-            $context .= "\nNO TASKS AVAILABLE: Project currently has no tasks. Generate a component with placeholder message or basic task creation interface.\n";
         }
-        
-        // Add team members if provided
+
         if (isset($projectContext['users']) && !empty($projectContext['users'])) {
-            $context .= "\nTEAM MEMBERS:\n";
+            $context .= "\nTEAM MEMBERS (" . count($projectContext['users']) . "):\n";
             foreach ($projectContext['users'] as $user) {
-                $context .= "- {$user['name']} ({$user['email']})\n";
+                $context .= "- ID: {$user['id']}, Name: {$user['name']}, Email: {$user['email']}\n";
             }
         }
-        
-        $context .= "\nINSTRUCTIONS FOR AI:\n";
-        $context .= "Use this REAL project data to create meaningful, data-driven components.\n";
-        $context .= "Generate components that work with the actual task IDs, titles, and statuses shown above.\n";
-        $context .= "IMPORTANT: Use the methodology-specific status labels (e.g., 'Backlog' instead of 'todo' for lean methodology).\n";
-        $context .= "Create useful dashboards, progress trackers, or task management widgets using this real data.\n";
-        $context .= "Consider the project timeline, completion rates, and team structure when designing the component.\n";
-        $context .= "Match the terminology and workflow of the {$methodology} methodology.\n";
         
         return $context;
+    }
+
+    /**
+     * Save custom view component code
+     */
+    public function saveCustomView(Project $project, int $userId, string $viewName, string $componentCode, ?int $customViewId = null): array
+    {
+        try {
+            $customView = CustomView::createOrUpdate(
+                $project->id,
+                $userId,
+                $viewName,
+                $componentCode,
+                [
+                    'type' => 'react_component',
+                    'saved_at' => now()->toISOString(),
+                ],
+                $customViewId
+            );
+
+            return [
+                'success' => true,
+                'custom_view_id' => $customView->id,
+                'message' => 'Custom view saved successfully'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('SaveCustomView error', [
+                'project_id' => $project->id,
+                'user_id' => $userId,
+                'view_name' => $viewName,
+                'error' => $e->getMessage()
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Save component data (for persistent state across component reloads)
+     */
+    public function saveComponentData(Project $project, int $userId, string $viewName, string $dataKey, $data): array
+    {
+        try {
+            // Get or create the custom view
+            $customView = CustomView::getActiveForProject($project->id, $userId, $viewName);
+            
+            if (!$customView) {
+                // Create a minimal custom view for data persistence if it doesn't exist
+                $customView = CustomView::create([
+                    'project_id' => $project->id,
+                    'user_id' => $userId,
+                    'name' => $viewName,
+                    'description' => 'Auto-created for data persistence',
+                    'html_content' => '// Data persistence container',
+                    'metadata' => [],
+                    'is_active' => true,
+                ]);
+            }
+
+            // Get existing metadata or create new
+            $metadata = $customView->metadata ?? [];
+            
+            // Ensure component_data key exists
+            if (!isset($metadata['component_data'])) {
+                $metadata['component_data'] = [];
+            }
+
+            // Save the data under the specified key
+            $metadata['component_data'][$dataKey] = [
+                'data' => $data,
+                'saved_at' => now()->toISOString()
+            ];
+
+            // Update the custom view
+            $customView->metadata = $metadata;
+            $customView->save();
+
+            return [
+                'success' => true,
+                'data_key' => $dataKey,
+                'saved_at' => $metadata['component_data'][$dataKey]['saved_at']
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('SaveComponentData error', [
+                'project_id' => $project->id,
+                'user_id' => $userId,
+                'view_name' => $viewName,
+                'data_key' => $dataKey,
+                'error' => $e->getMessage()
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Load component data (for restoring state across component reloads)
+     */
+    public function loadComponentData(Project $project, int $userId, string $viewName, string $dataKey): array
+    {
+        try {
+            // Get the custom view
+            $customView = CustomView::getActiveForProject($project->id, $userId, $viewName);
+            
+            if (!$customView) {
+                return [
+                    'success' => false,
+                    'data' => null,
+                    'message' => 'Custom view not found'
+                ];
+            }
+
+            // Get metadata
+            $metadata = $customView->metadata ?? [];
+            
+            // Check if component_data exists and has the requested key
+            if (!isset($metadata['component_data']) || !isset($metadata['component_data'][$dataKey])) {
+                return [
+                    'success' => true,
+                    'data' => null,
+                    'message' => 'No data found for the specified key'
+                ];
+            }
+
+            return [
+                'success' => true,
+                'data' => $metadata['component_data'][$dataKey]['data'],
+                'saved_at' => $metadata['component_data'][$dataKey]['saved_at']
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('LoadComponentData error', [
+                'project_id' => $project->id,
+                'user_id' => $userId,
+                'view_name' => $viewName,
+                'data_key' => $dataKey,
+                'error' => $e->getMessage()
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Get an existing custom view
+     */
+    public function getCustomView(Project $project, int $userId, string $viewName = 'default'): ?array
+    {
+        try {
+            $customView = CustomView::getActiveForProject($project->id, $userId, $viewName);
+            
+            if (!$customView) {
+                return null;
+            }
+
+            // Debug logging to understand what we're getting
+            Log::info('[GenerativeUIService] CustomView retrieved:', [
+                'customView_type' => gettype($customView),
+                'customView_class' => $customView ? get_class($customView) : 'null',
+                'is_array' => is_array($customView),
+                'is_instance' => $customView instanceof \App\Models\CustomView,
+            ]);
+
+            // Be defensive: ensure we have the right type
+            if (!($customView instanceof \App\Models\CustomView)) {
+                Log::error('[GenerativeUIService] Expected CustomView model, got: ' . gettype($customView), [
+                    'value' => $customView
+                ]);
+                return [
+                    'success' => false,
+                    'type' => 'error',
+                    'message' => 'Invalid custom view data structure'
+                ];
+            }
+
+            $code = $customView->getComponentCode();
+
+            return [
+                'success' => true,
+                'type' => 'spa_generated',
+                'html' => $code,
+                'component_code' => $code,
+                'custom_view_id' => $customView->id,
+                'message' => 'Custom view loaded successfully'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('GenerativeUIService::getCustomView error', [
+                'project_id' => $project->id,
+                'user_id' => $userId,
+                'view_name' => $viewName,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'type' => 'error',
+                'message' => 'Failed to load custom view'
+            ];
+        }
+    }
+
+    /**
+     * Delete a custom view
+     */
+    public function deleteCustomView(Project $project, int $userId, string $viewName = 'default'): bool
+    {
+        try {
+            $customView = CustomView::getActiveForProject($project->id, $userId, $viewName);
+            
+            if (!$customView) {
+                Log::info('GenerativeUIService::deleteCustomView - view not found', [
+                    'project_id' => $project->id,
+                    'user_id' => $userId,
+                    'view_name' => $viewName
+                ]);
+                return false;
+            }
+
+            $deleted = $customView->delete();
+
+            Log::info('GenerativeUIService::deleteCustomView - success', [
+                'project_id' => $project->id,
+                'user_id' => $userId,
+                'view_name' => $viewName,
+                'deleted' => $deleted
+            ]);
+
+            return $deleted;
+
+        } catch (\Exception $e) {
+            Log::error('GenerativeUIService::deleteCustomView error', [
+                'project_id' => $project->id,
+                'user_id' => $userId,
+                'view_name' => $viewName,
+                'error' => $e->getMessage()
+            ]);
+
+            return false;
+        }
     }
 }

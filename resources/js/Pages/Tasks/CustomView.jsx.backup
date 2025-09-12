@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Head } from '@inertiajs/react';
+import { useChat } from '@ai-sdk/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { 
-    Box, 
+import {
+    Box,
     Paper,
-    IconButton, 
-    Tooltip, 
-    Alert, 
-    Snackbar, 
-    Dialog, 
-    DialogTitle, 
-    DialogContent, 
-    DialogContentText, 
-    DialogActions, 
+    IconButton,
+    Tooltip,
+    Alert,
+    Snackbar,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
     Button,
     Typography,
     Stack,
@@ -22,7 +23,8 @@ import {
     Fade,
     CircularProgress,
     LinearProgress,
-    keyframes
+    keyframes,
+    TextField
 } from '@mui/material';
 import ChatIcon from '@mui/icons-material/Chat';
 import LockIcon from '@mui/icons-material/Lock';
@@ -34,6 +36,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CodeIcon from '@mui/icons-material/Code';
 import BuildIcon from '@mui/icons-material/Build';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import SendRoundedIcon from '@mui/icons-material/SendRounded';
 import AssistantChat from './AssistantChat';
 import ReactComponentRenderer from '@/utils/ReactComponentRenderer';
 import { csrfFetch } from '@/utils/csrf';
@@ -95,18 +98,7 @@ const shimmer = keyframes`
 `;
 
 export default function CustomView({ auth, project, tasks, allTasks, users, methodology, viewName }) {
-    
-    // Debug: Log all props received by CustomView
-    console.log('[CustomView] All props received:', {
-        auth: auth ? 'present' : 'missing',
-        project: project ? { id: project.id, name: project.name } : 'missing',
-        tasks: tasks ? Object.keys(tasks) : 'missing',
-        allTasks: allTasks ? `array of ${allTasks.length} items` : 'missing',
-        users: users ? `array of ${users.length} items` : 'missing', 
-        methodology: methodology || 'missing',
-        viewName: viewName || 'missing'
-    });
-    
+
     const theme = useTheme();
     const [assistantOpen, setAssistantOpen] = useState(false);
     const [isLocked, setIsLocked] = useState(true);
@@ -120,10 +112,281 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
     const [generationProgress, setGenerationProgress] = useState(null);
 
+    // Local input state for chat
+    const [chatInput, setChatInput] = useState('');
+    const [isManuallyGenerating, setIsManuallyGenerating] = useState(false);
+
+    // AI SDK useChat hook for streaming component generation
+    const {
+        messages,
+        input,
+        handleInputChange,
+        handleSubmit,
+        isLoading: isGenerating,
+        error: chatError,
+        append,
+        setMessages,
+        stop,
+    } = useChat({
+        api: `/api/chat`,
+        body: {
+            projectId: project?.id,
+            viewName,
+            currentCode: componentCode,
+            projectContext: {
+                tasks,
+                users,
+                methodology,
+            },
+        },
+        onResponse: (response) => {
+            console.log('AI SDK Response:', response);
+        },
+        onFinish: (message) => {
+            console.log('AI SDK Finished:', message);
+            console.log('Message experimental_data:', message?.experimental_data);
+            console.log('Message content:', message?.content);
+
+            // Extract component code from the response
+            if (message?.experimental_data?.component_code) {
+                console.log('Found component code in experimental_data');
+                setComponentCode(message.experimental_data.component_code);
+                setCustomViewId(message.experimental_data.custom_view_id);
+                setIsLocked(false);
+                showSnackbar('Component generated successfully!', 'success');
+            } else if (message?.content) {
+                console.log('Checking message content for component code');
+                const codeMatch = message.content.match(/```(?:jsx?|tsx?|html)?\n?([\s\S]*?)```/);
+                if (codeMatch) {
+                    console.log('Found component code in message content (code block)');
+                    setComponentCode(codeMatch[1]);
+                    setIsLocked(false);
+                    showSnackbar('Component generated successfully!', 'success');
+                } else if (message.content.trim() && !message.content.includes('Failed to generate')) {
+                    console.log('Using entire message content as component code');
+                    // If no code block found, try to use the entire content as code
+                    setComponentCode(message.content);
+                    setIsLocked(false);
+                    showSnackbar('Component generated successfully!', 'success');
+                } else {
+                    console.warn('Message content appears to be an error or empty:', message.content);
+                    showSnackbar('Failed to generate component. Please try again.', 'error');
+                }
+            } else {
+                console.warn('No component code found in message');
+                showSnackbar('No component code received. Please try again.', 'error');
+            }
+        },
+        onError: (error) => {
+            console.error('AI SDK Error:', error);
+            showSnackbar('Failed to generate component. Please try again.', 'error');
+        },
+    });
+
+    // Debug what we're getting from useChat
+    // console.log('useChat hook values:', { messages, input, append, isGenerating });
+
+    // Custom input handlers to ensure proper state management
+    const handleChatInputChange = (e) => {
+        // console.log('Input change:', e.target.value);
+        setChatInput(e.target.value);
+    };
+
+    const handleChatSubmit = async (e) => {
+        e.preventDefault();
+        if (!chatInput?.trim() || isGenerating || isManuallyGenerating) return;
+
+        try {
+            const userMessage = {
+                role: 'user',
+                content: chatInput.trim(),
+                id: Date.now().toString(),
+            };
+
+            // Add user message to chat immediately
+            setMessages(prev => [...(prev || []), userMessage]);
+            setChatInput(''); // Clear input immediately
+
+            // Try using append if it exists, otherwise use manual API call
+            if (typeof append === 'function') {
+                await append({
+                    role: 'user',
+                    content: userMessage.content
+                });
+            } else {
+                // Fallback: Manual API call
+                console.log('append function not available, using manual API call');
+                setIsManuallyGenerating(true);
+
+                    // FOR TESTING: Create a simple working component
+                    const testComponent = `import React, { useState, useEffect } from 'react';
+
+function TestTaskList() {
+    const [tasks, setTasks] = useState(() => tasksDataFromProps || __flatTasks || []);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    // Load data on mount
+    useEffect(() => {
+        const initializeData = async () => {
+            try {
+                console.log('Test component initializing with tasks:', tasks);
+                setLoading(false);
+            } catch (err) {
+                setError(err.message);
+                setLoading(false);
+            }
+        };
+        initializeData();
+    }, []);
+
+    if (loading) return <div style={{padding: '20px'}}>Loading...</div>;
+    if (error) return <div style={{padding: '20px', color: 'red'}}>Error: {error}</div>;
+
+    return (
+        <div style={{padding: '20px', fontFamily: 'Arial, sans-serif'}}>
+            <h2>Test Task List</h2>
+            <p>Found {tasks.length} tasks</p>
+            {tasks.length > 0 ? (
+                <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                    <thead>
+                        <tr style={{backgroundColor: '#f5f5f5'}}>
+                            <th style={{border: '1px solid #ddd', padding: '8px'}}>ID</th>
+                            <th style={{border: '1px solid #ddd', padding: '8px'}}>Title</th>
+                            <th style={{border: '1px solid #ddd', padding: '8px'}}>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {tasks.slice(0, 10).map((task, index) => (
+                            <tr key={task.id || index}>
+                                <td style={{border: '1px solid #ddd', padding: '8px'}}>{task.id}</td>
+                                <td style={{border: '1px solid #ddd', padding: '8px'}}>{task.title}</td>
+                                <td style={{border: '1px solid #ddd', padding: '8px'}}>{task.status}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            ) : (
+                <p>No tasks found</p>
+            )}
+        </div>
+    );
+}
+
+export default TestTaskList;`;
+
+                    // Set the test component directly
+                    setComponentCode(testComponent);
+                    setIsManuallyGenerating(false);
+                    showSnackbar('Test component generated successfully!', 'success');
+                    return;
+                }
+            } catch (error) {
+                console.error('Chat submit error:', error);
+                showSnackbar('Failed to send message. Please try again.', 'error');
+                setIsManuallyGenerating(false);
+            }
+        }
+
+        /*
+        // Original API call code (disabled for testing)
+        const tryOriginalApiCall = async () => {
+            try {
+                    const response = await csrfFetch('/api/chat', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        messages: [...(messages || []), userMessage],
+                        projectId: project?.id,
+                        viewName,
+                        currentCode: componentCode,
+                        projectContext: {
+                            tasks,
+                            users,
+                            methodology,
+                        },
+                    }),
+                });
+
+                if (response.ok) {
+                    const reader = response.body?.getReader();
+                    const decoder = new TextDecoder();
+                    let assistantMessage = '';
+                    let streamedComponentCode = '';
+                    let streamedCustomViewId = null;
+
+                    if (reader) {
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+
+                            const chunk = decoder.decode(value);
+                            const lines = chunk.split('\n');
+
+                            for (const line of lines) {
+                                if (!line.startsWith('data: ')) continue;
+                                const data = line.slice(6);
+                                if (data === '[DONE]') continue;
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.content) assistantMessage += parsed.content;
+                                    // Prefer experimental_data.component_code when present
+                                    const exp = parsed.experimental_data || parsed.experimentalData || null;
+                                    if (exp?.component_code && !streamedComponentCode) {
+                                        streamedComponentCode = exp.component_code;
+                                    }
+                                    if (exp?.custom_view_id && !streamedCustomViewId) {
+                                        streamedCustomViewId = exp.custom_view_id;
+                                    }
+                                } catch (_) {
+                                    // ignore
+                                }
+                            }
+                        }
+                    }
+
+                    // Add assistant response to messages (textual)
+                    setMessages(prev => [...(prev || []), {
+                        role: 'assistant',
+                        content: assistantMessage,
+                        id: Date.now().toString(),
+                    }]);
+
+                    // Choose code from experimental_data first, then code block, then raw fallback
+                    let nextCode = streamedComponentCode;
+                    if (!nextCode) {
+                        const codeMatch = assistantMessage.match(/```(?:jsx?|tsx?|html)?\n?([\s\S]*?)```/);
+                        if (codeMatch) nextCode = codeMatch[1];
+                    }
+                    if (!nextCode && assistantMessage.trim()) {
+                        nextCode = assistantMessage.trim();
+                    }
+
+                    if (nextCode) {
+                        setComponentCode(nextCode);
+                        if (streamedCustomViewId) setCustomViewId(streamedCustomViewId);
+                        setIsLocked(false);
+                        showSnackbar('Component generated successfully!', 'success');
+                    } else {
+                        showSnackbar('Generation finished, but no component code received. Please try again.', 'warning');
+                    }
+                } else {
+                    throw new Error('API call failed');
+                }
+
+                setIsManuallyGenerating(false);
+            }
+        } catch (error) {
+            console.error('Chat submit error:', error);
+            showSnackbar('Failed to send message. Please try again.', 'error');
+            setIsManuallyGenerating(false);
+        }
+        */
+    };
+
     // Enhanced save mechanism with better feedback
     const handleManualSave = async () => {
         if (!componentCode || isSaving) return;
-        
+
         setIsSaving(true);
         try {
             const response = await csrfFetch(`/projects/${project.id}/custom-views/save`, {
@@ -149,7 +412,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             setIsSaving(false);
         }
     };
-    
+
     // Enhanced generation progress with detailed stages
     const getProgressIcon = (stage) => {
         switch (stage) {
@@ -164,72 +427,65 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     const getProgressMessage = (stage) => {
         switch (stage) {
             case 1: return 'Analyzing your requirements...';
-            case 2: return 'Generating intelligent code...'; 
+            case 2: return 'Generating intelligent code...';
             case 3: return 'Building your application...';
             case 4: return 'Finalizing and deploying...';
             default: return 'Processing...';
         }
     };
 
-    // Auto-save component code to prevent data loss
+    // Auto-save component code to prevent data loss (optimized)
     useEffect(() => {
-        if (componentCode && !isLocked && autoSaveEnabled) {
-            console.log('[CustomView Debug] Setting up periodic save for component code');
-            const saveInterval = setInterval(() => {
-                const backupKey = `microapp-backup-${project?.id || 'unknown'}-${viewName || 'default'}`;
-                const backupData = {
-                    componentCode,
-                    timestamp: new Date().toISOString(),
-                    customViewId,
-                    projectId: project?.id,
-                    viewName: viewName || 'default'
-                };
-                localStorage.setItem(backupKey, JSON.stringify(backupData));
-                console.log('[CustomView Debug] Auto-saved component code to local storage');
-            }, 30000); // Save every 30 seconds
+        if (!componentCode || isLocked || !autoSaveEnabled) return;
 
-            return () => {
-                clearInterval(saveInterval);
-                console.log('[CustomView Debug] Cleared periodic save interval');
+        // Debounce auto-save to prevent excessive saves
+        const timeoutId = setTimeout(() => {
+            const backupKey = `microapp-backup-${project?.id || 'unknown'}-${viewName || 'default'}`;
+            const backupData = {
+                componentCode,
+                timestamp: new Date().toISOString(),
+                customViewId,
+                projectId: project?.id,
+                viewName: viewName || 'default'
             };
-        }
+            localStorage.setItem(backupKey, JSON.stringify(backupData));
+        }, 5000); // Save after 5 seconds of inactivity
+
+        return () => {
+            clearTimeout(timeoutId);
+        };
     }, [componentCode, isLocked, autoSaveEnabled, project?.id, viewName, customViewId]);
 
-    // Load existing custom view on mount
+    // Load existing custom view on mount (optimized)
     useEffect(() => {
         const loadCustomView = async () => {
-            console.log('[CustomView Debug] Component mounting, loading existing custom view', {
-                projectId: project?.id,
-                viewName: viewName
-            });
-
             if (!project?.id || !viewName) {
                 setIsLoading(false);
                 return;
             }
 
             try {
-                console.log('[CustomView Debug] Loading custom view from API', {
-                    projectId: project.id,
-                    viewName: viewName
-                });
-
                 const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${encodeURIComponent(viewName)}`);
                 const data = await response.json();
 
-                console.log('[CustomView Debug] API response received', {
-                    success: data.success,
-                    hasComponent: !!data.html,
-                    customViewId: data.customViewId
-                });
+                console.log('[CustomView] Server response:', data);
+                console.log('[CustomView] HTML content:', data.html);
+                console.log('[CustomView] HTML length:', data.html ? data.html.length : 0);
 
                 if (data.success && data.html && data.html.trim()) {
+                    console.log('[CustomView] Valid component found, setting component code');
                     setComponentCode(data.html);
-                    setCustomViewId(data.customViewId);
+                    setCustomViewId(data.customViewId || data.custom_view_id || null);
                     showSnackbar('Micro-application loaded successfully', 'success');
                 } else {
-                    console.log('[CustomView Debug] No existing custom view found or server returned empty component');
-                    
+                    console.log('[CustomView] No valid component found, falling back to empty state');
+                    setComponentCode(''); // Clear any invalid component code
+                    if (!data.success) {
+                        console.warn('[CustomView] Failed to fetch custom view:', data.message || 'No message provided.');
+                        if (!componentCode) { // Only show snackbar if there's no component rendered
+                            showSnackbar(data.message || 'Could not load micro-application.', 'warning');
+                        }
+                    }
                     // Try to load from local backup
                     const backupKey = `microapp-backup-${project.id}-${viewName}`;
                     const backup = localStorage.getItem(backupKey);
@@ -239,23 +495,20 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             if (backupData.componentCode && backupData.componentCode.trim()) {
                                 setComponentCode(backupData.componentCode || '');
                                 setCustomViewId(backupData.customViewId);
-                                console.log('[CustomView Debug] Loaded from local backup (no server component)');
                             } else {
                                 setComponentCode('');
-                                console.log('[CustomView Debug] Local backup was empty');
                             }
                         } catch (e) {
                             setComponentCode('');
-                            console.error('[CustomView Debug] Failed to parse backup:', e);
+                            console.error('[CustomView] Failed to parse backup:', e);
                         }
                     } else {
                         setComponentCode('');
-                        console.log('[CustomView Debug] No local backup found');
                     }
                 }
             } catch (error) {
-                console.error('[CustomView Debug] Error loading custom view:', error);
-                
+                console.error('[CustomView] Error loading custom view:', error);
+
                 // Fallback to local backup
                 const backupKey = `microapp-backup-${project.id}-${viewName}`;
                 const backup = localStorage.getItem(backupKey);
@@ -264,15 +517,14 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         const backupData = JSON.parse(backup);
                         setComponentCode(backupData.componentCode || '');
                         setCustomViewId(backupData.customViewId);
-                        console.log('[CustomView Debug] Loaded from local backup after API error');
                     } catch (e) {
                         setComponentCode('');
-                        console.error('[CustomView Debug] Failed to parse backup after API error:', e);
+                        console.error('[CustomView] Failed to parse backup after API error:', e);
                     }
                 } else {
                     setComponentCode('');
                 }
-                
+
                 showSnackbar('Failed to load custom view, using local backup if available', 'warning');
             } finally {
                 setIsLoading(false);
@@ -282,10 +534,13 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         loadCustomView();
     }, [project?.id, viewName]);
 
-    // Enhanced generation handling
-    const handleSpaGenerated = (payload) => {
-        console.log('[CustomView Debug] SPA generated via assistant', payload);
-        
+    // Memoize component code for AssistantChat to prevent unnecessary re-renders
+    const memoizedComponentCode = useMemo(() => {
+        return componentCode && componentCode.trim() ? componentCode : null;
+    }, [componentCode]);
+
+    // Enhanced generation handling (optimized with useCallback)
+    const handleSpaGenerated = useCallback((payload) => {
         if (typeof payload === 'string') {
             setComponentCode(payload);
             setGenerationProgress(null);
@@ -293,7 +548,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             setIsLocked(false);
             return;
         }
-        
+
         if (payload && payload.component_code) {
             setComponentCode(payload.component_code);
             setCustomViewId(payload.customViewId || payload.custom_view_id);
@@ -302,7 +557,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             setIsLocked(false);
             return;
         }
-        
+
         if (payload && payload.html) {
             setComponentCode(payload.html);
             setCustomViewId(payload.customViewId);
@@ -311,23 +566,15 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             setIsLocked(false);
             return;
         }
-        
+
         console.warn('Unexpected payload format:', payload);
         setGenerationProgress(null);
         showSnackbar('Generation completed but format was unexpected', 'warning');
-    };
+    }, []);
 
-    // Development logging helper
-    const devLog = (message, data = null) => {
-        if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
-            console.log(`[CustomView Debug] ${message}`, data || '');
-        }
-    };
+    // Development logging helper (removed - was causing performance issues)
 
     const handleToggleLock = () => {
-        console.log('[CustomView Debug] Toggling lock state', {
-            currentlyLocked: isLocked
-        });
         setIsLocked(!isLocked);
         showSnackbar(isLocked ? 'Micro-application unlocked for editing' : 'Micro-application locked', 'info');
     };
@@ -337,10 +584,6 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     };
 
     const handleClearWorkingArea = async () => {
-        console.log('[CustomView Debug] Clearing working area confirmed', {
-            hasCustomViewId: !!customViewId
-        });
-
         // Clear local storage backups and any micro-app data
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -350,9 +593,6 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             }
         }
         keysToRemove.forEach(key => localStorage.removeItem(key));
-        console.log('[CustomView Debug] Cleared local storage backups and data', {
-            removedKeys: keysToRemove.length
-        });
 
         // If there's a saved custom view, try to delete it from server
         if (customViewId) {
@@ -367,7 +607,6 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('[CustomView Debug] Server delete response:', data);
                     if (data.success) {
                         showSnackbar('Micro-application deleted permanently', 'success');
                     } else {
@@ -377,11 +616,10 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     showSnackbar('Micro-application cleared locally (server deletion failed)', 'warning');
                 }
             } catch (error) {
-                console.error('[CustomView Debug] Error deleting from server:', error);
+                console.error('[CustomView] Error deleting from server:', error);
                 showSnackbar('Micro-application cleared locally (server unreachable)', 'warning');
             }
         } else {
-            console.log('[CustomView Debug] Local working area cleared (no saved view)');
             showSnackbar('Working area cleared', 'info');
         }
 
@@ -390,13 +628,53 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         setCustomViewId(null);
         setIsLocked(true);
         setDeleteConfirmOpen(false);
-        console.log('[CustomView Debug] Cleared periodic save interval');
     };
 
+    // Emergency recovery function to clear problematic component
+    const handleEmergencyReset = useCallback(() => {
+        console.warn('[CustomView] Emergency reset triggered');
+        setComponentCode('');
+        setCustomViewId(null);
+        setComponentError(null);
+        setIsLocked(true);
+
+        // Clear local storage backups that might be causing issues
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.includes(`microapp-`) || key.includes(`${project?.id}-${viewName}`))) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        showSnackbar('Component reset. You can now generate a new micro-application.', 'info');
+    }, [project?.id, viewName]);
+
     const handleComponentError = (error) => {
+        console.error('[CustomView] Component error:', error);
         setComponentError(error);
         showSnackbar('Component error: ' + error, 'error');
-    };
+
+        const e = String(error || '').toLowerCase();
+        const isCritical =
+            e.includes('already been declared') ||
+            e.includes('syntaxerror') ||
+            e.includes('freeze') ||
+            e.includes('babel') ||
+            e.includes('requires a filename');
+
+        if (isCritical) {
+            setTimeout(() => {
+                setComponentCode('');
+                setComponentError(null);
+                showSnackbar(
+                    'Component cleared due to critical error (e.g., Babel/preset/filename). Please regenerate.',
+                    'warning'
+                );
+            }, 250);
+        }
+    };;
 
     const showSnackbar = (message, severity = 'info') => {
         setSnackbar({ open: true, message, severity });
@@ -409,59 +687,12 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     return (
         <AuthenticatedLayout
             user={auth.user}
-            header={
-                <Box sx={{ 
-                    background: designTokens.gradients.primary,
-                    borderBottom: `1px solid ${alpha(designTokens.colors.primary, 0.1)}`,
-                    py: 2
-                }}>
-                    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 3 }}>
-                        <Stack direction="row" alignItems="center" spacing={2}>
-                            <Box sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: designTokens.radii.lg,
-                                background: designTokens.gradients.accent,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                animation: `${pulseGlow} 2s infinite`
-                            }}>
-                                <AutoAwesomeIcon />
-                            </Box>
-                            <Box>
-                                <Typography variant="h5" fontWeight="600" color="text.primary">
-                                    Custom Application Studio
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    {project.name} • {viewName}
-                                </Typography>
-                            </Box>
-                        </Stack>
-                        
-                        <Chip 
-                            label={isLocked ? "View Mode" : "Edit Mode"}
-                            color={isLocked ? "default" : "primary"}
-                            variant="outlined"
-                            sx={{
-                                borderRadius: designTokens.radii.lg,
-                                fontWeight: 500,
-                                ...(isLocked ? {} : {
-                                    background: alpha(designTokens.colors.primary, 0.1),
-                                    borderColor: designTokens.colors.primary,
-                                })
-                            }}
-                        />
-                    </Stack>
-                </Box>
-            }
         >
             <Head title={`Custom View: ${viewName} - ${project.name}`} />
 
             {/* Enhanced Generation Progress Dialog */}
-            <Dialog 
-                open={!!generationProgress} 
+            <Dialog
+                open={!!generationProgress}
                 disableEscapeKeyDown
                 PaperProps={{
                     sx: {
@@ -474,9 +705,9 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             >
                 <DialogContent sx={{ p: 4, textAlign: 'center' }}>
                     <Stack spacing={3} alignItems="center">
-                        <Box sx={{ 
-                            width: 80, 
-                            height: 80, 
+                        <Box sx={{
+                            width: 80,
+                            height: 80,
                             borderRadius: '50%',
                             background: designTokens.gradients.accent,
                             display: 'flex',
@@ -498,7 +729,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         }}>
                             {getProgressIcon(generationProgress?.step)}
                         </Box>
-                        
+
                         <Box sx={{ width: '100%' }}>
                             <Typography variant="h6" fontWeight="600" color="text.primary" mb={1}>
                                 {getProgressMessage(generationProgress?.step)}
@@ -506,8 +737,8 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             <Typography variant="body2" color="text.secondary" mb={2}>
                                 Step {generationProgress?.step || 1} of {generationProgress?.total || 4}
                             </Typography>
-                            <LinearProgress 
-                                variant="determinate" 
+                            <LinearProgress
+                                variant="determinate"
                                 value={((generationProgress?.step || 1) / (generationProgress?.total || 4)) * 100}
                                 sx={{
                                     height: 8,
@@ -525,17 +756,17 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             </Dialog>
 
             {/* Professional Main Container */}
-            <Box sx={{ 
+            <Box sx={{
                 background: designTokens.gradients.primary,
                 minHeight: '100vh',
-                p: 3 
+                p: 3
             }}>
                 {/* Floating Control Panel */}
-                <Paper 
+                <Paper
                     elevation={0}
                     sx={{
                         position: 'fixed',
-                        top: 100,
+                        bottom: 24,
                         right: 24,
                         zIndex: 1200,
                         borderRadius: designTokens.radii.xl,
@@ -549,7 +780,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 >
                     <Stack direction="column" spacing={0}>
                         {/* Generate Button */}
-                        <Tooltip title="Generate New Application" placement="left">
+                        <Tooltip title={componentCode ? "Update Application" : "Generate New Application"} placement="left">
                             <IconButton
                                 onClick={() => setAssistantOpen(true)}
                                 sx={{
@@ -648,6 +879,29 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                 </IconButton>
                             </Tooltip>
                         )}
+
+                        {/* Emergency Reset - always visible when there's an error */}
+                        {componentError && (
+                            <Tooltip title="Emergency Reset (fixes freeze)" placement="left">
+                                <IconButton
+                                    onClick={handleEmergencyReset}
+                                    sx={{
+                                        p: 2,
+                                        borderRadius: 0,
+                                        color: 'white',
+                                        background: designTokens.colors.error,
+                                        borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                                        '&:hover': {
+                                            background: designTokens.colors.error,
+                                            transform: 'scale(1.05)',
+                                        },
+                                        animation: `${pulseGlow} 2s infinite`,
+                                    }}
+                                >
+                                    <RefreshIcon />
+                                </IconButton>
+                            </Tooltip>
+                        )}
                     </Stack>
                 </Paper>
 
@@ -657,12 +911,13 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     sx={{
                         mt: 2,
                         mr: 10, // Space for floating controls
-                        borderRadius: designTokens.radii.xl,
+                        p: '5%', // 5% padding for working area
+                        borderRadius: 3,
                         overflow: 'hidden',
                         background: alpha(theme.palette.background.paper, 0.8),
                         backdropFilter: 'blur(12px)',
-                        border: isLocked 
-                            ? `2px solid ${designTokens.colors.success}` 
+                        border: isLocked
+                            ? `2px solid ${designTokens.colors.success}`
                             : `2px dashed ${alpha(designTokens.colors.primary, 0.3)}`,
                         boxShadow: designTokens.shadows.elevated,
                         minHeight: 'calc(100vh - 200px)',
@@ -670,18 +925,20 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         animation: `${fadeSlideUp} 0.8s ease-out`,
                     }}
                 >
-                    {componentCode ? (
-                        <ReactComponentRenderer
-                            componentCode={componentCode}
-                            project={project}
-                            auth={auth}
-                            viewName={viewName}
-                            onError={handleComponentError}
-                            tasks={tasks}
-                            allTasks={allTasks}
-                            users={users}
-                            methodology={methodology}
-                        />
+                    {componentCode && componentCode.trim() && !componentError ? (
+                        <Box sx={{ position: 'relative' }}>
+                            <ReactComponentRenderer
+                                componentCode={componentCode}
+                                project={project}
+                                auth={auth}
+                                viewName={viewName}
+                                onError={handleComponentError}
+                                tasks={tasks}
+                                allTasks={allTasks}
+                                users={users}
+                                methodology={methodology}
+                            />
+                        </Box>
                     ) : isLoading ? (
                         <Box sx={{
                             display: 'flex',
@@ -739,42 +996,42 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                     boxShadow: designTokens.shadows.floating,
                                 }
                             }}
-                            onClick={() => setAssistantOpen(true)}
+                                onClick={() => setAssistantOpen(true)}
                             >
                                 <AutoAwesomeIcon sx={{ fontSize: 48 }} />
                             </Box>
-                            
+
                             <Typography variant="h4" fontWeight="600" color="text.primary" mb={2}>
                                 Ready to Create Something Amazing?
                             </Typography>
                             <Typography variant="body1" color="text.secondary" mb={4} maxWidth={600}>
-                                Welcome to your custom application studio. Use AI to generate powerful, 
+                                Welcome to your custom application studio. Use AI to generate powerful,
                                 data-driven micro-applications tailored to your project needs.
                             </Typography>
-                            
+
                             <Stack direction="row" spacing={2} flexWrap="wrap" justifyContent="center">
-                                <Chip 
-                                    label="📊 Data Dashboard" 
-                                    variant="outlined" 
+                                <Chip
+                                    label="📊 Data Dashboard"
+                                    variant="outlined"
                                     sx={{ borderRadius: designTokens.radii.lg }}
                                 />
-                                <Chip 
-                                    label="📋 Task Manager" 
-                                    variant="outlined" 
+                                <Chip
+                                    label="📋 Task Manager"
+                                    variant="outlined"
                                     sx={{ borderRadius: designTokens.radii.lg }}
                                 />
-                                <Chip 
-                                    label="📈 Analytics View" 
-                                    variant="outlined" 
+                                <Chip
+                                    label="📈 Analytics View"
+                                    variant="outlined"
                                     sx={{ borderRadius: designTokens.radii.lg }}
                                 />
-                                <Chip 
-                                    label="🎯 Custom Tool" 
-                                    variant="outlined" 
+                                <Chip
+                                    label="🎯 Custom Tool"
+                                    variant="outlined"
                                     sx={{ borderRadius: designTokens.radii.lg }}
                                 />
                             </Stack>
-                            
+
                             <Button
                                 variant="contained"
                                 size="large"
@@ -804,12 +1061,12 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             </Box>
 
             {/* Enhanced Delete Confirmation Dialog */}
-            <Dialog 
-                open={deleteConfirmOpen} 
+            <Dialog
+                open={deleteConfirmOpen}
                 onClose={() => setDeleteConfirmOpen(false)}
                 PaperProps={{
                     sx: {
-                        borderRadius: designTokens.radii.xl,
+                        borderRadius: 2,
                         background: designTokens.gradients.primary,
                     }
                 }}
@@ -840,17 +1097,17 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ p: 3, pt: 1 }}>
-                    <Button 
+                    <Button
                         onClick={() => setDeleteConfirmOpen(false)}
                         sx={{ borderRadius: designTokens.radii.lg }}
                     >
                         Cancel
                     </Button>
-                    <Button 
+                    <Button
                         onClick={handleClearWorkingArea}
                         variant="contained"
                         color="error"
-                        sx={{ 
+                        sx={{
                             borderRadius: designTokens.radii.lg,
                             fontWeight: 600,
                         }}
@@ -861,6 +1118,154 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             </Dialog>
 
             {/* Enhanced Assistant Chat Dialog */}
+            <Dialog
+                open={assistantOpen}
+                onClose={() => setAssistantOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 2,
+                        background: designTokens.gradients.primary,
+                        height: '80vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                    }
+                }}
+            >
+                <DialogTitle sx={{ pb: 1, borderBottom: 1, borderColor: 'divider' }}>
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <AutoAwesomeIcon color="primary" />
+                        <Typography variant="h6" fontWeight="600">
+                            AI Component Generator
+                        </Typography>
+                        <Chip
+                            label="Streaming AI"
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                        />
+                    </Stack>
+                </DialogTitle>
+
+                <DialogContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: 0 }}>
+                    {/* Messages Display */}
+                    <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+                        {(messages?.length || 0) === 0 ? (
+                            <Box textAlign="center" py={4}>
+                                <AutoAwesomeIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                                <Typography variant="h6" gutterBottom>
+                                    Generate Custom Components with AI
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Describe what you want to build and I'll create a React component for you
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <Stack spacing={2}>
+                                {messages?.map((message) => (
+                                    <Box
+                                        key={message?.id || Math.random()}
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: message?.role === 'user' ? 'flex-end' : 'flex-start',
+                                        }}
+                                    >
+                                        <Paper
+                                            sx={{
+                                                p: 2,
+                                                maxWidth: '70%',
+                                                bgcolor: message?.role === 'user'
+                                                    ? 'primary.main'
+                                                    : 'background.paper',
+                                                color: message?.role === 'user'
+                                                    ? 'primary.contrastText'
+                                                    : 'text.primary',
+                                                borderRadius: 2,
+                                            }}
+                                        >
+                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                                {message?.content || ''}
+                                            </Typography>
+                                        </Paper>
+                                    </Box>
+                                )) || []}
+                                {(isGenerating || isManuallyGenerating) && (
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                                        <Paper sx={{ p: 2, borderRadius: 2 }}>
+                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                <CircularProgress size={16} />
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Generating component...
+                                                </Typography>
+                                            </Stack>
+                                        </Paper>
+                                    </Box>
+                                )}
+                            </Stack>
+                        )}
+                    </Box>
+
+                    {/* Input Form */}
+                    <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+                        <form onSubmit={handleChatSubmit}>
+                            <Stack direction="row" spacing={1}>
+                                <TextField
+                                    fullWidth
+                                    value={chatInput}
+                                    onChange={handleChatInputChange}
+                                    placeholder="Describe the component you want to generate..."
+                                    disabled={isGenerating}
+                                    variant="outlined"
+                                    size="small"
+                                />
+                                <Button
+                                    type="submit"
+                                    variant="contained"
+                                    disabled={isGenerating || isManuallyGenerating || !chatInput?.trim()}
+                                    startIcon={(isGenerating || isManuallyGenerating) ? <CircularProgress size={16} /> : <SendRoundedIcon />}
+                                >
+                                    {(isGenerating || isManuallyGenerating) ? 'Generating...' : 'Generate'}
+                                </Button>
+                                {(isGenerating || isManuallyGenerating) && (
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
+                                        onClick={() => {
+                                            if (typeof stop === 'function') {
+                                                stop();
+                                            }
+                                            setIsManuallyGenerating(false);
+                                        }}
+                                    >
+                                        Stop
+                                    </Button>
+                                )}
+                            </Stack>
+                        </form>
+
+                        {chatError && (
+                            <Alert severity="error" sx={{ mt: 1 }}>
+                                {chatError.message}
+                            </Alert>
+                        )}
+                    </Box>
+                </DialogContent>
+
+                <DialogActions sx={{ p: 2 }}>
+                    <Button onClick={() => {
+                        setMessages([]);
+                        setChatInput('');
+                    }}>
+                        Clear Chat
+                    </Button>
+                    <Button onClick={() => setAssistantOpen(false)}>
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Legacy Assistant Chat - keeping for backup */}
             <AssistantChat
                 project={project}
                 tasks={tasks}
@@ -868,11 +1273,12 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 users={users}
                 methodology={methodology}
                 viewName={viewName}
-                open={assistantOpen}
+                open={false} // Disabled for now, using new streaming chat above
                 onClose={() => setAssistantOpen(false)}
                 isCustomView={true}
                 onSpaGenerated={handleSpaGenerated}
                 onProgressUpdate={setGenerationProgress}
+                currentComponentCode={memoizedComponentCode}
             />
 
             {/* Enhanced Snackbar */}
@@ -882,10 +1288,10 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 onClose={handleCloseSnackbar}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
             >
-                <Alert 
-                    onClose={handleCloseSnackbar} 
+                <Alert
+                    onClose={handleCloseSnackbar}
                     severity={snackbar.severity}
-                    sx={{ 
+                    sx={{
                         width: '100%',
                         borderRadius: designTokens.radii.lg,
                         fontWeight: 500,

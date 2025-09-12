@@ -1400,6 +1400,11 @@ window.addEventListener('beforeunload', () => {
 
         return $html;
     }
+
+    /**
+     * Generate a fallback React component when AI generation fails
+     */
+    private function generateFallbackReactComponent(string $userRequest, array $projectContext): string 
     {
         $title = $this->extractTitleFromRequest($userRequest) ?: 'Custom Application';
         
@@ -2198,13 +2203,24 @@ window.addEventListener('beforeunload', () => {
      */
     public function getCustomView(Project $project, int $userId, string $viewName = 'default'): ?CustomView
     {
-        $customView = CustomView::getActiveForProject($project->id, $userId, $viewName);
-        
-        if ($customView) {
-            $customView->updateLastAccessed();
+        try {
+            $customView = CustomView::getActiveForProject($project->id, $userId, $viewName);
+            
+            if ($customView) {
+                $customView->updateLastAccessed();
+            }
+            
+            return $customView;
+        } catch (\Exception $e) {
+            Log::error('[ProjectViewsService] Error in getCustomView', [
+                'error' => $e->getMessage(),
+                'project_id' => $project->id,
+                'user_id' => $userId,
+                'view_name' => $viewName,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return null;
         }
-        
-        return $customView;
     }
 
     /**

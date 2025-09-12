@@ -10,6 +10,12 @@ use App\Http\Controllers\CertificationController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\EmailVerificationController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PublicSimulatorController;
+use App\Http\Controllers\CustomViewsDataController;
+use App\Http\Controllers\ProjectViewsController;
+use App\Http\Controllers\CustomViewPageController;
 use App\Http\Controllers\ProjectAssistantController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
@@ -33,25 +39,7 @@ use Inertia\Inertia;
 |--------------------------------------------------------------------------
 */
 
-// Simple test route
-Route::get('/test', function () {
-    return 'Laravel is working!';
-});
-
-// Test admin route (bypass Inertia)
-Route::get('/admin-test', function () {
-    return 'Admin system is working!';
-});
-
-// Test email logs route
-Route::get('/test-email-logs', function () {
-    try {
-        $emails = \App\Models\EmailLog::take(5)->get();
-        return 'Email logs working! Found ' . $emails->count() . ' email logs.';
-    } catch (\Exception $e) {
-        return 'Email logs error: ' . $e->getMessage();
-    }
-});
+// Removed ad-hoc test/debug routes for clarity
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -81,90 +69,13 @@ Route::get('/terms_of_service', function () {
     return Inertia::render('Legal/TermsOfService');
 })->name('terms.service');
 
-// DEBUG: Test public route (remove after testing)
-Route::get('/test-public', function() {
-    return response()->json(['message' => 'Public route works', 'user' => Auth::check() ? Auth::user()->email : 'Not authenticated']);
-});
-
-// Debug route to test custom view API without auth
-Route::get('/debug/custom-view-test', function (Request $request) {
-    return response()->json([
-        'success' => true,
-        'message' => 'Debug route working',
-        'timestamp' => now(),
-        'headers' => $request->headers->all(),
-    ]);
-});
-
-// Debug route to check current authentication status
-Route::get('/debug/auth-status', function (Request $request) {
-    return response()->json([
-        'authenticated' => Auth::check(),
-        'user_id' => Auth::id(),
-        'user_email' => Auth::user()?->email,
-        'session_id' => session()->getId(),
-        'csrf_token' => csrf_token(),
-    ]);
-});
-
-// Debug route to test project route model binding
-Route::get('/debug/project/{project}', function (Request $request, Project $project) {
-    return response()->json([
-        'success' => true,
-        'message' => 'Project route model binding working',
-        'project_id' => $project->id,
-        'project_name' => $project->name,
-        'user_id' => $request->user()?->id,
-        'user_email' => $request->user()?->email,
-    ]);
-})->middleware('auth');
+// Removed debug endpoints; prefer local dev tools or controllers
 
 // Public Simulator (no authentication required) - renamed to /practice to avoid auth conflict
 Route::middleware([])->group(function () {
-    // Landing page for practice simulator
-    Route::get('/practice', function() {
-        Log::info('Practice landing page accessed');
-        return Inertia::render('PublicSimulator/Index', [
-            'title' => 'Project Management Simulator - Practice for Free',
-            'description' => 'Practice project management skills with realistic scenarios. No signup required.',
-        ]);
-    })->name('public-simulator.index');
-    
-    // Generate and start simulation
-    Route::post('/practice/start', function(\Illuminate\Http\Request $request) {
-        Log::info('Practice simulation started');
-        
-        // Generate simulation like in certification flow
-        $mockUser = new \App\Models\User([
-            'name' => 'Practice User',
-            'email' => 'practice@simulator.local'
-        ]);
-        
-        $simulationGenerator = app(\App\Services\SimpleSimulationGenerator::class);
-        $simulation = $simulationGenerator->generate($mockUser);
-        
-        // Store in session for the simulator
-        $request->session()->put('simulator_payload', $simulation);
-        
-        // Redirect to simulator instead of JSON response
-        return redirect()->route('public-simulator.simulator');
-    })->name('public-simulator.start');
-    
-    // Simulator view (accessed after generation)
-    Route::get('/practice/simulator', function(\Illuminate\Http\Request $request) {
-        $simulation = $request->session()->get('simulator_payload');
-        
-        if (!$simulation) {
-            return redirect()->route('public-simulator.index')->with('error', 'Please start a new simulation.');
-        }
-        
-        // Use the EXACT same component as certification but with no auth context
-        return \Inertia\Inertia::render('Simulator/Index', [
-            'simulation' => $simulation,
-            'certificationAttempt' => null, // No certification for public access
-            'auth' => ['user' => null], // Override auth to show no user
-        ]);
-    })->name('public-simulator.simulator');
+    Route::get('/practice', [PublicSimulatorController::class, 'index'])->name('public-simulator.index');
+    Route::post('/practice/start', [PublicSimulatorController::class, 'start'])->name('public-simulator.start');
+    Route::get('/practice/simulator', [PublicSimulatorController::class, 'simulator'])->name('public-simulator.simulator');
     
     // Use existing simulator endpoints (they work with the main simulator component)
     Route::post('/practice/evaluate-action', [App\Http\Controllers\SimulatorController::class, 'evaluateAction'])->name('public-simulator.evaluate-action');
@@ -272,93 +183,9 @@ Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallb
 | 4) We verify the user's email and log them in.
 */
 
-// Notice screen (requires auth)
-Route::get('/email/verify', function () {
-    return Inertia::render('Auth/VerifyEmail', ['status' => session('status')]);
-})->middleware('auth')->name('verification.notice');
-
-// Verification link target (PUBLIC)
-Route::get('/verify-email/{id}/{hash}', function (Request $request, $id, $hash) {
-    // Parameters to ignore during signature validation
-    $ignored = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
-
-    $isValid = false;
-
-    // Method 1: Try relative signature validation first (recommended for dev/proxy environments)
-    try {
-        $isValid = URL::hasValidSignature($request, false, $ignored);
-    } catch (\Exception $e) {
-        // Continue to next method
-    }
-
-    // Method 2: If relative fails, try absolute validation
-    if (! $isValid) {
-        try {
-            $isValid = URL::hasValidSignature($request, true, $ignored);
-        } catch (\Exception $e) {
-            // Continue to next method
-        }
-    }
-
-    // Method 3: Manual signature validation for local development
-    if (! $isValid && app()->environment(['local', 'testing'])) {
-        try {
-            $url = $request->url();
-            $queryString = $request->getQueryString();
-
-            if ($queryString) {
-                // Parse query parameters
-                parse_str($queryString, $params);
-                $signature = $params['signature'] ?? null;
-
-                if ($signature) {
-                    unset($params['signature']);
-
-                    // Rebuild URL without signature for validation
-                    $baseUrl = $url.'?'.http_build_query($params);
-
-                    // Generate expected signature
-                    $expectedSignature = hash_hmac('sha256', $baseUrl, config('app.key'));
-
-                    $isValid = hash_equals($expectedSignature, $signature);
-                }
-            }
-        } catch (\Exception $e) {
-            // If all methods fail, we'll show the error below
-        }
-    }
-
-    if (! $isValid) {
-        abort(403, 'Invalid signature. Please request a new verification email.');
-    }
-
-    $user = User::findOrFail($id);
-
-    // Ensure the hash matches the user's current email
-    if (! hash_equals(sha1($user->getEmailForVerification()), (string) $hash)) {
-        abort(403, 'Invalid verification hash.');
-    }
-
-    if (! $user->hasVerifiedEmail()) {
-        $user->markEmailAsVerified();
-        event(new Verified($user));
-    }
-
-    // Log the user in after verification
-    Auth::login($user);
-
-    return redirect()->intended('/dashboard')->with('verified', true);
-})->middleware('throttle:6,1')->name('verification.verify');
-
-// Resend verification email (requires auth)
-Route::post('/email/verification-notification', function (Request $request) {
-    if ($request->user()->hasVerifiedEmail()) {
-        return redirect()->intended('/dashboard');
-    }
-    $request->user()->sendEmailVerificationNotification();
-
-    return back()->with('status', 'verification-link-sent');
-})->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->middleware('auth')->name('verification.notice');
+Route::get('/verify-email/{id}/{hash}', [EmailVerificationController::class, 'verify'])->middleware('throttle:6,1')->name('verification.verify');
+Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])->middleware(['auth', 'throttle:6,1'])->name('verification.send');
 
 /*
 |--------------------------------------------------------------------------
@@ -467,7 +294,8 @@ Route::middleware(['auth'])->group(function () {
 // Public certificate access + verification (no auth required)
 Route::get('/verify/{serial}', [CertificationController::class, 'verifyPublic'])->name('certification.verify.public');
 
-// DEBUG: Minimal certificate test
+// DEBUG: Minimal certificate test (local only)
+if (app()->environment('local')) {
 Route::get('/certificates/{serial}/debug', function ($serial) {
     try {
         $attempt = \App\Models\CertificationAttempt::where('serial', $serial)->first();
@@ -492,6 +320,7 @@ Route::get('/certificates/{serial}/debug', function ($serial) {
         return response()->json(['error' => $e->getMessage(), 'line' => $e->getLine()], 500);
     }
 });
+}
 
 Route::get('/certificates/{serial}', [CertificationController::class, 'publicCertificate'])->name('certification.public.certificate');
 Route::get('/certificates/{serial}/badge', [CertificationController::class, 'publicBadge'])->name('certification.public.badge');
@@ -507,53 +336,7 @@ Route::get('/certificates/{serial}/badge/download/og-image', [CertificationContr
 | Dashboard
 |--------------------------------------------------------------------------
 */
-Route::get('/dashboard', function (Request $request) {
-    $user = $request->user();
-
-    // Get projects owned by the user
-    $ownedProjects = $user->projects()
-        ->with(['tasks:id,project_id,title,status', 'user:id,name'])
-        ->get();
-
-    // Get projects where the user is a member
-    $memberProjects = $user->memberProjects()
-        ->with(['tasks:id,project_id,title,status', 'user:id,name'])
-        ->get();
-
-    // Combine both collections
-    $allProjects = $ownedProjects->merge($memberProjects)->unique('id');
-
-    $projects = $allProjects->map(function ($p) use ($user) {
-        $group = fn (string $status) => $p->tasks
-            ->where('status', $status)
-            ->values()
-            ->map->only('id', 'title')
-            ->all();
-
-        return [
-            'id' => $p->id,
-            'name' => $p->name,
-            'description' => $p->description,
-            'is_owner' => $p->user_id === $user->id,
-            'owner' => [
-                'id' => $p->user->id,
-                'name' => $p->user->name,
-            ],
-            'tasks' => [
-                'todo' => $group('todo'),
-                'inprogress' => $group('inprogress'),
-                'review' => $group('review'),
-                'done' => $group('done'),
-            ],
-        ];
-    });
-
-    return Inertia::render('Dashboard', [
-        'projects' => $projects,
-        'appsumo_welcome' => session('appsumo_welcome'),
-        'message' => session('message'),
-    ]);
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 /*
 |--------------------------------------------------------------------------
@@ -760,185 +543,24 @@ Route::middleware('auth')->group(function () {
         Route::get('/timeline', [TaskController::class, 'timeline'])->name('tasks.timeline');
 
         /* CUSTOM VIEWS */
-        Route::get('/custom-views/{name}', function (Request $request, Project $project, $name) {
-            // Get project methodology
-            $methodology = $project->meta['methodology'] ?? 'kanban';
-            
-            // Get project tasks for the custom view
-            $tasks = $project->tasks()
-                ->with(['creator:id,name', 'assignee:id,name'])
-                ->get()
-                ->groupBy('status');
-
-            // Transform to the expected format with correct status mapping
-            $tasksByStatus = [
-                'todo' => $tasks->get('todo', collect())->values(),
-                'inprogress' => $tasks->get('inprogress', collect())->values(), 
-                'review' => $tasks->get('review', collect())->values(),
-                'done' => $tasks->get('done', collect())->values(),
-                // Also include any additional statuses that might exist
-                'backlog' => $tasks->get('backlog', collect())->values(),
-                'testing' => $tasks->get('testing', collect())->values(),
-            ];
-
-            // Flatten all tasks into a more comprehensive structure for AI context
-            $allTasks = $project->tasks()
-                ->with(['creator:id,name', 'assignee:id,name'])
-                ->get();
-
-            $users = $project->members()->select('users.id', 'users.name', 'users.email')->get();
-
-            return Inertia::render('Tasks/CustomView', [
-                'project' => $project,
-                'tasks' => $tasksByStatus,
-                'allTasks' => $allTasks, // Include all tasks for better AI context
-                'users' => $users,
-                'methodology' => $methodology, // Include methodology for context-aware AI
-                'viewName' => $name,
-                'isPro' => $request->user()?->hasActiveSubscription() ?? false,
-            ]);
-        })
+        Route::get('/custom-views/{name}', [CustomViewPageController::class, 'show'])
         // Prevent collisions with API-like endpoints so they don't get caught by {name}
         ->where('name', '^(?!get$|delete$|chat$)[A-Za-z0-9_-]+')
         ->name('custom-views.show');
 
-        // Route to get custom view data (for AJAX loading)
-        Route::get('/custom-views/get', function (Request $request, Project $project) {
-            try {
-                // Add debug logging
-                Log::info('Custom view get route accessed', [
-                    'project_id' => $project->id,
-                    'project_name' => $project->name,
-                    'user_id' => $request->user()?->id,
-                    'user_email' => $request->user()?->email,
-                    'view_name' => $request->query('view_name', 'default'),
-                    'headers' => $request->headers->all(),
-                    'route_params' => $request->route()->parameters(),
-                ]);
+        Route::get('/custom-views/get', [ProjectViewsController::class, 'getCustomView'])->name('custom-views.get');
+        Route::get('/custom-views/list', [ProjectViewsController::class, 'listCustomViews'])->name('custom-views.list');
 
-                // Check if user has access to this project
-                if (!$request->user()->can('view', $project)) {
-                    Log::warning('User denied access to project', [
-                        'user_id' => $request->user()->id,
-                        'project_id' => $project->id,
-                    ]);
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Access denied to this project',
-                    ], 403);
-                }
+        Route::delete('/custom-views/delete', [ProjectViewsController::class, 'deleteCustomView'])->name('custom-views.delete');
 
-                $viewName = $request->query('view_name', 'default');
-                $userId = $request->user()->id;
-                
-                $generativeUIService = app(\App\Services\GenerativeUIService::class);
-                $customView = $generativeUIService->getCustomView($project, $userId, $viewName);
-                
-                if ($customView) {
-                    $response = [
-                        'success' => true,
-                        'html' => $customView->getComponentCode(), // Now returns React component code
-                        'custom_view_id' => $customView->id,
-                    ];
-                    Log::info('Custom view found and returning', ['response_preview' => substr(json_encode($response), 0, 200)]);
-                    return response()->json($response);
-                } else {
-                    $response = [
-                        'success' => false,
-                        'message' => 'No custom view found',
-                    ];
-                    Log::info('No custom view found', $response);
-                    return response()->json($response);
-                }
-            } catch (\Exception $e) {
-                Log::error('Custom view load error', [
-                    'project_id' => $project->id ?? 'unknown',
-                    'user_id' => $request->user()?->id,
-                    'view_name' => $request->query('view_name', 'default'),
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error loading custom view: ' . $e->getMessage(),
-                ], 500);
-            }
-        })->name('custom-views.get');
+        Route::post('/custom-views/save', [ProjectViewsController::class, 'saveCustomView'])->name('custom-views.save');
 
-        // Route for deleting custom views
-        Route::delete('/custom-views/delete', function (Request $request, Project $project) {
-            $viewName = $request->query('view_name', 'default');
-            $userId = $request->user()->id;
-            
-            try {
-                $generativeUIService = app(\App\Services\GenerativeUIService::class);
-                $deleted = $generativeUIService->deleteCustomView($project, $userId, $viewName);
-                
-                return response()->json([
-                    'success' => $deleted,
-                    'message' => $deleted ? 'Custom micro-application deleted successfully' : 'Custom view not found',
-                ]);
-            } catch (\Exception $e) {
-                Log::error('Custom view delete error', [
-                    'project_id' => $project->id,
-                    'user_id' => $userId,
-                    'view_name' => $viewName,
-                    'error' => $e->getMessage()
-                ]);
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error deleting custom view: ' . $e->getMessage(),
-                ], 500);
-            }
-        })->name('custom-views.delete');
+        Route::post('/custom-views/save-data', [ProjectViewsController::class, 'saveComponentData'])->name('custom-views.save-data');
 
-        // Route for custom view SPA generation chat - using new GenerativeUIService
-    Route::post('/custom-views/chat', function (Request $request, Project $project) {
-            try {
-                $userId = $request->user()->id;
-                $message = $request->input('message', '');
-                $conversationHistory = $request->input('conversation_history', []);
-        $viewName = $request->input('view_name', 'default');
-                
-                if (empty($message)) {
-                    return response()->json([
-                        'type' => 'error',
-                        'message' => 'Message cannot be empty.',
-                    ], 400);
-                }
-                
-                // Use the new GenerativeUIService instead of ProjectViewsService
-                $generativeUIService = app(\App\Services\GenerativeUIService::class);
-                $response = $generativeUIService->processCustomViewRequest(
-                    $project, 
-                    $message, 
-                    null, // sessionId
-                    $userId,
-                    $viewName, // viewName from request
-                    $conversationHistory,
-                    $request->input('project_context'), // Enhanced project context with tasks and users
-                    $request->input('current_component_code') // Current component code for updates
-                );
-                
-                return response()->json($response);
-            } catch (\Exception $e) {
-                Log::error('Custom view chat error', [
-                    'project_id' => $project->id,
-                    'user_id' => $request->user()->id ?? null,
-                    'message' => $request->input('message', ''),
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                
-                return response()->json([
-                    'type' => 'error',
-                    'message' => 'I encountered an error generating your micro-application. Please try again with a different request.',
-                    'success' => false,
-                ], 500);
-            }
-        })->name('custom-views.chat');
+        Route::get('/custom-views/load-data', [ProjectViewsController::class, 'loadComponentData'])->name('custom-views.load-data');
+
+        // Chat endpoint (JSON; client falls back when streaming unavailable)
+        Route::post('/custom-views/chat', [ProjectViewsController::class, 'chat'])->name('custom-views.chat');
 
         /* AUTOMATIONS (premium feature - automation) */
         // Allow all authenticated users to view automations index (overlay handles upsell)
@@ -956,6 +578,108 @@ Route::middleware('auth')->group(function () {
         Route::get('/assistant/suggestions', [ProjectAssistantController::class, 'suggestions'])->name('projects.assistant.suggestions'); // Remove middleware
         Route::post('/assistant/execute', [ProjectAssistantController::class, 'execute'])->middleware('subscription:ai_chat')->name('projects.assistant.execute'); // Keep middleware for actual execution
         Route::get('/assistant/test', [ProjectAssistantController::class, 'test'])->name('projects.assistant.test'); // Remove middleware
+    });
+
+    /* AI SDK compatible chat route for component generation */
+    Route::post('/api/chat', function (Request $request) {
+        try {
+            $messages = $request->input('messages', []);
+            
+            // Extract project context from request body (sent by useChat body parameter)
+            $projectId = $request->input('projectId') ?? null;
+            $viewName = $request->input('viewName') ?? 'default';
+            $currentComponentCode = $request->input('currentCode') ?? null;
+            $projectContext = $request->input('projectContext') ?? null;
+            
+            if (!$projectId) {
+                return response()->json(['error' => 'Project ID is required'], 400);
+            }
+            
+            $project = Project::find($projectId);
+            if (!$project) {
+                return response()->json(['error' => 'Project not found'], 404);
+            }
+            
+            // Get the latest user message
+            $lastMessage = end($messages);
+            $userMessage = $lastMessage['content'] ?? '';
+            
+            if (empty($userMessage)) {
+                return response()->json(['error' => 'Message content is required'], 400);
+            }
+            
+            // Build conversation history from messages array
+            $conversationHistory = array_map(function($msg) {
+                return [
+                    'role' => $msg['role'],
+                    'content' => $msg['content'],
+                    'timestamp' => $msg['timestamp'] ?? now()->toISOString()
+                ];
+            }, $messages);
+            
+            // Initialize services
+            $openAIService = app(\App\Services\OpenAIService::class);
+            $generativeUIService = new \App\Services\GenerativeUIService($openAIService);
+            
+            // Process the request
+            $result = $generativeUIService->processCustomViewRequest(
+                $project,
+                $userMessage,
+                null, // sessionId
+                $request->user()->id,
+                $viewName,
+                $conversationHistory,
+                $projectContext,
+                $currentComponentCode
+            );
+            
+            // Create the response message in AI SDK UIMessage format
+            $responseMessage = [
+                'id' => 'msg_' . uniqid(),
+                'role' => 'assistant',
+                'content' => $result['success'] ? $result['message'] : ($result['message'] ?? 'Failed to generate component'),
+                'createdAt' => now()->toISOString(),
+            ];
+            
+            // Add custom data for successful component generation
+            if ($result['success']) {
+                $responseMessage['experimental_data'] = [
+                    'type' => 'spa_generated',
+                    'component_code' => $result['component_code'],
+                    'custom_view_id' => $result['custom_view_id'] ?? null
+                ];
+            } else {
+                // Log detailed error information
+                Log::warning('Component generation failed', [
+                    'result' => $result,
+                    'project_id' => $projectId,
+                    'view_name' => $viewName,
+                    'user_message' => $userMessage,
+                    'user_id' => $request->user()->id
+                ]);
+            }
+            
+            // Return as a text/plain streaming response for AI SDK compatibility
+            return response()->stream(function () use ($responseMessage) {
+                // Simple data stream format
+                echo "data: " . json_encode($responseMessage) . "\n\n";
+                echo "data: [DONE]\n\n";
+            }, 200, [
+                'Content-Type' => 'text/plain',
+                'Cache-Control' => 'no-cache',
+                'Connection' => 'keep-alive',
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Chat API error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => 'Internal server error'
+            ], 500);
+        }
     });
 });
 
@@ -1051,16 +775,4 @@ if (app()->environment('local')) {
 }
 
 // Debug route
-Route::get('/debug/controller-check', function () {
-    $file = file_get_contents(app_path('Http/Controllers/CertificationController.php'));
-    $hasIntroGate = strpos($file, 'If no attempt exists, show intro page') !== false;
-    $hasOldLogic = strpos($file, 'getCurrentQuestion') !== false;
-
-    return response()->json([
-        'has_intro_gate' => $hasIntroGate,
-        'has_old_logic' => $hasOldLogic,
-        'file_size' => strlen($file),
-        'first_100_chars' => substr($file, 0, 100),
-        'git_commit' => trim(shell_exec('git rev-parse HEAD')),
-    ]);
-});
+// Removed deprecated debug controller-check route

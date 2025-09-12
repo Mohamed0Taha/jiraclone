@@ -24,6 +24,9 @@ class VerifyCsrfToken extends Middleware
 
         // API routes for custom views (these use session auth instead)
         'api/projects/*/custom-views/*',
+        
+        // Custom views streaming endpoints (these use session auth instead)
+        'projects/*/custom-views/chat',
 
         // Assistant endpoints now properly use CSRF tokens
         // 'projects/*/assistant/chat',

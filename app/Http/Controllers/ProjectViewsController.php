@@ -121,15 +121,35 @@ class ProjectViewsController extends Controller
             $viewName = $request->input('view_name', 'default');
             $userId = auth()->id();
 
+            Log::info('[ProjectViewsController] Getting custom view', [
+                'project_id' => $project->id,
+                'user_id' => $userId,
+                'view_name' => $viewName,
+            ]);
+
             $customView = $this->projectViewsService->getCustomView($project, $userId, $viewName);
+
+            Log::info('[ProjectViewsController] Service returned:', [
+                'customView' => $customView ? get_class($customView) : 'null',
+                'is_array' => is_array($customView),
+                'type' => gettype($customView),
+                'value' => $customView, // Add full value for debugging
+            ]);
 
             if (!$customView) {
                 return response()->json([
-                    'type' => 'empty',
-                    'message' => 'No custom view found.',
-                    'html' => null,
-                    'success' => true,
+                    'success' => false,
+                    'message' => 'No custom view found'
                 ]);
+            }
+
+            // Defensive programming: ensure we have a CustomView object
+            if (!($customView instanceof \App\Models\CustomView)) {
+                Log::error('[ProjectViewsController] Expected CustomView model, got: ' . gettype($customView));
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid custom view data structure'
+                ], 500);
             }
 
             return response()->json([
@@ -229,6 +249,128 @@ class ProjectViewsController extends Controller
                 'type' => 'error',
                 'message' => 'Failed to list custom views.',
                 'success' => false,
+            ], 500);
+        }
+    }
+
+    /**
+     * Save custom view component
+     */
+    public function saveCustomView(Request $request, Project $project): JsonResponse
+    {
+        try {
+            $this->authorize('view', $project);
+            
+            $request->validate([
+                'view_name' => 'required|string|max:255',
+                'component_code' => 'required|string',
+                'custom_view_id' => 'nullable|integer',
+            ]);
+
+            $viewName = $request->input('view_name');
+            $componentCode = $request->input('component_code');
+            $customViewId = $request->input('custom_view_id');
+            $userId = auth()->id();
+
+            // Use GenerativeUIService for saving
+            $generativeUIService = app(\App\Services\GenerativeUIService::class);
+            $result = $generativeUIService->saveCustomView($project, $userId, $viewName, $componentCode, $customViewId);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Custom micro-application saved successfully',
+                'customViewId' => $result['custom_view_id'],
+                'data' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('[ProjectViewsController] Error saving custom view', [
+                'error' => $e->getMessage(),
+                'project_id' => $project->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error saving custom view: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Save component data (for form data, user inputs, etc.)
+     */
+    public function saveComponentData(Request $request, Project $project): JsonResponse
+    {
+        try {
+            $this->authorize('view', $project);
+            
+            $request->validate([
+                'view_name' => 'required|string|max:255',
+                'data_key' => 'required|string|max:255',
+                'data' => 'required',
+            ]);
+
+            $viewName = $request->input('view_name');
+            $dataKey = $request->input('data_key');
+            $data = $request->input('data');
+            $userId = auth()->id();
+
+            $generativeUIService = app(\App\Services\GenerativeUIService::class);
+            $result = $generativeUIService->saveComponentData($project, $userId, $viewName, $dataKey, $data);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Component data saved successfully',
+                'data' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('[ProjectViewsController] Error saving component data', [
+                'error' => $e->getMessage(),
+                'project_id' => $project->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error saving component data: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Load component data
+     */
+    public function loadComponentData(Request $request, Project $project): JsonResponse
+    {
+        try {
+            $this->authorize('view', $project);
+            
+            $request->validate([
+                'view_name' => 'nullable|string|max:255',
+                'data_key' => 'nullable|string|max:255',
+            ]);
+
+            $viewName = $request->query('view_name', 'default');
+            $dataKey = $request->query('data_key', 'default');
+            $userId = auth()->id();
+
+            $generativeUIService = app(\App\Services\GenerativeUIService::class);
+            $result = $generativeUIService->loadComponentData($project, $userId, $viewName, $dataKey);
+
+            return response()->json([
+                'success' => true,
+                'data' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('[ProjectViewsController] Error loading component data', [
+                'error' => $e->getMessage(),
+                'project_id' => $project->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading component data: ' . $e->getMessage(),
             ], 500);
         }
     }

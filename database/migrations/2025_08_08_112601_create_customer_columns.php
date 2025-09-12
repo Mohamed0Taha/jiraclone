@@ -25,16 +25,27 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropIndex([
-                'stripe_id',
-            ]);
-
-            $table->dropColumn([
+            $columnsToDrop = [
                 'stripe_id',
                 'pm_type',
                 'pm_last_four',
                 'trial_ends_at',
-            ]);
+            ];
+
+            foreach ($columnsToDrop as $column) {
+                if (Schema::hasColumn('users', $column)) {
+                    if ($column === 'stripe_id') {
+                        // Attempt to drop index first, but don't fail if it doesn't exist.
+                        try {
+                            // Manually specify index name for safety.
+                            $table->dropIndex('users_stripe_id_index');
+                        } catch (\Exception $e) {
+                            // Log or ignore error if index doesn't exist
+                        }
+                    }
+                    $table->dropColumn($column);
+                }
+            }
         });
     }
 };

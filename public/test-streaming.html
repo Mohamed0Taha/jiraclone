@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Streaming Custom Views Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+        button { padding: 8px 16px; margin: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Custom Views Streaming Test</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: Streaming Protocol</h3>
+        <button onclick="testStreaming()">Test Streaming (text/plain)</button>
+        <div id="streamLog" class="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: JSON Fallback</h3>
+        <button onclick="testJsonFallback()">Test JSON Fallback</button>
+        <div id="jsonLog" class="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: AI Actions Client</h3>
+        <button onclick="testAiActionsClient()">Test AI Actions Client</button>
+        <div id="clientLog" class="log"></div>
+    </div>
+
+    <script>
+        // Get CSRF token
+        function getCsrfToken() {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? meta.getAttribute('content') : null;
+        }
+
+        // Test streaming protocol
+        async function testStreaming() {
+            const log = document.getElementById('streamLog');
+            log.innerHTML = 'Starting streaming test...\n';
+            
+            try {
+                const token = getCsrfToken();
+                if (!token) {
+                    log.innerHTML += '<span class="error">Error: No CSRF token found. Please ensure you\'re authenticated.</span>\n';
+                    return;
+                }
+
+                const projectId = 1; // Adjust as needed
+                const payload = {
+                    view_name: 'test',
+                    message: 'Create a simple test component',
+                    conversation_history: [],
+                    project_context: null,
+                    current_component_code: null
+                };
+
+                log.innerHTML += 'Making request with Accept: text/plain...\n';
+                
+                const response = await fetch(`/projects/${projectId}/custom-views/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': token,
+                        'Accept': 'text/plain'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+
+                log.innerHTML += `Response status: ${response.status}\n`;
+                log.innerHTML += `Content-Type: ${response.headers.get('content-type')}\n\n`;
+
+                if (response.status !== 200) {
+                    const text = await response.text();
+                    log.innerHTML += `<span class="error">Error response: ${text}</span>\n`;
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let eventCount = 0;
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.slice(6).trim();
+                            if (!dataStr) continue;
+                            
+                            if (dataStr === '[DONE]') {
+                                log.innerHTML += '<span class="success">Stream completed: [DONE]</span>\n';
+                            } else {
+                                try {
+                                    const event = JSON.parse(dataStr);
+                                    eventCount++;
+                                    log.innerHTML += `<span class="info">Event ${eventCount}:</span> ${JSON.stringify(event, null, 2)}\n\n`;
+                                } catch (e) {
+                                    log.innerHTML += `<span class="error">Non-JSON frame:</span> ${dataStr}\n`;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                log.innerHTML += `<span class="success">Test completed! Received ${eventCount} events.</span>\n`;
+                
+            } catch (error) {
+                log.innerHTML += `<span class="error">Error: ${error.message}</span>\n`;
+            }
+        }
+
+        // Test JSON fallback
+        async function testJsonFallback() {
+            const log = document.getElementById('jsonLog');
+            log.innerHTML = 'Starting JSON fallback test...\n';
+            
+            try {
+                const token = getCsrfToken();
+                if (!token) {
+                    log.innerHTML += '<span class="error">Error: No CSRF token found</span>\n';
+                    return;
+                }
+
+                const projectId = 1;
+                const payload = {
+                    view_name: 'test',
+                    message: 'Create a simple test component (JSON mode)',
+                    conversation_history: [],
+                    project_context: null
+                };
+
+                log.innerHTML += 'Making request with Accept: application/json...\n';
+                
+                const response = await fetch(`/projects/${projectId}/custom-views/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': token,
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+
+                log.innerHTML += `Response status: ${response.status}\n`;
+                log.innerHTML += `Content-Type: ${response.headers.get('content-type')}\n\n`;
+
+                if (response.status !== 200) {
+                    const text = await response.text();
+                    log.innerHTML += `<span class="error">Error response: ${text}</span>\n`;
+                    return;
+                }
+
+                const data = await response.json();
+                log.innerHTML += '<span class="success">JSON Response:</span>\n';
+                log.innerHTML += JSON.stringify(data, null, 2) + '\n';
+                
+            } catch (error) {
+                log.innerHTML += `<span class="error">Error: ${error.message}</span>\n`;
+            }
+        }
+
+        // Test AI Actions client (if available)
+        async function testAiActionsClient() {
+            const log = document.getElementById('clientLog');
+            log.innerHTML = 'Testing AI Actions client...\n';
+            
+            // This would normally import from the module, but for testing we'll inline a simplified version
+            try {
+                // Simple version of the streaming helper
+                const token = getCsrfToken();
+                if (!token) {
+                    log.innerHTML += '<span class="error">Error: No CSRF token found</span>\n';
+                    return;
+                }
+
+                log.innerHTML += 'Using simplified streaming client...\n';
+                
+                const projectId = 1;
+                const endpoint = `/projects/${projectId}/custom-views/chat`;
+                const payload = {
+                    view_name: 'test',
+                    message: 'Create a budget tracker using AI Actions client',
+                    conversation_history: [],
+                    project_context: null,
+                    current_component_code: null
+                };
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/json',
+                        'Accept': 'text/plain',
+                        'X-CSRF-TOKEN': token
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+
+                log.innerHTML += `Status: ${response.status}, Content-Type: ${response.headers.get('content-type')}\n\n`;
+
+                if (!response.body) {
+                    log.innerHTML += '<span class="error">No response body for streaming</span>\n';
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let eventCount = 0;
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const raw of lines) {
+                        const line = raw.trim();
+                        if (!line.startsWith('data: ')) continue;
+                        const dataStr = line.slice(6).trim();
+                        if (!dataStr) continue;
+                        if (dataStr === '[DONE]') {
+                            log.innerHTML += '<span class="success">Client test completed: [DONE]</span>\n';
+                            continue;
+                        }
+                        try {
+                            const evt = JSON.parse(dataStr);
+                            eventCount++;
+                            log.innerHTML += `<span class="info">Event ${eventCount}:</span> ${evt.type || 'unknown'}\n`;
+                            if (evt.message) log.innerHTML += `  Message: ${evt.message}\n`;
+                            if (evt.stage) log.innerHTML += `  Stage: ${evt.stage}/${evt.total || '?'}\n`;
+                            if (evt.html) log.innerHTML += `  Generated HTML: ${evt.html.length} chars\n`;
+                            log.innerHTML += '\n';
+                        } catch {
+                            log.innerHTML += `Raw frame: ${dataStr}\n`;
+                        }
+                    }
+                }
+
+                log.innerHTML += `<span class="success">AI Actions client test completed! Processed ${eventCount} events.</span>\n`;
+                
+            } catch (error) {
+                log.innerHTML += `<span class="error">Client error: ${error.message}</span>\n`;
+            }
+        }
+    </script>
+</body>
+</html>

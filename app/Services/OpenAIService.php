@@ -169,7 +169,7 @@ class OpenAIService
 
         try {
             $start = microtime(true);
-            $res = Http::timeout(25)->withHeaders([
+            $res = Http::timeout(120)->withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
             ])->post($this->baseUri().'/chat/completions', [
