@@ -502,7 +502,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 >
                     <Stack direction="column" spacing={0}>
                         {/* Generate Button */}
-                        <Tooltip title="Generate New Application" placement="left">
+                        <Tooltip title={componentCode ? "Update Application" : "Generate New Application"} placement="left">
                             <IconButton
                                 onClick={() => setAssistantOpen(true)}
                                 sx={{
@@ -624,17 +624,44 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     }}
                 >
                     {componentCode ? (
-                        <ReactComponentRenderer
-                            componentCode={componentCode}
-                            project={project}
-                            auth={auth}
-                            viewName={viewName}
-                            onError={handleComponentError}
-                            tasks={tasks}
-                            allTasks={allTasks}
-                            users={users}
-                            methodology={methodology}
-                        />
+                        <Box sx={{ position: 'relative' }}>
+                            {/* Update Available Indicator */}
+                            <Box sx={{
+                                position: 'absolute',
+                                top: 16,
+                                right: 16,
+                                zIndex: 10,
+                                opacity: 0.8,
+                            }}>
+                                <Chip 
+                                    label="Updateable"
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{
+                                        borderRadius: designTokens.radii.lg,
+                                        fontSize: '0.75rem',
+                                        fontWeight: 500,
+                                        color: designTokens.colors.accent,
+                                        borderColor: designTokens.colors.accent,
+                                        background: alpha(designTokens.colors.accent, 0.1),
+                                        '&:hover': {
+                                            background: alpha(designTokens.colors.accent, 0.2),
+                                        }
+                                    }}
+                                />
+                            </Box>
+                            <ReactComponentRenderer
+                                componentCode={componentCode}
+                                project={project}
+                                auth={auth}
+                                viewName={viewName}
+                                onError={handleComponentError}
+                                tasks={tasks}
+                                allTasks={allTasks}
+                                users={users}
+                                methodology={methodology}
+                            />
+                        </Box>
                     ) : isLoading ? (
                         <Box sx={{
                             display: 'flex',
@@ -826,6 +853,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 isCustomView={true}
                 onSpaGenerated={handleSpaGenerated}
                 onProgressUpdate={setGenerationProgress}
+                currentComponentCode={componentCode}
             />
 
             {/* Enhanced Snackbar */}

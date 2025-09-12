@@ -918,7 +918,8 @@ Route::middleware('auth')->group(function () {
                     $userId,
                     $viewName, // viewName from request
                     $conversationHistory,
-                    $request->input('project_context') // Enhanced project context with tasks and users
+                    $request->input('project_context'), // Enhanced project context with tasks and users
+                    $request->input('current_component_code') // Current component code for updates
                 );
                 
                 return response()->json($response);

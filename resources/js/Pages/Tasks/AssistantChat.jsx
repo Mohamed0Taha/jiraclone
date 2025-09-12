@@ -99,7 +99,7 @@ const palette = {
     cancelText: colors.error,
 };
 
-export default function AssistantChat({ project, tasks, allTasks, users, methodology, open, onClose, isCustomView = false, onSpaGenerated = null, onProgress = null, viewName }) {
+export default function AssistantChat({ project, tasks, allTasks, users, methodology, open, onClose, isCustomView = false, onSpaGenerated = null, viewName, currentComponentCode = null }) {
     
     // Debug logging for context data
     console.log('[AssistantChat] Component mounted/updated with props:', {
@@ -168,14 +168,6 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
     const [pendingCommand, setPendingCommand] = useState(null);
     const [generationProgress, setGenerationProgress] = useState(null); // New state for SPA generation progress
 
-    // Helper to broadcast progress to parent (CustomView) when in custom view mode
-    const updateProgress = (next) => {
-        setGenerationProgress(next);
-        if (isCustomView && typeof onProgress === 'function') {
-            try { onProgress(next); } catch {}
-        }
-    };
-
     // Voice interaction state
     const [voiceMode, setVoiceMode] = useState(false);
     const [isProcessingVoice, setIsProcessingVoice] = useState(false);
@@ -217,22 +209,29 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
     useEffect(() => {
         if (!open) return;
         
-        // In custom view mode, we intentionally hide generic suggestions
+        // Use different suggestions for custom view
         if (isCustomView) {
-            setSuggestions([]);
-            return;
-        }
-
-        fetch(`/projects/${project.id}/assistant/suggestions`, {
-            method: 'GET',
-            headers: { Accept: 'application/json' },
-            credentials: 'same-origin',
-        })
-            .then((response) => response.json())
-            .then((d) => {
-                if (Array.isArray(d?.suggestions)) setSuggestions(d.suggestions);
+            setSuggestions([
+                "Create an expense tracker for my team",
+                "Build a vendor phonebook",
+                "Make a project wiki page",
+                "Create a task analytics dashboard",
+                "Build a team workload overview",
+                "Create a milestone timeline",
+                "Build a budget tracking app"
+            ]);
+        } else {
+            fetch(`/projects/${project.id}/assistant/suggestions`, {
+                method: 'GET',
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
             })
-            .catch(() => {});
+                .then((response) => response.json())
+                .then((d) => {
+                    if (Array.isArray(d?.suggestions)) setSuggestions(d.suggestions);
+                })
+                .catch(() => {});
+        }
     }, [open, project?.id, isCustomView]);
 
     useEffect(() => {
@@ -436,7 +435,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
         
         // For custom view mode, show detailed progress
         if (isCustomView) {
-            updateProgress({
+            setGenerationProgress({
                 step: 1,
                 total: 4,
                 message: '🔍 Analyzing your request...'
@@ -553,12 +552,16 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                         email: u.email,
                     })) : [],
                 } : null,
+                // Include current component code for updates/modifications
+                current_component_code: isCustomView && currentComponentCode ? currentComponentCode : null,
             };
 
             // Debug the payload being sent
             console.log('[AssistantChat Debug] Payload being sent to API:', {
                 isCustomView: isCustomView,
                 hasProjectContext: !!payload.project_context,
+                hasCurrentComponent: !!payload.current_component_code,
+                currentComponentLength: payload.current_component_code ? payload.current_component_code.length : 0,
                 projectContextSummary: payload.project_context ? {
                     project_name: payload.project_context.project?.name,
                     methodology: payload.project_context.methodology?.name,
@@ -581,7 +584,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
 
             // Update progress for custom view
             if (isCustomView) {
-                updateProgress({
+                setGenerationProgress({
                     step: 2,
                     total: 4,
                     message: '🤖 Generating custom application with AI...'
@@ -604,13 +607,13 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
             // Handle enhanced conversation flow responses
             if (data?.type === 'conversation_continue') {
                 // AI is asking questions or needs clarification
-                updateProgress({
+                setGenerationProgress({
                     step: 2,
                     total: 4,
                     message: '🤔 AI needs more information...'
                 });
                 
-                setTimeout(() => updateProgress(null), 2000);
+                setTimeout(() => setGenerationProgress(null), 2000);
                 
                 const asstMsg = {
                     role: 'assistant',
@@ -629,7 +632,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
             // Handle custom view SPA generation
             if (isCustomView && data?.type === 'spa_generated' && data?.html) {
                 // Update progress
-                updateProgress({
+                setGenerationProgress({
                     step: 3,
                     total: 4,
                     message: '✨ Enhancing your application...'
@@ -638,7 +641,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                 // Short delay to show progress
                 await new Promise(resolve => setTimeout(resolve, 500));
 
-                updateProgress({
+                setGenerationProgress({
                     step: 4,
                     total: 4,
                     message: '🎉 Your custom application is ready!'
@@ -659,7 +662,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                 }
                 
                 // Clear progress after a moment
-                setTimeout(() => updateProgress(null), 2000);
+                setTimeout(() => setGenerationProgress(null), 2000);
                 setBusy(false);
                 return;
             }
@@ -711,7 +714,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
             ]);
         } finally {
             setBusy(false);
-            updateProgress(null);
+            setGenerationProgress(null);
         }
     };
 
@@ -863,8 +866,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     overflow: 'hidden',
                 }}
             >
-                {/* Suggestions ribbon: hidden for custom view generation */}
-                {!isCustomView && (
+                {/* Suggestions ribbon */}
                 <Box
                     sx={{
                         px: 2,
@@ -924,7 +926,6 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                         </Typography>
                     )}
                 </Box>
-                )}
 
                 {/* Scrollable message area */}
                 <Box
@@ -941,7 +942,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                         },
                     }}
                 >
-                    {messages.length === 0 && !isCustomView && (
+                    {messages.length === 0 && (
                         <Box
                             sx={{
                                 display: 'flex',
@@ -1722,7 +1723,9 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             fullWidth
                             size="small"
                             placeholder={isCustomView 
-                                ? "Describe the SPA you want to create..." 
+                                ? (currentComponentCode 
+                                    ? "Describe how you want to update your application..." 
+                                    : "Describe the SPA you want to create...") 
                                 : "Type your message..."}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}

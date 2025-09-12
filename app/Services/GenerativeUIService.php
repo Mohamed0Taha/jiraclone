@@ -29,7 +29,8 @@ class GenerativeUIService
         int $userId, 
         string $viewName = 'default',
         array $conversationHistory = [],
-        ?array $projectContext = null
+        ?array $projectContext = null,
+        ?string $currentComponentCode = null
     ): array {
         try {
             // Get existing view for context
@@ -41,13 +42,16 @@ class GenerativeUIService
                 $project, 
                 $existingView,
                 $conversationHistory,
-                $projectContext
+                $projectContext,
+                $currentComponentCode
             );
 
             // Generate React component using OpenAI
             Log::info('GenerativeUIService: Sending prompt to OpenAI', [
                 'project_id' => $project->id,
                 'user_message' => $userMessage,
+                'is_update_request' => !empty($currentComponentCode),
+                'current_component_length' => $currentComponentCode ? strlen($currentComponentCode) : 0,
                 'has_project_context' => !is_null($projectContext),
                 'project_context_keys' => $projectContext ? array_keys($projectContext) : [],
                 'project_context_summary' => $projectContext ? [
@@ -184,13 +188,55 @@ REACT;
         Project $project, 
         ?CustomView $existingView = null,
         array $conversationHistory = [],
-        ?array $projectContext = null
+        ?array $projectContext = null,
+        ?string $currentComponentCode = null
     ): string {
         // Use enhanced project context if provided, otherwise fall back to basic context
         $contextData = $projectContext ? $this->buildEnhancedProjectContext($project, $projectContext) : $this->buildProjectContext($project);
         $componentStructure = $this->getReactComponentStructure();
         
-        $prompt = "You are an expert React developer specializing in creating data-focused micro-applications using modern React patterns.
+        // Determine if this is an update request
+        $isUpdateRequest = !empty($currentComponentCode) && !empty(trim($currentComponentCode));
+        
+        if ($isUpdateRequest) {
+            $prompt = "You are an expert React developer specializing in updating and modifying existing data-focused micro-applications.
+
+MODIFICATION TASK:
+The user wants to modify an EXISTING React component. Your job is to update the current component according to their request while preserving working functionality.
+
+CRITICAL REQUIREMENTS FOR UPDATES:
+1. PRESERVE existing component structure and working features unless explicitly asked to change them
+2. MAINTAIN all current state management and data initialization patterns
+3. **CONTINUE to use the provided REAL DATA - never switch to API calls or hardcoded arrays**
+4. Keep the same data-focused design principles (87% display, 13% controls)
+5. Only modify the specific aspects mentioned in the user's request
+6. Ensure backward compatibility with existing data flow
+7. Maintain responsive design and existing styling patterns
+
+CURRENT COMPONENT CODE:
+```jsx
+{$currentComponentCode}
+```
+
+PROJECT CONTEXT (for reference):
+{$contextData}
+
+USER MODIFICATION REQUEST: \"{$userRequest}\"
+
+CONVERSATION HISTORY:
+" . (!empty($conversationHistory) ? json_encode(array_slice($conversationHistory, -3), JSON_PRETTY_PRINT) : "No previous conversation") . "
+
+RESPONSE FORMAT:
+Provide ONLY the UPDATED complete React component code that:
+- Incorporates the user's requested changes
+- Preserves all working functionality not mentioned in the request
+- Continues to use the REAL DATA from project context
+- Maintains the same data initialization patterns
+- No explanations, no markdown - just the working JSX component ready for immediate use
+
+Remember: This is an UPDATE, not a complete rewrite. Preserve what works, modify only what's requested.";
+        } else {
+            $prompt = "You are an expert React developer specializing in creating data-focused micro-applications using modern React patterns.
 
 CRITICAL REQUIREMENTS:
 1. Generate a COMPLETE, FUNCTIONAL React component that can be directly used
@@ -245,6 +291,7 @@ Provide ONLY the complete React component code that uses the REAL DATA from the 
 - No explanations, no markdown - just the working JSX component ready for immediate use.
 
 Remember: Focus on DATA DISPLAY (87% of space) with minimal input controls (13% max) and USE THE PROVIDED REAL DATA.";
+        }
 
         return $prompt;
     }
