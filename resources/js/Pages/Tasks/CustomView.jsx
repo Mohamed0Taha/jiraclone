@@ -343,9 +343,55 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         setDeleteConfirmOpen(false);
     };
 
+    // Emergency recovery function to clear problematic component
+    const handleEmergencyReset = useCallback(() => {
+        console.warn('[CustomView] Emergency reset triggered');
+        setComponentCode('');
+        setCustomViewId(null);
+        setComponentError(null);
+        setIsLocked(true);
+        
+        // Clear local storage backups that might be causing issues
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.includes(`microapp-`) || key.includes(`${project?.id}-${viewName}`))) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        
+        showSnackbar('Component reset. You can now generate a new micro-application.', 'info');
+    }, [project?.id, viewName]);
+
+    // Handle critical errors that could freeze the app
+    useEffect(() => {
+        const handleCriticalError = (error) => {
+            if (componentError && (
+                componentError.includes('already been declared') ||
+                componentError.includes('SyntaxError') ||
+                componentError.includes('freeze')
+            )) {
+                setTimeout(() => {
+                    handleEmergencyReset();
+                }, 2000); // Reset after 2 seconds to prevent freeze
+            }
+        };
+
+        if (componentError) {
+            handleCriticalError(componentError);
+        }
+    }, [componentError, handleEmergencyReset]);
+
     const handleComponentError = (error) => {
+        console.error('[CustomView] Component error:', error);
         setComponentError(error);
         showSnackbar('Component error: ' + error, 'error');
+        // Clear the problematic component code to prevent freeze
+        if (error.includes('already been declared') || error.includes('SyntaxError')) {
+            setComponentCode('');
+            showSnackbar('Component cleared due to syntax error. Please regenerate.', 'warning');
+        }
     };
 
     const showSnackbar = (message, severity = 'info') => {
@@ -548,6 +594,29 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                     }}
                                 >
                                     <DeleteIcon />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+
+                        {/* Emergency Reset - always visible when there's an error */}
+                        {componentError && (
+                            <Tooltip title="Emergency Reset (fixes freeze)" placement="left">
+                                <IconButton
+                                    onClick={handleEmergencyReset}
+                                    sx={{
+                                        p: 2,
+                                        borderRadius: 0,
+                                        color: 'white',
+                                        background: designTokens.colors.error,
+                                        borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                                        '&:hover': {
+                                            background: designTokens.colors.error,
+                                            transform: 'scale(1.05)',
+                                        },
+                                        animation: `${pulseGlow} 2s infinite`,
+                                    }}
+                                >
+                                    <RefreshIcon />
                                 </IconButton>
                             </Tooltip>
                         )}

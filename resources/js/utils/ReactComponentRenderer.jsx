@@ -305,7 +305,17 @@ export class ReactComponentRenderer extends React.Component {
                 'allTasks',
                 'users',
                 'methodology',
-                `"use strict";\nconst { useState, useEffect, useMemo, useRef, useCallback, useReducer, useContext } = React;\n// Expose data as globals within the eval scope for AI components\nconst __project = project;\nconst __tasks = tasks;\nconst __allTasks = allTasks;\nconst __users = users;\nconst __methodology = methodology;\n// Build a flat list of tasks for convenience
+                `"use strict";
+const { useState, useEffect, useMemo, useRef, useCallback, useReducer, useContext } = React;
+
+// Expose data as globals within the eval scope for AI components
+const __project = project;
+const __tasks = tasks;
+const __allTasks = allTasks;
+const __users = users;
+const __methodology = methodology;
+
+// Build a flat list of tasks for convenience
 const __flatTasks = Array.isArray(__allTasks)
   ? __allTasks
   : (Array.isArray(__tasks)
@@ -313,7 +323,17 @@ const __flatTasks = Array.isArray(__allTasks)
       : (__tasks && typeof __tasks === 'object'
           ? Object.values(__tasks).reduce((acc, arr) => acc.concat(arr || []), [])
           : []));
-// Encourage components to use these names\nconst projectData = __project;\nconst tasksDataFromProps = __flatTasks;\nconst allTasksDataFromProps = __flatTasks;\nconst usersDataFromProps = __users;\nconst methodologyDataFromProps = __methodology;\n${transformed}\nreturn (${componentName});`
+
+// Only declare data variables if they don't already exist in the component code
+${transformed.includes('tasksDataFromProps') ? '' : 'const tasksDataFromProps = __flatTasks;'}
+${transformed.includes('allTasksDataFromProps') ? '' : 'const allTasksDataFromProps = __flatTasks;'}
+${transformed.includes('usersDataFromProps') ? '' : 'const usersDataFromProps = __users;'}
+${transformed.includes('methodologyDataFromProps') ? '' : 'const methodologyDataFromProps = __methodology;'}
+${transformed.includes('projectData') ? '' : 'const projectData = __project;'}
+
+${transformed}
+
+return (${componentName});`
             );
 
             return factory(
