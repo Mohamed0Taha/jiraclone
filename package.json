@@ -45,6 +45,7 @@
         "react-speech-recognition": "^4.0.1",
         "react-window": "^1.8.11",
         "recharts": "^3.1.2",
+        "@babel/standalone": "^7.25.7",
         "vite": "^7.0.4",
         "ziggy-js": "^2.5.3"
     },

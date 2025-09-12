@@ -99,8 +99,9 @@ const palette = {
     cancelText: colors.error,
 };
 
-export default function AssistantChat({ project, open, onClose, isCustomView = false, onSpaGenerated = null }) {
-    const { props } = usePage();
+export default function AssistantChat({ project, viewName, open, onClose, isCustomView = false, onSpaGenerated = null }) {
+    // Use Inertia page props as a fallback, but prefer the explicit prop
+    const { props: pageProps } = usePage();
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState([]);
     const [busy, setBusy] = useState(false);
@@ -387,7 +388,8 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
             const payload = {
                 message: text,
                 session_id: sessionRef.current,
-                view_name: 'default', // Add view_name for custom views
+                // Prefer explicitly passed viewName; then page props; finally default
+                view_name: (isCustomView ? (viewName || pageProps?.viewName || 'default') : 'default'),
                 conversation_history: messages.map((m) => ({
                     role: m.role,
                     content: m.text,
@@ -396,7 +398,7 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
 
             // Route to different endpoints based on context
             const endpoint = isCustomView 
-                ? `/api/projects/${project.id}/custom-views/chat`
+                ? `/projects/${project.id}/custom-views/chat` // moved from /api to web route for session auth
                 : `/projects/${project.id}/assistant/chat`;
 
             // Update progress for custom view
@@ -474,8 +476,10 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
                 setMessages((prev) => [...prev, asstMsg]);
                 
                 // Notify parent component about the generated SPA
+                // Pass the full response object so the parent can capture
+                // custom_view_id and any metadata (rather than just raw HTML).
                 if (onSpaGenerated) {
-                    onSpaGenerated(data.html, data);
+                    onSpaGenerated(data);
                 }
                 
                 // Clear progress after a moment
@@ -779,7 +783,7 @@ export default function AssistantChat({ project, open, onClose, isCustomView = f
                             >
                                 <Box
                                     component="img"
-                                    src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXZ6OXcxajF5aGIxZHB3dm5xdm95aWUzanJtaWljb2Y2M3VvcGY4aCZlcD12MV9pbnRlcm5alf9naWZfYnlfaWQmY3Q9Zw/LHZyixOnHwDDy/giphy.gif"
+                                    src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXZ6OXcxajF5aGIxZHB3dm5xdm95aWUzanJtaWljb2Y2M3VvcGY4aCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LHZyixOnHwDDy/giphy.gif"
                                     alt="Thinking..."
                                     sx={{
                                         height: 180,

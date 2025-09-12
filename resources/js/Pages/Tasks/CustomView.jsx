@@ -70,7 +70,8 @@ export default function CustomView({ auth, project, viewName }) {
             devLog('Loading custom view from API', { projectId: project.id, viewName: viewName || 'default' });
             
             // Use the web route for custom views (not API)
-            const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${viewName || 'default'}`);
+            const activeView = viewName || 'default';
+            const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${encodeURIComponent(activeView)}`);
             
             // Check if response is actually JSON
             const contentType = response.headers.get('content-type');
@@ -80,7 +81,8 @@ export default function CustomView({ auth, project, viewName }) {
                     status: response.status,
                     statusText: response.statusText,
                     contentType: contentType,
-                    responsePreview: responseText.substring(0, 500)
+                    responsePreview: responseText.substring(0, 500),
+                    url: `/projects/${project.id}/custom-views/get?view_name=${activeView}`
                 });
                 throw new Error('Server returned non-JSON response. Check server configuration.');
             }
@@ -92,13 +94,33 @@ export default function CustomView({ auth, project, viewName }) {
                 // data.html now contains React component code instead of HTML
                 setComponentCode(data.html);
                 setCustomViewId(data.custom_view_id);
+                try {
+                    const backupKey = `microapp-backup-${project?.id}-${viewName || 'default'}`;
+                    localStorage.setItem(backupKey, JSON.stringify({ componentCode: data.html, customViewId: data.custom_view_id, ts: Date.now() }));
+                } catch {}
                 devLog('React component code loaded successfully');
                 
                 showSnackbar('Micro-application loaded successfully', 'success');
             } else {
-                devLog('No existing custom view found');
-                setComponentCode('');
-                setCustomViewId(null);
+                devLog('No existing custom view found or server returned empty component');
+                // Fallback to local backup if available
+                const backupKey = `microapp-backup-${project.id}-${viewName || 'default'}`;
+                const backup = localStorage.getItem(backupKey);
+                if (backup) {
+                    try {
+                        const backupData = JSON.parse(backup);
+                        setComponentCode(backupData.componentCode || '');
+                        setCustomViewId(backupData.customViewId || null);
+                        devLog('Loaded from local backup (no server component)');
+                        showSnackbar('Loaded from local backup', 'info');
+                    } catch {
+                        setComponentCode('');
+                        setCustomViewId(null);
+                    }
+                } else {
+                    setComponentCode('');
+                    setCustomViewId(null);
+                }
             }
         } catch (error) {
             console.error('Error loading custom view:', error);
@@ -125,18 +147,42 @@ export default function CustomView({ auth, project, viewName }) {
         }
     };
     // Handle AI-generated component
-    const handleSpaGenerated = (response) => {
-        devLog('SPA generated via assistant', response);
-        
-        if (response && response.component_code) {
-            setComponentCode(response.component_code);
-            setCustomViewId(response.custom_view_id);
+    const handleSpaGenerated = (payload) => {
+        // payload can be either a string (component code) or an object with html/component_code
+        devLog('SPA generated via assistant', payload);
+
+        if (!payload) return;
+
+        if (typeof payload === 'string') {
+            setComponentCode(payload);
+            try {
+                const backupKey = `microapp-backup-${project?.id}-${viewName || 'default'}`;
+                localStorage.setItem(backupKey, JSON.stringify({ componentCode: payload, customViewId: null, ts: Date.now() }));
+            } catch {}
             showSnackbar('Micro-application generated successfully!', 'success');
             setAssistantOpen(false);
-        } else if (response && response.html) {
-            // Fallback for old HTML responses - convert to component
-            setComponentCode(response.html);
-            setCustomViewId(response.custom_view_id);
+            return;
+        }
+
+        if (payload.component_code) {
+            setComponentCode(payload.component_code);
+            setCustomViewId(payload.custom_view_id);
+            try {
+                const backupKey = `microapp-backup-${project?.id}-${viewName || 'default'}`;
+                localStorage.setItem(backupKey, JSON.stringify({ componentCode: payload.component_code, customViewId: payload.custom_view_id, ts: Date.now() }));
+            } catch {}
+            showSnackbar('Micro-application generated successfully!', 'success');
+            setAssistantOpen(false);
+            return;
+        }
+
+        if (payload.html) {
+            setComponentCode(payload.html);
+            setCustomViewId(payload.custom_view_id);
+            try {
+                const backupKey = `microapp-backup-${project?.id}-${viewName || 'default'}`;
+                localStorage.setItem(backupKey, JSON.stringify({ componentCode: payload.html, customViewId: payload.custom_view_id, ts: Date.now() }));
+            } catch {}
             showSnackbar('Application generated successfully!', 'success');
             setAssistantOpen(false);
         }
@@ -178,9 +224,34 @@ export default function CustomView({ auth, project, viewName }) {
         devLog('Clearing working area confirmed', { hasCustomViewId: !!customViewId });
         setDeleteConfirmOpen(false);
         
+        // Always clear local state and backups first
+        setComponentCode('');
+        setCustomViewId(null);
+        setComponentError(null);
+        
+        // Clear local storage backups and any micro-app data
+        try {
+            const backupKey = `microapp-backup-${project?.id}-${viewName || 'default'}`;
+            localStorage.removeItem(backupKey);
+            
+            // Clear all micro-app data for this view (milestones, data, etc.)
+            const ns = `microapp-${project?.id || 'unknown'}-${viewName || 'default'}-`;
+            const toRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(ns)) {
+                    toRemove.push(key);
+                }
+            }
+            toRemove.forEach(key => localStorage.removeItem(key));
+            
+            devLog('Cleared local storage backups and data', { removedKeys: toRemove.length });
+        } catch (storageError) {
+            devLog('Error clearing local storage', storageError);
+        }
+
         if (!customViewId) {
-            // Just clear the local state if no saved view
-            setComponentCode('');
+            // Just local cleanup if no saved view on server
             showSnackbar('Working area cleared', 'success');
             devLog('Local working area cleared (no saved view)');
             return;
@@ -204,25 +275,26 @@ export default function CustomView({ auth, project, viewName }) {
                     contentType: contentType,
                     responsePreview: responseText.substring(0, 500)
                 });
-                throw new Error('Server returned non-JSON response. Check server configuration.');
+                // Still consider it successful since local cleanup already happened
+                showSnackbar('Micro-application cleared (server response unclear)', 'warning');
+                return;
             }
             
             const data = await response.json();
             devLog('Delete API response', { success: data.success, message: data.message });
             
             if (data.success) {
-                setComponentCode('');
-                setCustomViewId(null);
-                setComponentError(null);
                 showSnackbar('Micro-application deleted permanently', 'success');
-                devLog('Custom view deleted successfully');
+                devLog('Custom view deleted successfully from server');
             } else {
-                throw new Error(data.message || 'Failed to delete custom view');
+                // Local cleanup already happened, so just warn about server
+                showSnackbar('Micro-application cleared locally (server deletion failed)', 'warning');
+                devLog('Server deletion failed but local cleanup completed', data.message);
             }
         } catch (error) {
-            devLog('Failed to delete custom view', error);
-            console.error('Failed to delete custom view:', error);
-            showSnackbar('Failed to delete micro-application from server', 'error');
+            devLog('Failed to delete custom view from server', error);
+            // Local cleanup already happened, so just warn about server
+            showSnackbar('Micro-application cleared locally (server unreachable)', 'warning');
         }
     };
 
@@ -277,7 +349,6 @@ export default function CustomView({ auth, project, viewName }) {
                                 {isLocked ? <LockIcon /> : <LockOpenIcon />}
                             </IconButton>
                         </Tooltip>
-                        </Tooltip>
 
                         {!isLocked && (
                             <Tooltip title="Clear micro-application">
@@ -318,6 +389,7 @@ export default function CustomView({ auth, project, viewName }) {
                                 componentCode={componentCode}
                                 project={project}
                                 auth={auth}
+                                viewName={viewName}
                                 onError={handleComponentError}
                             />
                         ) : isLoading ? (
@@ -379,6 +451,7 @@ export default function CustomView({ auth, project, viewName }) {
                 {/* Assistant Chat Dialog */}
                 <AssistantChat
                     project={project}
+                    viewName={viewName}
                     open={assistantOpen}
                     onClose={() => setAssistantOpen(false)}
                     isCustomView={true}

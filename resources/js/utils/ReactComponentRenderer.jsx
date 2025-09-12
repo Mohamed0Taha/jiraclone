@@ -25,7 +25,7 @@ export class ReactComponentRenderer extends React.Component {
     }
 
     renderComponent = async () => {
-        const { componentCode, project, auth } = this.props;
+        const { componentCode, project, auth, viewName } = this.props;
         
         if (!componentCode) {
             this.setState({ Component: null, loading: false });
@@ -36,7 +36,7 @@ export class ReactComponentRenderer extends React.Component {
             this.setState({ loading: true, error: null });
 
             // Create a safe component from the code string
-            const Component = this.createComponentFromCode(componentCode);
+            const Component = await this.createComponentFromCode(componentCode, project?.id, viewName);
             
             this.setState({ 
                 Component, 
@@ -53,62 +53,256 @@ export class ReactComponentRenderer extends React.Component {
         }
     };
 
-    createComponentFromCode = (code) => {
+    createComponentFromCode = async (code, projectId, viewName) => {
         // Clean the code string
-        let cleanCode = code.trim();
-        
+        let cleanCode = (code || '').trim();
+
         // Remove markdown code blocks if present
-        cleanCode = cleanCode.replace(/^```jsx?\n/, '').replace(/\n```$/, '');
-        
-        // Ensure we have proper imports
-        if (!cleanCode.includes('import React')) {
-            cleanCode = `import React, { useState, useEffect } from 'react';\nimport { csrfFetch } from '@/utils/csrf';\n\n${cleanCode}`;
+        cleanCode = cleanCode.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
+
+        // Remove import lines (we'll inject dependencies manually)
+        cleanCode = cleanCode.replace(/(^|\n)\s*import[^;]+;?/g, '');
+
+        // Determine component name and normalize exports
+        let componentName = 'GeneratedComponent';
+        const defaultFnExport = cleanCode.match(/export\s+default\s+function\s+(\w+)/);
+        const normalFn = cleanCode.match(/function\s+(\w+)\s*\(/);
+        const defaultVarExport = cleanCode.match(/export\s+default\s+(\w+)/);
+
+        if (defaultFnExport) {
+            componentName = defaultFnExport[1];
+            cleanCode = cleanCode.replace(/export\s+default\s+function/, 'function');
+        } else if (defaultVarExport) {
+            componentName = defaultVarExport[1];
+            cleanCode = cleanCode.replace(/export\s+default\s+(\w+);?/, '$1;');
+        } else if (normalFn) {
+            componentName = normalFn[1];
         }
 
-        // Add default export if missing
-        if (!cleanCode.includes('export default')) {
-            cleanCode = cleanCode.replace(/function (\w+)/, 'export default function $1');
-        }
-
-        // Create component function with safe evaluation
+        // Transform JSX -> JS using Babel standalone
         try {
-            // Extract component name
-            const componentMatch = cleanCode.match(/(?:export default )?function (\w+)/);
-            const componentName = componentMatch ? componentMatch[1] : 'GeneratedComponent';
+            // Lazy-load Babel to avoid bloating the main bundle
+            const BabelMod = await import('@babel/standalone');
+            const babel = BabelMod?.default || BabelMod; // support different module shapes
+            let transformed = babel.transform(cleanCode, {
+                presets: [[
+                    'react',
+                    {
+                        runtime: 'classic', // ensure React.createElement, no jsx-runtime import
+                        development: false,
+                    },
+                ]],
+                plugins: [],
+                sourceType: 'script',
+            }).code;
 
-            // Create a safe evaluation context
-            const componentFunction = new Function(
-                'React', 
-                'useState', 
-                'useEffect', 
-                'csrfFetch',
-                `
-                const { useState, useEffect } = React;
-                
-                ${cleanCode.replace(/import[^;]+;/g, '')}
-                
-                return ${componentName};
-                `
-            );
+            // Make hook calls explicit to React.* to avoid undefined identifiers
+            const hookCall = (name) => new RegExp(String.raw`\b${name}\s*\(`, 'g');
+            transformed = transformed
+                .replace(hookCall('useState'), 'React.useState(')
+                .replace(hookCall('useEffect'), 'React.useEffect(')
+                .replace(hookCall('useMemo'), 'React.useMemo(')
+                .replace(hookCall('useRef'), 'React.useRef(')
+                .replace(hookCall('useCallback'), 'React.useCallback(')
+                .replace(hookCall('useReducer'), 'React.useReducer(')
+                .replace(hookCall('useContext'), 'React.useContext(');
 
-            // Import dependencies for the component
-            const { useState, useEffect } = React;
-            const csrfFetch = (url, options = {}) => {
+            // Provide a minimal csrfFetch in scope with smart interception for demo endpoints
+            const localCsrfFetch = async (url, options = {}) => {
                 const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                return fetch(url, {
+
+                // Normalize URL to inspect pathname (handles absolute and relative)
+                let u;
+                try {
+                    u = new URL(url, window.location.origin);
+                } catch {
+                    // If URL constructor fails, fall back to direct fetch
+                    return fetch(url, {
+                        ...options,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': token,
+                            ...options.headers,
+                        },
+                    });
+                }
+
+                // Simple, per-microapp, local CRUD store to avoid hitting non-existent /api/* endpoints
+                const path = u.pathname;
+                const method = (options.method || 'GET').toUpperCase();
+                const isLocalApi = /^\/api\/(?!projects|auth|user|csrf)/.test(path); // Intercept all /api/* except core app routes
+
+                if (isLocalApi) {
+                    // Use namespaced storage to isolate each micro-app's dataset
+                    const ns = `microapp-${projectId || 'unknown'}-${viewName || 'default'}-`;
+                    
+                    // Extract resource name from path (e.g., /api/milestones -> milestones, /api/data -> data)
+                    const resourceMatch = path.match(/^\/api\/([^\/]+)/);
+                    const resourceName = resourceMatch ? resourceMatch[1] : 'items';
+                    const storeKey = ns + resourceName;
+
+                    const readStore = () => {
+                        try {
+                            const raw = window.localStorage.getItem(storeKey);
+                            if (raw) return JSON.parse(raw);
+                            // Back-compat: migrate from any previous key the app may have used
+                            const legacyKeys = [
+                                ns + 'microapp-data',
+                                ns + 'data-items', 
+                                'microapp-data',
+                                `microapp-${resourceName}`
+                            ];
+                            for (const legacyKey of legacyKeys) {
+                                const legacyRaw = window.localStorage.getItem(legacyKey);
+                                if (legacyRaw) {
+                                    try {
+                                        const legacy = JSON.parse(legacyRaw);
+                                        // Normalize into array of items if legacy is array
+                                        const items = Array.isArray(legacy) ? legacy : [];
+                                        window.localStorage.setItem(storeKey, JSON.stringify(items));
+                                        return items;
+                                    } catch {}
+                                }
+                            }
+                            return [];
+                        } catch {
+                            return [];
+                        }
+                    };
+
+                    const writeStore = (items) => {
+                        try {
+                            window.localStorage.setItem(storeKey, JSON.stringify(items));
+                        } catch {}
+                    };
+
+                    const jsonResponse = (body, init = {}) => {
+                        return new Response(JSON.stringify(body), {
+                            status: 200,
+                            headers: { 'Content-Type': 'application/json' },
+                            ...init,
+                        });
+                    };
+
+                    const notFound = () => new Response(JSON.stringify({ message: 'Not Found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+                    const noContent = () => new Response(null, { status: 204 });
+
+                    let items = readStore();
+
+                    // GET /api/{resource}
+                    if (method === 'GET' && resourceMatch && !path.match(/\/\d+$/)) {
+                        return jsonResponse(items);
+                    }
+
+                    // POST /api/{resource}
+                    if (method === 'POST' && resourceMatch && !path.match(/\/\d+$/)) {
+                        let body = {};
+                        try { body = options.body ? JSON.parse(options.body) : {}; } catch {}
+                        const nextId = items.length ? Math.max(...items.map(i => i.id || 0)) + 1 : 1;
+                        const created = { id: nextId, ...body };
+                        items.push(created);
+                        writeStore(items);
+                        return jsonResponse(created, { status: 201 });
+                    }
+
+                    // GET/PUT/PATCH/DELETE /api/{resource}/:id
+                    const itemMatch = path.match(/^\/api\/[^\/]+\/(\d+)$/);
+                    if (itemMatch) {
+                        const id = parseInt(itemMatch[1], 10);
+                        const idx = items.findIndex(i => (i.id || 0) === id);
+
+                        if (method === 'GET') {
+                            if (idx === -1) return notFound();
+                            return jsonResponse(items[idx]);
+                        }
+
+                        if (method === 'PUT' || method === 'PATCH') {
+                            if (idx === -1) return notFound();
+                            let body = {};
+                            try { body = options.body ? JSON.parse(options.body) : {}; } catch {}
+                            items[idx] = { ...items[idx], ...body, id };
+                            writeStore(items);
+                            return jsonResponse(items[idx]);
+                        }
+
+                        if (method === 'DELETE') {
+                            if (idx === -1) return notFound();
+                            items.splice(idx, 1);
+                            writeStore(items);
+                            return noContent();
+                        }
+                    }
+
+                    // Fallback for unexpected method/path under /api/*
+                    return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
+                }
+
+                // Default: pass-through to network
+                return fetch(u.toString(), {
                     ...options,
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': token,
                         ...options.headers,
                     },
+                    credentials: options.credentials || 'same-origin',
                 });
             };
 
-            // Execute the function to get the component
-            const GeneratedComponent = componentFunction(React, useState, useEffect, csrfFetch);
-            
-            return GeneratedComponent;
+            // Namespace localStorage so each micro-app stores under its own keys
+            const ns = `microapp-${projectId || 'unknown'}-${viewName || 'default'}-`;
+            const localStorageProxy = {
+                getItem: (key) => {
+                    const nsKey = ns + key;
+                    let val = window.localStorage.getItem(nsKey);
+                    // Back-compat: if no namespaced value exists, try migrating from global key once
+                    if (val === null) {
+                        const legacy = window.localStorage.getItem(key);
+                        if (legacy !== null) {
+                            try { window.localStorage.setItem(nsKey, legacy); } catch {}
+                            val = legacy;
+                        }
+                    }
+                    return val;
+                },
+                setItem: (key, value) => window.localStorage.setItem(ns + key, value),
+                removeItem: (key) => window.localStorage.removeItem(ns + key),
+                clear: () => {
+                    const toRemove = [];
+                    for (let i = 0; i < window.localStorage.length; i++) {
+                        const k = window.localStorage.key(i);
+                        if (k && k.startsWith(ns)) toRemove.push(k);
+                    }
+                    toRemove.forEach((k) => window.localStorage.removeItem(k));
+                },
+                key: (index) => {
+                    // Only expose keys in this namespace
+                    const keys = [];
+                    for (let i = 0; i < window.localStorage.length; i++) {
+                        const k = window.localStorage.key(i);
+                        if (k && k.startsWith(ns)) keys.push(k.substring(ns.length));
+                    }
+                    return keys[index] || null;
+                },
+                get length() {
+                    let count = 0;
+                    for (let i = 0; i < window.localStorage.length; i++) {
+                        const k = window.localStorage.key(i);
+                        if (k && k.startsWith(ns)) count++;
+                    }
+                    return count;
+                },
+            };
+
+            // Wrap transformed code and return the component reference
+            const factory = new Function(
+                'React',
+                'csrfFetch',
+                'localStorage',
+                `"use strict";\nconst { useState, useEffect, useMemo, useRef, useCallback, useReducer, useContext } = React;\n${transformed}\nreturn (${componentName});`
+            );
+
+            return factory(React, localCsrfFetch, localStorageProxy);
         } catch (error) {
             throw new Error(`Failed to create component: ${error.message}`);
         }

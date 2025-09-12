@@ -86,6 +86,39 @@ Route::get('/test-public', function() {
     return response()->json(['message' => 'Public route works', 'user' => Auth::check() ? Auth::user()->email : 'Not authenticated']);
 });
 
+// Debug route to test custom view API without auth
+Route::get('/debug/custom-view-test', function (Request $request) {
+    return response()->json([
+        'success' => true,
+        'message' => 'Debug route working',
+        'timestamp' => now(),
+        'headers' => $request->headers->all(),
+    ]);
+});
+
+// Debug route to check current authentication status
+Route::get('/debug/auth-status', function (Request $request) {
+    return response()->json([
+        'authenticated' => Auth::check(),
+        'user_id' => Auth::id(),
+        'user_email' => Auth::user()?->email,
+        'session_id' => session()->getId(),
+        'csrf_token' => csrf_token(),
+    ]);
+});
+
+// Debug route to test project route model binding
+Route::get('/debug/project/{project}', function (Request $request, Project $project) {
+    return response()->json([
+        'success' => true,
+        'message' => 'Project route model binding working',
+        'project_id' => $project->id,
+        'project_name' => $project->name,
+        'user_id' => $request->user()?->id,
+        'user_email' => $request->user()?->email,
+    ]);
+})->middleware('auth');
+
 // Public Simulator (no authentication required) - renamed to /practice to avoid auth conflict
 Route::middleware([])->group(function () {
     // Landing page for practice simulator
@@ -751,35 +784,66 @@ Route::middleware('auth')->group(function () {
                 'viewName' => $name,
                 'isPro' => $request->user()?->hasActiveSubscription() ?? false,
             ]);
-        })->name('custom-views.show');
+        })
+        // Prevent collisions with API-like endpoints so they don't get caught by {name}
+        ->where('name', '^(?!get$|delete$|chat$)[A-Za-z0-9_-]+')
+        ->name('custom-views.show');
 
         // Route to get custom view data (for AJAX loading)
         Route::get('/custom-views/get', function (Request $request, Project $project) {
-            $viewName = $request->query('view_name', 'default');
-            $userId = $request->user()->id;
-            
             try {
+                // Add debug logging
+                Log::info('Custom view get route accessed', [
+                    'project_id' => $project->id,
+                    'project_name' => $project->name,
+                    'user_id' => $request->user()?->id,
+                    'user_email' => $request->user()?->email,
+                    'view_name' => $request->query('view_name', 'default'),
+                    'headers' => $request->headers->all(),
+                    'route_params' => $request->route()->parameters(),
+                ]);
+
+                // Check if user has access to this project
+                if (!$request->user()->can('view', $project)) {
+                    Log::warning('User denied access to project', [
+                        'user_id' => $request->user()->id,
+                        'project_id' => $project->id,
+                    ]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Access denied to this project',
+                    ], 403);
+                }
+
+                $viewName = $request->query('view_name', 'default');
+                $userId = $request->user()->id;
+                
                 $generativeUIService = app(\App\Services\GenerativeUIService::class);
                 $customView = $generativeUIService->getCustomView($project, $userId, $viewName);
                 
                 if ($customView) {
-                    return response()->json([
+                    $response = [
                         'success' => true,
                         'html' => $customView->getComponentCode(), // Now returns React component code
                         'custom_view_id' => $customView->id,
-                    ]);
+                    ];
+                    Log::info('Custom view found and returning', ['response_preview' => substr(json_encode($response), 0, 200)]);
+                    return response()->json($response);
                 } else {
-                    return response()->json([
+                    $response = [
                         'success' => false,
                         'message' => 'No custom view found',
-                    ]);
+                    ];
+                    Log::info('No custom view found', $response);
+                    return response()->json($response);
                 }
             } catch (\Exception $e) {
                 Log::error('Custom view load error', [
-                    'project_id' => $project->id,
-                    'user_id' => $userId,
-                    'view_name' => $viewName,
-                    'error' => $e->getMessage()
+                    'project_id' => $project->id ?? 'unknown',
+                    'user_id' => $request->user()?->id,
+                    'view_name' => $request->query('view_name', 'default'),
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
                 ]);
                 
                 return response()->json([
@@ -817,12 +881,139 @@ Route::middleware('auth')->group(function () {
             }
         })->name('custom-views.delete');
 
+        // Local API for generated micro-apps (per-view, stored in CustomView.metadata)
+        Route::match(['GET', 'POST', 'PATCH', 'DELETE'], '/custom-views/local-api/{collection}/{id?}', function (Request $request, Project $project, string $collection, $id = null) {
+            try {
+                $viewName = $request->query('view_name', 'default');
+                $userId = $request->user()->id;
+
+                // Ensure the user can access this project
+                if (! $request->user()->can('view', $project)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Access denied to this project',
+                    ], 403);
+                }
+
+                $generativeUIService = app(\App\Services\GenerativeUIService::class);
+                $customView = $generativeUIService->getCustomView($project, $userId, $viewName);
+
+                // If reading and nothing exists yet, return empty set
+                if (! $customView && $request->isMethod('get')) {
+                    return response()->json([]);
+                }
+
+                // If writing and no record yet, create a placeholder so we can persist metadata
+                if (! $customView) {
+                    $customView = \App\Models\CustomView::createOrUpdate(
+                        $project->id,
+                        $userId,
+                        $viewName,
+                        '',
+                        ['type' => 'react_component']
+                    );
+                }
+
+                $meta = $customView->metadata ?? [];
+                $collections = $meta['collections'] ?? [];
+                $counters = $meta['counters'] ?? [];
+
+                $list = isset($collections[$collection]) && is_array($collections[$collection])
+                    ? $collections[$collection]
+                    : [];
+
+                $method = strtolower($request->method());
+                if ($method === 'get') {
+                    // Return plain array to match common SPA expectations: setData(await res.json())
+                    return response()->json(array_values($list));
+                }
+
+                if ($method === 'post') {
+                    $item = $request->all();
+                    $nextId = ((int) ($counters[$collection] ?? 0)) + 1;
+                    $counters[$collection] = $nextId;
+                    $item['id'] = $nextId;
+                    $list[] = $item;
+
+                    $collections[$collection] = array_values($list);
+                    $meta['collections'] = $collections;
+                    $meta['counters'] = $counters;
+                    $customView->metadata = $meta;
+                    $customView->save();
+
+                    return response()->json([
+                        'success' => true,
+                        'item' => $item,
+                    ]);
+                }
+
+                if ($method === 'patch') {
+                    $itemId = (int) $id;
+                    $updates = $request->all();
+                    $updated = null;
+                    foreach ($list as $idx => $it) {
+                        if (isset($it['id']) && (int) $it['id'] === $itemId) {
+                            $list[$idx] = array_merge($it, $updates);
+                            $updated = $list[$idx];
+                            break;
+                        }
+                    }
+                    $collections[$collection] = array_values($list);
+                    $meta['collections'] = $collections;
+                    $meta['counters'] = $counters;
+                    $customView->metadata = $meta;
+                    $customView->save();
+
+                    return response()->json([
+                        'success' => (bool) $updated,
+                        'item' => $updated,
+                    ], $updated ? 200 : 404);
+                }
+
+                if ($method === 'delete') {
+                    $itemId = (int) $id;
+                    $before = count($list);
+                    $list = array_values(array_filter($list, function ($it) use ($itemId) {
+                        return ! (isset($it['id']) && (int) $it['id'] === $itemId);
+                    }));
+                    $after = count($list);
+
+                    $collections[$collection] = $list;
+                    $meta['collections'] = $collections;
+                    $meta['counters'] = $counters;
+                    $customView->metadata = $meta;
+                    $customView->save();
+
+                    return response()->json([
+                        'success' => $after < $before,
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unsupported method',
+                ], 405);
+            } catch (\Throwable $e) {
+                Log::error('Custom views local API error', [
+                    'project_id' => $project->id ?? null,
+                    'collection' => $collection,
+                    'id' => $id,
+                    'error' => $e->getMessage(),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Local API error: '.$e->getMessage(),
+                ], 500);
+            }
+        })->name('custom-views.local-api');
+
         // Route for custom view SPA generation chat - using new GenerativeUIService
-        Route::post('/custom-views/chat', function (Request $request, Project $project) {
+    Route::post('/custom-views/chat', function (Request $request, Project $project) {
             try {
                 $userId = $request->user()->id;
                 $message = $request->input('message', '');
                 $conversationHistory = $request->input('conversation_history', []);
+        $viewName = $request->input('view_name', 'default');
                 
                 if (empty($message)) {
                     return response()->json([
@@ -838,7 +1029,7 @@ Route::middleware('auth')->group(function () {
                     $message, 
                     null, // sessionId
                     $userId,
-                    'default', // viewName
+                    $viewName, // viewName from request
                     $conversationHistory
                 );
                 

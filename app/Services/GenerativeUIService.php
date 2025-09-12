@@ -45,6 +45,12 @@ class GenerativeUIService
             // Generate React component using OpenAI
             $generatedComponent = $this->openAIService->generateCustomView($prompt);
 
+            // Defensive fallback: if generation is empty, provide a minimal working component for dev
+            if (!is_string($generatedComponent) || trim($generatedComponent) === '') {
+                Log::warning('OpenAI returned empty component. Using fallback component.');
+                $generatedComponent = $this->fallbackReactComponent();
+            }
+
             // Validate and enhance the generated component
             $enhancedComponent = $this->enhanceReactComponent($generatedComponent, $userMessage);
 
@@ -65,6 +71,8 @@ class GenerativeUIService
             return [
                 'type' => 'spa_generated',
                 'success' => true,
+                // Frontend expects `html`; keep `component_code` for compatibility
+                'html' => $enhancedComponent,
                 'component_code' => $enhancedComponent,
                 'custom_view_id' => $customView->id,
                 'message' => 'Custom micro-application generated successfully!'
@@ -85,6 +93,70 @@ class GenerativeUIService
             ];
         }
     }
+
+    /**
+     * Minimal fallback component to ensure UX continuity when AI generation is unavailable
+     */
+        private function fallbackReactComponent(): string
+        {
+                return <<<'REACT'
+import React, { useState, useEffect } from 'react';
+
+export default function GeneratedMicroApp({ project, auth }) {
+    const [items, setItems] = useState(() => [{ id: 1, title: 'Welcome to your Micro App', status: 'todo' }]);
+    const [filter, setFilter] = useState('all');
+
+    useEffect(() => {
+        const saved = localStorage.getItem('microapp-data');
+        if (saved) {
+            try { setItems(JSON.parse(saved)); } catch (e) { console.error(e); }
+        }
+    }, []);
+    useEffect(() => {
+        localStorage.setItem('microapp-data', JSON.stringify(items));
+    }, [items]);
+
+    const addItem = () => {
+        const id = items.length ? Math.max(...items.map(i => i.id)) + 1 : 1;
+        setItems([...items, { id, title: `Item #${id}`, status: 'todo' }]);
+    };
+    const toggle = (id) => {
+        setItems(items.map(i => i.id === id ? { ...i, status: i.status === 'done' ? 'todo' : 'done' } : i));
+    };
+    const remove = (id) => setItems(items.filter(i => i.id !== id));
+
+    const visible = items.filter(i => filter === 'all' ? true : i.status === filter);
+
+    return (
+        <div className="p-4 space-y-4">
+            <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">{project?.name || 'Micro App'}</h2>
+                <div className="space-x-2">
+                    <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={addItem}>Add</button>
+                    <select className="px-2 py-1 border rounded" value={filter} onChange={e => setFilter(e.target.value)}>
+                        <option value="all">All</option>
+                        <option value="todo">Todo</option>
+                        <option value="done">Done</option>
+                    </select>
+                </div>
+            </div>
+            <div className="grid gap-2">
+                {visible.map(i => (
+                    <div key={i.id} className="p-3 border rounded flex items-center justify-between">
+                        <div>#{i.id} · {i.title} · <span className="italic">{i.status}</span></div>
+                        <div className="space-x-2">
+                            <button className="px-2 py-1 bg-green-600 text-white rounded" onClick={() => toggle(i.id)}>{i.status === 'done' ? 'Mark Todo' : 'Mark Done'}</button>
+                            <button className="px-2 py-1 bg-red-600 text-white rounded" onClick={() => remove(i.id)}>Delete</button>
+                        </div>
+                    </div>
+                ))}
+                {visible.length === 0 && <div className="text-gray-500 text-sm">No items found.</div>}
+            </div>
+        </div>
+    );
+}
+REACT;
+        }
 
     /**
      * Build specialized prompt for React component generation

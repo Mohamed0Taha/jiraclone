@@ -13,11 +13,11 @@ class ExpandedPMQuestionsSeeder extends Seeder
         // Non-destructive in production: do NOT truncate attempts/answers; only add missing questions
         // In non-production we still allow a clean reset for consistency
         if (! app()->environment('production')) {
-            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+            // DB::statement('SET FOREIGN_KEY_CHECKS=0;'); // Disabled for SQLite compatibility
             \App\Models\CertificationAnswer::truncate();
             \App\Models\CertificationAttempt::truncate();
             PMQuestion::truncate();
-            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            // DB::statement('SET FOREIGN_KEY_CHECKS=1;'); // Disabled for SQLite compatibility
         }
 
         $questions = [
