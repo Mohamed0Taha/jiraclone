@@ -99,9 +99,67 @@ const palette = {
     cancelText: colors.error,
 };
 
-export default function AssistantChat({ project, viewName, open, onClose, isCustomView = false, onSpaGenerated = null }) {
-    // Use Inertia page props as a fallback, but prefer the explicit prop
-    const { props: pageProps } = usePage();
+export default function AssistantChat({ project, tasks, allTasks, users, methodology, open, onClose, isCustomView = false, onSpaGenerated = null, onProgress = null, viewName }) {
+    
+    // Debug logging for context data
+    console.log('[AssistantChat] Component mounted/updated with props:', {
+        project: project,
+        tasks: tasks,
+        allTasks: allTasks,
+        users: users,
+        methodology: methodology,
+        isCustomView: isCustomView,
+        open: open
+    });
+    
+    useEffect(() => {
+        if (open && isCustomView) {
+            console.log('[AssistantChat Debug] Dialog opened - Project data:', project);
+            console.log('[AssistantChat Debug] Dialog opened - Tasks data:', tasks);
+            console.log('[AssistantChat Debug] Dialog opened - All tasks data:', allTasks);
+            console.log('[AssistantChat Debug] Dialog opened - Users data:', users);
+            console.log('[AssistantChat Debug] Dialog opened - Methodology:', methodology);
+        }
+    }, [open, isCustomView, project, tasks, allTasks, users, methodology]);
+    
+    // Methodology-aware status mapping (matches the backend ProjectContextService)
+    const getMethodologyStatusLabels = (methodology) => {
+        switch (methodology) {
+            case 'waterfall':
+                return {
+                    todo: 'Requirements',
+                    inprogress: 'Design', 
+                    review: 'Verification',
+                    done: 'Maintenance'
+                };
+            case 'lean':
+                return {
+                    todo: 'Backlog',
+                    inprogress: 'Todo',
+                    review: 'Testing', 
+                    done: 'Done'
+                };
+            case 'scrum':
+            case 'agile':
+                return {
+                    todo: 'Backlog',
+                    inprogress: 'In Progress',
+                    review: 'Testing',
+                    done: 'Done'
+                };
+            case 'kanban':
+            default:
+                return {
+                    todo: 'Todo',
+                    inprogress: 'In Progress', 
+                    review: 'Review',
+                    done: 'Done'
+                };
+        }
+    };
+
+    const statusLabels = getMethodologyStatusLabels(methodology || 'kanban');
+    const { props } = usePage();
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState([]);
     const [busy, setBusy] = useState(false);
@@ -109,6 +167,14 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
     const [copiedIndex, setCopiedIndex] = useState(null);
     const [pendingCommand, setPendingCommand] = useState(null);
     const [generationProgress, setGenerationProgress] = useState(null); // New state for SPA generation progress
+
+    // Helper to broadcast progress to parent (CustomView) when in custom view mode
+    const updateProgress = (next) => {
+        setGenerationProgress(next);
+        if (isCustomView && typeof onProgress === 'function') {
+            try { onProgress(next); } catch {}
+        }
+    };
 
     // Voice interaction state
     const [voiceMode, setVoiceMode] = useState(false);
@@ -151,29 +217,22 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
     useEffect(() => {
         if (!open) return;
         
-        // Use different suggestions for custom view
+        // In custom view mode, we intentionally hide generic suggestions
         if (isCustomView) {
-            setSuggestions([
-                "Create an expense tracker for my team",
-                "Build a vendor phonebook",
-                "Make a project wiki page",
-                "Create a task analytics dashboard",
-                "Build a team workload overview",
-                "Create a milestone timeline",
-                "Build a budget tracking app"
-            ]);
-        } else {
-            fetch(`/projects/${project.id}/assistant/suggestions`, {
-                method: 'GET',
-                headers: { Accept: 'application/json' },
-                credentials: 'same-origin',
-            })
-                .then((response) => response.json())
-                .then((d) => {
-                    if (Array.isArray(d?.suggestions)) setSuggestions(d.suggestions);
-                })
-                .catch(() => {});
+            setSuggestions([]);
+            return;
         }
+
+        fetch(`/projects/${project.id}/assistant/suggestions`, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        })
+            .then((response) => response.json())
+            .then((d) => {
+                if (Array.isArray(d?.suggestions)) setSuggestions(d.suggestions);
+            })
+            .catch(() => {});
     }, [open, project?.id, isCustomView]);
 
     useEffect(() => {
@@ -377,7 +436,7 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
         
         // For custom view mode, show detailed progress
         if (isCustomView) {
-            setGenerationProgress({
+            updateProgress({
                 step: 1,
                 total: 4,
                 message: '🔍 Analyzing your request...'
@@ -388,13 +447,132 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
             const payload = {
                 message: text,
                 session_id: sessionRef.current,
-                // Prefer explicitly passed viewName; then page props; finally default
-                view_name: (isCustomView ? (viewName || pageProps?.viewName || 'default') : 'default'),
+                view_name: (typeof window !== 'undefined' ? window?.Ziggy?.route?.params?.name : null) || (isCustomView ? (props?.viewName || viewName || 'default') : 'default'),
                 conversation_history: messages.map((m) => ({
                     role: m.role,
                     content: m.text,
                 })),
+                // Include project context for AI to generate data-aware components
+                project_context: isCustomView ? {
+                    project: {
+                        id: project?.id,
+                        name: project?.name,
+                        description: project?.description,
+                        key: project?.key,
+                        start_date: project?.start_date,
+                        end_date: project?.end_date,
+                        meta: project?.meta,
+                        methodology: methodology || 'kanban',
+                    },
+                    methodology: {
+                        name: methodology || 'kanban',
+                        status_labels: statusLabels,
+                        description: `This project uses ${methodology || 'kanban'} methodology. Use the correct status terminology in generated components.`
+                    },
+                    tasks: tasks ? {
+                        todo: (tasks.todo || []).map(t => ({ 
+                            id: t.id, 
+                            title: t.title, 
+                            status: t.status, 
+                            description: t.description,
+                            priority: t.priority,
+                            due_date: t.due_date,
+                            assignee: t.assignee?.name || null,
+                            creator: t.creator?.name || null,
+                        })),
+                        inprogress: (tasks.inprogress || []).map(t => ({ 
+                            id: t.id, 
+                            title: t.title, 
+                            status: t.status, 
+                            description: t.description,
+                            priority: t.priority,
+                            due_date: t.due_date,
+                            assignee: t.assignee?.name || null,
+                            creator: t.creator?.name || null,
+                        })),
+                        review: (tasks.review || []).map(t => ({ 
+                            id: t.id, 
+                            title: t.title, 
+                            status: t.status, 
+                            description: t.description,
+                            priority: t.priority,
+                            due_date: t.due_date,
+                            assignee: t.assignee?.name || null,
+                            creator: t.creator?.name || null,
+                        })),
+                        done: (tasks.done || []).map(t => ({ 
+                            id: t.id, 
+                            title: t.title, 
+                            status: t.status, 
+                            description: t.description,
+                            priority: t.priority,
+                            due_date: t.due_date,
+                            assignee: t.assignee?.name || null,
+                            creator: t.creator?.name || null,
+                        })),
+                        // Include additional status categories
+                        backlog: (tasks.backlog || []).map(t => ({ 
+                            id: t.id, 
+                            title: t.title, 
+                            status: t.status, 
+                            description: t.description,
+                            priority: t.priority,
+                            due_date: t.due_date,
+                            assignee: t.assignee?.name || null,
+                            creator: t.creator?.name || null,
+                        })),
+                        testing: (tasks.testing || []).map(t => ({ 
+                            id: t.id, 
+                            title: t.title, 
+                            status: t.status, 
+                            description: t.description,
+                            priority: t.priority,
+                            due_date: t.due_date,
+                            assignee: t.assignee?.name || null,
+                            creator: t.creator?.name || null,
+                        })),
+                        total_count: (tasks.todo?.length || 0) + (tasks.inprogress?.length || 0) + (tasks.review?.length || 0) + (tasks.done?.length || 0) + (tasks.backlog?.length || 0) + (tasks.testing?.length || 0),
+                        completion_rate: Math.round(((tasks.done?.length || 0) / Math.max(1, (tasks.todo?.length || 0) + (tasks.inprogress?.length || 0) + (tasks.review?.length || 0) + (tasks.done?.length || 0) + (tasks.backlog?.length || 0) + (tasks.testing?.length || 0))) * 100),
+                    } : null,
+                    // Also include all tasks as a flat array for easier processing
+                    all_tasks: allTasks ? allTasks.map(t => ({
+                        id: t.id,
+                        title: t.title,
+                        status: t.status,
+                        description: t.description,
+                        priority: t.priority,
+                        due_date: t.due_date,
+                        assignee: t.assignee?.name || null,
+                        creator: t.creator?.name || null,
+                        created_at: t.created_at,
+                        updated_at: t.updated_at,
+                    })) : [],
+                    users: users ? users.map(u => ({
+                        id: u.id,
+                        name: u.name,
+                        email: u.email,
+                    })) : [],
+                } : null,
             };
+
+            // Debug the payload being sent
+            console.log('[AssistantChat Debug] Payload being sent to API:', {
+                isCustomView: isCustomView,
+                hasProjectContext: !!payload.project_context,
+                projectContextSummary: payload.project_context ? {
+                    project_name: payload.project_context.project?.name,
+                    methodology: payload.project_context.methodology?.name,
+                    tasks_summary: {
+                        todo: payload.project_context.tasks?.todo?.length || 0,
+                        inprogress: payload.project_context.tasks?.inprogress?.length || 0,
+                        review: payload.project_context.tasks?.review?.length || 0,
+                        done: payload.project_context.tasks?.done?.length || 0,
+                    },
+                    all_tasks_count: payload.project_context.all_tasks?.length || 0,
+                    users_count: payload.project_context.users?.length || 0,
+                } : null,
+                full_payload: payload
+            });
 
             // Route to different endpoints based on context
             const endpoint = isCustomView 
@@ -403,7 +581,7 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
 
             // Update progress for custom view
             if (isCustomView) {
-                setGenerationProgress({
+                updateProgress({
                     step: 2,
                     total: 4,
                     message: '🤖 Generating custom application with AI...'
@@ -426,13 +604,13 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
             // Handle enhanced conversation flow responses
             if (data?.type === 'conversation_continue') {
                 // AI is asking questions or needs clarification
-                setGenerationProgress({
+                updateProgress({
                     step: 2,
                     total: 4,
                     message: '🤔 AI needs more information...'
                 });
                 
-                setTimeout(() => setGenerationProgress(null), 2000);
+                setTimeout(() => updateProgress(null), 2000);
                 
                 const asstMsg = {
                     role: 'assistant',
@@ -451,7 +629,7 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
             // Handle custom view SPA generation
             if (isCustomView && data?.type === 'spa_generated' && data?.html) {
                 // Update progress
-                setGenerationProgress({
+                updateProgress({
                     step: 3,
                     total: 4,
                     message: '✨ Enhancing your application...'
@@ -460,7 +638,7 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
                 // Short delay to show progress
                 await new Promise(resolve => setTimeout(resolve, 500));
 
-                setGenerationProgress({
+                updateProgress({
                     step: 4,
                     total: 4,
                     message: '🎉 Your custom application is ready!'
@@ -476,14 +654,12 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
                 setMessages((prev) => [...prev, asstMsg]);
                 
                 // Notify parent component about the generated SPA
-                // Pass the full response object so the parent can capture
-                // custom_view_id and any metadata (rather than just raw HTML).
                 if (onSpaGenerated) {
-                    onSpaGenerated(data);
+                    onSpaGenerated(data.html, data);
                 }
                 
                 // Clear progress after a moment
-                setTimeout(() => setGenerationProgress(null), 2000);
+                setTimeout(() => updateProgress(null), 2000);
                 setBusy(false);
                 return;
             }
@@ -535,7 +711,7 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
             ]);
         } finally {
             setBusy(false);
-            setGenerationProgress(null);
+            updateProgress(null);
         }
     };
 
@@ -687,7 +863,8 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
                     overflow: 'hidden',
                 }}
             >
-                {/* Suggestions ribbon */}
+                {/* Suggestions ribbon: hidden for custom view generation */}
+                {!isCustomView && (
                 <Box
                     sx={{
                         px: 2,
@@ -747,6 +924,7 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
                         </Typography>
                     )}
                 </Box>
+                )}
 
                 {/* Scrollable message area */}
                 <Box
@@ -763,7 +941,7 @@ export default function AssistantChat({ project, viewName, open, onClose, isCust
                         },
                     }}
                 >
-                    {messages.length === 0 && (
+                    {messages.length === 0 && !isCustomView && (
                         <Box
                             sx={{
                                 display: 'flex',

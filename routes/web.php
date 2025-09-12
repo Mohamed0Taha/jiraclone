@@ -761,26 +761,39 @@ Route::middleware('auth')->group(function () {
 
         /* CUSTOM VIEWS */
         Route::get('/custom-views/{name}', function (Request $request, Project $project, $name) {
+            // Get project methodology
+            $methodology = $project->meta['methodology'] ?? 'kanban';
+            
             // Get project tasks for the custom view
             $tasks = $project->tasks()
                 ->with(['creator:id,name', 'assignee:id,name'])
                 ->get()
                 ->groupBy('status');
 
-            // Transform to the expected format
+            // Transform to the expected format with correct status mapping
             $tasksByStatus = [
                 'todo' => $tasks->get('todo', collect())->values(),
-                'inprogress' => $tasks->get('inprogress', collect())->values(),
+                'inprogress' => $tasks->get('inprogress', collect())->values(), 
                 'review' => $tasks->get('review', collect())->values(),
                 'done' => $tasks->get('done', collect())->values(),
+                // Also include any additional statuses that might exist
+                'backlog' => $tasks->get('backlog', collect())->values(),
+                'testing' => $tasks->get('testing', collect())->values(),
             ];
+
+            // Flatten all tasks into a more comprehensive structure for AI context
+            $allTasks = $project->tasks()
+                ->with(['creator:id,name', 'assignee:id,name'])
+                ->get();
 
             $users = $project->members()->select('users.id', 'users.name', 'users.email')->get();
 
             return Inertia::render('Tasks/CustomView', [
                 'project' => $project,
                 'tasks' => $tasksByStatus,
+                'allTasks' => $allTasks, // Include all tasks for better AI context
                 'users' => $users,
+                'methodology' => $methodology, // Include methodology for context-aware AI
                 'viewName' => $name,
                 'isPro' => $request->user()?->hasActiveSubscription() ?? false,
             ]);
@@ -881,132 +894,6 @@ Route::middleware('auth')->group(function () {
             }
         })->name('custom-views.delete');
 
-        // Local API for generated micro-apps (per-view, stored in CustomView.metadata)
-        Route::match(['GET', 'POST', 'PATCH', 'DELETE'], '/custom-views/local-api/{collection}/{id?}', function (Request $request, Project $project, string $collection, $id = null) {
-            try {
-                $viewName = $request->query('view_name', 'default');
-                $userId = $request->user()->id;
-
-                // Ensure the user can access this project
-                if (! $request->user()->can('view', $project)) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Access denied to this project',
-                    ], 403);
-                }
-
-                $generativeUIService = app(\App\Services\GenerativeUIService::class);
-                $customView = $generativeUIService->getCustomView($project, $userId, $viewName);
-
-                // If reading and nothing exists yet, return empty set
-                if (! $customView && $request->isMethod('get')) {
-                    return response()->json([]);
-                }
-
-                // If writing and no record yet, create a placeholder so we can persist metadata
-                if (! $customView) {
-                    $customView = \App\Models\CustomView::createOrUpdate(
-                        $project->id,
-                        $userId,
-                        $viewName,
-                        '',
-                        ['type' => 'react_component']
-                    );
-                }
-
-                $meta = $customView->metadata ?? [];
-                $collections = $meta['collections'] ?? [];
-                $counters = $meta['counters'] ?? [];
-
-                $list = isset($collections[$collection]) && is_array($collections[$collection])
-                    ? $collections[$collection]
-                    : [];
-
-                $method = strtolower($request->method());
-                if ($method === 'get') {
-                    // Return plain array to match common SPA expectations: setData(await res.json())
-                    return response()->json(array_values($list));
-                }
-
-                if ($method === 'post') {
-                    $item = $request->all();
-                    $nextId = ((int) ($counters[$collection] ?? 0)) + 1;
-                    $counters[$collection] = $nextId;
-                    $item['id'] = $nextId;
-                    $list[] = $item;
-
-                    $collections[$collection] = array_values($list);
-                    $meta['collections'] = $collections;
-                    $meta['counters'] = $counters;
-                    $customView->metadata = $meta;
-                    $customView->save();
-
-                    return response()->json([
-                        'success' => true,
-                        'item' => $item,
-                    ]);
-                }
-
-                if ($method === 'patch') {
-                    $itemId = (int) $id;
-                    $updates = $request->all();
-                    $updated = null;
-                    foreach ($list as $idx => $it) {
-                        if (isset($it['id']) && (int) $it['id'] === $itemId) {
-                            $list[$idx] = array_merge($it, $updates);
-                            $updated = $list[$idx];
-                            break;
-                        }
-                    }
-                    $collections[$collection] = array_values($list);
-                    $meta['collections'] = $collections;
-                    $meta['counters'] = $counters;
-                    $customView->metadata = $meta;
-                    $customView->save();
-
-                    return response()->json([
-                        'success' => (bool) $updated,
-                        'item' => $updated,
-                    ], $updated ? 200 : 404);
-                }
-
-                if ($method === 'delete') {
-                    $itemId = (int) $id;
-                    $before = count($list);
-                    $list = array_values(array_filter($list, function ($it) use ($itemId) {
-                        return ! (isset($it['id']) && (int) $it['id'] === $itemId);
-                    }));
-                    $after = count($list);
-
-                    $collections[$collection] = $list;
-                    $meta['collections'] = $collections;
-                    $meta['counters'] = $counters;
-                    $customView->metadata = $meta;
-                    $customView->save();
-
-                    return response()->json([
-                        'success' => $after < $before,
-                    ]);
-                }
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unsupported method',
-                ], 405);
-            } catch (\Throwable $e) {
-                Log::error('Custom views local API error', [
-                    'project_id' => $project->id ?? null,
-                    'collection' => $collection,
-                    'id' => $id,
-                    'error' => $e->getMessage(),
-                ]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Local API error: '.$e->getMessage(),
-                ], 500);
-            }
-        })->name('custom-views.local-api');
-
         // Route for custom view SPA generation chat - using new GenerativeUIService
     Route::post('/custom-views/chat', function (Request $request, Project $project) {
             try {
@@ -1030,7 +917,8 @@ Route::middleware('auth')->group(function () {
                     null, // sessionId
                     $userId,
                     $viewName, // viewName from request
-                    $conversationHistory
+                    $conversationHistory,
+                    $request->input('project_context') // Enhanced project context with tasks and users
                 );
                 
                 return response()->json($response);

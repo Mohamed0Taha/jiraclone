@@ -299,10 +299,34 @@ export class ReactComponentRenderer extends React.Component {
                 'React',
                 'csrfFetch',
                 'localStorage',
-                `"use strict";\nconst { useState, useEffect, useMemo, useRef, useCallback, useReducer, useContext } = React;\n${transformed}\nreturn (${componentName});`
+                // Real project data injected into component scope
+                'project',
+                'tasks',
+                'allTasks',
+                'users',
+                'methodology',
+                `"use strict";\nconst { useState, useEffect, useMemo, useRef, useCallback, useReducer, useContext } = React;\n// Expose data as globals within the eval scope for AI components\nconst __project = project;\nconst __tasks = tasks;\nconst __allTasks = allTasks;\nconst __users = users;\nconst __methodology = methodology;\n// Build a flat list of tasks for convenience
+const __flatTasks = Array.isArray(__allTasks)
+  ? __allTasks
+  : (Array.isArray(__tasks)
+      ? __tasks
+      : (__tasks && typeof __tasks === 'object'
+          ? Object.values(__tasks).reduce((acc, arr) => acc.concat(arr || []), [])
+          : []));
+// Encourage components to use these names\nconst projectData = __project;\nconst tasksDataFromProps = __flatTasks;\nconst allTasksDataFromProps = __flatTasks;\nconst usersDataFromProps = __users;\nconst methodologyDataFromProps = __methodology;\n${transformed}\nreturn (${componentName});`
             );
 
-            return factory(React, localCsrfFetch, localStorageProxy);
+            return factory(
+                React,
+                localCsrfFetch,
+                localStorageProxy,
+                // Inject the real props provided to the renderer
+                this.props.project,
+                this.props.tasks,
+                this.props.allTasks,
+                this.props.users,
+                this.props.methodology,
+            );
         } catch (error) {
             throw new Error(`Failed to create component: ${error.message}`);
         }
@@ -358,7 +382,16 @@ export class ReactComponentRenderer extends React.Component {
         return (
             <ErrorBoundary onError={onError}>
                 <div className="micro-app-wrapper">
-                    <Component project={project} auth={auth} />
+                    {/* Provide real data props to the AI-generated component */}
+                    <Component 
+                        project={project} 
+                        auth={auth} 
+                        /** Real project context for data-aware components */
+                        tasks={this.props.tasks}
+                        allTasks={this.props.allTasks}
+                        users={this.props.users}
+                        methodology={this.props.methodology}
+                    />
                 </div>
             </ErrorBoundary>
         );

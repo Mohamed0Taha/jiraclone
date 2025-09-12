@@ -1,17 +1,113 @@
 import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Box, Fab, IconButton, Tooltip, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
+import { 
+    Box, 
+    Paper,
+    IconButton, 
+    Tooltip, 
+    Alert, 
+    Snackbar, 
+    Dialog, 
+    DialogTitle, 
+    DialogContent, 
+    DialogContentText, 
+    DialogActions, 
+    Button,
+    Typography,
+    Stack,
+    Chip,
+    alpha,
+    useTheme,
+    Fade,
+    CircularProgress,
+    LinearProgress,
+    keyframes
+} from '@mui/material';
 import ChatIcon from '@mui/icons-material/Chat';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SaveIcon from '@mui/icons-material/Save';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import CodeIcon from '@mui/icons-material/Code';
+import BuildIcon from '@mui/icons-material/Build';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import AssistantChat from './AssistantChat';
 import ReactComponentRenderer from '@/utils/ReactComponentRenderer';
 import { csrfFetch } from '@/utils/csrf';
 
-export default function CustomView({ auth, project, viewName }) {
+// Professional design tokens inspired by Board.jsx
+const designTokens = {
+    gradients: {
+        primary: 'linear-gradient(140deg, #F7FAFF 0%, #F2F6FE 55%, #EDF2FA 100%)',
+        accent: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        success: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        warning: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    },
+    colors: {
+        primary: '#4F46E5',
+        accent: '#667eea',
+        success: '#10B981',
+        warning: '#F59E0B',
+        error: '#EF4444',
+    },
+    shadows: {
+        card: '0 4px 16px -8px rgba(0, 0, 0, 0.1)',
+        elevated: '0 8px 32px -12px rgba(0, 0, 0, 0.15)',
+        floating: '0 16px 48px -16px rgba(0, 0, 0, 0.2)',
+    },
+    radii: {
+        lg: 12,
+        xl: 16,
+    }
+};
+
+// Elegant animations
+const pulseGlow = keyframes`
+  0%, 100% { 
+    box-shadow: 0 0 0 0 rgba(103, 126, 234, 0.7);
+  }
+  50% { 
+    box-shadow: 0 0 0 10px rgba(103, 126, 234, 0);
+  }
+`;
+
+const fadeSlideUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const shimmer = keyframes`
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+`;
+
+export default function CustomView({ auth, project, tasks, allTasks, users, methodology, viewName }) {
+    
+    // Debug: Log all props received by CustomView
+    console.log('[CustomView] All props received:', {
+        auth: auth ? 'present' : 'missing',
+        project: project ? { id: project.id, name: project.name } : 'missing',
+        tasks: tasks ? Object.keys(tasks) : 'missing',
+        allTasks: allTasks ? `array of ${allTasks.length} items` : 'missing',
+        users: users ? `array of ${users.length} items` : 'missing', 
+        methodology: methodology || 'missing',
+        viewName: viewName || 'missing'
+    });
+    
+    const theme = useTheme();
     const [assistantOpen, setAssistantOpen] = useState(false);
     const [isLocked, setIsLocked] = useState(true);
     const [componentCode, setComponentCode] = useState('');
@@ -20,18 +116,65 @@ export default function CustomView({ auth, project, viewName }) {
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [componentError, setComponentError] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+    const [generationProgress, setGenerationProgress] = useState(null);
 
-    // Development logging helper
-    const devLog = (message, data = null) => {
-        if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
-            console.log(`[CustomView Debug] ${message}`, data || '');
+    // Enhanced save mechanism with better feedback
+    const handleManualSave = async () => {
+        if (!componentCode || isSaving) return;
+        
+        setIsSaving(true);
+        try {
+            const response = await csrfFetch(`/projects/${project.id}/custom-views/save`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    view_name: viewName,
+                    component_code: componentCode,
+                    custom_view_id: customViewId
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setCustomViewId(data.customViewId);
+                showSnackbar('Micro-application saved successfully!', 'success');
+            } else {
+                throw new Error('Save failed');
+            }
+        } catch (error) {
+            console.error('Save error:', error);
+            showSnackbar('Failed to save. Please try again.', 'error');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    // Enhanced generation progress with detailed stages
+    const getProgressIcon = (stage) => {
+        switch (stage) {
+            case 1: return <CodeIcon sx={{ color: designTokens.colors.primary }} />;
+            case 2: return <AutoAwesomeIcon sx={{ color: designTokens.colors.accent }} />;
+            case 3: return <BuildIcon sx={{ color: designTokens.colors.warning }} />;
+            case 4: return <RocketLaunchIcon sx={{ color: designTokens.colors.success }} />;
+            default: return <CircularProgress size={20} />;
+        }
+    };
+
+    const getProgressMessage = (stage) => {
+        switch (stage) {
+            case 1: return 'Analyzing your requirements...';
+            case 2: return 'Generating intelligent code...'; 
+            case 3: return 'Building your application...';
+            case 4: return 'Finalizing and deploying...';
+            default: return 'Processing...';
         }
     };
 
     // Auto-save component code to prevent data loss
     useEffect(() => {
-        if (componentCode && !isLocked) {
-            devLog('Setting up periodic save for component code');
+        if (componentCode && !isLocked && autoSaveEnabled) {
+            console.log('[CustomView Debug] Setting up periodic save for component code');
             const saveInterval = setInterval(() => {
                 const backupKey = `microapp-backup-${project?.id || 'unknown'}-${viewName || 'default'}`;
                 const backupData = {
@@ -42,260 +185,221 @@ export default function CustomView({ auth, project, viewName }) {
                     viewName: viewName || 'default'
                 };
                 localStorage.setItem(backupKey, JSON.stringify(backupData));
-                devLog('Auto-saved component code to local storage');
+                console.log('[CustomView Debug] Auto-saved component code to local storage');
             }, 30000); // Save every 30 seconds
 
             return () => {
                 clearInterval(saveInterval);
-                devLog('Cleared periodic save interval');
+                console.log('[CustomView Debug] Cleared periodic save interval');
             };
         }
-    }, [componentCode, isLocked, project?.id, viewName, customViewId]);
+    }, [componentCode, isLocked, autoSaveEnabled, project?.id, viewName, customViewId]);
 
-    // Load existing custom view on component mount
+    // Load existing custom view on mount
     useEffect(() => {
-        devLog('Component mounting, loading existing custom view', { projectId: project?.id, viewName });
-        loadExistingCustomView();
-    }, [project?.id, viewName]);
+        const loadCustomView = async () => {
+            console.log('[CustomView Debug] Component mounting, loading existing custom view', {
+                projectId: project?.id,
+                viewName: viewName
+            });
 
-    const loadExistingCustomView = async () => {
-        if (!project?.id) {
-            devLog('No project ID available, skipping load');
-            setIsLoading(false);
-            return;
-        }
-
-        try {
-            setIsLoading(true);
-            devLog('Loading custom view from API', { projectId: project.id, viewName: viewName || 'default' });
-            
-            // Use the web route for custom views (not API)
-            const activeView = viewName || 'default';
-            const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${encodeURIComponent(activeView)}`);
-            
-            // Check if response is actually JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const responseText = await response.text();
-                devLog('Non-JSON response received', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    contentType: contentType,
-                    responsePreview: responseText.substring(0, 500),
-                    url: `/projects/${project.id}/custom-views/get?view_name=${activeView}`
-                });
-                throw new Error('Server returned non-JSON response. Check server configuration.');
+            if (!project?.id || !viewName) {
+                setIsLoading(false);
+                return;
             }
-            
-            const data = await response.json();
-            devLog('API response received', { success: data.success, hasComponent: !!data.html, customViewId: data.custom_view_id });
-            
-            if (data.success && data.html) {
-                // data.html now contains React component code instead of HTML
-                setComponentCode(data.html);
-                setCustomViewId(data.custom_view_id);
-                try {
-                    const backupKey = `microapp-backup-${project?.id}-${viewName || 'default'}`;
-                    localStorage.setItem(backupKey, JSON.stringify({ componentCode: data.html, customViewId: data.custom_view_id, ts: Date.now() }));
-                } catch {}
-                devLog('React component code loaded successfully');
+
+            try {
+                console.log('[CustomView Debug] Loading custom view from API', {
+                    projectId: project.id,
+                    viewName: viewName
+                });
+
+                const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${encodeURIComponent(viewName)}`);
+                const data = await response.json();
+
+                console.log('[CustomView Debug] API response received', {
+                    success: data.success,
+                    hasComponent: !!data.html,
+                    customViewId: data.customViewId
+                });
+
+                if (data.success && data.html && data.html.trim()) {
+                    setComponentCode(data.html);
+                    setCustomViewId(data.customViewId);
+                    showSnackbar('Micro-application loaded successfully', 'success');
+                } else {
+                    console.log('[CustomView Debug] No existing custom view found or server returned empty component');
+                    
+                    // Try to load from local backup
+                    const backupKey = `microapp-backup-${project.id}-${viewName}`;
+                    const backup = localStorage.getItem(backupKey);
+                    if (backup) {
+                        try {
+                            const backupData = JSON.parse(backup);
+                            if (backupData.componentCode && backupData.componentCode.trim()) {
+                                setComponentCode(backupData.componentCode || '');
+                                setCustomViewId(backupData.customViewId);
+                                console.log('[CustomView Debug] Loaded from local backup (no server component)');
+                            } else {
+                                setComponentCode('');
+                                console.log('[CustomView Debug] Local backup was empty');
+                            }
+                        } catch (e) {
+                            setComponentCode('');
+                            console.error('[CustomView Debug] Failed to parse backup:', e);
+                        }
+                    } else {
+                        setComponentCode('');
+                        console.log('[CustomView Debug] No local backup found');
+                    }
+                }
+            } catch (error) {
+                console.error('[CustomView Debug] Error loading custom view:', error);
                 
-                showSnackbar('Micro-application loaded successfully', 'success');
-            } else {
-                devLog('No existing custom view found or server returned empty component');
-                // Fallback to local backup if available
-                const backupKey = `microapp-backup-${project.id}-${viewName || 'default'}`;
+                // Fallback to local backup
+                const backupKey = `microapp-backup-${project.id}-${viewName}`;
                 const backup = localStorage.getItem(backupKey);
                 if (backup) {
                     try {
                         const backupData = JSON.parse(backup);
                         setComponentCode(backupData.componentCode || '');
-                        setCustomViewId(backupData.customViewId || null);
-                        devLog('Loaded from local backup (no server component)');
-                        showSnackbar('Loaded from local backup', 'info');
-                    } catch {
+                        setCustomViewId(backupData.customViewId);
+                        console.log('[CustomView Debug] Loaded from local backup after API error');
+                    } catch (e) {
                         setComponentCode('');
-                        setCustomViewId(null);
+                        console.error('[CustomView Debug] Failed to parse backup after API error:', e);
                     }
                 } else {
                     setComponentCode('');
-                    setCustomViewId(null);
                 }
+                
+                showSnackbar('Failed to load custom view, using local backup if available', 'warning');
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error('Error loading custom view:', error);
-            devLog('Error loading custom view', { error: error.message });
-            
-            // Try to load from backup
-            const backupKey = `microapp-backup-${project.id}-${viewName || 'default'}`;
-            const backup = localStorage.getItem(backupKey);
-            if (backup) {
-                try {
-                    const backupData = JSON.parse(backup);
-                    setComponentCode(backupData.componentCode || '');
-                    setCustomViewId(backupData.customViewId);
-                    devLog('Loaded from local backup');
-                    showSnackbar('Loaded from local backup due to server error', 'warning');
-                } catch (backupError) {
-                    devLog('Backup parsing failed', { error: backupError.message });
-                }
-            } else {
-                showSnackbar('Error loading custom view: ' + error.message, 'error');
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    // Handle AI-generated component
+        };
+
+        loadCustomView();
+    }, [project?.id, viewName]);
+
+    // Enhanced generation handling
     const handleSpaGenerated = (payload) => {
-        // payload can be either a string (component code) or an object with html/component_code
-        devLog('SPA generated via assistant', payload);
-
-        if (!payload) return;
-
+        console.log('[CustomView Debug] SPA generated via assistant', payload);
+        
         if (typeof payload === 'string') {
             setComponentCode(payload);
-            try {
-                const backupKey = `microapp-backup-${project?.id}-${viewName || 'default'}`;
-                localStorage.setItem(backupKey, JSON.stringify({ componentCode: payload, customViewId: null, ts: Date.now() }));
-            } catch {}
+            setGenerationProgress(null);
             showSnackbar('Micro-application generated successfully!', 'success');
-            setAssistantOpen(false);
+            setIsLocked(false);
             return;
         }
-
-        if (payload.component_code) {
+        
+        if (payload && payload.component_code) {
             setComponentCode(payload.component_code);
-            setCustomViewId(payload.custom_view_id);
-            try {
-                const backupKey = `microapp-backup-${project?.id}-${viewName || 'default'}`;
-                localStorage.setItem(backupKey, JSON.stringify({ componentCode: payload.component_code, customViewId: payload.custom_view_id, ts: Date.now() }));
-            } catch {}
+            setCustomViewId(payload.customViewId || payload.custom_view_id);
+            setGenerationProgress(null);
             showSnackbar('Micro-application generated successfully!', 'success');
-            setAssistantOpen(false);
+            setIsLocked(false);
             return;
         }
-
-        if (payload.html) {
+        
+        if (payload && payload.html) {
             setComponentCode(payload.html);
-            setCustomViewId(payload.custom_view_id);
-            try {
-                const backupKey = `microapp-backup-${project?.id}-${viewName || 'default'}`;
-                localStorage.setItem(backupKey, JSON.stringify({ componentCode: payload.html, customViewId: payload.custom_view_id, ts: Date.now() }));
-            } catch {}
-            showSnackbar('Application generated successfully!', 'success');
-            setAssistantOpen(false);
+            setCustomViewId(payload.customViewId);
+            setGenerationProgress(null);
+            showSnackbar('Micro-application generated successfully!', 'success');
+            setIsLocked(false);
+            return;
+        }
+        
+        console.warn('Unexpected payload format:', payload);
+        setGenerationProgress(null);
+        showSnackbar('Generation completed but format was unexpected', 'warning');
+    };
+
+    // Development logging helper
+    const devLog = (message, data = null) => {
+        if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
+            console.log(`[CustomView Debug] ${message}`, data || '');
         }
     };
 
-    // Handle component rendering errors
-    const handleComponentError = (error) => {
-        setComponentError(error);
-        showSnackbar(`Component error: ${error}`, 'error');
-    };
-
-    // Refresh/reload the component
-    const handleRefreshComponent = () => {
-        setComponentError(null);
-        loadExistingCustomView();
-    };
-    // Utility functions
-    const showSnackbar = (message, severity = 'info') => {
-        setSnackbar({ open: true, message, severity });
-    };
-
-    const toggleLock = () => {
-        devLog('Toggling lock state', { currentlyLocked: isLocked });
+    const handleToggleLock = () => {
+        console.log('[CustomView Debug] Toggling lock state', {
+            currentlyLocked: isLocked
+        });
         setIsLocked(!isLocked);
         showSnackbar(isLocked ? 'Micro-application unlocked for editing' : 'Micro-application locked', 'info');
     };
 
-    const handleDeleteClick = () => {
-        devLog('Delete button clicked, opening confirmation dialog');
-        setDeleteConfirmOpen(true);
+    const handleRefresh = () => {
+        window.location.reload();
     };
 
-    const handleDeleteCancel = () => {
-        devLog('Delete cancelled by user');
-        setDeleteConfirmOpen(false);
-    };
+    const handleClearWorkingArea = async () => {
+        console.log('[CustomView Debug] Clearing working area confirmed', {
+            hasCustomViewId: !!customViewId
+        });
 
-    const clearWorkingArea = async () => {
-        devLog('Clearing working area confirmed', { hasCustomViewId: !!customViewId });
-        setDeleteConfirmOpen(false);
-        
-        // Always clear local state and backups first
+        // Clear local storage backups and any micro-app data
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.includes(`microapp-`) || key.includes(`${project?.id}-${viewName}`))) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        console.log('[CustomView Debug] Cleared local storage backups and data', {
+            removedKeys: keysToRemove.length
+        });
+
+        // If there's a saved custom view, try to delete it from server
+        if (customViewId) {
+            try {
+                const response = await csrfFetch(`/projects/${project.id}/custom-views/delete`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({
+                        view_name: viewName,
+                        custom_view_id: customViewId
+                    }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('[CustomView Debug] Server delete response:', data);
+                    if (data.success) {
+                        showSnackbar('Micro-application deleted permanently', 'success');
+                    } else {
+                        showSnackbar('Micro-application cleared locally (server deletion failed)', 'warning');
+                    }
+                } else {
+                    showSnackbar('Micro-application cleared locally (server deletion failed)', 'warning');
+                }
+            } catch (error) {
+                console.error('[CustomView Debug] Error deleting from server:', error);
+                showSnackbar('Micro-application cleared locally (server unreachable)', 'warning');
+            }
+        } else {
+            console.log('[CustomView Debug] Local working area cleared (no saved view)');
+            showSnackbar('Working area cleared', 'info');
+        }
+
+        // Reset local state
         setComponentCode('');
         setCustomViewId(null);
-        setComponentError(null);
-        
-        // Clear local storage backups and any micro-app data
-        try {
-            const backupKey = `microapp-backup-${project?.id}-${viewName || 'default'}`;
-            localStorage.removeItem(backupKey);
-            
-            // Clear all micro-app data for this view (milestones, data, etc.)
-            const ns = `microapp-${project?.id || 'unknown'}-${viewName || 'default'}-`;
-            const toRemove = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.startsWith(ns)) {
-                    toRemove.push(key);
-                }
-            }
-            toRemove.forEach(key => localStorage.removeItem(key));
-            
-            devLog('Cleared local storage backups and data', { removedKeys: toRemove.length });
-        } catch (storageError) {
-            devLog('Error clearing local storage', storageError);
-        }
+        setIsLocked(true);
+        setDeleteConfirmOpen(false);
+        console.log('[CustomView Debug] Cleared periodic save interval');
+    };
 
-        if (!customViewId) {
-            // Just local cleanup if no saved view on server
-            showSnackbar('Working area cleared', 'success');
-            devLog('Local working area cleared (no saved view)');
-            return;
-        }
+    const handleComponentError = (error) => {
+        setComponentError(error);
+        showSnackbar('Component error: ' + error, 'error');
+    };
 
-        try {
-            devLog('Deleting custom view from server', { projectId: project.id, viewName: viewName || 'default', customViewId });
-            
-            // Use web route for deleting custom views
-            const response = await csrfFetch(`/projects/${project.id}/custom-views/delete?view_name=${viewName || 'default'}`, {
-                method: 'DELETE',
-            });
-            
-            // Check if response is actually JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const responseText = await response.text();
-                devLog('Non-JSON response received on delete', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    contentType: contentType,
-                    responsePreview: responseText.substring(0, 500)
-                });
-                // Still consider it successful since local cleanup already happened
-                showSnackbar('Micro-application cleared (server response unclear)', 'warning');
-                return;
-            }
-            
-            const data = await response.json();
-            devLog('Delete API response', { success: data.success, message: data.message });
-            
-            if (data.success) {
-                showSnackbar('Micro-application deleted permanently', 'success');
-                devLog('Custom view deleted successfully from server');
-            } else {
-                // Local cleanup already happened, so just warn about server
-                showSnackbar('Micro-application cleared locally (server deletion failed)', 'warning');
-                devLog('Server deletion failed but local cleanup completed', data.message);
-            }
-        } catch (error) {
-            devLog('Failed to delete custom view from server', error);
-            // Local cleanup already happened, so just warn about server
-            showSnackbar('Micro-application cleared locally (server unreachable)', 'warning');
-        }
+    const showSnackbar = (message, severity = 'info') => {
+        setSnackbar({ open: true, message, severity });
     };
 
     const handleCloseSnackbar = () => {
@@ -303,62 +407,193 @@ export default function CustomView({ auth, project, viewName }) {
     };
 
     return (
-        <>
-            <Head title={`${viewName} - ${project?.name ?? 'Project'}`} />
+        <AuthenticatedLayout
+            user={auth.user}
+        >
+            <Head title={`Custom View: ${viewName} - ${project.name}`} />
 
-            <AuthenticatedLayout user={auth?.user}>
-                {/* Wrapper padding prevents margin-collapsing so top/bottom spacing is visible */}
-                <Box sx={{ p: '3%', position: 'relative' }}>
-                    {/* Lock/Unlock Controls */}
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            top: 20,
-                            right: 20,
-                            zIndex: 1200,
+            {/* Enhanced Generation Progress Dialog */}
+            <Dialog 
+                open={!!generationProgress} 
+                disableEscapeKeyDown
+                PaperProps={{
+                    sx: {
+                        borderRadius: designTokens.radii.xl,
+                        minWidth: 400,
+                        background: designTokens.gradients.primary,
+                        boxShadow: designTokens.shadows.floating,
+                    }
+                }}
+            >
+                <DialogContent sx={{ p: 4, textAlign: 'center' }}>
+                    <Stack spacing={3} alignItems="center">
+                        <Box sx={{ 
+                            width: 80, 
+                            height: 80, 
+                            borderRadius: '50%',
+                            background: designTokens.gradients.accent,
                             display: 'flex',
-                            gap: 1,
-                        }}
-                    >
-                        <Tooltip title="Refresh micro-application">
-                            <IconButton
-                                onClick={handleRefreshComponent}
-                                sx={{
-                                    backgroundColor: '#2196f3',
-                                    color: 'white',
-                                    '&:hover': {
-                                        backgroundColor: '#1976d2',
-                                    },
-                                }}
-                            >
-                                <RefreshIcon />
-                            </IconButton>
-                        </Tooltip>
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: 32,
+                            position: 'relative',
+                            '&::after': {
+                                content: '""',
+                                position: 'absolute',
+                                inset: -4,
+                                borderRadius: '50%',
+                                background: `linear-gradient(45deg, ${designTokens.colors.primary}, ${designTokens.colors.accent})`,
+                                animation: `${shimmer} 2s infinite linear`,
+                                zIndex: -1,
+                                opacity: 0.5,
+                            }
+                        }}>
+                            {getProgressIcon(generationProgress?.step)}
+                        </Box>
                         
-                        <Tooltip title={isLocked ? 'Unlock working area' : 'Lock working area'}>
-                            <IconButton
-                                onClick={toggleLock}
+                        <Box sx={{ width: '100%' }}>
+                            <Typography variant="h6" fontWeight="600" color="text.primary" mb={1}>
+                                {getProgressMessage(generationProgress?.step)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" mb={2}>
+                                Step {generationProgress?.step || 1} of {generationProgress?.total || 4}
+                            </Typography>
+                            <LinearProgress 
+                                variant="determinate" 
+                                value={((generationProgress?.step || 1) / (generationProgress?.total || 4)) * 100}
                                 sx={{
-                                    backgroundColor: isLocked ? '#f44336' : '#4caf50',
+                                    height: 8,
+                                    borderRadius: 4,
+                                    backgroundColor: alpha(designTokens.colors.primary, 0.1),
+                                    '& .MuiLinearProgress-bar': {
+                                        borderRadius: 4,
+                                        background: designTokens.gradients.accent,
+                                    }
+                                }}
+                            />
+                        </Box>
+                    </Stack>
+                </DialogContent>
+            </Dialog>
+
+            {/* Professional Main Container */}
+            <Box sx={{ 
+                background: designTokens.gradients.primary,
+                minHeight: '100vh',
+                p: 3 
+            }}>
+                {/* Floating Control Panel */}
+                <Paper 
+                    elevation={0}
+                    sx={{
+                        position: 'fixed',
+                        bottom: 24,
+                        right: 24,
+                        zIndex: 1200,
+                        borderRadius: designTokens.radii.xl,
+                        background: alpha(theme.palette.background.paper, 0.95),
+                        backdropFilter: 'blur(12px)',
+                        border: `1px solid ${alpha(designTokens.colors.primary, 0.1)}`,
+                        boxShadow: designTokens.shadows.floating,
+                        overflow: 'hidden',
+                        animation: `${fadeSlideUp} 0.6s ease-out`,
+                    }}
+                >
+                    <Stack direction="column" spacing={0}>
+                        {/* Generate Button */}
+                        <Tooltip title="Generate New Application" placement="left">
+                            <IconButton
+                                onClick={() => setAssistantOpen(true)}
+                                sx={{
+                                    p: 2,
+                                    borderRadius: 0,
+                                    background: designTokens.gradients.accent,
                                     color: 'white',
                                     '&:hover': {
-                                        backgroundColor: isLocked ? '#d32f2f' : '#388e3c',
+                                        background: designTokens.gradients.accent,
+                                        transform: 'scale(1.05)',
                                     },
+                                    transition: 'all 0.2s ease',
                                 }}
                             >
-                                {isLocked ? <LockIcon /> : <LockOpenIcon />}
+                                <AutoAwesomeIcon />
                             </IconButton>
                         </Tooltip>
 
-                        {!isLocked && (
-                            <Tooltip title="Clear micro-application">
+                        {/* Save Button */}
+                        {componentCode && (
+                            <Tooltip title="Save Application" placement="left">
                                 <IconButton
-                                    onClick={handleDeleteClick}
+                                    onClick={handleManualSave}
+                                    disabled={isSaving}
                                     sx={{
-                                        backgroundColor: '#ff9800',
-                                        color: 'white',
+                                        p: 2,
+                                        borderRadius: 0,
+                                        color: designTokens.colors.success,
+                                        borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                                         '&:hover': {
-                                            backgroundColor: '#f57c00',
+                                            background: alpha(designTokens.colors.success, 0.1),
+                                        },
+                                    }}
+                                >
+                                    {isSaving ? <CircularProgress size={20} /> : <SaveIcon />}
+                                </IconButton>
+                            </Tooltip>
+                        )}
+
+                        {/* Lock/Unlock */}
+                        {componentCode && (
+                            <Tooltip title={isLocked ? "Unlock for Editing" : "Lock Application"} placement="left">
+                                <IconButton
+                                    onClick={handleToggleLock}
+                                    sx={{
+                                        p: 2,
+                                        borderRadius: 0,
+                                        color: isLocked ? designTokens.colors.warning : designTokens.colors.primary,
+                                        borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                                        '&:hover': {
+                                            background: alpha(isLocked ? designTokens.colors.warning : designTokens.colors.primary, 0.1),
+                                        },
+                                    }}
+                                >
+                                    {isLocked ? <LockIcon /> : <LockOpenIcon />}
+                                </IconButton>
+                            </Tooltip>
+                        )}
+
+                        {/* Refresh */}
+                        {componentCode && (
+                            <Tooltip title="Refresh Application" placement="left">
+                                <IconButton
+                                    onClick={handleRefresh}
+                                    sx={{
+                                        p: 2,
+                                        borderRadius: 0,
+                                        color: theme.palette.text.secondary,
+                                        borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                                        '&:hover': {
+                                            background: alpha(theme.palette.text.secondary, 0.1),
+                                        },
+                                    }}
+                                >
+                                    <RefreshIcon />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+
+                        {/* Delete */}
+                        {componentCode && (
+                            <Tooltip title="Delete Application" placement="left">
+                                <IconButton
+                                    onClick={() => setDeleteConfirmOpen(true)}
+                                    sx={{
+                                        p: 2,
+                                        borderRadius: 0,
+                                        color: designTokens.colors.error,
+                                        borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                                        '&:hover': {
+                                            background: alpha(designTokens.colors.error, 0.1),
                                         },
                                     }}
                                 >
@@ -366,143 +601,252 @@ export default function CustomView({ auth, project, viewName }) {
                                 </IconButton>
                             </Tooltip>
                         )}
-                    </Box>
+                    </Stack>
+                </Paper>
 
-                    {/* Main Working Area - React Component Renderer */}
-                    <Box
-                        id="working-area"
-                        sx={{
-                            width: '100%',
-                            m: 0,
-                            border: isLocked ? '2px solid #4caf50' : '2px dotted #ffcccb',
-                            borderRadius: 3,
-                            minHeight: 'calc(100vh - 64px - 12%)',
-                            p: componentCode ? 0 : 3, // No padding for components, padding for placeholder
-                            backgroundColor: '#fff',
-                            boxSizing: 'border-box',
-                            position: 'relative',
-                            overflow: 'auto',
+                {/* Enhanced Main Working Area */}
+                <Paper
+                    elevation={0}
+                    sx={{
+                        mt: 2,
+                        mr: 10, // Space for floating controls
+                        borderRadius: 3,
+                        overflow: 'hidden',
+                        background: alpha(theme.palette.background.paper, 0.8),
+                        backdropFilter: 'blur(12px)',
+                        border: isLocked 
+                            ? `2px solid ${designTokens.colors.success}` 
+                            : `2px dashed ${alpha(designTokens.colors.primary, 0.3)}`,
+                        boxShadow: designTokens.shadows.elevated,
+                        minHeight: 'calc(100vh - 200px)',
+                        position: 'relative',
+                        animation: `${fadeSlideUp} 0.8s ease-out`,
+                    }}
+                >
+                    {componentCode ? (
+                        <ReactComponentRenderer
+                            componentCode={componentCode}
+                            project={project}
+                            auth={auth}
+                            viewName={viewName}
+                            onError={handleComponentError}
+                            tasks={tasks}
+                            allTasks={allTasks}
+                            users={users}
+                            methodology={methodology}
+                        />
+                    ) : isLoading ? (
+                        <Box sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: 'calc(100vh - 200px)',
+                            color: 'text.secondary',
+                        }}>
+                            <Box sx={{
+                                width: 60,
+                                height: 60,
+                                borderRadius: '50%',
+                                background: designTokens.gradients.accent,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                mb: 3,
+                                animation: `${shimmer} 1.5s infinite linear`,
+                            }}>
+                                <AutoAwesomeIcon fontSize="large" />
+                            </Box>
+                            <Typography variant="h6" fontWeight="500" mb={1}>
+                                Loading Application Studio...
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Preparing your custom application environment
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <Box sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: 'calc(100vh - 200px)',
+                            p: 4,
+                            textAlign: 'center',
+                        }}>
+                            <Box sx={{
+                                width: 120,
+                                height: 120,
+                                borderRadius: designTokens.radii.xl,
+                                background: designTokens.gradients.accent,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                mb: 4,
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    transform: 'scale(1.05)',
+                                    boxShadow: designTokens.shadows.floating,
+                                }
+                            }}
+                            onClick={() => setAssistantOpen(true)}
+                            >
+                                <AutoAwesomeIcon sx={{ fontSize: 48 }} />
+                            </Box>
+                            
+                            <Typography variant="h4" fontWeight="600" color="text.primary" mb={2}>
+                                Ready to Create Something Amazing?
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" mb={4} maxWidth={600}>
+                                Welcome to your custom application studio. Use AI to generate powerful, 
+                                data-driven micro-applications tailored to your project needs.
+                            </Typography>
+                            
+                            <Stack direction="row" spacing={2} flexWrap="wrap" justifyContent="center">
+                                <Chip 
+                                    label="📊 Data Dashboard" 
+                                    variant="outlined" 
+                                    sx={{ borderRadius: designTokens.radii.lg }}
+                                />
+                                <Chip 
+                                    label="📋 Task Manager" 
+                                    variant="outlined" 
+                                    sx={{ borderRadius: designTokens.radii.lg }}
+                                />
+                                <Chip 
+                                    label="📈 Analytics View" 
+                                    variant="outlined" 
+                                    sx={{ borderRadius: designTokens.radii.lg }}
+                                />
+                                <Chip 
+                                    label="🎯 Custom Tool" 
+                                    variant="outlined" 
+                                    sx={{ borderRadius: designTokens.radii.lg }}
+                                />
+                            </Stack>
+                            
+                            <Button
+                                variant="contained"
+                                size="large"
+                                onClick={() => setAssistantOpen(true)}
+                                startIcon={<AutoAwesomeIcon />}
+                                sx={{
+                                    mt: 4,
+                                    borderRadius: designTokens.radii.lg,
+                                    background: designTokens.gradients.accent,
+                                    px: 4,
+                                    py: 1.5,
+                                    fontWeight: 600,
+                                    boxShadow: designTokens.shadows.card,
+                                    '&:hover': {
+                                        background: designTokens.gradients.accent,
+                                        transform: 'translateY(-2px)',
+                                        boxShadow: designTokens.shadows.elevated,
+                                    },
+                                    transition: 'all 0.3s ease',
+                                }}
+                            >
+                                Start Creating
+                            </Button>
+                        </Box>
+                    )}
+                </Paper>
+            </Box>
+
+            {/* Enhanced Delete Confirmation Dialog */}
+            <Dialog 
+                open={deleteConfirmOpen} 
+                onClose={() => setDeleteConfirmOpen(false)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: designTokens.radii.xl,
+                        background: designTokens.gradients.primary,
+                    }
+                }}
+            >
+                <DialogTitle sx={{ pb: 1 }}>
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Box sx={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            background: alpha(designTokens.colors.error, 0.1),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: designTokens.colors.error,
+                        }}>
+                            <DeleteIcon />
+                        </Box>
+                        <Typography variant="h6" fontWeight="600">
+                            Delete Application
+                        </Typography>
+                    </Stack>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography color="text.secondary">
+                        Are you sure you want to delete this custom application? This action cannot be undone.
+                        All generated code and saved data will be permanently removed.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button 
+                        onClick={() => setDeleteConfirmOpen(false)}
+                        sx={{ borderRadius: designTokens.radii.lg }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button 
+                        onClick={handleClearWorkingArea}
+                        variant="contained"
+                        color="error"
+                        sx={{ 
+                            borderRadius: designTokens.radii.lg,
+                            fontWeight: 600,
                         }}
                     >
-                        {componentCode ? (
-                            <ReactComponentRenderer
-                                componentCode={componentCode}
-                                project={project}
-                                auth={auth}
-                                viewName={viewName}
-                                onError={handleComponentError}
-                            />
-                        ) : isLoading ? (
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    height: '100%',
-                                    flexDirection: 'column',
-                                    color: 'text.secondary',
-                                }}
-                            >
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
-                                <div>Loading micro-application...</div>
-                            </Box>
-                        ) : (
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    height: '100%',
-                                    flexDirection: 'column',
-                                    color: 'text.secondary',
-                                }}
-                            >
-                                <ChatIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
-                                <Box sx={{ textAlign: 'center' }}>
-                                    <div>Open the chat to generate a custom micro-application</div>
-                                    <div style={{ fontSize: '0.9em', marginTop: '8px' }}>
-                                        Try: "Create an expense tracker", "Build a notice board", "Make a timesheet"
-                                    </div>
-                                    <div style={{ fontSize: '0.8em', marginTop: '16px', fontStyle: 'italic' }}>
-                                        {customViewId ? 'Your previous micro-application will be updated' : 'A new micro-application will be created'}
-                                    </div>
-                                </Box>
-                            </Box>
-                        )}
-                    </Box>
-                </Box>
+                        Delete Permanently
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
-                {/* Floating Chat Button */}
-                <Fab
-                    color="primary"
-                    onClick={() => setAssistantOpen(true)}
-                    sx={{
-                        position: 'fixed',
-                        bottom: 24,
-                        right: 24,
-                        zIndex: 1300,
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+            {/* Enhanced Assistant Chat Dialog */}
+            <AssistantChat
+                project={project}
+                tasks={tasks}
+                allTasks={allTasks}
+                users={users}
+                methodology={methodology}
+                viewName={viewName}
+                open={assistantOpen}
+                onClose={() => setAssistantOpen(false)}
+                isCustomView={true}
+                onSpaGenerated={handleSpaGenerated}
+                onProgressUpdate={setGenerationProgress}
+            />
+
+            {/* Enhanced Snackbar */}
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={4000}
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            >
+                <Alert 
+                    onClose={handleCloseSnackbar} 
+                    severity={snackbar.severity}
+                    sx={{ 
+                        width: '100%',
+                        borderRadius: designTokens.radii.lg,
+                        fontWeight: 500,
                     }}
-                    aria-label="Open assistant chat"
                 >
-                    <ChatIcon />
-                </Fab>
-
-                {/* Assistant Chat Dialog */}
-                <AssistantChat
-                    project={project}
-                    viewName={viewName}
-                    open={assistantOpen}
-                    onClose={() => setAssistantOpen(false)}
-                    isCustomView={true}
-                    onSpaGenerated={handleSpaGenerated}
-                />
-
-                {/* Snackbar for notifications */}
-                <Snackbar
-                    open={snackbar.open}
-                    autoHideDuration={4000}
-                    onClose={handleCloseSnackbar}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                >
-                    <Alert
-                        onClose={handleCloseSnackbar}
-                        severity={snackbar.severity}
-                        variant="filled"
-                        sx={{ width: '100%' }}
-                    >
-                        {snackbar.message}
-                    </Alert>
-                </Snackbar>
-
-                {/* Delete Confirmation Dialog */}
-                <Dialog
-                    open={deleteConfirmOpen}
-                    onClose={handleDeleteCancel}
-                    aria-labelledby="delete-dialog-title"
-                    aria-describedby="delete-dialog-description"
-                >
-                    <DialogTitle id="delete-dialog-title">
-                        Confirm Deletion
-                    </DialogTitle>
-                    <DialogContent>
-                        <DialogContentText id="delete-dialog-description">
-                            {customViewId 
-                                ? 'Are you sure you want to permanently delete this custom application? This action cannot be undone.'
-                                : 'Are you sure you want to clear the working area? Any unsaved changes will be lost.'
-                            }
-                        </DialogContentText>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={handleDeleteCancel} color="primary">
-                            Cancel
-                        </Button>
-                        <Button onClick={clearWorkingArea} color="error" variant="contained">
-                            {customViewId ? 'Delete Permanently' : 'Clear Area'}
-                        </Button>
-                    </DialogActions>
-                </Dialog>
-            </AuthenticatedLayout>
-        </>
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
+        </AuthenticatedLayout>
     );
 }

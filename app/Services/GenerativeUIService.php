@@ -28,7 +28,8 @@ class GenerativeUIService
         ?string $sessionId = null, 
         int $userId, 
         string $viewName = 'default',
-        array $conversationHistory = []
+        array $conversationHistory = [],
+        ?array $projectContext = null
     ): array {
         try {
             // Get existing view for context
@@ -39,10 +40,27 @@ class GenerativeUIService
                 $userMessage, 
                 $project, 
                 $existingView,
-                $conversationHistory
+                $conversationHistory,
+                $projectContext
             );
 
             // Generate React component using OpenAI
+            Log::info('GenerativeUIService: Sending prompt to OpenAI', [
+                'project_id' => $project->id,
+                'user_message' => $userMessage,
+                'has_project_context' => !is_null($projectContext),
+                'project_context_keys' => $projectContext ? array_keys($projectContext) : [],
+                'project_context_summary' => $projectContext ? [
+                    'has_tasks' => isset($projectContext['tasks']),
+                    'task_count' => isset($projectContext['tasks']['total_count']) ? $projectContext['tasks']['total_count'] : 0,
+                    'has_all_tasks' => isset($projectContext['all_tasks']),
+                    'all_tasks_count' => isset($projectContext['all_tasks']) ? count($projectContext['all_tasks']) : 0,
+                    'has_users' => isset($projectContext['users']),
+                    'users_count' => isset($projectContext['users']) ? count($projectContext['users']) : 0,
+                ] : null,
+                'prompt_preview' => substr($prompt, 0, 500) . '...'
+            ]);
+            
             $generatedComponent = $this->openAIService->generateCustomView($prompt);
 
             // Defensive fallback: if generation is empty, provide a minimal working component for dev
@@ -165,9 +183,11 @@ REACT;
         string $userRequest, 
         Project $project, 
         ?CustomView $existingView = null,
-        array $conversationHistory = []
+        array $conversationHistory = [],
+        ?array $projectContext = null
     ): string {
-        $projectContext = $this->buildProjectContext($project);
+        // Use enhanced project context if provided, otherwise fall back to basic context
+        $contextData = $projectContext ? $this->buildEnhancedProjectContext($project, $projectContext) : $this->buildProjectContext($project);
         $componentStructure = $this->getReactComponentStructure();
         
         $prompt = "You are an expert React developer specializing in creating data-focused micro-applications using modern React patterns.
@@ -175,12 +195,13 @@ REACT;
 CRITICAL REQUIREMENTS:
 1. Generate a COMPLETE, FUNCTIONAL React component that can be directly used
 2. Use React hooks (useState, useEffect) for state management  
-3. Implement FULL CRUD functionality with local state and persistence
-4. Input controls must take LESS THAN 13% of the workspace - focus 87%+ on data display
-5. Use modern CSS-in-JS or Tailwind classes for styling
-6. Include proper TypeScript types if applicable
-7. Add loading states, error handling, and user feedback
-8. Ensure mobile-responsive design
+3. **NEVER use API calls like csrfFetch('/api/tasks') - USE THE PROVIDED REAL DATA instead**
+4. Initialize state with the ACTUAL project data provided in the context below AND via props injected by the host renderer
+5. Input controls must take LESS THAN 13% of the workspace - focus 87%+ on data display
+6. Use modern CSS-in-JS or Tailwind classes for styling
+7. Include proper TypeScript types if applicable
+8. Add loading states, error handling, and user feedback
+9. Ensure mobile-responsive design
 
 DATA-FOCUSED DESIGN PRINCIPLES:
 - Minimize input forms - use inline editing, modals, or compact controls
@@ -188,6 +209,18 @@ DATA-FOCUSED DESIGN PRINCIPLES:
 - Use tables, cards, charts, or lists as primary content
 - Add search, filtering, and sorting capabilities
 - Include data export/import functionality where relevant
+- **START WITH REAL DATA - no empty states or API loading**
+
+IMPORTANT: Instead of API calls or hardcoded arrays, initialize your state with the real data like this:
+```jsx
+// ✅ CORRECT: Use provided real data (prefer props injected by host)
+const [tasks, setTasks] = useState(() => (tasksDataFromProps || allTasksDataFromProps || []));
+
+// ❌ WRONG: Don't make API calls or hardcode arrays  
+// const tasksData = [{ id: 1, title: 'Fake' }];
+// const [tasks, setTasks] = useState(tasksData);
+// useEffect(() => { fetch('/api/tasks')... }, []);
+```
 
 COMPONENT STRUCTURE:
 ```jsx
@@ -195,7 +228,7 @@ COMPONENT STRUCTURE:
 ```
 
 PROJECT CONTEXT:
-{$projectContext}
+{$contextData}
 
 EXISTING COMPONENT CONTEXT:
 " . ($existingView ? "You are updating an existing component. Current implementation details should be preserved where relevant." : "This is a new component being created from scratch.") . "
@@ -206,9 +239,12 @@ CONVERSATION HISTORY:
 " . (!empty($conversationHistory) ? json_encode(array_slice($conversationHistory, -3), JSON_PRETTY_PRINT) : "No previous conversation") . "
 
 RESPONSE FORMAT:
-Provide ONLY the complete React component code. No explanations, no markdown - just the working JSX component ready for immediate use.
+Provide ONLY the complete React component code that uses the REAL DATA from the project context above. 
+- Initialize state with the provided tasks, users, and project data
+- No API calls, no empty states - use the real data immediately
+- No explanations, no markdown - just the working JSX component ready for immediate use.
 
-Remember: Focus on DATA DISPLAY (87% of space) with minimal input controls (13% max).";
+Remember: Focus on DATA DISPLAY (87% of space) with minimal input controls (13% max) and USE THE PROVIDED REAL DATA.";
 
         return $prompt;
     }
@@ -270,6 +306,37 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
      */
     private function enhanceReactComponent(string $componentCode, string $userRequest): string
     {
+        // 0) Force usage of real data when available: Replace common fake arrays with props-based init
+        // Remove patterns like: const SomethingData = [ ... ]; const [items, setItems] = useState(SomethingData);
+        $componentCode = preg_replace('/const\s+(\w+)Data\s*=\s*\[[\s\S]*?\];/m', '', $componentCode);
+        // Replace useState(XxxData) with useState(() => props-based fallbacks)
+        $componentCode = preg_replace(
+            '/useState\s*\(\s*(\w+)Data\s*\)/',
+            'useState(() => (typeof tasks !== "undefined" ? tasks : (typeof allTasks !== "undefined" ? allTasks : [])))',
+            $componentCode
+        );
+
+        // Replace useState(() => tasksDataFromProps) style with fallback
+        $componentCode = preg_replace(
+            '/useState\s*\(\s*\(\s*\)\s*=>\s*(\w+)Data\s*\)/',
+            'useState(() => (typeof tasks !== "undefined" ? tasks : (typeof allTasks !== "undefined" ? allTasks : [])))',
+            $componentCode
+        );
+
+        // Also convert obvious literals like useState\(\s*\[\s*\{ id:\s*\d+.*?\}\s*\]\s*\)
+        $componentCode = preg_replace(
+            '/useState\s*\(\s*\[\s*\{[\s\S]*?\}\s*\]\s*\)/m',
+            'useState(() => (typeof tasks !== "undefined" ? tasks : (typeof allTasks !== "undefined" ? allTasks : [])))',
+            $componentCode
+        );
+
+        // Replace any "const <name> = [ { ... } ]; const [x, setX] = useState(<name>)"
+        $componentCode = preg_replace(
+            '/const\s+(\w+)\s*=\s*\[\s*\{[\s\S]*?\}\s*\]\s*;[\s\S]*?useState\s*\(\s*\1\s*\)/m',
+            'useState(() => (typeof tasks !== "undefined" ? tasks : (typeof allTasks !== "undefined" ? allTasks : [])))',
+            $componentCode
+        );
+
         // Add data persistence utilities if not present
         if (!str_contains($componentCode, 'localStorage')) {
             $persistenceCode = "
@@ -343,5 +410,109 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
         }
         
         return false;
+    }
+
+    /**
+     * Build enhanced project context with live tasks and user data
+     */
+    private function buildEnhancedProjectContext(Project $project, array $projectContext): string
+    {
+        $context = "PROJECT: {$project->name}\n";
+        $context .= "Description: {$project->description}\n";
+        $context .= "Key: {$project->key}\n";
+        
+        // Add methodology information
+        $methodology = $projectContext['methodology']['name'] ?? $project->meta['methodology'] ?? 'kanban';
+        $context .= "Methodology: {$methodology}\n";
+        
+        if ($project->start_date) {
+            $context .= "Start Date: {$project->start_date}\n";
+        }
+        if ($project->end_date) {
+            $context .= "End Date: {$project->end_date}\n";
+        }
+        
+        // Add methodology-specific status labels
+        if (isset($projectContext['methodology']['status_labels'])) {
+            $context .= "\nMETHODOLOGY STATUS LABELS (use these in your component):\n";
+            foreach ($projectContext['methodology']['status_labels'] as $internal => $display) {
+                $context .= "- {$internal} → '{$display}'\n";
+            }
+        }
+        
+        // Add metadata if available
+        if ($project->meta && !empty($project->meta)) {
+            $context .= "Metadata: " . json_encode($project->meta, JSON_PRETTY_PRINT) . "\n";
+        }
+        
+        // Add live tasks data if provided
+        if (isset($projectContext['tasks']) && $projectContext['tasks']) {
+            $tasks = $projectContext['tasks'];
+            $context .= "\nTASKS SUMMARY:\n";
+            $context .= "Total Tasks: {$tasks['total_count']}\n";
+            $context .= "Completion Rate: {$tasks['completion_rate']}%\n";
+            
+            // Add detailed task data for AI to use
+            $context .= "\nDETAILED TASK DATA FOR COMPONENT INITIALIZATION:\n";
+            $context .= "// Use this exact data structure in your React component:\n";
+            $context .= "const initialTasks = {\n";
+            $context .= "  todo: " . json_encode($tasks['todo'], JSON_PRETTY_PRINT) . ",\n";
+            $context .= "  inprogress: " . json_encode($tasks['inprogress'], JSON_PRETTY_PRINT) . ",\n";
+            $context .= "  review: " . json_encode($tasks['review'], JSON_PRETTY_PRINT) . ",\n";
+            $context .= "  done: " . json_encode($tasks['done'], JSON_PRETTY_PRINT) . "\n";
+            $context .= "};\n\n";
+            
+            // Also provide flat array if available
+            if (isset($projectContext['all_tasks']) && !empty($projectContext['all_tasks'])) {
+                $context .= "// Alternative: All tasks as flat array:\n";
+                $context .= "const allTasks = " . json_encode($projectContext['all_tasks'], JSON_PRETTY_PRINT) . ";\n\n";
+            }
+            
+            $context .= "TASK BREAKDOWN:\n";
+            $context .= "\nTODO TASKS (" . count($tasks['todo']) . "):\n";
+            foreach (array_slice($tasks['todo'], 0, 10) as $task) {
+                $context .= "- #{$task['id']}: {$task['title']}";
+                if ($task['priority']) $context .= " [Priority: {$task['priority']}]";
+                if ($task['due_date']) $context .= " [Due: {$task['due_date']}]";
+                $context .= "\n";
+            }
+            
+            $context .= "\nIN PROGRESS TASKS (" . count($tasks['inprogress']) . "):\n";
+            foreach (array_slice($tasks['inprogress'], 0, 10) as $task) {
+                $context .= "- #{$task['id']}: {$task['title']}";
+                if ($task['assignee']) $context .= " [Assignee: {$task['assignee']}]";
+                $context .= "\n";
+            }
+            
+            $context .= "\nREVIEW TASKS (" . count($tasks['review']) . "):\n";
+            foreach (array_slice($tasks['review'], 0, 5) as $task) {
+                $context .= "- #{$task['id']}: {$task['title']}\n";
+            }
+            
+            $context .= "\nCOMPLETED TASKS (" . count($tasks['done']) . "):\n";
+            foreach (array_slice($tasks['done'], 0, 5) as $task) {
+                $context .= "- #{$task['id']}: {$task['title']}\n";
+            }
+        } else {
+            $context .= "\nNO TASKS AVAILABLE: Project currently has no tasks. Generate a component with placeholder message or basic task creation interface.\n";
+        }
+        
+        // Add team members if provided
+        if (isset($projectContext['users']) && !empty($projectContext['users'])) {
+            $context .= "\nTEAM MEMBERS:\n";
+            foreach ($projectContext['users'] as $user) {
+                $context .= "- {$user['name']} ({$user['email']})\n";
+            }
+        }
+        
+        $context .= "\nINSTRUCTIONS FOR AI:\n";
+        $context .= "Use this REAL project data to create meaningful, data-driven components.\n";
+        $context .= "Generate components that work with the actual task IDs, titles, and statuses shown above.\n";
+        $context .= "IMPORTANT: Use the methodology-specific status labels (e.g., 'Backlog' instead of 'todo' for lean methodology).\n";
+        $context .= "Create useful dashboards, progress trackers, or task management widgets using this real data.\n";
+        $context .= "Consider the project timeline, completion rates, and team structure when designing the component.\n";
+        $context .= "Match the terminology and workflow of the {$methodology} methodology.\n";
+        
+        return $context;
     }
 }
