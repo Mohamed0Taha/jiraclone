@@ -5,41 +5,13 @@ import {
     UpgradeRounded as UpgradeIcon,
     StarRounded as StarIcon,
     RocketLaunchRounded as RocketIcon,
+    Settings as SettingsIcon,
+    Group as GroupIcon,
+    Assessment as AssessmentIcon,
+    AutoAwesome as AutoAwesomeIcon,
 } from '@mui/icons-material';
 import { router } from '@inertiajs/react';
-
-const featureInfo = {
-    ai_task_generation: {
-        title: 'AI Task Generation',
-        description: 'Generate intelligent, contextual tasks with AI assistance',
-        icon: <RocketIcon />,
-        color: 'primary',
-    },
-    automation: {
-        title: 'Automations',
-        description: 'Automate workflows and streamline your processes',
-        icon: <SettingsIcon />,
-        color: 'secondary',
-    },
-    members: {
-        title: 'Team Collaboration',
-        description: 'Invite team members and collaborate on projects',
-        icon: <GroupIcon />,
-        color: 'info',
-    },
-    reports: {
-        title: 'Advanced Reports',
-        description: 'Generate detailed project reports and insights',
-        icon: <AssessmentIcon />,
-        color: 'success',
-    },
-    ai_assistant: {
-        title: 'AI Assistant',
-        description: 'Get intelligent help and suggestions for your projects',
-        icon: <AutoAwesomeIcon />,
-        color: 'warning',
-    },
-};
+import { useTranslation } from 'react-i18next';
 
 export default function PaywallNotice({
     feature,
@@ -49,9 +21,44 @@ export default function PaywallNotice({
     variant = 'card', // 'card' | 'banner' | 'modal'
 }) {
     const theme = useTheme();
+    const { t } = useTranslation();
+    
+    const featureInfo = {
+        ai_task_generation: {
+            title: t('paywall.aiTaskGeneration'),
+            description: t('paywall.aiTaskGenerationDesc'),
+            icon: <RocketIcon />,
+            color: 'primary',
+        },
+        automation: {
+            title: t('paywall.automationTitle'),
+            description: t('paywall.automationDescription'),
+            icon: <SettingsIcon />,
+            color: 'secondary',
+        },
+        members: {
+            title: t('paywall.teamCollaborationTitle'),
+            description: t('paywall.teamCollaborationDescription'),
+            icon: <GroupIcon />,
+            color: 'info',
+        },
+        reports: {
+            title: t('paywall.advancedReports'),
+            description: t('paywall.advancedReportsDesc'),
+            icon: <AssessmentIcon />,
+            color: 'success',
+        },
+        ai_assistant: {
+            title: t('paywall.aiAssistantTitle'),
+            description: t('paywall.aiAssistantDescription'),
+            icon: <AutoAwesomeIcon />,
+            color: 'warning',
+        },
+    };
+    
     const info = featureInfo[feature] || {
-        title: 'Premium Feature',
-        description: 'This feature is available on paid plans',
+        title: t('paywall.premiumFeature'),
+        description: t('features.premiumFeatureDesc'),
         icon: <StarIcon />,
         color: 'primary',
     };
@@ -88,7 +95,7 @@ export default function PaywallNotice({
                     </Box>
                     <Box sx={{ flexGrow: 1 }}>
                         <Typography variant="subtitle2" fontWeight={700}>
-                            {info.title} - Premium Feature
+                            {info.title} - {t('paywall.premiumFeature')}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                             {info.description}
@@ -98,6 +105,20 @@ export default function PaywallNotice({
                         <Stack direction="row" spacing={1}>
                             <Button
                                 variant="outlined"
+                                size="small"
+                                onClick={handleStartTrial}
+                                sx={{ textTransform: 'none' }}
+                            >
+                                {t('paywall.startTrial')}
+                            </Button>
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={handleUpgrade}
+                                sx={{ textTransform: 'none' }}
+                            >
+                                {t('paywall.upgradeNow')}
+                            </Button>
                                 size="small"
                                 onClick={handleStartTrial}
                                 sx={{ fontWeight: 600 }}
@@ -161,7 +182,7 @@ export default function PaywallNotice({
                             sx={{ fontWeight: 700 }}
                         />
                         <Chip
-                            label="Premium"
+                            label={t('features.premiumFeature')}
                             size="small"
                             sx={{
                                 background: `linear-gradient(135deg, ${theme.palette.warning.main}, ${theme.palette.warning.dark})`,
@@ -172,7 +193,7 @@ export default function PaywallNotice({
                     </Stack>
 
                     <Typography variant="h5" fontWeight={800} sx={{ mb: 1 }}>
-                        Unlock Premium Features
+                        {t('paywall.unlockPremiumFeatures')}
                     </Typography>
 
                     <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 400 }}>
