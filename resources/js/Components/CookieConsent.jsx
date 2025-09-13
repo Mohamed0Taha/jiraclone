@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Button, Card, Stack, Typography, Slide, IconButton, Link } from '@mui/material';
 import { Close as CloseIcon, Cookie as CookieIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 
 export default function CookieConsent() {
     const [showConsent, setShowConsent] = useState(false);
+    const { t } = useTranslation();
 
     useEffect(() => {
         // Check if user has already given consent
@@ -59,19 +61,16 @@ export default function CookieConsent() {
 
                     <Box flex={1}>
                         <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                            We use cookies
+                            {t('cookies.title')}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            We use cookies to enhance your experience, analyze site traffic, and
-                            provide personalized content. By clicking "Accept", you consent to our
-                            use of cookies. You can manage your preferences in your browser
-                            settings.{' '}
+                            {t('cookies.message')}{' '}
                             <Link
                                 href="/privacy"
                                 color="primary"
                                 sx={{ textDecoration: 'none', fontWeight: 600 }}
                             >
-                                Learn more
+                                {t('cookies.learnMore')}
                             </Link>
                         </Typography>
 
@@ -89,7 +88,7 @@ export default function CookieConsent() {
                                     },
                                 }}
                             >
-                                Accept All
+                                {t('cookies.acceptAll')}
                             </Button>
                             <Button
                                 variant="outlined"
@@ -97,7 +96,7 @@ export default function CookieConsent() {
                                 size="small"
                                 sx={{ textTransform: 'none', fontWeight: 600 }}
                             >
-                                Decline
+                                {t('cookies.decline')}
                             </Button>
                         </Stack>
                     </Box>
@@ -109,6 +108,7 @@ export default function CookieConsent() {
                             color: 'text.secondary',
                             '&:hover': { background: 'rgba(0,0,0,0.04)' },
                         }}
+                        aria-label={t('cookies.close')}
                     >
                         <CloseIcon fontSize="small" />
                     </IconButton>

@@ -11,6 +11,7 @@ import {
 import GetAppIcon from '@mui/icons-material/GetApp';
 import { useSubscription } from '../Hooks/useSubscription';
 import { router } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 
 export default function FloatingActionGroup({
     onAddTask,
@@ -23,6 +24,7 @@ export default function FloatingActionGroup({
     const [expanded, setExpanded] = useState(false);
     const { shouldShowOverlay, userPlan } = useSubscription();
     const assistantLocked = shouldShowOverlay('ai_chat');
+    const { t } = useTranslation();
 
     const handleToggle = () => {
         setExpanded(!expanded);
@@ -88,7 +90,7 @@ export default function FloatingActionGroup({
                     timeout={200}
                     style={{ transitionDelay: expanded ? '100ms' : '0ms' }}
                 >
-                    <Tooltip title="AI Assistant" placement="left">
+                    <Tooltip title={t('floating.aiAssistant')} placement="left">
                         <Fab
                             size="medium"
                             onClick={handleOpenAssistant}
@@ -114,7 +116,7 @@ export default function FloatingActionGroup({
                     timeout={200}
                     style={{ transitionDelay: expanded ? '0ms' : '0ms' }}
                 >
-                    <Tooltip title="Create task (c)" placement="left">
+                    <Tooltip title={t('floating.createTask')} placement="left">
                         <Fab
                             size="medium"
                             onClick={handleAddTask}
