@@ -1,6 +1,7 @@
 // resources/js/Pages/Dashboard.jsx
 import React, { useMemo, useState, useCallback, memo } from 'react';
 import { Head, router } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
     Box,
@@ -114,6 +115,7 @@ const useRowColor = () => {
 export default function Dashboard({ auth, projects, appsumo_welcome, message }) {
     const theme = useTheme();
     const rowSx = useRowColor();
+    const { t } = useTranslation();
 
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [projectToDelete, setProjectToDelete] = useState(null);
@@ -294,13 +296,13 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                 icon: <GroupIcon />,
             },
             {
-                label: 'Tasks',
+                label: t('dashboard.totalTasks'),
                 value: stats.tasks,
                 color: theme.palette.info.main,
                 icon: <AutoAwesomeIcon />,
             },
             {
-                label: 'Completion',
+                label: t('dashboard.completion'),
                 value: `${stats.completion}%`,
                 color: theme.palette.success.main,
                 icon: <AdminPanelSettingsIcon />,
@@ -450,9 +452,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                             variant="body2"
                                             sx={{ color: '#166534', mb: 2 }}
                                         >
-                                            Thank you for your AppSumo purchase! Your lifetime
-                                            subscription is now active with access to all premium
-                                            features.
+                                            {t('dashboard.appsumoWelcome')}
                                         </Typography>
                                         <Stack direction="row" spacing={2} alignItems="center">
                                             <Button
@@ -469,14 +469,14 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                                     )
                                                 }
                                             >
-                                                ⭐ Leave a Review on AppSumo
+                                                {t('dashboard.leaveReview')}
                                             </Button>
                                             <Button
                                                 variant="outlined"
                                                 size="small"
                                                 onClick={() => router.visit('/certification')}
                                             >
-                                                🎓 Get Certified
+                                                {t('dashboard.getCertified')}
                                             </Button>
                                         </Stack>
                                     </Box>
@@ -567,7 +567,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                         // Removed all ::after shimmer/rectangle
                                     }}
                                 >
-                                    Welcome back, {auth.user?.name || 'Explorer'}
+                                    {t('dashboard.welcomeBack', { name: auth.user?.name || 'Explorer' })}
                                 </Typography>
                                 <Typography
                                     variant="h6"
@@ -581,8 +581,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                         mb: 2,
                                     }}
                                 >
-                                    Orchestrate your ideas into reality. Create, collaborate, and
-                                    achieve extraordinary results.
+                                    {t('dashboard.yourWorkspace')}
                                 </Typography>
                                 {/* Scope Toggle (positioned under subtitle) */}
                                 <Stack direction="row" spacing={1.5} sx={{ mb: { xs: 3, md: 0 } }}>
@@ -621,7 +620,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                             },
                                         }}
                                     >
-                                        {`${ownedProjects.length} Projects`}
+                                        {t('dashboard.projectsCount', { count: ownedProjects.length })}
                                     </Button>
                                     <Button
                                         onClick={() => setScope('all')}
@@ -651,7 +650,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                             },
                                         }}
                                     >
-                                        {`All ${filtered.length}`}
+                                        {t('dashboard.allProjects')} ({filtered.length})
                                     </Button>
                                 </Stack>
                             </Box>
@@ -753,7 +752,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                         />
                                         <TextField
                                             fullWidth
-                                            placeholder="Search by name, key or description..."
+                                            placeholder={t('dashboard.searchProjects')}
                                             value={query}
                                             onChange={handleQueryChange}
                                             size="medium"
