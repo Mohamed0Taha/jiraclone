@@ -194,7 +194,10 @@ const OptimizedTaskCard = memo(
                         boxShadow: isPending
                             ? `0 0 0 2px ${alpha(cardAccent, 0.35)}`
                             : theme.shadows[1],
-                        background: `linear-gradient(135deg, ${alpha(cardAccent, 0.06)}, ${alpha('#fff', 0.8)})`,
+                        background:
+                            theme.palette.mode === 'dark'
+                                ? `linear-gradient(135deg, ${alpha(cardAccent, 0.08)}, ${alpha('#0f172a', 0.9)})`
+                                : `linear-gradient(135deg, ${alpha(cardAccent, 0.06)}, ${alpha('#fff', 0.8)})`,
                         backdropFilter: 'blur(2px)',
                         overflow: 'hidden',
                         border: `1px solid ${alpha(cardAccent, 0.15)}`,
@@ -265,8 +268,17 @@ const OptimizedTaskCard = memo(
                                     size="small"
                                     onClick={() => setImageModalOpen(true)}
                                     sx={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 1)' },
+                                        backgroundColor:
+                                            theme.palette.mode === 'dark'
+                                                ? 'rgba(17,24,39, 0.9)'
+                                                : 'rgba(255, 255, 255, 0.9)',
+                                        color: theme.palette.mode === 'dark' ? '#e5e7eb' : undefined,
+                                        '&:hover': {
+                                            backgroundColor:
+                                                theme.palette.mode === 'dark'
+                                                    ? 'rgba(17,24,39, 1)'
+                                                    : 'rgba(255, 255, 255, 1)',
+                                        },
                                     }}
                                 >
                                     <VisibilityIcon fontSize="small" />

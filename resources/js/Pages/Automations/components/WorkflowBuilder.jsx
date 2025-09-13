@@ -730,11 +730,13 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                                         transition: 'all .2s',
                                         transform: isSelected ? 'scale(1.01)' : 'scale(1)',
                                         background: isSelected
-                                            ? `linear-gradient(135deg, ${alpha(theme.palette[trigger.color || 'primary'].main, 0.08)} 0%, ${alpha(
-                                                  theme.palette[trigger.color || 'primary'].main,
-                                                  0.02
+                                            ? `linear-gradient(135deg, ${alpha(theme.palette[trigger.color || 'primary'].main, 0.12)} 0%, ${alpha(
+                                                  theme.palette.mode === 'dark' ? '#0f172a' : '#ffffff',
+                                                  0.8
                                               )} 100%)`
-                                            : 'white',
+                                            : theme.palette.mode === 'dark'
+                                              ? alpha('#0f172a', 0.9)
+                                              : '#ffffff',
                                         '&:hover': {
                                             transform: 'scale(1.01)',
                                             boxShadow: `0 10px 25px ${alpha(theme.palette[trigger.color || 'primary'].main, 0.18)}`,
@@ -930,7 +932,10 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                                         sx={{
                                             border: `2px solid ${alpha(theme.palette[def?.color || 'primary'].main, 0.2)}`,
                                             borderRadius: 3,
-                                            background: `linear-gradient(135deg, ${alpha(theme.palette[def?.color || 'primary'].main, 0.05)} 0%, white 60%)`,
+                                            background:
+                                                theme.palette.mode === 'dark'
+                                                    ? `linear-gradient(135deg, ${alpha(theme.palette[def?.color || 'primary'].main, 0.08)} 0%, ${alpha('#0f172a', 0.9)} 60%)`
+                                                    : `linear-gradient(135deg, ${alpha(theme.palette[def?.color || 'primary'].main, 0.05)} 0%, white 60%)`,
                                         }}
                                     >
                                         <CardContent sx={{ p: 2.5 }}>

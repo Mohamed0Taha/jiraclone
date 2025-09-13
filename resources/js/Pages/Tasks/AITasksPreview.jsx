@@ -99,7 +99,7 @@ export default function AITasksPreview({
                         background:
                             theme.palette.mode === 'light'
                                 ? 'linear-gradient(135deg,#F2F7FC 0%,#E9F0F9 50%,#E2E9F3 100%)'
-                                : 'linear-gradient(135deg,#0F1823,#101B27)',
+                                : 'linear-gradient(135deg,#0b1220,#0f172a)',
                     }}
                 >
                     <Paper
@@ -112,11 +112,15 @@ export default function AITasksPreview({
                             position: 'relative',
                             overflow: 'hidden',
                             background:
-                                'linear-gradient(145deg,rgba(255,255,255,0.88),rgba(255,255,255,0.62))',
+                                theme.palette.mode === 'dark'
+                                    ? `linear-gradient(145deg, ${alpha('#0f172a', 0.9)}, ${alpha('#1f2937', 0.9)})`
+                                    : 'linear-gradient(145deg,rgba(255,255,255,0.88),rgba(255,255,255,0.62))',
                             backdropFilter: 'blur(16px)',
                             border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
                             boxShadow:
-                                '0 12px 36px -14px rgba(28,46,78,.3), 0 2px 4px rgba(0,0,0,.05)',
+                                theme.palette.mode === 'dark'
+                                    ? '0 12px 36px -14px rgba(0,0,0,.6), 0 2px 4px rgba(0,0,0,.35)'
+                                    : '0 12px 36px -14px rgba(28,46,78,.3), 0 2px 4px rgba(0,0,0,.05)',
                         }}
                     >
                         <Box
@@ -234,10 +238,14 @@ export default function AITasksPreview({
                                             position: 'relative',
                                             borderRadius: 3,
                                             background:
-                                                'linear-gradient(145deg,rgba(255,255,255,0.75),rgba(255,255,255,0.5))',
+                                                theme.palette.mode === 'dark'
+                                                    ? `linear-gradient(145deg, ${alpha('#111827', 0.95)}, ${alpha('#0f172a', 0.95)})`
+                                                    : 'linear-gradient(145deg,rgba(255,255,255,0.75),rgba(255,255,255,0.5))',
                                             border: `1px solid ${alpha(accent, 0.35)}`,
                                             boxShadow:
-                                                '0 3px 10px -5px rgba(0,0,0,.15), 0 1px 0 0 rgba(255,255,255,0.65) inset',
+                                                theme.palette.mode === 'dark'
+                                                    ? '0 6px 12px -6px rgba(0,0,0,.6)'
+                                                    : '0 3px 10px -5px rgba(0,0,0,.15), 0 1px 0 0 rgba(255,255,255,0.65) inset',
                                             overflow: 'hidden',
                                             display: 'flex',
                                             flexDirection: 'column',
@@ -258,7 +266,9 @@ export default function AITasksPreview({
                                             '&:hover': {
                                                 transform: 'translateY(-2px)',
                                                 boxShadow:
-                                                    '0 8px 22px -10px rgba(0,0,0,.28), 0 1px 0 0 rgba(255,255,255,0.7) inset',
+                                                    theme.palette.mode === 'dark'
+                                                        ? '0 12px 24px -12px rgba(0,0,0,.8)'
+                                                        : '0 8px 22px -10px rgba(0,0,0,.28), 0 1px 0 0 rgba(255,255,255,0.7) inset',
                                             },
                                         }}
                                     >

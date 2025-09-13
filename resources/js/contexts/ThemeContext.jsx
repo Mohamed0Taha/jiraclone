@@ -151,6 +151,17 @@ const typography = {
 
 // Component overrides for better accessibility and professional look
 const getComponentOverrides = (mode) => ({
+    MuiCssBaseline: {
+        styleOverrides: {
+            body: {
+                backgroundColor: mode === 'light' ? '#FFFFFF' : '#0f172a',
+                color: mode === 'light' ? '#1A202C' : '#e5e7eb',
+            },
+            '*, *::before, *::after': {
+                borderColor: mode === 'light' ? '#E2E8F0' : 'rgba(255,255,255,0.12)',
+            },
+        },
+    },
     MuiButton: {
         styleOverrides: {
             root: {
@@ -188,6 +199,8 @@ const getComponentOverrides = (mode) => ({
         styleOverrides: {
             root: {
                 borderRadius: 12,
+                backgroundColor: mode === 'light' ? '#FFFFFF' : '#1f2937',
+                backgroundImage: 'none',
                 boxShadow: mode === 'light' 
                     ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)'
                     : '0 4px 6px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.5)',
@@ -199,6 +212,8 @@ const getComponentOverrides = (mode) => ({
             root: {
                 borderRadius: 12,
                 transition: 'box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out',
+                backgroundColor: mode === 'light' ? '#FFFFFF' : '#1f2937',
+                backgroundImage: 'none',
                 '&:hover': {
                     boxShadow: mode === 'light'
                         ? '0 4px 8px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)'
@@ -287,7 +302,7 @@ export const ThemeProvider = ({ children }) => {
         typography,
         components: getComponentOverrides(mode),
         shape: {
-            borderRadius: 8,
+            borderRadius: 4,
         },
         spacing: 8,
     });

@@ -519,7 +519,7 @@ return (${componentName});`;
 
         return (
             <ErrorBoundary onErrorOnce={this.notifyErrorOnce}>
-                <div className="micro-app-wrapper">
+                <div className="micro-app-wrapper text-gray-900 dark:text-gray-100">
                     <Component
                         project={project}
                         auth={auth}

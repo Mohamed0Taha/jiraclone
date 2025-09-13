@@ -219,7 +219,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
         <Accordion
             disableGutters
             sx={{
-                borderRadius: 2, // Reduced border radius
+                borderRadius: 1, // 4px corners
                 overflow: 'hidden',
                 position: 'relative',
                 border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,

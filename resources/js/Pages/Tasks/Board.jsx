@@ -56,6 +56,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { DragDropContext } from 'react-beautiful-dnd';
 
 import HeaderBanner from '../Board/HeaderBanner';
+import { useTranslation } from 'react-i18next';
 import Column from '../Board/Column';
 import UpgradeDialog from '../Board/UpgradeDialog';
 import FloatingActionGroup from '@/Components/FloatingActionGroup';
@@ -214,6 +215,7 @@ export default function Board({
     isPro: isProProp,
 }) {
     const page = usePage();
+    const { t } = useTranslation();
     const isPro = typeof isProProp === 'boolean' ? isProProp : !!(page?.props && page.props.isPro);
     const { shouldShowOverlay, userPlan } = useSubscription();
     const automationLocked = shouldShowOverlay('automation');
@@ -955,11 +957,11 @@ export default function Board({
     ].filter((c) => c.show);
 
     const methodLabel = {
-        [METHODOLOGIES.KANBAN]: 'Kanban',
-        [METHODOLOGIES.SCRUM]: 'Scrum',
-        [METHODOLOGIES.AGILE]: 'Agile',
-        [METHODOLOGIES.WATERFALL]: 'Waterfall',
-        [METHODOLOGIES.LEAN]: 'Lean',
+        [METHODOLOGIES.KANBAN]: t('board.methodologyName.kanban'),
+        [METHODOLOGIES.SCRUM]: t('board.methodologyName.scrum'),
+        [METHODOLOGIES.AGILE]: t('board.methodologyName.agile'),
+        [METHODOLOGIES.WATERFALL]: t('board.methodologyName.waterfall'),
+        [METHODOLOGIES.LEAN]: t('board.methodologyName.lean'),
     }[methodology];
 
     useEffect(() => {
@@ -978,8 +980,10 @@ export default function Board({
                     mb: 1.25,
                     borderRadius: 2.5,
                     p: 1,
-                    background:
-                        'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.75))',
+                    background: (t) =>
+                        t.palette.mode === 'dark'
+                            ? 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(17,24,39,0.9))'
+                            : 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.75))',
                     border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
                     boxShadow: `0 8px 22px -14px rgba(0,0,0,.25)`,
                 }}
@@ -994,9 +998,9 @@ export default function Board({
                                 fontWeight: 700,
                                 background: (t) => methodStyles.chipBg(t),
                                 border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
-                                color: '#000000',
+                                color: (t) => (t.palette.mode === 'dark' ? '#e5e7eb' : '#000000'),
                                 '& .MuiChip-label': {
-                                    color: '#000000',
+                                    color: (t) => (t.palette.mode === 'dark' ? '#e5e7eb' : '#000000'),
                                     fontWeight: 700,
                                 },
                             }}
@@ -1125,7 +1129,10 @@ export default function Board({
                         minHeight: '100vh',
                         display: 'flex',
                         flexDirection: 'row',
-                        background: methodStyles.gradient,
+                        background: (t) =>
+                            t.palette.mode === 'dark'
+                                ? 'linear-gradient(135deg,#0b1220,#0f172a)'
+                                : methodStyles.gradient,
                     }}
                     style={{ ['--col-w']: `${COLUMN_WIDTH}px`, ['--col-gap']: `${COLUMN_GAP}px` }}
                 >
@@ -1166,7 +1173,7 @@ export default function Board({
                             <TextField
                                 select
                                 size="small"
-                                label="Methodology"
+                                label={t('board.methodology')}
                                 value={methodology}
                                 onChange={(e) => {
                                     const next = e.target.value;
@@ -1203,7 +1210,7 @@ export default function Board({
                         <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
                             <TextField
                                 size="small"
-                                placeholder="Search tasks by name or description..."
+                                placeholder={t('board.searchPlaceholder')}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 sx={{
@@ -1211,10 +1218,22 @@ export default function Board({
                                     maxWidth: 400,
                                     '& .MuiOutlinedInput-root': {
                                         borderRadius: 2,
-                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
+                                        backgroundColor: (t) =>
+                                            t.palette.mode === 'dark'
+                                                ? 'rgba(15,23,42,0.9)'
+                                                : 'rgba(255, 255, 255, 0.8)',
+                                        color: (t) => (t.palette.mode === 'dark' ? '#e5e7eb' : 'inherit'),
+                                        '&:hover': {
+                                            backgroundColor: (t) =>
+                                                t.palette.mode === 'dark'
+                                                    ? 'rgba(15,23,42,1)'
+                                                    : 'rgba(255, 255, 255, 0.9)',
+                                        },
                                         '&.Mui-focused': {
-                                            backgroundColor: 'rgba(255, 255, 255, 1)',
+                                            backgroundColor: (t) =>
+                                                t.palette.mode === 'dark'
+                                                    ? 'rgba(15,23,42,1)'
+                                                    : 'rgba(255, 255, 255, 1)',
                                         },
                                     },
                                     '& .MuiOutlinedInput-notchedOutline': {
@@ -1242,17 +1261,29 @@ export default function Board({
                             />
 
                             <FormControl size="small" sx={{ minWidth: 140 }}>
-                                <InputLabel>Priority Filter</InputLabel>
+                                <InputLabel>{t('board.priorityFilter')}</InputLabel>
                                 <Select
                                     value={priorityFilter}
                                     onChange={(e) => setPriorityFilter(e.target.value)}
-                                    label="Priority Filter"
+                                    label={t('board.priorityFilter')}
                                     sx={{
                                         borderRadius: 2,
-                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
+                                        backgroundColor: (t) =>
+                                            t.palette.mode === 'dark'
+                                                ? 'rgba(15,23,42,0.9)'
+                                                : 'rgba(255, 255, 255, 0.8)',
+                                        color: (t) => (t.palette.mode === 'dark' ? '#e5e7eb' : 'inherit'),
+                                        '&:hover': {
+                                            backgroundColor: (t) =>
+                                                t.palette.mode === 'dark'
+                                                    ? 'rgba(15,23,42,1)'
+                                                    : 'rgba(255, 255, 255, 0.9)',
+                                        },
                                         '&.Mui-focused': {
-                                            backgroundColor: 'rgba(255, 255, 255, 1)',
+                                            backgroundColor: (t) =>
+                                                t.palette.mode === 'dark'
+                                                    ? 'rgba(15,23,42,1)'
+                                                    : 'rgba(255, 255, 255, 1)',
                                         },
                                         '& .MuiOutlinedInput-notchedOutline': {
                                             borderColor: (t) => methodStyles.chipBorder(t),
@@ -1271,17 +1302,29 @@ export default function Board({
                             </FormControl>
 
                             <FormControl size="small" sx={{ minWidth: 160 }}>
-                                <InputLabel>Team Member</InputLabel>
+                                <InputLabel>{t('board.teamMember')}</InputLabel>
                                 <Select
                                     value={teamMemberFilter}
                                     onChange={(e) => setTeamMemberFilter(e.target.value)}
-                                    label="Team Member"
+                                    label={t('board.teamMember')}
                                     sx={{
                                         borderRadius: 2,
-                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
+                                        backgroundColor: (t) =>
+                                            t.palette.mode === 'dark'
+                                                ? 'rgba(15,23,42,0.9)'
+                                                : 'rgba(255, 255, 255, 0.8)',
+                                        color: (t) => (t.palette.mode === 'dark' ? '#e5e7eb' : 'inherit'),
+                                        '&:hover': {
+                                            backgroundColor: (t) =>
+                                                t.palette.mode === 'dark'
+                                                    ? 'rgba(15,23,42,1)'
+                                                    : 'rgba(255, 255, 255, 0.9)',
+                                        },
                                         '&.Mui-focused': {
-                                            backgroundColor: 'rgba(255, 255, 255, 1)',
+                                            backgroundColor: (t) =>
+                                                t.palette.mode === 'dark'
+                                                    ? 'rgba(15,23,42,1)'
+                                                    : 'rgba(255, 255, 255, 1)',
                                         },
                                         '& .MuiOutlinedInput-notchedOutline': {
                                             borderColor: (t) => methodStyles.chipBorder(t),
@@ -1316,12 +1359,21 @@ export default function Board({
                                     sx={{
                                         borderRadius: 2,
                                         textTransform: 'none',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
+                                        backgroundColor: (t) =>
+                                            t.palette.mode === 'dark'
+                                                ? 'rgba(15,23,42,0.9)'
+                                                : 'rgba(255, 255, 255, 0.8)',
+                                        color: (t) => (t.palette.mode === 'dark' ? '#e5e7eb' : 'inherit'),
+                                        '&:hover': {
+                                            backgroundColor: (t) =>
+                                                t.palette.mode === 'dark'
+                                                    ? 'rgba(15,23,42,1)'
+                                                    : 'rgba(255, 255, 255, 0.9)',
+                                        },
                                         borderColor: (t) => methodStyles.chipBorder(t),
                                     }}
-                                >
-                                    Clear Filters
+                                    >
+                                    {t('board.clearFilters')}
                                 </Button>
                             )}
                         </Stack>
@@ -1449,8 +1501,10 @@ export default function Board({
                                 sx: {
                                     borderRadius: 3,
                                     overflow: 'hidden',
-                                    background:
-                                        'linear-gradient(140deg,rgba(255,255,255,0.95),rgba(255,255,255,0.8))',
+                                    background: (t) =>
+                                        t.palette.mode === 'dark'
+                                            ? 'linear-gradient(140deg,rgba(15,23,42,0.96),rgba(17,24,39,0.92))'
+                                            : 'linear-gradient(140deg,rgba(255,255,255,0.95),rgba(255,255,255,0.8))',
                                     backdropFilter: 'blur(12px)',
                                     border: (t) => `1px solid ${methodStyles.chipBorder(t)}`,
                                 },
@@ -1933,10 +1987,15 @@ export default function Board({
                         PaperProps={{
                             sx: {
                                 width: 320,
-                                background:
-                                    'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9))',
+                                background: (t) =>
+                                    t.palette.mode === 'dark'
+                                        ? 'linear-gradient(145deg, rgba(15,23,42,0.96), rgba(17,24,39,0.92))'
+                                        : 'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9))',
                                 backdropFilter: 'blur(10px)',
-                                borderLeft: '1px solid rgba(0, 0, 0, 0.1)',
+                                borderLeft: (t) =>
+                                    t.palette.mode === 'dark'
+                                        ? '1px solid rgba(255,255,255,0.12)'
+                                        : '1px solid rgba(0, 0, 0, 0.1)',
                             },
                         }}
                     >
@@ -2011,9 +2070,15 @@ export default function Board({
                                                 onClick={() => handleViewClick(view.name)}
                                                 sx={{
                                                     borderRadius: 2,
-                                                    background: 'rgba(255, 255, 255, 0.7)',
+                                                    background: (t) =>
+                                                        t.palette.mode === 'dark'
+                                                            ? 'rgba(31,41,55,0.9)'
+                                                            : 'rgba(255, 255, 255, 0.7)',
                                                     '&:hover': {
-                                                        background: 'rgba(255, 255, 255, 0.9)',
+                                                        background: (t) =>
+                                                            t.palette.mode === 'dark'
+                                                                ? 'rgba(31,41,55,1)'
+                                                                : 'rgba(255, 255, 255, 0.9)',
                                                     },
                                                 }}
                                             >
@@ -2063,8 +2128,10 @@ export default function Board({
                         PaperProps={{
                             sx: {
                                 borderRadius: 3,
-                                background:
-                                    'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9))',
+                                background: (t) =>
+                                    t.palette.mode === 'dark'
+                                        ? 'linear-gradient(145deg, rgba(15,23,42,0.96), rgba(17,24,39,0.92))'
+                                        : 'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9))',
                                 backdropFilter: 'blur(10px)',
                             },
                         }}

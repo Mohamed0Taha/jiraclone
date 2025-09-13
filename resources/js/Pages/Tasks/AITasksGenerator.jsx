@@ -1473,7 +1473,10 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                                     width: 3,
                                                     height: 3,
                                                     borderRadius: '50%',
-                                                    background: 'white',
+                                                    background: (theme) =>
+                                                        theme.palette.mode === 'dark'
+                                                            ? '#e5e7eb'
+                                                            : 'white',
                                                     animation:
                                                         'robotTypingDot1 1.8s ease-in-out infinite',
                                                 }}
@@ -1483,7 +1486,10 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                                     width: 3,
                                                     height: 3,
                                                     borderRadius: '50%',
-                                                    background: 'white',
+                                                    background: (theme) =>
+                                                        theme.palette.mode === 'dark'
+                                                            ? '#e5e7eb'
+                                                            : 'white',
                                                     animation:
                                                         'robotTypingDot2 1.8s ease-in-out infinite',
                                                 }}
@@ -1493,7 +1499,10 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                                     width: 3,
                                                     height: 3,
                                                     borderRadius: '50%',
-                                                    background: 'white',
+                                                    background: (theme) =>
+                                                        theme.palette.mode === 'dark'
+                                                            ? '#e5e7eb'
+                                                            : 'white',
                                                     animation:
                                                         'robotTypingDot3 1.8s ease-in-out infinite',
                                                 }}

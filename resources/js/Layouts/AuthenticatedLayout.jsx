@@ -232,7 +232,7 @@ export default function AuthenticatedLayout({ header, children }) {
             ${mobileOpen ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0'}
           `}
                 >
-                    <div className="px-4 pt-3 pb-6 space-y-6 bg-white/90 backdrop-blur-md border-t border-gray-200">
+                    <div className="px-4 pt-3 pb-6 space-y-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-700">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
                                 Navigation
@@ -260,10 +260,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {initials}
                                 </span>
                                 <div className="min-w-0">
-                                    <div className="text-sm font-medium text-gray-800 truncate">
+                                <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                                         {user.name || 'User'}
                                     </div>
-                                    <div className="text-xs font-medium text-gray-500 truncate">
+                                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
                                         {user.email}
                                     </div>
                                 </div>

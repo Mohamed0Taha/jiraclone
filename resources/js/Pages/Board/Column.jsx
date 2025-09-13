@@ -11,6 +11,7 @@ import {
     useTheme,
     Tooltip,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import AddIcon from '@mui/icons-material/Add';
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
@@ -40,6 +41,7 @@ export default function Column({
     statusMeta,
 }) {
     const theme = useTheme();
+    const { t } = useTranslation();
     const humanize = (k) =>
         String(k || '')
             .replace(/[_-]+/g, ' ')
@@ -68,7 +70,10 @@ export default function Column({
                 pr: 0.9,
                 mb: 0.5,
                 borderRadius: 2,
-                background: 'linear-gradient(135deg, rgba(255,255,255,.65), rgba(255,255,255,.35))',
+                background:
+                    theme.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, rgba(15,23,42,.85), rgba(17,24,39,.8))'
+                        : 'linear-gradient(135deg, rgba(255,255,255,.65), rgba(255,255,255,.35))',
                 backdropFilter: 'blur(6px)',
                 border: `1px solid ${alpha(metaConf.accent, 0.25)}`,
                 position: 'sticky',
@@ -138,7 +143,7 @@ export default function Column({
                 background: alpha(metaConf.accent, 0.06),
             }}
         >
-            No {metaConf.title} tasks
+            {t('board.noTasks', { status: metaConf.title })}
         </Box>
     );
 
@@ -197,7 +202,9 @@ export default function Column({
                     borderRadius: 2,
                     p: 1,
                     background:
-                        'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.6))',
+                        theme.palette.mode === 'dark'
+                            ? 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(17,24,39,0.9))'
+                            : 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.6))',
                     border: `1px solid ${border}`,
                     boxShadow: `0 10px 22px -18px rgba(0,0,0,.35)`,
                 }}
@@ -315,7 +322,10 @@ export default function Column({
                             borderRadius: 3,
                             position: 'relative',
                             p: 0.9,
-                            background: metaConf.gradient,
+                            background:
+                                theme.palette.mode === 'dark'
+                                    ? 'linear-gradient(135deg,#0f172a,#111827)'
+                                    : metaConf.gradient,
                             border: `1px solid ${alpha(metaConf.accent, 0.35)}`,
                             boxShadow: isOver
                                 ? `0 0 0 2px ${alpha(metaConf.accent, 0.5)} inset, 0 6px 16px -10px ${alpha(metaConf.accent, 0.45)}`
@@ -330,7 +340,10 @@ export default function Column({
                                 position: 'absolute',
                                 inset: 0,
                                 borderRadius: 3,
-                                background: `linear-gradient(180deg, ${alpha('#fff', 0.55)} 0%, transparent 60%)`,
+                                background:
+                                    theme.palette.mode === 'dark'
+                                        ? `linear-gradient(180deg, ${alpha('#000', 0.25)} 0%, transparent 60%)`
+                                        : `linear-gradient(180deg, ${alpha('#fff', 0.55)} 0%, transparent 60%)`,
                                 mixBlendMode: 'overlay',
                                 opacity: 0.45,
                             },
@@ -395,7 +408,7 @@ export default function Column({
                                 }}
                                 startIcon={<AddIcon fontSize="small" />}
                             >
-                                Add Task
+                                {t('board.addTask')}
                             </Button>
                         </Box>
                     </Paper>

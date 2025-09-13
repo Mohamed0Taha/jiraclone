@@ -26,6 +26,20 @@
     @apply transition-colors duration-200;
   }
 
+  /* Global dark overrides to ensure cards look dark and text is light */
+  :root {
+    --tp-card-dark: #1f2937; /* slate-800 */
+    --tp-surface-dark: #0f172a; /* slate-900 */
+    --tp-text-dark: #e5e7eb; /* gray-200 */
+    --tp-text-dark-secondary: #cbd5e1; /* slate-300 */
+    --tp-border-dark: rgba(255,255,255,0.12);
+  }
+
+  .dark body {
+    background-color: var(--tp-surface-dark);
+    color: var(--tp-text-dark);
+  }
+
   /* Improved contrast for text */
   .text-high-contrast {
     color: rgba(0, 0, 0, 0.87);
@@ -43,6 +57,26 @@
   .dark .text-medium-contrast {
     color: rgba(255, 255, 255, 0.7);
   }
+
+  /* Force commonly used light backgrounds to dark variants in dark mode */
+  .dark .MuiPaper-root,
+  .dark .MuiCard-root {
+    background-color: var(--tp-card-dark) !important;
+    color: var(--tp-text-dark) !important;
+    background-image: none !important;
+    border-color: var(--tp-border-dark) !important;
+  }
+  .dark .MuiTypography-root { color: var(--tp-text-dark); }
+  .dark .MuiDivider-root { border-color: var(--tp-border-dark); }
+
+  /* Tailwind utility overrides (broad but safe) */
+  .dark [class*="bg-white"] { background-color: var(--tp-card-dark) !important; }
+  .dark [class*="bg-gray-50"],
+  .dark [class*="bg-gray-100"] { background-color: var(--tp-card-dark) !important; }
+  .dark [class*="text-gray-900"],
+  .dark [class*="text-gray-800"],
+  .dark [class*="text-gray-700"],
+  .dark [class*="text-black"] { color: var(--tp-text-dark) !important; }
 }
 
 @layer components {

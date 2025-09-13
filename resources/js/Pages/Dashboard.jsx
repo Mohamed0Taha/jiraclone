@@ -43,9 +43,9 @@ import PersonIcon from '@mui/icons-material/Person';
 import ProjectAccordion from '@/Pages/ProjectAccordion';
 const designTokens = {
     radii: {
-        xl: 12,
-        lg: 8,
-        md: 6,
+        xl: 4,
+        lg: 4,
+        md: 4,
     },
     gradients: (theme) => ({
         hero:
@@ -669,14 +669,26 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                         px: 4,
                                         py: 1.75,
                                         borderRadius: designTokens.radii.lg,
-                                        background: 'rgba(255, 255, 255, 0.95)',
-                                        color: theme.palette.primary.main,
+                                        background:
+                                            theme.palette.mode === 'dark'
+                                                ? 'rgba(15,23,42,0.95)'
+                                                : 'rgba(255, 255, 255, 0.95)',
+                                        color:
+                                            theme.palette.mode === 'dark'
+                                                ? theme.palette.text.primary
+                                                : theme.palette.primary.main,
                                         boxShadow: designTokens.shadows.medium,
                                         backdropFilter: 'blur(10px)',
-                                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                                        border:
+                                            theme.palette.mode === 'dark'
+                                                ? '1px solid rgba(255, 255, 255, 0.12)'
+                                                : '1px solid rgba(255, 255, 255, 0.2)',
                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                         '&:hover': {
-                                            background: 'rgba(255, 255, 255, 1)',
+                                            background:
+                                                theme.palette.mode === 'dark'
+                                                    ? 'rgba(15,23,42,1)'
+                                                    : 'rgba(255, 255, 255, 1)',
                                             boxShadow: designTokens.shadows.elevated,
                                             transform: 'translateY(-2px)',
                                         },
@@ -1079,7 +1091,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                                     sx={{
                                                         position: 'relative',
                                                         borderLeft: `4px solid ${theme.palette.primary.main}`,
-                                                        borderRadius: 2, // Fixed border radius to match accordion
+                                                        borderRadius: 1, // 4px
                                                         background: `linear-gradient(145deg, ${alpha(theme.palette.primary.main, 0.02)}, ${alpha(theme.palette.primary.main, 0.05)})`,
                                                         boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.1)}`,
                                                         overflow: 'hidden',
@@ -1128,7 +1140,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                                           sx={{
                                                               position: 'relative',
                                                               borderLeft: `4px solid ${theme.palette.secondary.main}`,
-                                                              borderRadius: 2, // Fixed border radius to match accordion
+                                                              borderRadius: 1, // 4px
                                                               background: `linear-gradient(145deg, ${alpha(theme.palette.secondary.main, 0.02)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
                                                               boxShadow: `0 2px 8px ${alpha(theme.palette.secondary.main, 0.1)}`,
                                                               overflow: 'hidden',

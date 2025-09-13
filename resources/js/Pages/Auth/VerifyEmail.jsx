@@ -53,7 +53,10 @@ export default function VerifyEmail({ status }) {
                         sx={{
                             p: 5,
                             borderRadius: 3,
-                            background: 'rgba(255, 255, 255, 0.95)',
+                            background: (theme) =>
+                                theme.palette.mode === 'dark'
+                                    ? 'rgba(15,23,42,0.95)'
+                                    : 'rgba(255, 255, 255, 0.95)',
                             backdropFilter: 'blur(20px)',
                             border: `1px solid ${alpha(colors.primary, 0.1)}`,
                             boxShadow: `0 20px 60px ${alpha(colors.primary, 0.2)}`,

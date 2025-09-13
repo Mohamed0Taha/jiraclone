@@ -12,6 +12,7 @@ import {
     IconButton,
     useTheme,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import AutoGraphRoundedIcon from '@mui/icons-material/AutoGraphRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
@@ -36,6 +37,7 @@ export default function HeaderBanner({
     onOpenAssistant,
 }) {
     const theme = useTheme();
+    const { t } = useTranslation();
     const { shouldShowOverlay, userPlan } = useSubscription();
     const assistantLocked = shouldShowOverlay('ai_chat');
     const automationLocked = shouldShowOverlay('automation');
@@ -89,7 +91,7 @@ export default function HeaderBanner({
                         color: 'transparent',
                     }}
                 >
-                    {projectName} – Task Board
+                    {projectName} – {t('board.taskBoard')}
                 </Typography>
 
                 <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
@@ -129,7 +131,7 @@ export default function HeaderBanner({
 
                     {/* Action Buttons - Grouped together with consistent styling */}
                     <Box sx={{ ml: 'auto', display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <Tooltip title="AI Assistant Chat">
+                        <Tooltip title={t('features.aiChat')}>
                             <Button
                                 variant="outlined"
                                 size="small"
@@ -150,11 +152,11 @@ export default function HeaderBanner({
                                     },
                                 }}
                             >
-                                Assistant
+                                {t('features.aiAssistant')}
                             </Button>
                         </Tooltip>
 
-                        <Tooltip title="View project details">
+                        <Tooltip title={t('board.viewDetails')}>
                             <Button
                                 variant="outlined"
                                 size="small"
@@ -169,7 +171,7 @@ export default function HeaderBanner({
                                     height: 32,
                                 }}
                             >
-                                Details
+                                {t('board.details')}
                             </Button>
                         </Tooltip>
 
@@ -191,7 +193,7 @@ export default function HeaderBanner({
                                 },
                             }}
                         >
-                            AI Tasks
+                            {t('features.aiTasks')}
                         </Button>
                     </Box>
                 </Stack>

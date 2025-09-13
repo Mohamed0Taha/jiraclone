@@ -192,7 +192,9 @@ export default function ContactUs({ auth, flash }) {
                                 p: 3,
                                 borderRadius: 3,
                                 border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
-                                background: 'rgba(255,255,255,0.8)',
+                                background: theme.palette.mode === 'dark'
+                                    ? 'rgba(15,23,42,0.9)'
+                                    : 'rgba(255,255,255,0.8)',
                             }}
                         >
                             {showForm ? (

@@ -78,7 +78,9 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
                 sx: {
                     borderRadius: 3,
                     background:
-                        'linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))',
+                        theme.palette.mode === 'dark'
+                            ? `linear-gradient(145deg, ${alpha('#0f172a', 0.95)}, ${alpha('#1f2937', 0.95)})`
+                            : 'linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))',
                     backdropFilter: 'blur(10px)',
                 },
             }}
@@ -208,14 +210,20 @@ function PlanCard({
                 height: '100%',
                 borderRadius: 3,
                 border: `1px solid ${alpha(theme.palette.primary.main, 0.25)}`,
-                background: 'linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,255,255,0.6))',
+                background:
+                    theme.palette.mode === 'dark'
+                        ? `linear-gradient(145deg, ${alpha('#111827', 0.95)}, ${alpha('#0f172a', 0.95)})`
+                        : 'linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,255,255,0.6))',
                 backdropFilter: 'blur(10px)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 2,
                 position: 'relative',
                 overflow: 'hidden',
-                boxShadow: '0 12px 30px -18px rgba(30,50,90,.35), 0 2px 6px rgba(0,0,0,.08)',
+                boxShadow:
+                    theme.palette.mode === 'dark'
+                        ? '0 16px 32px -18px rgba(0,0,0,.65), 0 2px 6px rgba(0,0,0,.4)'
+                        : '0 12px 30px -18px rgba(30,50,90,.35), 0 2px 6px rgba(0,0,0,.08)',
             }}
         >
             {/* subtle light flare */}
@@ -228,7 +236,9 @@ function PlanCard({
                     width: 260,
                     height: 260,
                     background:
-                        'radial-gradient(circle at 60% 40%, rgba(255,255,255,0.7), transparent 65%)',
+                        theme.palette.mode === 'dark'
+                            ? 'radial-gradient(circle at 60% 40%, rgba(255,255,255,0.1), transparent 65%)'
+                            : 'radial-gradient(circle at 60% 40%, rgba(255,255,255,0.7), transparent 65%)',
                     pointerEvents: 'none',
                 }}
             />
