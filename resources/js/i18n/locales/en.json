@@ -43,7 +43,7 @@
   "tasks": {
     "status": {
       "todo": "To Do",
-      "inprogress": "In Progress", 
+      "inprogress": "In Progress",
       "review": "Review",
       "done": "Done",
       "backlog": "Backlog",
@@ -571,7 +571,8 @@
     "convertToSubtask": "Convert to Subtask",
     "attachFile": "Attach File",
     "addComment": "Add Comment",
-    "taskCount": "{{count}} Task{{count === 1 ? '' : 's'}}",
+    "taskCount": "{{count}} Task",
+    "taskCount_plural": "{{count}} Tasks",
     "percentComplete": "{{percent}}% Complete",
     "mode": "Mode",
     "searchTasks": "Search tasks...",
@@ -748,12 +749,12 @@
   },
   "projects": {
     "projectCount": "{{count}} project",
-    "projectCount_plural": "{{count}} projects", 
+    "projectCount_plural": "{{count}} projects",
     "myProjects": "My Projects",
     "myProjectsWithCount": "My Projects ({{count}})",
-    "sharedWithMe": "Shared with Me", 
+    "sharedWithMe": "Shared with Me",
     "sharedWithMeCount": "Shared with Me ({{count}})",
-    "yourProjects": "Your Projects", 
+    "yourProjects": "Your Projects",
     "manageOrganizeSubtitle": "Manage and organize your work with TaskPilot projects",
     "noProjectsYet": "No projects yet",
     "createFirstProject": "Create your first project to get started with TaskPilot",
@@ -884,7 +885,8 @@
     "memberEmail": "Member Email",
     "sendInvitation": "Send Invitation",
     "pendingInvitations": "Pending Invitations",
-    "memberCount": "{{count}} member{{count === 1 ? '' : 's'}}"
+    "memberCount": "{{count}} Member",
+    "memberCount_plural": "{{count}} Members"
   },
   "aiTask": {
     "generator": "AI Task Generator",
