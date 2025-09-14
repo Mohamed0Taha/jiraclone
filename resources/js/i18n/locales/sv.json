@@ -53,14 +53,17 @@
     "title": "Titel",
     "unassigned": "Ej tilldelad",
     "increase": "Increase",
-    "decrease": "Decrease"
+    "decrease": "Decrease",
+    "text": "[SE] Text"
   },
   "navigation": {
     "home": "Hem",
     "about": "Om",
     "contact": "Kontakt",
     "help": "Hjälp",
-    "documentation": "Dokumentation"
+    "documentation": "Dokumentation",
+    "navigation": "Navigering",
+    "settings": "Inställningar"
   },
   "auth": {
     "login": "Logga in",
@@ -675,7 +678,50 @@
     "sendInvitation": "kicka inbjudan",
     "pendingInvitations": "Väntande inbjudningar",
     "memberCount": "{{count}} medlem",
-    "memberCount_plural": "{{count}} medlemmar"
+    "memberCount_plural": "{{count}} medlemmar",
+    "active": "[SE] Actif",
+    "canAction": "[SE] Peut {{action}}",
+    "cancelInvitation": "[SE] Annuler l'invitation",
+    "cannotAction": "[SE] Ne peut pas {{action}}",
+    "currentMembers": "[SE] Membres actuels",
+    "editProject": "[SE] Modifier le projet",
+    "editTasks": "[SE] Modifier les tâches",
+    "failedToCancelInvitation": "[SE] Échec de l'annulation de l'invitation : {{error}}",
+    "failedToInviteMember": "[SE] Échec de l'invitation d'un membre : {{error}}",
+    "failedToLoadMembers": "[SE] Échec du chargement des membres : {{error}}",
+    "failedToRemoveMember": "[SE] Échec de la suppression du membre : {{error}}",
+    "failedToResendInvitation": "[SE] Échec du renvoi de l'invitation : {{error}}",
+    "fullAccessOwner": "[SE] (Accès complet - Propriétaire)",
+    "invitationCancelledSuccess": "[SE] Invitation annulée avec succès !",
+    "invitationResentSuccess": "[SE] Invitation renvoyée avec succès !",
+    "invite": "[SE] Inviter",
+    "inviteFirstCollaborator": "[SE] Invitez votre premier collaborateur via le formulaire ci-dessus.",
+    "inviteNewMember": "[SE] Inviter un nouveau membre",
+    "inviting": "[SE] Invitation en cours",
+    "joined": "[SE] A rejoint le {{date}}",
+    "limit": "[SE] Limite",
+    "limitReached": "[SE] Limite atteinte pour le plan {{plan}}",
+    "limitReachedLabel": "[SE] Limite atteinte",
+    "limitReachedTooltip": "[SE] Limite de membres atteinte – mettez à niveau pour en ajouter davantage",
+    "manageMembers": "[SE] Gérer les membres",
+    "memberAccess": "[SE] (Accès membre)",
+    "memberInvitedSuccess": "[SE] Membre invité avec succès !",
+    "memberLimitError": "[SE] Vous avez atteint votre limite de membres ({{used}}/{{limit}}). Mettez à niveau votre plan pour ajouter davantage de membres.",
+    "memberRemovedSuccess": "[SE] Membre supprimé avec succès !",
+    "noMembersYet": "[SE] Aucun membre pour l'instant",
+    "pending": "[SE] En attente",
+    "permissions": "[SE] Autorisations",
+    "removeExistingOrUpgrade": "[SE] Supprimez un membre existant ou mettez à niveau pour augmenter votre limite.",
+    "resendInvitation": "[SE] Renvoyer l'invitation",
+    "role": "[SE] Rôle",
+    "slotsLeft": "[SE] {{count}} place restante",
+    "slotsLeft_plural": "[SE] {{count}} places restantes",
+    "switchToCompact": "[SE] Basculer vers le design compact",
+    "switchToEnhanced": "[SE] Basculer vers le design amélioré",
+    "upgrade": "[SE] Mettre à niveau",
+    "usage": "[SE] Utilisation",
+    "viewProject": "[SE] Voir le projet",
+    "viewTasks": "[SE] Voir les tâches"
   },
   "aiTask": {
     "generator": "AI-uppgiftsgenerator",
@@ -687,7 +733,7 @@
     "scope": "Omfång",
     "timeline": "Tidslinje",
     "resources": "Resurser",
-    "previewTitle": "AI Tasks Preview",
+    "previewTitle": "AI Uppgifter Preview",
     "numberOfTasksLabel": "Number of tasks",
     "numberOfTasksHelp": "Pick how many tasks to generate (1–8). You can adjust later.",
     "extraInstructionsLabel": "xtra instructions",
@@ -734,7 +780,7 @@
     "redeemTitle": "Redeem Appumo Code - TaskPilot",
     "redeemHeading": "Redeem Your Appumo Code",
     "redeemSubheading": "Get lifetime access to TaskPilot with your Appumo purchase",
-    "createLifetime": "Create Your Lifetime Account",
+    "createLifetime": "Skapa ditt livstidskonto",
     "createLifetimeDesc": "nter your details and Appumo code to activate your lifetime access",
     "codeLabel": "Appumo Code",
     "codePlaceholder": "nter your Appumo code",
@@ -770,13 +816,13 @@
     "certificationDescription": "Get certified as a Project Management Professional",
     "getStarted": "Gettarted",
     "getStartedDescription": "Here's what you can do right now",
-    "createFirstProject": "Create your first project",
+    "createFirstProject": "Skapa ditt första projekt",
     "createProjectDescription": "tart managing your tasks with AI assistance",
     "startNow": "tart Now",
     "takeCertification": "Take the PM Certification",
     "takeCertificationDescription": "Get certified and enhance your career",
     "getCertified": "Get Certified",
-    "goToDashboard": "Go to Dashboard",
+    "goToDashboard": "Go to Instrumentpanel",
     "questionsContact": "Questions? Reach out to us at",
     "brand": "TaskPilot",
     "contactSupport": "Contactupport"
@@ -923,12 +969,16 @@
         "title": "Navigate Weeks Title"
       },
       "tasks": {
-        "description": "Tasks Description",
-        "title": "Tasks Title"
+        "description": "Uppgifter Description",
+        "title": "Uppgifter Title"
       },
       "team": {
         "description": "Team Description",
         "title": "Team Title"
+      },
+      "guideTasks": {
+        "description": "[SE] Lisää ja priorisoi tehtävät tehokkaan etenemisen varmistamiseksi.",
+        "title": "[SE] Tehtävät"
       }
     },
     "startFailed": "tart Failed",
@@ -972,8 +1022,41 @@
       "done": "Done",
       "inprogress": "In Progress",
       "review": "Review",
-      "todo": "To Do"
-    }
+      "todo": "To Do",
+      "backlog": "[SE] Backlog",
+      "testing": "[SE] Testing"
+    },
+    "addCommentsHint": "[SE] Klicken, um Kommentare hinzuzufügen",
+    "aria": {
+      "addImage": "[SE] Bild hinzufügen"
+    },
+    "assignedTo": "[SE] Zugewiesen an {{name}}",
+    "comment": "[SE] Kommentar",
+    "comments": "[SE] Kommentare",
+    "commentsCount": "[SE] {{count}} {{label}}",
+    "createdBy": "[SE] Erstellt von {{name}}",
+    "imageAlt": "[SE] Aufgabenbild",
+    "imageTitle": "[SE] Aufgabe #{{id}}: {{title}}",
+    "overdue": "[SE] Aufgabe ist überfällig",
+    "priority": {
+      "high": "[SE] High",
+      "low": "[SE] Low",
+      "medium": "[SE] Medium",
+      "urgent": "[SE] Urgent"
+    },
+    "schedule": {
+      "completed": "[SE] Aufgabe abgeschlossen",
+      "elapsedPercent": "[SE] {{percent}}% der geplanten Zeit verstrichen",
+      "fullyConsumed": "[SE] (Zeit vollständig aufgebraucht)",
+      "noData": "[SE] Keine Zeitplandaten",
+      "overdueSuffix": "[SE] (überfällig)"
+    },
+    "tooltips": {
+      "taskId": "[SE] Aufgaben-ID: {{id}}",
+      "viewDetails": "[SE] Klicken Sie, um Aufgabendetails und Kommentare anzuzeigen"
+    },
+    "untitled": "[SE] (Unbenannt)",
+    "noTasksYet": "Inga uppgifter än"
   },
   "workflows": {
     "templates": {
@@ -1009,7 +1092,7 @@
     "style": "tyle",
     "success": "uccess",
     "tr": "Table Row",
-    "dashboard": "Dashboard"
+    "dashboard": "Instrumentpanel"
   },
   "authPage": {
     "togglePasswordVisibility": "toggle password visibility",
@@ -1054,7 +1137,8 @@
     "willActivate": "Will activate",
     "willPause": "Will pause",
     "workflowDeleted": "Workflow deleted successfully",
-    "yourWorkflows": "Your Workflows"
+    "yourWorkflows": "Your Workflows",
+    "saved": "Sparad"
   },
   "billing": {
     "cancelSubscription": "Cancelubscription",
@@ -1064,7 +1148,31 @@
     "mostPopular": "Most Popular",
     "onTrial": "On Trial",
     "whyCancel": "Why are you canceling?",
-    "yesContinue": "Yes, Continue"
+    "yesContinue": "Yes, Continue",
+    "activeSubscriber": "[SE] Aktiivinen tilaaja",
+    "cancelConfirmation": "[SE] Haluatko varmasti peruuttaa {{planName}}-tilauksesi? Menetät premium-ominaisuudet nykyisen laskutuskauden lopussa.",
+    "cancellationReasons": {
+      "missing_features": "[SE] Puuttuu tarvitsemani ominaisuuksia",
+      "not_using_enough": "[SE] En käytä tarpeeksi",
+      "other": "[SE] Muu syy",
+      "switching_service": "[SE] Vaihdaan toiseen palveluun",
+      "technical_issues": "[SE] Teknisiä ongelmia",
+      "temporary_pause": "[SE] Tilapäinen tauko",
+      "too_expensive": "[SE] Liian kallis"
+    },
+    "cancelsOn": "[SE] Peruutus astuu voimaan {{date}}",
+    "dayTrial": "[SE] {{days}}-tägige Testphase",
+    "freeTier": "[SE] Ilmainen taso",
+    "helpImprove": "[SE] Auta meitä kehittymään kertomalla miksi peruutat:",
+    "priceLoading": "[SE] Hinta latautuu...",
+    "resumeSubscription": "[SE] Jatka tilausta",
+    "startDayTrial": "[SE] Aloita {{days}} päivän kokeilu",
+    "startPlan": "[SE] Aloita {{plan}}",
+    "stripeNotice": "[SE] Maksut käsittelee turvallisesti Stripe. Aloita ilmainen kokeilu millä tahansa voimassa olevalla luottokortilla.",
+    "subtitle": "[SE] Valitse paketti ja aloita ilmaisella kokeilulla. Saat käyttöösi premium-ominaisuudet kuten AI-tehtävien luonnin, tiimiyhteistyön ja kehittyneet raportit.",
+    "title": "[SE] Laskutus ja tilaus",
+    "trialEndsOn": "[SE] Kokeilu päättyy {{date}}",
+    "upgradeToPlan": "[SE] Päivitä pakettiin {{plan}}"
   },
   "profile": {
     "title": "Profileettings",
@@ -1098,7 +1206,7 @@
     "createProject": "Create Project",
     "creating": "Creating...",
     "projectSetup": "Projectetup",
-    "backToProjects": "Back to Projects",
+    "backToProjects": "Back to Projekt",
     "back": "Back",
     "next": "Next",
     "nextWith": "Next: {{label}}",
@@ -1188,7 +1296,18 @@
       "keyMaxLength": "Key maximum length exceeded",
       "keyRequired": "Key is required",
       "nameRequired": "Name is required"
-    }
+    },
+    "createFirstProject": "[SE] Skapa ditt första projekt to get started with TaskPilot",
+    "createFirstProjectButton": "[SE] Create Your First Project",
+    "manageOrganizeSubtitle": "[SE] Manage and organize your work with TaskPilot projects",
+    "myProjects": "[SE] My Projekt",
+    "myProjectsWithCount": "[SE] My Projekt ({{count}})",
+    "noProjectsYet": "[SE] No projects yet",
+    "projectCount": "[SE] {{count}} project",
+    "projectCount_plural": "[SE] {{count}} projects",
+    "sharedWithMe": "[SE] Shared with Me",
+    "sharedWithMeCount": "[SE] Shared with Me ({{count}})",
+    "yourProjects": "[SE] Your Projekt"
   },
   "projectScope": {
     "title": "cope & Team",
@@ -1252,8 +1371,8 @@
     "canAction": "Can {{action}}",
     "cannotAction": "Cannot {{action}}",
     "viewProject": "View Project",
-    "viewTasks": "View Tasks",
-    "editTasks": "dit Tasks",
+    "viewTasks": "View Uppgifter",
+    "editTasks": "dit Uppgifter",
     "editProject": "Redigera projekt",
     "manageMembers": "Manage Members",
     "memberLimitError": "You have reached your member limit ({{used}}/{{limit}}). Upgrade your plan to add more team members.",

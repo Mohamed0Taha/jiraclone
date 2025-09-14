@@ -39,7 +39,22 @@
     "upgradeNow": "Upgrade Now",
     "there": "there",
     "or": "OR",
-    "text": "Text"
+    "text": "Text",
+    "back": "Zurück",
+    "countMeter": "Zähler",
+    "decrease": "Verringern",
+    "finish": "Fertig",
+    "goToHomepage": "Zur Startseite",
+    "increase": "Erhöhen",
+    "next": "Weiter",
+    "notNow": "Nicht jetzt",
+    "previous": "Zurück",
+    "priority": "Priorität",
+    "project": "Projekt",
+    "saved": "Gespeichert",
+    "skip": "Überspringen",
+    "title": "Titel",
+    "unassigned": "Nicht zugewiesen"
   },
   "tasks": {
     "status": {
@@ -55,14 +70,41 @@
       "medium": "Medium",
       "high": "High",
       "urgent": "Urgent"
-    }
+    },
+    "addCommentsHint": "Klicken, um Kommentare hinzuzufügen",
+    "aria": {
+      "addImage": "Bild hinzufügen"
+    },
+    "assignedTo": "Zugewiesen an {{name}}",
+    "comment": "Kommentar",
+    "comments": "Kommentare",
+    "commentsCount": "{{count}} {{label}}",
+    "createdBy": "Erstellt von {{name}}",
+    "imageAlt": "Aufgabenbild",
+    "imageTitle": "Aufgabe #{{id}}: {{title}}",
+    "overdue": "Aufgabe ist überfällig",
+    "schedule": {
+      "completed": "Aufgabe abgeschlossen",
+      "elapsedPercent": "{{percent}}% der geplanten Zeit verstrichen",
+      "fullyConsumed": "(Zeit vollständig aufgebraucht)",
+      "noData": "Keine Zeitplandaten",
+      "overdueSuffix": "(überfällig)"
+    },
+    "tooltips": {
+      "taskId": "Aufgaben-ID: {{id}}",
+      "viewDetails": "Klicken Sie, um Aufgabendetails und Kommentare anzuzeigen"
+    },
+    "untitled": "(Unbenannt)",
+    "noTasksYet": "No tasks yet"
   },
   "navigation": {
     "home": "Home",
     "about": "About",
     "contact": "Contact",
     "help": "Help",
-    "documentation": "Documentation"
+    "documentation": "Documentation",
+    "navigation": "Navigation",
+    "settings": "Settings"
   },
   "auth": {
     "login": "Log in",
@@ -100,7 +142,19 @@
     "createAccountToStart": "Create your account to get started",
     "createAccountWithEmail": "Create Account with Email",
     "alreadyHaveAccount": "Already have an account?",
-    "signIn": "Sign in"
+    "signIn": "Sign in",
+    "confirm": "Bestätigen",
+    "confirmPasswordDesc": "Dies ist ein sicherer Bereich der Anwendung. Bitte bestätigen Sie Ihr Passwort, bevor Sie fortfahren.",
+    "confirmPasswordTitle": "Passwort bestätigen",
+    "confirming": "Bestätigung...",
+    "emailPasswordReset": "E‑Mail‑Passwort zurücksetzen",
+    "logIn": "Anmelden",
+    "logout": "Abmelden",
+    "resetPasswordDesc": "Passwort vergessen? Kein Problem. Teilen Sie uns einfach IhreE-Mail-Adresse mit und wir senden Ihnen einen Link zum Zurücksetzen des Passworts.",
+    "resetPasswordTitle": "Passwort zurücksetzen",
+    "resettingPassword": "Passwort wird zurückgesetzt...",
+    "sending": "Wird gesendet...",
+    "signUpNow": "Jetzt registrieren"
   },
   "chat": {
     "projectAssistant": "Project Assistant",
@@ -171,7 +225,9 @@
         "title": "Stay ahead of what's next",
         "description": "Organize your work, reminders, and calendar events all from your personalized Home."
       }
-    }
+    },
+    "continueWithGoogle": "Mit Google fortfahren",
+    "signInDescription": "Melden Sie sich bei Ihrem Konto an, um fortzufahren"
   },
   "head": {
     "landing": "TaskPilot - The AI workspace where all your work gets done",
@@ -242,10 +298,46 @@
     "takeCertificationDescription": "Get certified and enhance your career",
     "getCertified": "Get Certified",
     "goToDashboard": "Go to Dashboard",
-    "questionsContact": "Questions? Reach out to us at"
+    "questionsContact": "Questions? Reach out to us at",
+    "brand": "TaskPilot",
+    "contactSupport": "Contact Support"
   },
   "contactUs": {
-    "detailsPlaceholder": "Please describe your issue or question in detail... (minimum 10 characters)"
+    "detailsPlaceholder": "Please describe your issue or question in detail... (minimum 10 characters)",
+    "characters": "Characters",
+    "description": "escription",
+    "email": "mail",
+    "error": {
+      "message": "rror Message",
+      "title": "rror Title"
+    },
+    "message": "Message",
+    "messagePlaceholder": "Message Placeholder",
+    "minimumCharacters": "Minimum Characters",
+    "moreCharactersNeeded": "More Characters Needed",
+    "name": "Name",
+    "responseTime": "Response Time",
+    "sendAnother": "Send Another",
+    "sendMessage": "Send Message",
+    "sending": "Sending",
+    "success": {
+      "message": "Success Message",
+      "title": "Success Title"
+    },
+    "title": "Contact Us",
+    "topic": "Topic",
+    "topics": {
+      "account": "Account",
+      "billing": "Billing",
+      "bug": "Bug",
+      "feature": "Feature",
+      "feedback": "Feedback",
+      "general": "General",
+      "other": "Other",
+      "technical": "Technical"
+    },
+    "tryAgain": "Try Again",
+    "yourDetails": "Youretails"
   },
   "assistantChat": {
     "close": "Close assistant chat",
@@ -259,7 +351,24 @@
     "detailedResponsePlaceholder": "Provide a detailed response explaining your approach, reasoning, and specific actions you would take as the project manager. Consider the impact on scope, time, cost, quality, and team dynamics.",
     "typeResponsePlaceholder": "Type your response here...",
     "taskTitlePlaceholder": "Task title",
-    "taskDescriptionPlaceholder": "Task description"
+    "taskDescriptionPlaceholder": "Task description",
+    "assessmentComplete": "Assessment Complete",
+    "beginCertification": "Begin Certification",
+    "complete": "Complete",
+    "completeDesc": "Complete your certification",
+    "downloadCertificate": "ownload Certificate",
+    "pmConcepts": "PM Concepts",
+    "pmConceptsDesc": "Project Management Concepts",
+    "practicalScenario": "Practical Scenario",
+    "practicalScenarioDesc": "Real-world scenario assessment",
+    "questionProgress": "Question Progress",
+    "startOver": "Start Over",
+    "startPractical": "Start Practical",
+    "starting": "Starting...",
+    "submitAnswer": "Submit Answer",
+    "submitting": "Submitting...",
+    "subtitle": "Project Management Certification",
+    "title": "Certification"
   },
   "simulator": {
     "explainScopeChangePlaceholder": "Explain the reason for scope change...",
@@ -276,7 +385,101 @@
     "removeMemberAria": "remove member",
     "toggleStatusAria": "toggle status",
     "exampleNumberPlaceholder": "e.g. 10",
-    "exampleCategoriesPlaceholder": "e.g. Governance, Analysis"
+    "exampleCategoriesPlaceholder": "e.g. Governance, Analysis",
+    "addTask": {
+      "create": "Create",
+      "description": "escription",
+      "estimatedHours": "stimated Hours",
+      "requiredSkills": "Required Skills",
+      "requirements": "Requirements",
+      "selectPriority": "Select Priority",
+      "title": "Titel"
+    },
+    "button": {
+      "generating": "Generating...",
+      "start": "Start",
+      "startNew": "Start New"
+    },
+    "conflict": {
+      "description": "escription",
+      "differentMembers": "ifferent Members",
+      "mediate": "Mediate",
+      "memberA": "Member A",
+      "memberB": "Member B",
+      "title": "Titel"
+    },
+    "cta": {
+      "certification": "Certification",
+      "createAccount": "Create Account"
+    },
+    "events": {
+      "attrition": "Attrition",
+      "budgetReq": "Budget Request",
+      "conflict": "Conflict",
+      "funding": "Funding",
+      "morale": "Morale",
+      "quality": "Quality",
+      "scope": "Scope",
+      "standup": "Standup",
+      "teamEvent": "Teamvent",
+      "techDebt": "Technicalebt",
+      "vendor": "Vendor"
+    },
+    "experience": {
+      "adaptRequirements": "Adapt Requirements",
+      "applyMethodologies": "Apply Methodologies",
+      "buildConfidence": "Build Confidence",
+      "criticalDecisions": "Criticalecisions",
+      "handleConflicts": "Handle Conflicts",
+      "learnConsequences": "Learn Consequences",
+      "manageBudgets": "Manage Budgets",
+      "navigateScenarios": "Navigate Scenarios"
+    },
+    "features": {
+      "analytics": {
+        "description": "Analyticsescription",
+        "title": "Analytics Title"
+      },
+      "instantFeedback": {
+        "description": "Instant Feedbackescription",
+        "title": "Instant Feedback Title"
+      },
+      "noRegistration": {
+        "description": "No Registrationescription",
+        "title": "No Registration Title"
+      }
+    },
+    "guide": {
+      "events": {
+        "description": "ventsescription",
+        "title": "vents Title"
+      },
+      "guideTasks": {
+        "description": "Lisää ja priorisoi tehtävät tehokkaan etenemisen varmistamiseksi.",
+        "title": "Tehtävät"
+      },
+      "navigateWeeks": {
+        "description": "Navigate Weeksescription",
+        "title": "Navigate Weeks Title"
+      },
+      "tasks": {
+        "description": "Tasksescription",
+        "title": "Tasks Title"
+      },
+      "team": {
+        "description": "Teamescription",
+        "title": "Team Title"
+      }
+    },
+    "startFailed": "Start Failed",
+    "subtitle": "Subtitle",
+    "tasks": {
+      "clearHighlights": "Clear Highlights",
+      "highlighted": "Highlighted",
+      "newTask": "New Task"
+    },
+    "title": "Titel",
+    "whatYouExperience": "What Youxperience"
   },
   "authPage": {
     "togglePasswordVisibility": "toggle password visibility",
@@ -308,7 +511,10 @@
     "editProject": "Edit Project",
     "notSet": "Not set",
     "untitledProject": "Untitled Project",
-    "additionalInformation": "Additional Information"
+    "additionalInformation": "Additional Information",
+    "membersCount": "{{count}} Mitglied",
+    "membersCount_plural": "{{count}} Mitglieder",
+    "noKey": "Kein Schlüssel"
   },
   "task": {
     "title": "Task Title",
@@ -433,7 +639,9 @@
     "editProject": "Edit project",
     "deleteProject": "Delete project",
     "leaveProject": "Leave project",
-    "completionProgress": "Completion {{percentage}}%"
+    "completionProgress": "Completion {{percentage}}%",
+    "areYouSure": "Are you sure?",
+    "createProject": "Projekt erstellen"
   },
   "floating": {
     "aiAssistant": "AI Assistant",
@@ -621,7 +829,15 @@
     "confirmDeleteTask": "Are you sure you want to permanently delete",
     "actionCannotBeUndone": "This action cannot be undone.",
     "addCommentPlaceholder": "Add a comment...",
-    "writeReplyPlaceholder": "Write a reply..."
+    "writeReplyPlaceholder": "Write a reply...",
+    "columns": {
+      "build": "Bauen",
+      "ideas": "Ideen",
+      "learn": "Lernen",
+      "measure": "Messen",
+      "validated": "Validiert"
+    },
+    "viewDetails": "Viewetails"
   },
   "customViews": {
     "title": "Custom Views",
@@ -734,7 +950,8 @@
     "actionPlaceholder": "e.g. send email to assignee",
     "searchTemplatesPlaceholder": "Search templates by name or description...",
     "workflowNamePlaceholder": "e.g., Due Date Reminders",
-    "workflowDescriptionPlaceholder": "Describe what this workflow does..."
+    "workflowDescriptionPlaceholder": "Describe what this workflow does...",
+    "save": "Save"
   },
   "subscription": {
     "subscriptions": "Subscriptions",
@@ -768,7 +985,12 @@
     "confirmPassword": "Confirm Password",
     "deleteAccountWarning": "Are you sure you want to delete your account? This action cannot be undone.",
     "passwordToConfirm": "Please enter your password to confirm you would like to permanently delete your account.",
-    "deleteAccountButton": "Delete Account"
+    "deleteAccountButton": "Delete Account",
+    "confirmDeleteAccount": "Confirmelete Account",
+    "deleteAccountConfirmation": "elete Account Confirmation",
+    "password": "Password",
+    "passwordSecurityAdvice": "Password Security Advice",
+    "updateProfileDescription": "Update Profileescription"
   },
   "projects": {
     "projectCount": "{{count}} project",
@@ -868,6 +1090,13 @@
       "startsOn": "Starts {{date}}",
       "teamMembersChip": "{{count}} team member",
       "teamMembersChip_plural": "{{count}} team members"
+    },
+    "validation": {
+      "endDateAfterStart": "Enddatum muss nach dem Startdatum liegen",
+      "keyFormat": "Schlüsselformat ungültig",
+      "keyMaxLength": "Maximale Schlüssellänge überschritten",
+      "keyRequired": "Schlüssel ist erforderlich",
+      "nameRequired": "Name ist erforderlich"
     }
   },
   "projectScope": {
@@ -909,7 +1138,50 @@
     "sendInvitation": "Send Invitation",
     "pendingInvitations": "Pending Invitations",
     "memberCount": "{{count}} Member",
-    "memberCount_plural": "{{count}} Members"
+    "memberCount_plural": "{{count}} Members",
+    "active": "Actif",
+    "canAction": "Peut {{action}}",
+    "cancelInvitation": "Annuler l'invitation",
+    "cannotAction": "Ne peut pas {{action}}",
+    "currentMembers": "Membres actuels",
+    "editProject": "Modifier le projet",
+    "editTasks": "Modifier les tâches",
+    "failedToCancelInvitation": "Échec de l'annulation de l'invitation : {{error}}",
+    "failedToInviteMember": "Échec de l'invitation d'un membre : {{error}}",
+    "failedToLoadMembers": "Échec du chargement des membres : {{error}}",
+    "failedToRemoveMember": "Échec de la suppression du membre : {{error}}",
+    "failedToResendInvitation": "Échec du renvoi de l'invitation : {{error}}",
+    "fullAccessOwner": "(Accès complet - Propriétaire)",
+    "invitationCancelledSuccess": "Invitation annulée avec succès !",
+    "invitationResentSuccess": "Invitation renvoyée avec succès !",
+    "invite": "Inviter",
+    "inviteFirstCollaborator": "Invitez votre premier collaborateur via le formulaire ci-dessus.",
+    "inviteNewMember": "Inviter un nouveau membre",
+    "inviting": "Invitation en cours",
+    "joined": "A rejoint le {{date}}",
+    "limit": "Limite",
+    "limitReached": "Limite atteinte pour le plan {{plan}}",
+    "limitReachedLabel": "Limite atteinte",
+    "limitReachedTooltip": "Limite de membres atteinte – mettez à niveau pour en ajouter davantage",
+    "manageMembers": "Gérer les membres",
+    "memberAccess": "(Accès membre)",
+    "memberInvitedSuccess": "Membre invité avec succès !",
+    "memberLimitError": "Vous avez atteint votre limite de membres ({{used}}/{{limit}}). Mettez à niveau votre plan pour ajouter davantage de membres.",
+    "memberRemovedSuccess": "Membre supprimé avec succès !",
+    "noMembersYet": "Aucun membre pour l'instant",
+    "pending": "En attente",
+    "permissions": "Autorisations",
+    "removeExistingOrUpgrade": "Supprimez un membre existant ou mettez à niveau pour augmenter votre limite.",
+    "resendInvitation": "Renvoyer l'invitation",
+    "role": "Rôle",
+    "slotsLeft": "{{count}} place restante",
+    "slotsLeft_plural": "{{count}} places restantes",
+    "switchToCompact": "Basculer vers le design compact",
+    "switchToEnhanced": "Basculer vers le design amélioré",
+    "upgrade": "Mettre à niveau",
+    "usage": "Utilisation",
+    "viewProject": "Voir le projet",
+    "viewTasks": "Voir les tâches"
   },
   "aiTask": {
     "generator": "AI Task Generator",
@@ -935,7 +1207,12 @@
     "suggestionsCount_plural": "{{count}} suggestions",
     "regenerateSuggestions": "Regenerate suggestions",
     "generateAdvanced": "🚀 Generate Advanced Tasks",
-    "generatingAdvanced": "🧠 Generating {{count}} Advanced Tasks..."
+    "generatingAdvanced": "🧠 Generating {{count}} Advanced Tasks...",
+    "countRequested": "{{count}} angefordert",
+    "extraInstructionsLabel": "xtra instructions",
+    "numberOfTasksHelp": "Pick how many tasks to generate (1–8). You can adjust later.",
+    "numberOfTasksLabel": "Number of tasks",
+    "uploadContextTooltip": "Dateien hochladen, um der KI mehr Kontext zu geben"
   },
   "teamManagement": {
     "title": "Team Members",
@@ -988,5 +1265,137 @@
     "failedToCancelInvitation": "Failed to cancel invitation: {{error}}",
     "invitationResentSuccess": "Invitation resent successfully!",
     "failedToResendInvitation": "Failed to resend invitation: {{error}}"
+  },
+  "automations": {
+    "actions": "Actions",
+    "active": "Active",
+    "addAction": "Add Action",
+    "addActionsDesc": "Add actions to execute when this workflow is triggered",
+    "addFirstAction": "Add your first action",
+    "addTriggerAndAction": "Add Trigger and Action",
+    "browseTemplates": "Browse Templates",
+    "cancel": "Cancel",
+    "chooseTrigger": "Choose Trigger",
+    "clickVariable": "Click to use this variable",
+    "configureTrigger": "Configure Trigger",
+    "createWorkflow": "Create Workflow",
+    "deleteWorkflowTitle": "elete Workflow",
+    "failedToDelete": "Failed to delete workflow",
+    "howToUse": "How to use",
+    "inMessages": "in messages",
+    "manageAtGlance": "Manage at a glance",
+    "noDescription": "No description provided",
+    "paused": "Paused",
+    "proTip": "Pro tip",
+    "remove": "Remove",
+    "saveWorkflow": "Save Workflow",
+    "select": "Select",
+    "selectEvent": "Selectvent",
+    "selected": "Selected",
+    "subtitle": "Automate your workflow",
+    "title": "Automations",
+    "unknownAction": "Unknown Action",
+    "unknownActionDesc": "This action type is not recognized",
+    "untitled": "Untitled Workflow",
+    "variableReplaced": "Variable will be replaced with actual value",
+    "variableUsage": "Variable Usage",
+    "willActivate": "Will activate",
+    "willPause": "Will pause",
+    "workflowDeleted": "Workflow deleted successfully",
+    "yourWorkflows": "Your Workflows",
+    "saved": "Saved"
+  },
+  "billing": {
+    "activeSubscriber": "Aktiivinen tilaaja",
+    "cancelConfirmation": "Haluatko varmasti peruuttaa {{planName}}-tilauksesi? Menetät premium-ominaisuudet nykyisen laskutuskauden lopussa.",
+    "cancelSubscription": "Cancel Subscription",
+    "cancelSubscriptionAction": "Cancel Subscription",
+    "cancellationReasons": {
+      "missing_features": "Puuttuu tarvitsemani ominaisuuksia",
+      "not_using_enough": "En käytä tarpeeksi",
+      "other": "Muu syy",
+      "switching_service": "Vaihdaan toiseen palveluun",
+      "technical_issues": "Teknisiä ongelmia",
+      "temporary_pause": "Tilapäinen tauko",
+      "too_expensive": "Liian kallis"
+    },
+    "cancelsOn": "Peruutus astuu voimaan {{date}}",
+    "currentPlan": "Current Plan",
+    "dayTrial": "{{days}}-tägige Testphase",
+    "freeTier": "Ilmainen taso",
+    "helpImprove": "Auta meitä kehittymään kertomalla miksi peruutat:",
+    "keepSubscription": "Keep Subscription",
+    "mostPopular": "Most Popular",
+    "onTrial": "On Trial",
+    "priceLoading": "Hinta latautuu...",
+    "resumeSubscription": "Jatka tilausta",
+    "startDayTrial": "Aloita {{days}} päivän kokeilu",
+    "startPlan": "Aloita {{plan}}",
+    "stripeNotice": "Maksut käsittelee turvallisesti Stripe. Aloita ilmainen kokeilu millä tahansa voimassa olevalla luottokortilla.",
+    "subtitle": "Valitse paketti ja aloita ilmaisella kokeilulla. Saat käyttöösi premium-ominaisuudet kuten AI-tehtävien luonnin, tiimiyhteistyön ja kehittyneet raportit.",
+    "title": "Laskutus ja tilaus",
+    "trialEndsOn": "Kokeilu päättyy {{date}}",
+    "upgradeToPlan": "Päivitä pakettiin {{plan}}",
+    "whyCancel": "Why are you canceling?",
+    "yesContinue": "Yes, Continue"
+  },
+  "errors": {
+    "emailMismatch": "mail Mismatch",
+    "fileProcessing": "File Processing",
+    "invitationExpired": "Invitationxpired",
+    "invitationExpiredMessage": "Invitationxpired Message",
+    "speechRecognitionError": "Speech Recognitionrror",
+    "speechRecognitionFailed": "Speech Recognition Failed"
+  },
+  "legal": {
+    "privacyTitle": "Privacy Policy",
+    "termsTitle": "Terms of Service"
+  },
+  "misc": {
+    "button": "Button",
+    "current_password": "Current Password",
+    "dashboard": "Dashboard",
+    "div": "iv",
+    "error": "rror",
+    "img": "Image",
+    "input": "Input",
+    "meta": "Meta",
+    "password": "Password",
+    "span": "Span",
+    "style": "Style",
+    "success": "Success",
+    "tr": "Table Row"
+  },
+  "timeline": {
+    "backToBoard": "Back to Board",
+    "defaultTitle": "efault Title",
+    "scrollToToday": "Scroll to Today",
+    "status": {
+      "inProgress": "In Progress",
+      "todo": "Too"
+    },
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out"
+  },
+  "upgrade": {
+    "proFeature": "Pro Feature",
+    "proFeatureDescription": "Pro Featureescription",
+    "viewPlans": "View Plans"
+  },
+  "workflows": {
+    "templates": {
+      "comfort": "Comfort",
+      "compact": "Compact",
+      "createCustomWorkflow": "Create Custom Workflow",
+      "customWorkflow": "Custom Workflow",
+      "customWorkflowDescription": "Custom Workflowescription",
+      "description": "escription",
+      "noTemplatesFound": "No Templates Found",
+      "noTemplatesMessage": "No Templates Message",
+      "resetFilters": "Reset Filters",
+      "searchPlaceholder": "Search Placeholder",
+      "title": "Titel",
+      "useTemplate": "Use Template"
+    }
   }
 }
