@@ -864,7 +864,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                 <ChatBubbleOutlineRoundedIcon fontSize="small" />
                             )}
                             <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                {voiceMode ? 'Voice' : 'Text'}
+                                {voiceMode ? t('aiTask.voice') : t('common.text')}
                             </Typography>
                         </Box>
                     }
@@ -1909,7 +1909,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                 transition: 'all 0.25s ease',
                                 animation: listening ? `${pulse} 2s infinite` : 'none',
                             }}
-                            aria-label={listening ? 'Stop listening' : 'Start voice input'}
+                            aria-label={listening ? t('aiTask.stopListening') : t('aiTask.startVoiceInput')}
                         >
                             {isProcessingVoice ? (
                                 <CircularProgress size={20} sx={{ color: 'inherit' }} />

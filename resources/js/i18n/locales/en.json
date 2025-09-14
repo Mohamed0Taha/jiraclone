@@ -38,7 +38,8 @@
     "getCertified": "Get Certified",
     "upgradeNow": "Upgrade Now",
     "there": "there",
-    "or": "OR"
+    "or": "OR",
+    "text": "Text"
   },
   "tasks": {
     "status": {
@@ -676,7 +677,27 @@
     "messages": "Messages",
     "project": "Project",
     "error": "Error",
-    "streamingAI": "Streaming AI"
+    "streamingAI": "Streaming AI",
+    "aiComponentGenerator": "AI Component Generator",
+    "generateWithAITitle": "Generate with AI",
+    "generateWithAIDesc": "Describe what you want to build and the AI will generate a component.",
+    "loadingStudio": "Loading Studio",
+    "preparingEnvironment": "Preparing your environment...",
+    "readyToCreate": "Ready to create",
+    "welcomeStudio": "Welcome to your custom app studio. Use AI to generate powerful, data-driven micro-applications tailored to your project needs.",
+    "examples": {
+      "dataDashboard": "Data Dashboard",
+      "taskManager": "Task Manager",
+      "analyticsView": "Analytics View",
+      "customTool": "Custom Tool"
+    },
+    "headTitle": "Custom View: {{name}} — {{project}}",
+    "deleteSavedApplication": "Delete Saved Application",
+    "deleteConfirmSaved": "Are you sure you want to delete this saved application? This action cannot be undone. All saved data will be permanently removed from the database.",
+    "deleteConfirmWorking": "Are you sure you want to clear this working area? The current component will be removed but no saved data will be affected.",
+    "generatingComponent": "Generating component...",
+    "saveFailed": "Save failed",
+    "saveSuccess": "Saved successfully"
   },
   "admin": {
     "dashboard": "Dashboard",
@@ -900,7 +921,21 @@
     "requirements": "Requirements",
     "scope": "Scope",
     "timeline": "Timeline",
-    "resources": "Resources"
+    "resources": "Resources",
+    "startVoiceInput": "Start voice input",
+    "stopRecording": "Stop recording",
+    "stopListening": "Stop listening",
+    "voice": "Voice",
+    "uploadedFiles": "Uploaded Files:",
+    "listening": "🎤 Listening... Speak now",
+    "speechRecognition": "Speech Recognition:",
+    "promptPlaceholder": "e.g. Include tasks for safety checks specific to Khartoum site, local permitting, and budget tracking cadence…",
+    "addContextHelp": "Add context to guide the AI",
+    "suggestionsCount": "{{count}} suggestion",
+    "suggestionsCount_plural": "{{count}} suggestions",
+    "regenerateSuggestions": "Regenerate suggestions",
+    "generateAdvanced": "🚀 Generate Advanced Tasks",
+    "generatingAdvanced": "🧠 Generating {{count}} Advanced Tasks..."
   },
   "teamManagement": {
     "title": "Team Members",

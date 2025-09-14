@@ -1246,10 +1246,10 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <AutoAwesomeIcon color="primary" />
                         <Typography variant="h6" fontWeight="600">
-                            AI Component Generator
+                            {t('customViews.aiComponentGenerator')}
                         </Typography>
                         <Chip
-                            label="Streaming AI"
+                            label={t('customViews.streamingAI')}
                             size="small"
                             color="primary"
                             variant="outlined"
@@ -1347,7 +1347,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                             setIsManuallyGenerating(false);
                                         }}
                                     >
-                                        {t('common.stop')}
+                                        {t('customViews.stop')}
                                     </Button>
                                 )}
                             </Stack>

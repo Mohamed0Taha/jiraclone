@@ -861,7 +861,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                                 }),
                                             }}
                                         >
-                                            {listening ? 'Stop' : 'Voice'}
+                                            {listening ? t('aiTask.stopRecording') : t('aiTask.voice')}
                                         </Button>
                                     </Tooltip>
                                 )}
@@ -874,7 +874,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                         variant="caption"
                                         sx={{ color: alpha(theme.palette.text.primary, 0.6) }}
                                     >
-                                        Uploaded Files:
+                                        {t('aiTask.uploadedFiles')}
                                     </Typography>
                                     {uploadedFiles.map((file, index) => (
                                         <Paper
@@ -952,7 +952,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                         variant="body2"
                                         sx={{ color: theme.palette.error.main, fontWeight: 600 }}
                                     >
-                                        🎤 Listening... Speak now
+                                        {t('aiTask.listening')}
                                     </Typography>
                                 </Paper>
                             )}
@@ -971,7 +971,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                         variant="caption"
                                         sx={{ color: alpha(theme.palette.text.primary, 0.6) }}
                                     >
-                                        Speech Recognition:
+                                        {t('aiTask.speechRecognition')}
                                     </Typography>
                                     <Typography
                                         variant="body2"
@@ -986,7 +986,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                 multiline
                                 minRows={5}
                                 fullWidth
-                                placeholder="e.g. Include tasks for safety checks specific to Khartoum site, local permitting, and budget tracking cadence…"
+                                placeholder={t('aiTask.promptPlaceholder')}
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
                                 disabled={isGenerating || processing}
@@ -1004,11 +1004,11 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                         variant="caption"
                                         sx={{ color: alpha(theme.palette.text.primary, 0.6) }}
                                     >
-                                        Add context to guide the AI
+                                        {t('aiTask.addContextHelp')}
                                     </Typography>
                                     <Chip
                                         size="small"
-                                        label={`${chips.length} suggestion${chips.length === 1 ? '' : 's'}`}
+                                        label={t('aiTask.suggestionsCount', { count: chips.length })}
                                         sx={{
                                             height: 22,
                                             fontWeight: 700,
@@ -1017,7 +1017,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                         }}
                                     />
                                     <Box sx={{ flexGrow: 1 }} />
-                                    <Tooltip title="Regenerate suggestions">
+                                    <Tooltip title={t('aiTask.regenerateSuggestions')}>
                                         <span>
                                             <Button
                                                 size="small"
@@ -1027,7 +1027,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                                 disabled={loadingChips}
                                                 sx={{ textTransform: 'none', fontWeight: 700 }}
                                             >
-                                                Refresh
+                                                {t('buttons.refresh')}
                                             </Button>
                                         </span>
                                     </Tooltip>
@@ -1046,7 +1046,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                         }).map((_, i) => (
                                             <Chip
                                                 key={`skeleton-${i}`}
-                                                label="Loading…"
+                                                label={t('common.loading')}
                                                 icon={<TipsAndUpdatesRoundedIcon />}
                                                 sx={{
                                                     opacity: 0.65,
@@ -1100,7 +1100,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                     disabled={isGenerating || processing}
                                     sx={{ textTransform: 'none', fontWeight: 700 }}
                                 >
-                                    Reset
+                                    {t('buttons.reset')}
                                 </Button>
                                 <Button
                                     variant="outlined"
@@ -1108,7 +1108,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                     disabled={isGenerating || processing}
                                     sx={{ textTransform: 'none', fontWeight: 700 }}
                                 >
-                                    Cancel
+                                    {t('buttons.cancel')}
                                 </Button>
                                 <Button
                                     variant="contained"
@@ -1144,8 +1144,8 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                     }}
                                 >
                                     {isGenerating || processing
-                                        ? `🧠 Generating ${count} Advanced Tasks...`
-                                        : '🚀 Generate Advanced Tasks'}
+                                        ? t('aiTask.generatingAdvanced', { count })
+                                        : t('aiTask.generateAdvanced')}
                                 </Button>
                             </Stack>
 
