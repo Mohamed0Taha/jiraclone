@@ -40,14 +40,28 @@
     "there": "there",
     "or": "OR"
   },
+  "tasks": {
+    "status": {
+      "todo": "To Do",
+      "inprogress": "In Progress", 
+      "review": "Review",
+      "done": "Done",
+      "backlog": "Backlog",
+      "testing": "Testing"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    }
+  },
   "navigation": {
     "home": "Home",
     "about": "About",
     "contact": "Contact",
     "help": "Help",
-    "documentation": "Documentation",
-    "navigation": "Navigation",
-    "settings": "Settings"
+    "documentation": "Documentation"
   },
   "auth": {
     "login": "Log in",
@@ -733,6 +747,17 @@
     "deleteAccountButton": "Delete Account"
   },
   "projects": {
+    "projectCount": "{{count}} project",
+    "projectCount_plural": "{{count}} projects", 
+    "myProjects": "My Projects",
+    "myProjectsWithCount": "My Projects ({{count}})",
+    "sharedWithMe": "Shared with Me", 
+    "sharedWithMeCount": "Shared with Me ({{count}})",
+    "yourProjects": "Your Projects", 
+    "manageOrganizeSubtitle": "Manage and organize your work with TaskPilot projects",
+    "noProjectsYet": "No projects yet",
+    "createFirstProject": "Create your first project to get started with TaskPilot",
+    "createFirstProjectButton": "Create Your First Project",
     "createProject": "Create Project",
     "creating": "Creating...",
     "projectSetup": "Project Setup",
