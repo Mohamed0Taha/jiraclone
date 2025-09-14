@@ -1067,10 +1067,10 @@
   },
   "tasks": {
     "status": {
-      "done": "Done",
-      "inprogress": "In Progress",
-      "review": "Review",
-      "todo": "To Do"
+      "done": "Klaar",
+      "inprogress": "Bezig",
+      "review": "Beoordeling",
+      "todo": "Te doen"
     }
   },
   "workflows": {

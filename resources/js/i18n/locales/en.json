@@ -534,6 +534,7 @@
     "close": "Close"
   },
   "board": {
+    "details": "Details",
     "taskBoard": "Task Board",
     "methodology": "Methodology",
     "methodologyName": {

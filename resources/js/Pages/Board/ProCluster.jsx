@@ -48,7 +48,9 @@ export default function ProCluster({
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 0.8,
-                    minWidth: 92,
+                    minWidth: { xs: 80, sm: 90, md: 100 }, // Dynamic minimum width
+                    flex: '1 1 auto', // Allow flex growth
+                    maxWidth: 120, // Prevent excessive expansion
                 }}
             >
                 <Box sx={{ position: 'relative', lineHeight: 0 }}>
@@ -106,6 +108,10 @@ export default function ProCluster({
                         border: `1px solid ${alpha('#0EA5E9', 0.25)}`,
                         backdropFilter: 'blur(4px)',
                         whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '100%',
+                        textAlign: 'center',
                     }}
                 >
                     {label}
@@ -167,10 +173,14 @@ export default function ProCluster({
 
                     <Stack
                         direction="row"
-                        spacing={1.4}
+                        spacing={{ xs: 0.8, sm: 1.2, md: 1.4 }} // Dynamic spacing
                         alignItems="center"
                         justifyContent="space-between"
-                        sx={{ px: 0.4 }}
+                        sx={{ 
+                            px: 0.4,
+                            flexWrap: 'nowrap', // Prevent wrapping
+                            minWidth: 0, // Allow shrinking
+                        }}
                     >
                         <ActionItem
                             label={t('members.teamMembers', 'Members')}

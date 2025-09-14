@@ -328,27 +328,32 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
             >
                 {/* Project name interactive element styled like a button (avoid nested button) */}
                 <Box
-                    role="button"
-                    tabIndex={0}
-                    onClick={gotoBoard}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        gotoBoard(e);
+                    }}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
+                            e.stopPropagation();
                             gotoBoard(e);
                         }
                     }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={t('projects.goToBoard', { name: project.name })}
                     sx={{
-                        px: 0.75,
-                        py: 0.75,
-                        cursor: 'pointer',
-                        textTransform: 'none',
-                        fontWeight: 800,
-                        fontSize: 16,
-                        color: 'text.primary',
-                        borderRadius: 1.5,
-                        maxWidth: { xs: 180, sm: 260, md: 360 },
+                        flex: '1 1 auto',
+                        minWidth: 0, // Allow shrinking
+                        mr: 1,
                         display: 'flex',
                         alignItems: 'center',
+                        gap: 1.5,
+                        overflow: 'hidden',
+                        px: 0.25,
+                        py: 0.3,
+                        borderRadius: 1,
+                        cursor: 'pointer',
                         '&:hover': {
                             backgroundColor: alpha(theme.palette.primary.main, 0.08),
                             color: 'text.primary',
@@ -361,8 +366,15 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                 >
                     <Typography
                         component="span"
-                        noWrap
-                        sx={{ fontSize: 'inherit', fontWeight: 'inherit' }}
+                        sx={{ 
+                            fontSize: 'inherit', 
+                            fontWeight: 'inherit',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            minWidth: 0,
+                            flex: '1 1 auto',
+                        }}
                     >
                         {project.name}
                     </Typography>
@@ -370,7 +382,6 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                         size="small"
                         label={isOwner ? 'OWNER' : 'COLLABORATOR'}
                         sx={{
-                            ml: 1.5,
                             height: 20,
                             fontWeight: 700,
                             fontSize: '0.65rem',
@@ -378,6 +389,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                             background: alpha(ownershipColor, 0.12),
                             color: ownershipColor,
                             border: `1px solid ${alpha(ownershipColor, 0.25)}`,
+                            flexShrink: 0, // Prevent chip from shrinking
                             '& .MuiChip-label': {
                                 px: 1,
                             },
@@ -389,13 +401,11 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                     direction="row"
                     spacing={1.1}
                     sx={{
-                        ml: 'auto',
-                        mr: 1.5,
+                        flexShrink: 0, // Prevent shrinking
                         flexWrap: 'nowrap',
                         overflow: 'hidden',
                         alignItems: 'center',
-                        maxWidth: { xs: '55%', sm: '60%', md: '65%' },
-                        justifyContent: 'flex-end',
+                        mr: 1.5,
                     }}
                 >
                     {ORDER.map((s) => (
@@ -580,7 +590,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                         color: alpha(theme.palette.text.primary, 0.55),
                     }}
                 >
-                    Tasks ({total})
+                    {t('tasks.taskCount', { count: total })}
                 </Typography>
 
                 <Box
@@ -600,7 +610,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                 >
                     {total === 0 && (
                         <Chip
-                            label="No tasks yet"
+                            label={t('tasks.noTasksYet', 'No tasks yet')}
                             size="small"
                             variant="outlined"
                             sx={{
