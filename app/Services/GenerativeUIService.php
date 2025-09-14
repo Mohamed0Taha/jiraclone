@@ -740,6 +740,7 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
 
     /**
      * Save component data (for persistent state across component reloads)
+     * This method now embeds data directly into the component code
      */
     public function saveComponentData(Project $project, int $userId, string $viewName, string $dataKey, $data): array
     {
@@ -755,28 +756,33 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
                 ];
             }
 
-            // Get existing metadata or create new
-            $metadata = $customView->metadata ?? [];
+            // Get current component code
+            $componentCode = $customView->html_content;
             
-            // Ensure component_data key exists
+            // Update the component code to embed the new data
+            $updatedCode = $this->embedDataIntoComponent($componentCode, $dataKey, $data);
+            
+            // Update the custom view with the modified code
+            $customView->html_content = $updatedCode;
+            
+            // Also update metadata for backwards compatibility
+            $metadata = $customView->metadata ?? [];
             if (!isset($metadata['component_data'])) {
                 $metadata['component_data'] = [];
             }
-
-            // Save the data under the specified key
             $metadata['component_data'][$dataKey] = [
                 'data' => $data,
                 'saved_at' => now()->toISOString()
             ];
-
-            // Update the custom view
             $customView->metadata = $metadata;
+            
             $customView->save();
 
             return [
                 'success' => true,
                 'data_key' => $dataKey,
-                'saved_at' => $metadata['component_data'][$dataKey]['saved_at']
+                'saved_at' => now()->toISOString(),
+                'embedded' => true
             ];
 
         } catch (\Exception $e) {
@@ -790,6 +796,50 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
 
             throw $e;
         }
+    }
+
+    /**
+     * Embed data directly into the component code (universal approach)
+     */
+    private function embedDataIntoComponent(string $componentCode, string $dataKey, $data): string
+    {
+        // First, extract any existing embedded data to preserve other keys
+        $existingData = [];
+        $pattern = '/\/\*\s*EMBEDDED_DATA_START\s*\*\/.*?const __EMBEDDED_DATA__ = ({[^;]*});.*?\/\*\s*EMBEDDED_DATA_END\s*\*\//s';
+        
+        if (preg_match($pattern, $componentCode, $matches)) {
+            try {
+                $existingData = json_decode($matches[1], true) ?: [];
+            } catch (Exception $e) {
+                // If parsing fails, start fresh
+                $existingData = [];
+            }
+        }
+        
+        // Update/add the new data key
+        $existingData[$dataKey] = $data;
+        
+        // Generate the complete embedded data block
+        $dataJson = json_encode($existingData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        
+        $embeddedDataBlock = "/* EMBEDDED_DATA_START */
+const __EMBEDDED_DATA__ = {$dataJson};
+/* EMBEDDED_DATA_END */";
+
+        // Remove any existing embedded data block
+        $componentCode = preg_replace('/\/\*\s*EMBEDDED_DATA_START\s*\*\/.*?\/\*\s*EMBEDDED_DATA_END\s*\*\//s', '', $componentCode);
+        
+        // Add the new/updated embedded data block
+        $importPattern = '/(import.*?;[\s\n]*)/s';
+        if (preg_match($importPattern, $componentCode, $matches, PREG_OFFSET_CAPTURE)) {
+            $insertPos = $matches[0][1] + strlen($matches[0][0]);
+            $componentCode = substr_replace($componentCode, "\n" . $embeddedDataBlock . "\n", $insertPos, 0);
+        } else {
+            // If no imports found, add at the beginning
+            $componentCode = $embeddedDataBlock . "\n" . $componentCode;
+        }
+        
+        return $componentCode;
     }
 
     /**

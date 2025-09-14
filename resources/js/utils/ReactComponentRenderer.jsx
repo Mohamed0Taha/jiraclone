@@ -383,7 +383,7 @@ async function saveViewData(dataKey, data) {
     console.warn('Failed to save to localStorage:', e);
   }
   
-  // Try to save to server (shared project data)
+  // Save to server (which will embed data into the component itself)
   try {
     const url = '/projects/' + __projectId + '/custom-views/save-data';
     const res = await csrfFetch(url, {
@@ -397,7 +397,8 @@ async function saveViewData(dataKey, data) {
     const result = await res.json();
     
     if (result.success) {
-      return { success: true, message: 'Data saved to shared project storage', source: 'server' };
+      console.log('Data embedded into view successfully');
+      return { success: true, message: 'Data embedded into shared view', source: 'embedded', embedded: true };
     } else {
       console.warn('saveViewData server returned error:', result.message);
       return { success: true, message: 'Data saved locally only', fallback: true };
@@ -411,9 +412,14 @@ async function saveViewData(dataKey, data) {
 async function loadViewData(dataKey) {
   if (!__projectId) return null;
   
+  // First check for embedded data (universal approach)
+  if (typeof __EMBEDDED_DATA__ !== 'undefined' && __EMBEDDED_DATA__[dataKey]) {
+    return __EMBEDDED_DATA__[dataKey];
+  }
+  
   const localKey = 'microapp-' + __projectId + '-' + __viewName + '-' + String(dataKey || 'default');
   
-  // First try to load from server (shared project data)
+  // Then try to load from server (shared project data)
   try {
     const url = '/projects/' + __projectId + '/custom-views/load-data?view_name=' + encodeURIComponent(__viewName) + '&data_key=' + encodeURIComponent(String(dataKey || 'default'));
     const res = await csrfFetch(url, {
@@ -423,7 +429,7 @@ async function loadViewData(dataKey) {
     const result = await res.json();
     
     if (result.success && result.data?.data) {
-      return { data: result.data.data, source: 'server' };
+      return result.data.data;
     }
   } catch (e) {
     console.warn('loadViewData server error, falling back to localStorage:', e);
@@ -433,7 +439,7 @@ async function loadViewData(dataKey) {
   try {
     const localData = localStorage.getItem(localKey);
     if (localData) {
-      return { data: JSON.parse(localData), source: 'localStorage' };
+      return JSON.parse(localData);
     }
   } catch (e) {
     console.warn('loadViewData localStorage error:', e);
