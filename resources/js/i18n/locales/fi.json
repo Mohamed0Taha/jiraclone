@@ -1297,17 +1297,17 @@
       "keyRequired": "Avain on pakollinen",
       "nameRequired": "Nimi on pakollinen"
     },
-    "createFirstProject": "Create your first project to get started with TaskPilot",
-    "createFirstProjectButton": "Create Yourirst Project",
-    "manageOrganizeSubtitle": "Manage and organize your work with TaskPilot projects",
-    "myProjects": "My Projects",
-    "myProjectsWithCount": "My Projects ({{count}})",
-    "noProjectsYet": "No projects yet",
-    "projectCount": "{{count}} project",
-    "projectCount_plural": "{{count}} projects",
-    "sharedWithMe": "Shared with Me",
-    "sharedWithMeCount": "Shared with Me ({{count}})",
-    "yourProjects": "Your Projects"
+    "createFirstProject": "Luo ensimmäinen projektisi aloittaaksesi TaskPilotin käytön",
+    "createFirstProjectButton": "Luo ensimmäinen projektisi",
+    "manageOrganizeSubtitle": "Hallinnoi ja organisoi työsi TaskPilot-projekteilla",
+    "myProjects": "Projektini",
+    "myProjectsWithCount": "Projektini ({{count}})",
+    "noProjectsYet": "Ei projekteja vielä",
+    "projectCount": "{{count}} projekti",
+    "projectCount_plural": "{{count}} projektia",
+    "sharedWithMe": "Jaettu kanssani",
+    "sharedWithMeCount": "Jaettu kanssani ({{count}})",
+    "yourProjects": "Projektisi"
   },
   "projectScope": {
     "title": "Laajuus ja tiimi",
