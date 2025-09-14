@@ -11,6 +11,9 @@ class CustomViewPageController extends Controller
 {
     public function show(Request $request, Project $project, string $name)
     {
+        // Authorize access: project owner or members may view
+        $this->authorize('view', $project);
+
         $methodology = $project->meta['methodology'] ?? 'kanban';
 
         $tasks = $project->tasks()
@@ -66,4 +69,3 @@ class CustomViewPageController extends Controller
         ]);
     }
 }
-
