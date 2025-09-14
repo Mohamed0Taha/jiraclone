@@ -1231,7 +1231,7 @@
     "fileTooLargeError": "File size must be less than 8MB.",
     "failedToAnalyze": "Failed to analyze document",
     "failedToUploadAnalyze": "Failed to upload and analyze document. Please try again.",
-    "createManually": "Create Project Manually",
+    "createManually": "Skapa projekt manuellt",
     "createManuallyDescription": "Fill out the project details step by step using our guided form with basics, scope, and objectives.",
     "startManualCreation": "tart Manual Creation",
     "steps": {
