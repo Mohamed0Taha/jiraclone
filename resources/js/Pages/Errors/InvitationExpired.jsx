@@ -2,8 +2,11 @@ import React from 'react';
 import { Box, Typography, Button, Container, Card, CardContent } from '@mui/material';
 import { ErrorOutline, Home } from '@mui/icons-material';
 import { Link } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 
 const InvitationExpired = () => {
+    const { t } = useTranslation();
+
     return (
         <Container maxWidth="sm" sx={{ py: 8 }}>
             <Card elevation={3}>
@@ -16,11 +19,10 @@ const InvitationExpired = () => {
                         }}
                     />
                     <Typography variant="h4" gutterBottom color="error">
-                        Invitation Expired
+                        {t('errors.invitationExpired')}
                     </Typography>
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                        This invitation link has expired. Please ask the project owner to send you a
-                        new invitation.
+                        {t('errors.invitationExpiredMessage')}
                     </Typography>
                     <Button
                         component={Link}
@@ -29,7 +31,7 @@ const InvitationExpired = () => {
                         startIcon={<Home />}
                         size="large"
                     >
-                        Go to Homepage
+                        {t('common.goToHomepage')}
                     </Button>
                 </CardContent>
             </Card>

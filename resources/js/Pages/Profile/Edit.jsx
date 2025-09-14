@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Container,
@@ -20,19 +21,20 @@ import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 
 export default function Edit({ mustVerifyEmail, status, auth }) {
+    const { t } = useTranslation();
     const theme = useTheme();
 
     return (
         <AuthenticatedLayout user={auth.user}>
-            <Head title="Profile" />
+            <Head title={t('profile.title')} />
 
             <Container maxWidth="lg" sx={{ py: 4 }}>
                 <Box sx={{ mb: 4 }}>
                     <Typography variant="h3" component="h1" fontWeight={700} sx={{ mb: 2 }}>
-                        Profile Settings
+                        {t('profile.title')}
                     </Typography>
                     <Typography variant="body1" color="text.secondary">
-                        Manage your account settings and preferences
+                        {t('profile.subtitle')}
                     </Typography>
                 </Box>
 
@@ -51,10 +53,10 @@ export default function Edit({ mustVerifyEmail, status, auth }) {
                                 />
                                 <Box>
                                     <Typography variant="h6" fontWeight={600}>
-                                        Profile Information
+                                        {t('profile.profileInformation')}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        Update your account's profile information and email address
+                                        {t('profile.profileInformationDesc')}
                                     </Typography>
                                 </Box>
                             </Stack>
@@ -81,11 +83,10 @@ export default function Edit({ mustVerifyEmail, status, auth }) {
                                 />
                                 <Box>
                                     <Typography variant="h6" fontWeight={600}>
-                                        Update Password
+                                        {t('profile.updatePassword')}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        Ensure your account is using a long, random password to stay
-                                        secure
+                                        {t('profile.updatePasswordDesc')}
                                     </Typography>
                                 </Box>
                             </Stack>
@@ -109,10 +110,10 @@ export default function Edit({ mustVerifyEmail, status, auth }) {
                                 />
                                 <Box>
                                     <Typography variant="h6" fontWeight={600}>
-                                        Delete Account
+                                        {t('profile.deleteAccount')}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        Permanently delete your account and all of its data
+                                        {t('profile.deleteAccountDesc')}
                                     </Typography>
                                 </Box>
                             </Stack>

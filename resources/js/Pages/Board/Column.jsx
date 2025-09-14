@@ -107,7 +107,9 @@ export default function Column({
                         color: alpha(theme.palette.text.primary, 0.82),
                     }}
                 >
-                    {metaConf.title}
+                    {metaConf.titleKey
+                        ? t(metaConf.titleKey, { defaultValue: metaConf.title })
+                        : metaConf.title}
                 </Typography>
             </Stack>
             <Chip
@@ -148,12 +150,13 @@ export default function Column({
     );
 
     const ProjectSummary = ({ project }) => {
+        const { t } = useTranslation();
         if (!project) return null;
         const m = project.meta || {};
         const chips = [
             {
                 icon: <KeyRoundedIcon fontSize="small" />,
-                label: project.key || 'No key',
+                label: project.key || t('project.noKey', { defaultValue: 'No key' }),
                 show: true,
             },
             {
@@ -168,7 +171,12 @@ export default function Column({
             },
             {
                 icon: <GroupsRoundedIcon fontSize="small" />,
-                label: m.team_size ? `${m.team_size} members` : null,
+                label: m.team_size
+                    ? t('project.membersCount', {
+                        count: m.team_size,
+                        defaultValue: '{{count}} members',
+                    })
+                    : null,
                 show: !!m.team_size,
             },
             {

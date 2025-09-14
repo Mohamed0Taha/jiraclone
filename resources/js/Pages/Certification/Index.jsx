@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
     Box,
@@ -29,27 +30,6 @@ import {
     Close as CloseIcon,
 } from '@mui/icons-material';
 
-const CERTIFICATION_PHASES = [
-    {
-        id: 'pm_concepts',
-        label: 'PM Concepts & Theory',
-        icon: QuizIcon,
-        description: 'Answer questions about core project management concepts',
-    },
-    {
-        id: 'practical_scenario',
-        label: 'Practical Scenario',
-        icon: ProjectIcon,
-        description: 'Complete a realistic project management scenario',
-    },
-    {
-        id: 'certification_complete',
-        label: 'Certification Complete',
-        icon: TrophyIcon,
-        description: 'Receive your certification',
-    },
-];
-
 export default function CertificationIndex({
     auth,
     attempt,
@@ -64,6 +44,29 @@ export default function CertificationIndex({
     remainingSeconds,
     timeUp,
 }) {
+    const { t } = useTranslation();
+
+    const CERTIFICATION_PHASES = [
+        {
+            id: 'pm_concepts',
+            label: t('certification.pmConcepts', 'PM Concepts & Theory'),
+            icon: QuizIcon,
+            description: t('certification.pmConceptsDesc', 'Answer questions about core project management concepts'),
+        },
+        {
+            id: 'practical_scenario',
+            label: t('certification.practicalScenario', 'Practical Scenario'),
+            icon: ProjectIcon,
+            description: t('certification.practicalScenarioDesc', 'Complete a realistic project management scenario'),
+        },
+        {
+            id: 'certification_complete',
+            label: t('certification.complete', 'Certification Complete'),
+            icon: TrophyIcon,
+            description: t('certification.completeDesc', 'Receive your certification'),
+        },
+    ];
+
     // Add localRemaining state early so effects can use it
     const [localRemaining, setLocalRemaining] = useState(remainingSeconds ?? 20 * 60);
     const [selectedAnswers, setSelectedAnswers] = useState({});
@@ -167,10 +170,10 @@ export default function CertificationIndex({
                         sx={{ mb: 1 }}
                     >
                         <Typography variant="body2" color="textSecondary">
-                            Question Progress
+                            {t('certification.questionProgress', 'Question Progress')}
                         </Typography>
                         <Typography variant="body2" color="textSecondary">
-                            {answeredCount} / {totalQuestions} completed
+                            {t('certification.progressCount', '{{answered}} / {{total}} completed', { answered: answeredCount, total: totalQuestions })}
                         </Typography>
                     </Stack>
                     <LinearProgress
@@ -216,15 +219,15 @@ export default function CertificationIndex({
             return (
                 <Box sx={{ textAlign: 'center', py: 6 }}>
                     <Typography variant="h5" gutterBottom>
-                        PM Concepts Assessment Complete!
+                        {t('certification.assessmentComplete', 'PM Concepts Assessment Complete!')}
                     </Typography>
                     <Typography variant="body1" paragraph>
-                        You've completed all the project management concept questions.
+                        {t('certification.assessmentCompleteDesc', 'You\'ve completed all the project management concept questions.')}
                     </Typography>
                     {renderScoreDisplay()}
                     {score !== undefined &&
-                    maxScore !== undefined &&
-                    (score / maxScore) * 100 >= 90 ? (
+                        maxScore !== undefined &&
+                        (score / maxScore) * 100 >= 90 ? (
                         <>
                             <Typography variant="body1" color="success.main" gutterBottom>
                                 Congratulations! You've passed the concepts phase.
@@ -236,7 +239,7 @@ export default function CertificationIndex({
                                 size="large"
                                 sx={{ mt: 2 }}
                             >
-                                Start Practical Scenario
+                                {t('certification.startPractical', 'Start Practical Scenario')}
                             </Button>
                         </>
                     ) : (
@@ -252,7 +255,7 @@ export default function CertificationIndex({
                                 }}
                                 size="medium"
                             >
-                                Start Over
+                                {t('certification.startOver', 'Start Over')}
                             </Button>
                         </Stack>
                     )}
@@ -317,7 +320,7 @@ export default function CertificationIndex({
                             </Typography>
 
                             {Array.isArray(currentQuestion.options) &&
-                            currentQuestion.options.length > 0 ? (
+                                currentQuestion.options.length > 0 ? (
                                 <RadioGroup
                                     value={selectedAnswers[currentQuestion.id] || ''}
                                     onChange={(e) =>
@@ -362,7 +365,7 @@ export default function CertificationIndex({
                                         onChange={(e) =>
                                             handleAnswerChange(currentQuestion.id, e.target.value)
                                         }
-                                        placeholder="Type your response here..."
+                                        placeholder={t('certification.typeResponsePlaceholder')}
                                         onCopy={(e) => e.preventDefault()}
                                         onCut={(e) => e.preventDefault()}
                                         onPaste={(e) => e.preventDefault()}
@@ -396,7 +399,7 @@ export default function CertificationIndex({
                                         onClick={goToPreviousQuestion}
                                         disabled={isSubmitting}
                                     >
-                                        Previous
+                                        {t('common.previous', 'Previous')}
                                     </Button>
                                 )}
 
@@ -406,7 +409,7 @@ export default function CertificationIndex({
                                     disabled={!selectedAnswers[currentQuestion.id] || isSubmitting}
                                     endIcon={isSubmitting ? null : <CheckIcon />}
                                 >
-                                    {isSubmitting ? 'Submitting...' : 'Submit Answer'}
+                                    {isSubmitting ? t('certification.submitting', 'Submitting...') : t('certification.submitAnswer', 'Submit Answer')}
                                 </Button>
                             </Stack>
                         </Stack>
@@ -507,7 +510,7 @@ export default function CertificationIndex({
                 </Typography>
                 {renderScoreDisplay()}
                 <Button variant="contained" size="large" sx={{ mt: 2 }}>
-                    Download Certificate
+                    {t('certification.downloadCertificate', 'Download Certificate')}
                 </Button>
             </Box>
         );
@@ -584,7 +587,7 @@ export default function CertificationIndex({
                 </Box>
             }
         >
-            <Head title="PM with AI Certification" />
+            <Head title={t('head.certification.index')} />
 
             <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
                 {/* Phase Stepper */}

@@ -480,16 +480,16 @@ return (${componentName});`;
 
         if (loading) {
             return (
-                <div className="flex items-center justify-center p-8">
+                <div className="flex items-center justify-center p-8 text-gray-700 dark:text-gray-200">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                    <span className="ml-3 text-gray-600">Loading micro-application...</span>
+                    <span className="ml-3">Loading micro-application...</span>
                 </div>
             );
         }
 
         if (error) {
             return (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-6 m-4">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 m-4">
                     <div className="flex">
                         <div className="flex-shrink-0">
                             <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -497,8 +497,8 @@ return (${componentName});`;
                             </svg>
                         </div>
                         <div className="ml-3">
-                            <h3 className="text-sm font-medium text-red-800">Error Loading Component</h3>
-                            <div className="mt-2 text-sm text-red-700">
+                            <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error Loading Component</h3>
+                            <div className="mt-2 text-sm text-red-700 dark:text-red-300">
                                 <p>{error}</p>
                                 <p className="mt-2">Please regenerate your component. The renderer only accepts valid TSX/JSX with <code>export default</code>.</p>
                             </div>
@@ -510,7 +510,7 @@ return (${componentName});`;
 
         if (!Component) {
             return (
-                <div className="text-center p-8 text-gray-500">
+                <div className="text-center p-8 text-gray-600 dark:text-gray-300">
                     <p>No micro-application available.</p>
                     <p className="text-sm mt-2">Use the assistant to create a custom application.</p>
                 </div>
@@ -577,7 +577,7 @@ class ErrorBoundary extends React.Component {
             }
 
             return (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 m-4">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 m-4">
                     <div className="flex">
                         <div className="flex-shrink-0">
                             <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
@@ -585,8 +585,8 @@ class ErrorBoundary extends React.Component {
                             </svg>
                         </div>
                         <div className="ml-3">
-                            <h3 className="text-sm font-medium text-yellow-800">Component Runtime Error</h3>
-                            <div className="mt-2 text-sm text-yellow-700">
+                            <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Component Runtime Error</h3>
+                            <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
                                 <p>{helpText}</p>
                                 <p className="mt-1 font-mono text-xs">{errorMessage}</p>
                                 {suggestions.length > 0 && (

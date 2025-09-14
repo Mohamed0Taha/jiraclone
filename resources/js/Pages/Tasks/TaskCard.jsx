@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Card,
     CardContent,
@@ -33,6 +34,7 @@ import ImageModal from '@/Components/ImageModal';
  * - Task ID displayed above title in blue
  */
 export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUpload, accent }) {
+    const { t } = useTranslation();
     const theme = useTheme();
     const defaultAccent = theme.palette.primary.main;
     const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -72,15 +74,15 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
     const getPriorityLabel = (priority) => {
         switch (priority) {
             case 'urgent':
-                return 'Urgent';
+                return t('board.priority.urgent', 'Urgent');
             case 'high':
-                return 'High';
+                return t('board.priority.high', 'High');
             case 'medium':
-                return 'Medium';
+                return t('board.priority.medium', 'Medium');
             case 'low':
-                return 'Low';
+                return t('board.priority.low', 'Low');
             default:
-                return 'Medium';
+                return t('board.priority.medium', 'Medium');
         }
     };
 
@@ -125,18 +127,18 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
 
     // Human tooltip text for schedule state
     const scheduleTooltip = (() => {
-        if (task?.status === 'done') return 'Task completed';
-        if (rawElapsedPct == null) return 'No schedule data';
-        const pctTxt = `${Math.round(rawElapsedPct)}% of scheduled time elapsed`;
-        if (overdue) return pctTxt + ' (overdue)';
-        if (rawElapsedPct > 100) return pctTxt + ' (time fully consumed)';
+        if (task?.status === 'done') return t('tasks.schedule.completed', 'Task completed');
+        if (rawElapsedPct == null) return t('tasks.schedule.noData', 'No schedule data');
+        const pctTxt = t('tasks.schedule.elapsedPercent', '{{percent}}% of scheduled time elapsed', { percent: Math.round(rawElapsedPct) });
+        if (overdue) return pctTxt + ' ' + t('tasks.schedule.overdueSuffix', '(overdue)');
+        if (rawElapsedPct > 100) return pctTxt + ' ' + t('tasks.schedule.fullyConsumed', '(time fully consumed)');
         return pctTxt;
     })();
 
     return (
         <>
             <Tooltip
-                title={onClick ? 'Click to view task details and comments' : ''}
+                title={onClick ? t('tasks.tooltips.viewDetails', 'Click to view task details and comments') : ''}
                 placement="top"
                 disableHoverListener={!onClick}
             >
@@ -152,9 +154,9 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                         transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
                         '&:hover': onClick
                             ? {
-                                  transform: 'translateY(-2px)',
-                                  boxShadow: theme.shadows[4],
-                              }
+                                transform: 'translateY(-2px)',
+                                boxShadow: theme.shadows[4],
+                            }
                             : {},
                     }}
                 >
@@ -189,7 +191,7 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                         >
                             <img
                                 src={task.cover_image}
-                                alt={task.title || 'Task image'}
+                                alt={task.title || t('tasks.imageAlt', 'Task image')}
                                 style={{
                                     width: '100%',
                                     height: '100%',
@@ -234,7 +236,7 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                             mb: 0.25,
                                             color: 'primary.main', // Changed to blue using theme primary color
                                         }}
-                                        title={`Task ID: ${task.id}`}
+                                        title={t('tasks.tooltips.taskId', 'Task ID: {{id}}', { id: task.id })}
                                     >
                                         #{task.id}
                                     </Typography>
@@ -252,9 +254,9 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                         overflow: 'hidden',
                                         wordBreak: 'break-word',
                                     }}
-                                    title={task?.title || '(Untitled)'}
+                                    title={task?.title || t('tasks.untitled', '(Untitled)')}
                                 >
-                                    {task?.title || '(Untitled)'}
+                                    {task?.title || t('tasks.untitled', '(Untitled)')}
                                 </Typography>
                             </Box>
 
@@ -267,7 +269,7 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                     flexShrink: 0,
                                 }}
                             >
-                                <Tooltip title="View Details">
+                                <Tooltip title={t('board.taskDetails')}>
                                     <IconButton
                                         size="small"
                                         onClick={(e) => {
@@ -279,7 +281,7 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                         <VisibilityIcon fontSize="small" />
                                     </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Edit">
+                                <Tooltip title={t('buttons.edit')}>
                                     <IconButton
                                         size="small"
                                         onClick={(e) => {
@@ -292,11 +294,11 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                     </IconButton>
                                 </Tooltip>
                                 {onImageUpload && (
-                                    <Tooltip title="Add Image">
+                                    <Tooltip title={t('buttons.upload')}>
                                         <IconButton
                                             size="small"
                                             component="label"
-                                            aria-label="Add image"
+                                            aria-label={t('tasks.aria.addImage', 'Add image')}
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             <AddPhotoAlternateIcon fontSize="small" />
@@ -315,7 +317,7 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                         </IconButton>
                                     </Tooltip>
                                 )}
-                                <Tooltip title="Delete">
+                                <Tooltip title={t('buttons.delete')}>
                                     <IconButton
                                         size="small"
                                         onClick={(e) => {
@@ -346,7 +348,7 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                     variant="caption"
                                     sx={{ fontWeight: 600, color: (t) => t.palette.warning.main }}
                                 >
-                                    Milestone
+                                    {t('board.milestone', 'Milestone')}
                                 </Typography>
                             </Stack>
                         )}
@@ -376,7 +378,7 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                             {/* Comments count */}
                             {task?.comments_count > 0 && (
                                 <Chip
-                                    label={`${task.comments_count} ${task.comments_count === 1 ? 'comment' : 'comments'}`}
+                                    label={t('tasks.commentsCount', '{{count}} {{label}}', { count: task.comments_count, label: task.comments_count === 1 ? t('tasks.comment', 'comment') : t('tasks.comments', 'comments') })}
                                     size="small"
                                     icon={<CommentIcon style={{ fontSize: 14 }} />}
                                     sx={{
@@ -418,7 +420,7 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                         sx={{ color: 'text.secondary' }}
                                     />
                                     <Typography variant="caption" color="text.secondary">
-                                        Click to add comments
+                                        {t('tasks.addCommentsHint', 'Click to add comments')}
                                     </Typography>
                                 </Stack>
                             )}
@@ -464,7 +466,7 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                     sx={{ color: (t) => alpha(t.palette.text.primary, 0.5) }}
                                 />
                                 <Tooltip
-                                    title={overdue ? 'Task is overdue' : ''}
+                                    title={overdue ? t('tasks.overdue', 'Task is overdue') : ''}
                                     disableHoverListener={!overdue}
                                 >
                                     <Typography
@@ -533,7 +535,7 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                     color="text.secondary"
                                     display="block"
                                 >
-                                    Created by {task.creator.name}
+                                    {t('tasks.createdBy', 'Created by {{name}}', { name: task.creator.name })}
                                 </Typography>
                             )}
                             {task?.assignee?.name && (
@@ -542,7 +544,7 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                     color="text.secondary"
                                     display="block"
                                 >
-                                    Assigned to {task.assignee.name}
+                                    {t('tasks.assignedTo', 'Assigned to {{name}}', { name: task.assignee.name })}
                                 </Typography>
                             )}
                         </Box>
@@ -554,8 +556,8 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                 open={imageModalOpen}
                 onClose={() => setImageModalOpen(false)}
                 src={task?.cover_image}
-                alt={task?.title || 'Task image'}
-                title={`Task #${task?.id}: ${task?.title}`}
+                alt={task?.title || t('tasks.imageAlt', 'Task image')}
+                title={t('tasks.imageTitle', 'Task #{{id}}: {{title}}', { id: task?.id, title: task?.title })}
                 downloadUrl={task?.cover_image}
             />
         </>

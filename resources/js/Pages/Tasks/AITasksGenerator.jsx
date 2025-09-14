@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef, forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Head, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useIsolatedSpeechRecognition } from '@/hooks/useIsolatedSpeechRecognition';
@@ -106,6 +107,7 @@ const Transition = forwardRef(function Transition(props, ref) {
 });
 
 export default function AITasksGenerator({ auth, project, prefill = {} }) {
+    const { t } = useTranslation();
     const theme = useTheme();
     const { processing, errors = {} } = usePage().props;
     const { userPlan } = useSubscription();
@@ -303,7 +305,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
             }
         } catch (error) {
             console.error('Error processing file:', error);
-            alert('Error processing file. Please try again.');
+            alert(t('errors.fileProcessing'));
         } finally {
             setIsProcessingFile(false);
             // Reset file input
@@ -353,11 +355,11 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                 console.log('Speech recognition started successfully for AI task generator');
             } else {
                 console.error('Failed to start speech recognition for AI task generator');
-                alert('Failed to start speech recognition. Please try again.');
+                alert(t('errors.speechRecognitionFailed'));
             }
         } catch (error) {
             console.error('Error starting speech recognition for AI task generator:', error);
-            alert('Failed to start speech recognition: ' + error.message);
+            alert(t('errors.speechRecognitionError') + ': ' + error.message);
         }
     };
 
@@ -576,7 +578,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
 
     return (
         <>
-            <Head title="AI Task Generator" />
+            <Head title={t('aiTask.generator')} />
             <AuthenticatedLayout user={auth?.user}>
                 <Box
                     sx={{
@@ -624,11 +626,11 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                     sx={{ color: alpha(theme.palette.primary.main, 0.9) }}
                                 />
                                 <Typography variant="h6" fontWeight={900} letterSpacing={-0.2}>
-                                    AI Task Generator
+                                    {t('aiTask.generator')}
                                 </Typography>
                                 <Chip
                                     size="small"
-                                    label={`${count} Task${count === 1 ? '' : 's'}`}
+                                    label={t('aiTask.taskCount', { count })}
                                     sx={{
                                         ml: 'auto',
                                         fontWeight: 800,
@@ -644,7 +646,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                 variant="body2"
                                 sx={{ color: alpha(theme.palette.text.primary, 0.7), mb: 2 }}
                             >
-                                Project: <strong>{project?.name}</strong>
+                                {t('common.project')}: <strong>{project?.name}</strong>
                             </Typography>
 
                             {errors?.ai && (
@@ -675,7 +677,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                     color: alpha(theme.palette.text.primary, 0.85),
                                 }}
                             >
-                                NUMBER OF TASKS
+                                {t('aiTask.numberOfTasksLabel')}
                             </Typography>
 
                             <Typography
@@ -690,7 +692,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                 }}
                             >
                                 <TipsAndUpdatesRoundedIcon sx={{ fontSize: 14 }} />
-                                Generate up to 8 tasks at a time to prevent timeout issues
+                                {t('aiTask.numberOfTasksHelp')}
                             </Typography>
 
                             <Stack direction="row" spacing={1} alignItems="center">
@@ -709,7 +711,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <Tooltip title="Decrease">
+                                                <Tooltip title={t('common.decrease')}>
                                                     <span>
                                                         <IconButton
                                                             size="small"
@@ -728,7 +730,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                         ),
                                         endAdornment: (
                                             <InputAdornment position="end">
-                                                <Tooltip title="Increase">
+                                                <Tooltip title={t('common.increase')}>
                                                     <span>
                                                         <IconButton
                                                             size="small"
@@ -749,7 +751,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                 />
 
                                 <Box
-                                    aria-label="count meter"
+                                    aria-label={t('common.countMeter')}
                                     sx={{
                                         flexGrow: 1,
                                         height: 10,
@@ -779,7 +781,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                             fontWeight: 600,
                                         }}
                                     >
-                                        {count}/10 requested
+                                        {t('aiTask.countRequested', { count })}
                                     </Typography>
                                 </Box>
                             </Stack>
@@ -795,7 +797,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                     color: alpha(theme.palette.text.primary, 0.85),
                                 }}
                             >
-                                EXTRA INSTRUCTIONS (OPTIONAL)
+                                {t('aiTask.extraInstructionsLabel')}
                             </Typography>
 
                             {/* File Upload and Speech Recognition Controls */}
@@ -809,7 +811,7 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                     multiple
                                     style={{ display: 'none' }}
                                 />
-                                <Tooltip title="Upload context files (txt, md, json, csv)">
+                                <Tooltip title={t('aiTask.uploadContextTooltip')}>
                                     <Button
                                         variant="outlined"
                                         size="small"
@@ -827,14 +829,14 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                             borderColor: alpha(theme.palette.primary.main, 0.3),
                                         }}
                                     >
-                                        {isProcessingFile ? 'Processing...' : 'Upload Files'}
+                                        {isProcessingFile ? t('auth.processing') : t('buttons.upload')}
                                     </Button>
                                 </Tooltip>
 
                                 {/* Speech Recognition Button */}
                                 {browserSupportsSpeechRecognition && (
                                     <Tooltip
-                                        title={listening ? 'Stop recording' : 'Start voice input'}
+                                        title={listening ? t('aiTask.stopRecording') : t('aiTask.startVoiceInput')}
                                     >
                                         <Button
                                             variant={listening ? 'contained' : 'outlined'}
@@ -1040,47 +1042,47 @@ export default function AITasksGenerator({ auth, project, prefill = {} }) {
                                 <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1.2}>
                                     {loadingChips
                                         ? Array.from({
-                                              length: Math.max(6, Math.min(10, count)),
-                                          }).map((_, i) => (
-                                              <Chip
-                                                  key={`skeleton-${i}`}
-                                                  label="Loading…"
-                                                  icon={<TipsAndUpdatesRoundedIcon />}
-                                                  sx={{
-                                                      opacity: 0.65,
-                                                      fontWeight: 700,
-                                                      background: alpha(
-                                                          theme.palette.info.main,
-                                                          0.12
-                                                      ),
-                                                      border: `1px solid ${alpha(theme.palette.info.main, 0.35)}`,
-                                                  }}
-                                              />
-                                          ))
+                                            length: Math.max(6, Math.min(10, count)),
+                                        }).map((_, i) => (
+                                            <Chip
+                                                key={`skeleton-${i}`}
+                                                label="Loading…"
+                                                icon={<TipsAndUpdatesRoundedIcon />}
+                                                sx={{
+                                                    opacity: 0.65,
+                                                    fontWeight: 700,
+                                                    background: alpha(
+                                                        theme.palette.info.main,
+                                                        0.12
+                                                    ),
+                                                    border: `1px solid ${alpha(theme.palette.info.main, 0.35)}`,
+                                                }}
+                                            />
+                                        ))
                                         : chips.map((s, idx) => {
-                                              const pal = chipPalettes[idx % chipPalettes.length];
-                                              return (
-                                                  <Chip
-                                                      key={`${idx}-${s}`}
-                                                      onClick={() => appendChip(s)}
-                                                      icon={<TipsAndUpdatesRoundedIcon />}
-                                                      label={s}
-                                                      sx={{
-                                                          cursor: 'pointer',
-                                                          fontWeight: 700,
-                                                          background: pal.bg,
-                                                          border: `1px solid ${pal.brd}`,
-                                                          transition:
-                                                              'transform .15s, box-shadow .15s, background .15s',
-                                                          '&:hover': {
-                                                              background: alpha(pal.brd, 0.18),
-                                                              transform: 'translateY(-1px)',
-                                                              boxShadow: `0 6px 16px -8px ${alpha(pal.brd, 0.55)}`,
-                                                          },
-                                                      }}
-                                                  />
-                                              );
-                                          })}
+                                            const pal = chipPalettes[idx % chipPalettes.length];
+                                            return (
+                                                <Chip
+                                                    key={`${idx}-${s}`}
+                                                    onClick={() => appendChip(s)}
+                                                    icon={<TipsAndUpdatesRoundedIcon />}
+                                                    label={s}
+                                                    sx={{
+                                                        cursor: 'pointer',
+                                                        fontWeight: 700,
+                                                        background: pal.bg,
+                                                        border: `1px solid ${pal.brd}`,
+                                                        transition:
+                                                            'transform .15s, box-shadow .15s, background .15s',
+                                                        '&:hover': {
+                                                            background: alpha(pal.brd, 0.18),
+                                                            transform: 'translateY(-1px)',
+                                                            boxShadow: `0 6px 16px -8px ${alpha(pal.brd, 0.55)}`,
+                                                        },
+                                                    }}
+                                                />
+                                            );
+                                        })}
                                 </Stack>
                             </Stack>
 

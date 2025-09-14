@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Button,
@@ -377,6 +378,7 @@ const WorkflowCard = ({ workflow, onEdit, onToggle, onDelete }) => {
 
 export default function AutomationsIndex({ auth, project, automations = [], quota = {} }) {
     const theme = useTheme();
+    const { t } = useTranslation();
     const { shouldShowOverlay, userPlan } = useSubscription();
     const showOverlay = shouldShowOverlay('automation');
 
@@ -619,10 +621,10 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
                                 </Avatar>
                                 <Box>
                                     <Typography variant="h4" fontWeight={900}>
-                                        Automations
+                                        {t('automations.title', 'Automations')}
                                     </Typography>
                                     <Typography sx={{ opacity: 0.9 }}>
-                                        Supercharge your workflow
+                                        {t('automations.subtitle', 'Supercharge your workflow')}
                                     </Typography>
                                 </Box>
                             </Stack>
@@ -659,8 +661,8 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
                             }}
                         >
                             {quota.can_create
-                                ? 'Create Workflow'
-                                : `Upgrade Plan (${quota.used}/${quota.limit} used)`}
+                                ? t('automations.createWorkflow', 'Create Workflow')
+                                : t('automations.upgradePlan', { used: quota.used, limit: quota.limit }, `Upgrade Plan (${quota.used}/${quota.limit} used)`)}
                         </Button>
                         <Button
                             variant="outlined"
@@ -679,7 +681,7 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
                                 },
                             }}
                         >
-                            Browse Templates
+                            {t('automations.browseTemplates', 'Browse Templates')}
                         </Button>
                     </Stack>
                 </Paper>
@@ -692,10 +694,10 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
                 >
                     <Box>
                         <Typography variant="h5" fontWeight={900}>
-                            Your Workflows
+                            {t('automations.yourWorkflows', 'Your Workflows')}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            Manage your automated tasks at a glance.
+                            {t('automations.manageAtGlance', 'Manage your automated tasks at a glance.')}
                         </Typography>
                     </Box>
                     <Stack direction="row" spacing={2} alignItems="center">
@@ -746,7 +748,7 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
 
                 <Grid container spacing={3}>
                     {workflows.map((w) => (
-                        <Grid item xs={12} md={6} key={w.id}>
+                        <Grid size={{ xs: 12, md: 6 }} key={w.id}>
                             <WorkflowCard
                                 workflow={w}
                                 onEdit={handleEditWorkflow}
@@ -776,12 +778,11 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
                     >
                         <WarningAmberIcon />
                     </Avatar>
-                    Delete Workflow?
+                    {t('automations.deleteWorkflowTitle', 'Delete Workflow?')}
                 </DialogTitle>
                 <DialogContent>
                     <Typography>
-                        You’re about to delete “<b>{toDelete?.name || 'Untitled'}</b>”. This cannot
-                        be undone.
+                        {t('automations.deleteWorkflowDesc', { name: toDelete?.name || t('automations.untitled', 'Untitled') }, `You’re about to delete “${toDelete?.name || 'Untitled'}”. This cannot be undone.`)}
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ p: 2 }}>
@@ -789,7 +790,7 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
                         onClick={() => setConfirmOpen(false)}
                         sx={{ textTransform: 'none', fontWeight: 700 }}
                     >
-                        Cancel
+                        {t('common.cancel', 'Cancel')}
                     </Button>
                     <Button
                         variant="contained"
@@ -798,14 +799,14 @@ export default function AutomationsIndex({ auth, project, automations = [], quot
                             if (!toDelete?.id) return;
                             router.delete(`/projects/${project.id}/automations/${toDelete.id}`, {
                                 preserveScroll: true,
-                                onSuccess: () => setSnack('Workflow deleted!'),
-                                onError: () => setSnack('Failed to delete workflow.'),
+                                onSuccess: () => setSnack(t('automations.workflowDeleted', 'Workflow deleted!')),
+                                onError: () => setSnack(t('automations.failedToDelete', 'Failed to delete workflow.')),
                             });
                             setConfirmOpen(false);
                         }}
                         sx={{ textTransform: 'none', fontWeight: 800, borderRadius: 2 }}
                     >
-                        Delete
+                        {t('common.delete', 'Delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

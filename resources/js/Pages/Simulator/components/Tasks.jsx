@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Typography,
@@ -39,6 +40,7 @@ export default function Tasks({
     resolvedEventIds = [],
     onResolveEventAction,
 }) {
+    const { t } = useTranslation();
     const data = tasks && tasks.length ? tasks : MOCK_TASKS;
     const summary = {
         total: data.length,
@@ -57,7 +59,7 @@ export default function Tasks({
                         <Chip
                             size="small"
                             color="info"
-                            label={`Highlighted: ${highlightedTaskIds.length}`}
+                            label={`${t('simulator.tasks.highlighted')}: ${highlightedTaskIds.length}`}
                             sx={{ ml: 1 }}
                         />
                     )}
@@ -70,7 +72,7 @@ export default function Tasks({
                             color="info"
                             onClick={onClearHighlights}
                         >
-                            Clear Highlights
+                            {t('simulator.tasks.clearHighlights')}
                         </Button>
                     )}
                     <Button
@@ -79,7 +81,7 @@ export default function Tasks({
                         disabled={!canAddTask}
                         onClick={canAddTask ? onShowAddTask : undefined}
                     >
-                        New Task
+                        {t('simulator.tasks.newTask')}
                     </Button>
                 </Stack>
             </Stack>

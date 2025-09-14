@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Button,
@@ -19,19 +20,20 @@ import {
 } from '@mui/material';
 import { Send as SendIcon, Support as SupportIcon, Email as EmailIcon } from '@mui/icons-material';
 
-const contactTopics = [
-    { value: 'billing', label: 'Billing Issue' },
-    { value: 'bug', label: 'Bug Report' },
-    { value: 'feature', label: 'Feature Request' },
-    { value: 'technical', label: 'Technical Support' },
-    { value: 'account', label: 'Account Issue' },
-    { value: 'general', label: 'General Inquiry' },
-    { value: 'feedback', label: 'Feedback' },
-    { value: 'other', label: 'Other' },
-];
-
 export default function ContactUs({ auth, flash }) {
+    const { t } = useTranslation();
     const theme = useTheme();
+
+    const contactTopics = [
+        { value: 'billing', label: t('contactUs.topics.billing') },
+        { value: 'bug', label: t('contactUs.topics.bug') },
+        { value: 'feature', label: t('contactUs.topics.feature') },
+        { value: 'technical', label: t('contactUs.topics.technical') },
+        { value: 'account', label: t('contactUs.topics.account') },
+        { value: 'general', label: t('contactUs.topics.general') },
+        { value: 'feedback', label: t('contactUs.topics.feedback') },
+        { value: 'other', label: t('contactUs.topics.other') },
+    ];
     const [formData, setFormData] = useState({
         topic: '',
         message: '',
@@ -94,7 +96,7 @@ export default function ContactUs({ auth, flash }) {
 
     return (
         <>
-            <Head title="Contact Us" />
+            <Head title={t('contactUs.title')} />
             <AuthenticatedLayout user={auth?.user}>
                 <Box
                     sx={{
@@ -158,7 +160,7 @@ export default function ContactUs({ auth, flash }) {
                                         color: 'transparent',
                                     }}
                                 >
-                                    Contact Us
+                                    {t('contactUs.title')}
                                 </Typography>
                             </Stack>
                             <Typography
@@ -168,8 +170,7 @@ export default function ContactUs({ auth, flash }) {
                                     maxWidth: 600,
                                 }}
                             >
-                                Need help or have questions? We're here to assist you. Send us a
-                                message and we'll get back to you as soon as possible.
+                                {t('contactUs.description')}
                             </Typography>
                         </Stack>
 
@@ -217,23 +218,23 @@ export default function ContactUs({ auth, flash }) {
                                             >
                                                 <EmailIcon fontSize="small" color="primary" />
                                                 <Typography variant="subtitle2" fontWeight={700}>
-                                                    Your Details
+                                                    {t('contactUs.yourDetails')}
                                                 </Typography>
                                             </Stack>
                                             <Typography variant="body2" color="text.secondary">
-                                                <strong>Name:</strong> {auth.user.name}
+                                                <strong>{t('contactUs.name')}:</strong> {auth.user.name}
                                             </Typography>
                                             <Typography variant="body2" color="text.secondary">
-                                                <strong>Email:</strong> {auth.user.email}
+                                                <strong>{t('contactUs.email')}:</strong> {auth.user.email}
                                             </Typography>
                                         </Box>
 
                                         {/* Topic Selection */}
                                         <FormControl fullWidth>
-                                            <InputLabel>Topic *</InputLabel>
+                                            <InputLabel>{t('contactUs.topic')} *</InputLabel>
                                             <Select
                                                 value={formData.topic}
-                                                label="Topic *"
+                                                label={`${t('contactUs.topic')} *`}
                                                 onChange={handleChange('topic')}
                                                 required
                                             >
@@ -247,21 +248,21 @@ export default function ContactUs({ auth, flash }) {
 
                                         {/* Message */}
                                         <TextField
-                                            label="Message *"
+                                            label={`${t('contactUs.message')} *`}
                                             multiline
                                             rows={6}
                                             value={formData.message}
                                             onChange={handleChange('message')}
-                                            placeholder="Please describe your issue or question in detail... (minimum 10 characters)"
+                                            placeholder={t('contactUs.messagePlaceholder')}
                                             required
                                             fullWidth
                                             helperText={
                                                 formData.message.trim().length > 0 &&
-                                                formData.message.trim().length < 10
-                                                    ? `${10 - formData.message.trim().length} more characters needed`
+                                                    formData.message.trim().length < 10
+                                                    ? `${10 - formData.message.trim().length} ${t('contactUs.moreCharactersNeeded')}`
                                                     : formData.message.trim().length >= 10
-                                                      ? `${formData.message.trim().length} characters`
-                                                      : 'Minimum 10 characters required'
+                                                        ? `${formData.message.trim().length} ${t('contactUs.characters')}`
+                                                        : t('contactUs.minimumCharacters')
                                             }
                                             error={
                                                 formData.message.trim().length > 0 &&
@@ -296,7 +297,7 @@ export default function ContactUs({ auth, flash }) {
                                                 },
                                             }}
                                         >
-                                            {isSubmitting ? 'Sending...' : 'Send Message'}
+                                            {isSubmitting ? t('contactUs.sending') : t('contactUs.sendMessage')}
                                         </Button>
 
                                         <Typography
@@ -304,8 +305,7 @@ export default function ContactUs({ auth, flash }) {
                                             color="text.secondary"
                                             textAlign="center"
                                         >
-                                            We typically respond within 24 hours during business
-                                            days.
+                                            {t('contactUs.responseTime')}
                                         </Typography>
                                     </Stack>
                                 </form>
@@ -340,16 +340,14 @@ export default function ContactUs({ auth, flash }) {
                                                     color="success.main"
                                                     gutterBottom
                                                 >
-                                                    Message Sent Successfully!
+                                                    {t('contactUs.success.title')}
                                                 </Typography>
                                                 <Typography
                                                     variant="body1"
                                                     color="text.secondary"
                                                     mb={3}
                                                 >
-                                                    Thank you for reaching out! We've received your
-                                                    message and will get back to you within 24 hours
-                                                    during business days.
+                                                    {t('contactUs.success.message')}
                                                 </Typography>
                                             </Box>
                                             <Button
@@ -362,7 +360,7 @@ export default function ContactUs({ auth, flash }) {
                                                         'linear-gradient(135deg, #6366F1, #4F46E5)',
                                                 }}
                                             >
-                                                Send Another Message
+                                                {t('contactUs.sendAnother')}
                                             </Button>
                                         </>
                                     ) : (
@@ -396,16 +394,14 @@ export default function ContactUs({ auth, flash }) {
                                                     color="error.main"
                                                     gutterBottom
                                                 >
-                                                    Message Failed to Send
+                                                    {t('contactUs.error.title')}
                                                 </Typography>
                                                 <Typography
                                                     variant="body1"
                                                     color="text.secondary"
                                                     mb={3}
                                                 >
-                                                    We're sorry, but there was an issue sending your
-                                                    message. Please try again or contact us directly
-                                                    at <strong>taha.elfatih@gmail.com</strong>.
+                                                    {t('contactUs.error.message')}
                                                 </Typography>
                                             </Box>
                                             <Button
@@ -418,7 +414,7 @@ export default function ContactUs({ auth, flash }) {
                                                         'linear-gradient(135deg, #6366F1, #4F46E5)',
                                                 }}
                                             >
-                                                Try Again
+                                                {t('contactUs.tryAgain')}
                                             </Button>
                                         </>
                                     )}

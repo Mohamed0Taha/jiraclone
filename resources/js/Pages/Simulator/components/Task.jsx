@@ -35,10 +35,11 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import WarningIcon from '@mui/icons-material/Warning';
 
-const priorityColor = (p) => ({ High: 'error', Medium: 'warning', Low: 'success' })[p] || 'default';
+
+import { useTranslation } from 'react-i18next';const priorityColor = (p) => ({ High: 'error', Medium: 'warning', Low: 'success' })[p] || 'default';
 const statusColor = (s) =>
     ({ Completed: 'success', 'In Progress': 'warning', Pending: 'default', Cancelled: 'error' })[
-        s
+    s
     ] || 'default';
 
 export default function Task({
@@ -56,6 +57,7 @@ export default function Task({
     resolvedEventIds = [],
     onResolveEventAction,
 }) {
+  const { t } = useTranslation();
     const [local, setLocal] = useState(task);
     const [expanded, setExpanded] = useState(defaultExpanded);
     const [actionDialog, setActionDialog] = useState({ open: false, type: null });
@@ -166,14 +168,14 @@ export default function Task({
                 minHeight: expanded ? undefined : 60,
                 '::after': highlighted
                     ? {
-                          content: '""',
-                          position: 'absolute',
-                          inset: 0,
-                          border: '2px solid',
-                          borderColor: highlightColor || 'info.light',
-                          borderRadius: 1,
-                          pointerEvents: 'none',
-                      }
+                        content: '""',
+                        position: 'absolute',
+                        inset: 0,
+                        border: '2px solid',
+                        borderColor: highlightColor || 'info.light',
+                        borderRadius: 1,
+                        pointerEvents: 'none',
+                    }
                     : undefined,
             }}
         >
@@ -347,7 +349,7 @@ export default function Task({
                             Task Actions
                         </Typography>
                         <Grid container spacing={0.5} sx={{ mt: 0.5 }}>
-                            <Grid item xs={6}>
+                            <Grid size={{ xs: 6 }}>
                                 <Button
                                     size="small"
                                     variant="outlined"
@@ -360,7 +362,7 @@ export default function Task({
                                     Split Task
                                 </Button>
                             </Grid>
-                            <Grid item xs={6}>
+                            <Grid size={{ xs: 6 }}>
                                 <Button
                                     size="small"
                                     variant="outlined"
@@ -373,7 +375,7 @@ export default function Task({
                                     Add Resources
                                 </Button>
                             </Grid>
-                            <Grid item xs={6}>
+                            <Grid size={{ xs: 6 }}>
                                 <Button
                                     size="small"
                                     variant="outlined"
@@ -386,7 +388,7 @@ export default function Task({
                                     Change Scope
                                 </Button>
                             </Grid>
-                            <Grid item xs={6}>
+                            <Grid size={{ xs: 6 }}>
                                 <Button
                                     size="small"
                                     variant="outlined"
@@ -399,7 +401,7 @@ export default function Task({
                                     Rush Delivery
                                 </Button>
                             </Grid>
-                            <Grid item xs={6}>
+                            <Grid size={{ xs: 6 }}>
                                 <Button
                                     size="small"
                                     variant="outlined"
@@ -412,7 +414,7 @@ export default function Task({
                                     Request Budget
                                 </Button>
                             </Grid>
-                            <Grid item xs={6}>
+                            <Grid size={{ xs: 6 }}>
                                 <Button
                                     size="small"
                                     variant="outlined"
@@ -430,12 +432,12 @@ export default function Task({
                         {/* Risk Indicators */}
                         {(local.progress > 80 ||
                             local.remaining_hours > local.estimated_hours * 1.2) && (
-                            <Alert severity="warning" sx={{ mt: 1 }} icon={<WarningIcon />}>
-                                {local.progress > 80
-                                    ? 'Task nearing completion - limited action options'
-                                    : 'Task behind schedule - consider taking action'}
-                            </Alert>
-                        )}
+                                <Alert severity="warning" sx={{ mt: 1 }} icon={<WarningIcon />}>
+                                    {local.progress > 80
+                                        ? 'Task nearing completion - limited action options'
+                                        : 'Task behind schedule - consider taking action'}
+                                </Alert>
+                            )}
                         {/* Event impacts removed from task card to increase challenge; view & resolve via Command Center */}
                     </Box>
                 </Collapse>
@@ -577,7 +579,7 @@ export default function Task({
                                         justification: e.target.value,
                                     })
                                 }
-                                placeholder="Explain the reason for scope change..."
+                                placeholder={t('simulator.explainScopeChangePlaceholder')}
                             />
                         </Stack>
                     )}
@@ -657,7 +659,7 @@ export default function Task({
                                         justification: e.target.value,
                                     })
                                 }
-                                placeholder="Explain why additional budget is needed..."
+                                placeholder={t('simulator.explainBudgetNeedPlaceholder')}
                             />
                             <Typography variant="caption" color="info.main">
                                 Higher amounts may require executive approval but provide greater

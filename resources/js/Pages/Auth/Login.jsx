@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     TextField,
@@ -26,6 +27,7 @@ import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 export default function Login({ status, canResetPassword }) {
+    const { t } = useTranslation();
     const theme = useTheme();
     const [showPassword, setShowPassword] = useState(false);
 
@@ -45,7 +47,7 @@ export default function Login({ status, canResetPassword }) {
 
     return (
         <GuestLayout>
-            <Head title="Log in" />
+            <Head title={t('auth.login')} />
 
             <Card
                 sx={{
@@ -82,11 +84,11 @@ export default function Login({ status, canResetPassword }) {
                                     fontFamily: '"Inter", "Segoe UI", sans-serif',
                                 }}
                             >
-                                Welcome back
+                                {t('auth.welcomeBack')}
                             </Typography>
                         </Box>
                         <Typography variant="body1" color="textSecondary" sx={{ mb: 1 }}>
-                            Sign in to your TaskPilot account
+                            {t('auth.signInToAccount')}
                         </Typography>
                     </Box>
 
@@ -138,7 +140,7 @@ export default function Login({ status, canResetPassword }) {
                                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                                 />
                             </svg>
-                            Continue with Google
+                            {t('auth.continueWithGoogle')}
                         </Button>
 
                         <Box sx={{ my: 3, display: 'flex', alignItems: 'center' }}>
@@ -148,7 +150,7 @@ export default function Login({ status, canResetPassword }) {
                                 color="text.secondary"
                                 sx={{ mx: 2, fontWeight: 500 }}
                             >
-                                OR
+                                {t('common.or')}
                             </Typography>
                             <Divider sx={{ flexGrow: 1 }} />
                         </Box>
@@ -159,7 +161,7 @@ export default function Login({ status, canResetPassword }) {
                             fullWidth
                             id="email"
                             name="email"
-                            label="Email"
+                            label={t('auth.email')}
                             type="email"
                             value={data.email}
                             onChange={(e) => setData('email', e.target.value)}
@@ -189,7 +191,7 @@ export default function Login({ status, canResetPassword }) {
                             fullWidth
                             id="password"
                             name="password"
-                            label="Password"
+                            label={t('auth.password')}
                             type={showPassword ? 'text' : 'password'}
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
@@ -201,7 +203,7 @@ export default function Login({ status, canResetPassword }) {
                                 endAdornment: (
                                     <InputAdornment position="end">
                                         <IconButton
-                                            aria-label="toggle password visibility"
+                                            aria-label={t('auth.togglePasswordVisibility')}
                                             onClick={() => setShowPassword(!showPassword)}
                                             edge="end"
                                         >
@@ -229,7 +231,7 @@ export default function Login({ status, canResetPassword }) {
                                     color="primary"
                                 />
                             }
-                            label="Remember me"
+                            label={t('auth.rememberMe')}
                             sx={{ mt: 2, mb: 2 }}
                         />
 
@@ -254,7 +256,7 @@ export default function Login({ status, canResetPassword }) {
                                 },
                             }}
                         >
-                            {processing ? 'Signing in...' : 'Sign in with Email'}
+                            {processing ? t('auth.signingIn') : t('auth.signInWithEmail')}
                         </Button>
 
                         {canResetPassword && (
@@ -272,7 +274,7 @@ export default function Login({ status, canResetPassword }) {
                                             },
                                         }}
                                     >
-                                        Forgot your password?
+                                        {t('auth.forgotPassword')}
                                     </MuiLink>
                                 </Link>
                             </Box>
@@ -280,7 +282,7 @@ export default function Login({ status, canResetPassword }) {
 
                         <Box sx={{ textAlign: 'center', mt: 2 }}>
                             <Typography variant="body2" color="text.secondary">
-                                Don't have an account?{' '}
+                                {t('auth.noAccount')}{' '}
                                 <Link href={route('register')}>
                                     <MuiLink
                                         component="span"
@@ -294,7 +296,7 @@ export default function Login({ status, canResetPassword }) {
                                             },
                                         }}
                                     >
-                                        Sign up
+                                        {t('auth.signUp')}
                                     </MuiLink>
                                 </Link>
                             </Typography>

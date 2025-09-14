@@ -1,10 +1,12 @@
 import { Head, useForm } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 
 export default function Redeem({ flash, prefilledCode }) {
+    const { t } = useTranslation();
     const { data, setData, post, processing, errors, reset } = useForm({
         code: prefilledCode || '',
         first_name: '',
@@ -43,7 +45,7 @@ export default function Redeem({ flash, prefilledCode }) {
 
     return (
         <>
-            <Head title="Redeem AppSumo Code - TaskPilot" />
+            <Head title={t('appsumo.redeemTitle')} />
 
             <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
                 <div className="w-full max-w-md">
@@ -54,20 +56,20 @@ export default function Redeem({ flash, prefilledCode }) {
                             </div>
                         </div>
                         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                            Redeem Your AppSumo Code
+                            {t('appsumo.redeemHeading')}
                         </h1>
                         <p className="text-gray-600">
-                            Get lifetime access to TaskPilot with your AppSumo purchase
+                            {t('appsumo.redeemSubheading')}
                         </p>
                     </div>
 
                     <div className="bg-white rounded-lg shadow-lg p-6">
                         <div className="mb-6">
                             <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                                Create Your Lifetime Account
+                                {t('appsumo.createLifetime')}
                             </h2>
                             <p className="text-gray-600 text-sm">
-                                Enter your details and AppSumo code to activate your lifetime access
+                                {t('appsumo.createLifetimeDesc')}
                             </p>
                         </div>
 
@@ -115,12 +117,12 @@ export default function Redeem({ flash, prefilledCode }) {
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <InputLabel htmlFor="code" value="AppSumo Code" />
+                                <InputLabel htmlFor="code" value={t('appsumo.codeLabel')} />
                                 <TextInput
                                     id="code"
                                     type="text"
                                     className="mt-1 block w-full text-center font-mono text-lg tracking-wider"
-                                    placeholder="Enter your AppSumo code"
+                                    placeholder={t('appsumo.codePlaceholder')}
                                     value={data.code}
                                     onChange={(e) => setData('code', e.target.value.toUpperCase())}
                                     maxLength={12}
@@ -132,12 +134,12 @@ export default function Redeem({ flash, prefilledCode }) {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <InputLabel htmlFor="first_name" value="First Name" />
+                                    <InputLabel htmlFor="first_name" value={t('common.firstName')} />
                                     <TextInput
                                         id="first_name"
                                         type="text"
                                         className="mt-1 block w-full"
-                                        placeholder="First name"
+                                        placeholder={t('appsumo.firstNamePlaceholder')}
                                         value={data.first_name}
                                         onChange={(e) => setData('first_name', e.target.value)}
                                         disabled={processing}
@@ -147,12 +149,12 @@ export default function Redeem({ flash, prefilledCode }) {
                                 </div>
 
                                 <div>
-                                    <InputLabel htmlFor="last_name" value="Last Name" />
+                                    <InputLabel htmlFor="last_name" value={t('common.lastName')} />
                                     <TextInput
                                         id="last_name"
                                         type="text"
                                         className="mt-1 block w-full"
-                                        placeholder="Last name"
+                                        placeholder={t('appsumo.lastNamePlaceholder')}
                                         value={data.last_name}
                                         onChange={(e) => setData('last_name', e.target.value)}
                                         disabled={processing}
@@ -163,12 +165,12 @@ export default function Redeem({ flash, prefilledCode }) {
                             </div>
 
                             <div>
-                                <InputLabel htmlFor="email" value="Email Address" />
+                                <InputLabel htmlFor="email" value={t('common.emailAddress')} />
                                 <TextInput
                                     id="email"
                                     type="email"
                                     className="mt-1 block w-full"
-                                    placeholder="Your email address"
+                                    placeholder={t('appsumo.emailPlaceholder')}
                                     value={data.email}
                                     onChange={(e) => setData('email', e.target.value)}
                                     disabled={processing}
@@ -177,13 +179,12 @@ export default function Redeem({ flash, prefilledCode }) {
                                 <InputError message={errors.email} className="mt-2" />
                                 {isGmailAccount && (
                                     <p className="mt-1 text-xs text-green-600">
-                                        ✓ Gmail account detected - You'll sign in with Google OAuth
-                                        (no password needed)
+                                        ✓ {t('appsumo.gmailDetected')}
                                     </p>
                                 )}
                                 {needsPassword && (
                                     <p className="mt-1 text-xs text-blue-600">
-                                        ℹ️ Non-Gmail account - Please create a password below
+                                        ℹ️ {t('appsumo.nonGmailAccount')}
                                     </p>
                                 )}
                             </div>
@@ -192,12 +193,12 @@ export default function Redeem({ flash, prefilledCode }) {
                             {needsPassword && (
                                 <>
                                     <div>
-                                        <InputLabel htmlFor="password" value="Password" />
+                                        <InputLabel htmlFor="password" value={t('common.password')} />
                                         <TextInput
                                             id="password"
                                             type="password"
                                             className="mt-1 block w-full"
-                                            placeholder="Create a password (min 8 characters)"
+                                            placeholder={t('appsumo.passwordPlaceholder')}
                                             value={data.password}
                                             onChange={(e) => setData('password', e.target.value)}
                                             disabled={processing}
@@ -210,13 +211,13 @@ export default function Redeem({ flash, prefilledCode }) {
                                     <div>
                                         <InputLabel
                                             htmlFor="password_confirmation"
-                                            value="Confirm Password"
+                                            value={t('common.confirmPassword')}
                                         />
                                         <TextInput
                                             id="password_confirmation"
                                             type="password"
                                             className="mt-1 block w-full"
-                                            placeholder="Confirm your password"
+                                            placeholder={t('appsumo.confirmPasswordPlaceholder')}
                                             value={data.password_confirmation}
                                             onChange={(e) =>
                                                 setData('password_confirmation', e.target.value)
@@ -238,8 +239,8 @@ export default function Redeem({ flash, prefilledCode }) {
                                 disabled={!isFormValid() || processing}
                             >
                                 {processing
-                                    ? 'Activating Your Account...'
-                                    : 'Redeem Code & Create Account'}
+                                    ? t('appsumo.activatingAccount')
+                                    : t('appsumo.redeemButton')}
                             </PrimaryButton>
                         </form>
 
@@ -259,14 +260,12 @@ export default function Redeem({ flash, prefilledCode }) {
                                     />
                                 </svg>
                                 <div className="text-xs text-blue-800">
-                                    <p className="font-medium mb-1">Account Types:</p>
+                                    <p className="font-medium mb-1">{t('appsumo.accountTypes')}</p>
                                     <p>
-                                        <strong>Gmail accounts:</strong> Sign in with Google OAuth
-                                        (no password needed)
+                                        <strong>{t('appsumo.gmailAccounts')}</strong> {t('appsumo.gmailDescription')}
                                     </p>
                                     <p>
-                                        <strong>Other emails:</strong> Create a password for direct
-                                        login
+                                        <strong>{t('appsumo.otherEmails')}</strong> {t('appsumo.otherEmailsDescription')}
                                     </p>
                                 </div>
                             </div>
@@ -275,7 +274,7 @@ export default function Redeem({ flash, prefilledCode }) {
 
                     <div className="mt-6 text-center">
                         <p className="text-sm text-gray-500">
-                            Need help? Contact us at{' '}
+                            {t('appsumo.needHelp')}{' '}
                             <a
                                 href="mailto:support@taskpilot.app"
                                 className="text-blue-600 hover:underline"

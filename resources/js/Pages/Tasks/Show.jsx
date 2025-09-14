@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { route } from 'ziggy-js';
+import { useTranslation } from 'react-i18next';
 import { alpha } from '@mui/material/styles';
 import {
     Container,
@@ -99,6 +100,7 @@ export default function TaskShow({
     allTasks,
     methodology,
 }) {
+    const { t } = useTranslation();
     // Design tokens (align view + modals)
     const palette = {
         gradientSurface: 'linear-gradient(155deg,#FFFFFF 0%,#F5F7FB 65%,#EEF2F9 100%)',
@@ -130,7 +132,7 @@ export default function TaskShow({
             if (project?.id) {
                 fromLocal = localStorage.getItem(`project:${project.id}:methodology`);
             }
-        } catch {}
+        } catch { }
         if (allowed.includes(fromLocal)) return fromLocal;
         return DEFAULT_METHOD;
     })();
@@ -520,7 +522,7 @@ export default function TaskShow({
                                 }}
                                 sx={{ borderRadius: 2, px: 2 }}
                             >
-                                Cancel
+                                {t('common.cancel')}
                             </Button>
                         </Stack>
                     </Stack>
@@ -1176,7 +1178,7 @@ export default function TaskShow({
                         <TextField
                             multiline
                             rows={3}
-                            placeholder={replyTo ? 'Write a reply...' : 'Add a comment...'}
+                            placeholder={replyTo ? t('board.writeReplyPlaceholder') : t('board.addCommentPlaceholder')}
                             value={commentText}
                             onChange={(e) => setCommentText(e.target.value)}
                             variant="outlined"
@@ -1346,7 +1348,7 @@ export default function TaskShow({
                             fullWidth
                             value={editForm.title}
                             onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                            placeholder="Concise task name"
+                            placeholder={t('board.conciseTaskName')}
                             variant="outlined"
                             size="small"
                         />
@@ -1359,7 +1361,7 @@ export default function TaskShow({
                             onChange={(e) =>
                                 setEditForm({ ...editForm, description: e.target.value })
                             }
-                            placeholder="Add more context..."
+                            placeholder={t('board.addMoreContext')}
                             size="small"
                         />
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
@@ -1419,7 +1421,7 @@ export default function TaskShow({
                                     ),
                                 }}
                             >
-                                <MenuItem value="">— Unassigned —</MenuItem>
+                                <MenuItem value="">— {t('common.unassigned')} —</MenuItem>
                                 {Array.isArray(users) &&
                                     users.map((u) => (
                                         <MenuItem key={u.id} value={u.id}>
@@ -1440,14 +1442,14 @@ export default function TaskShow({
                                 helperText="Task priority level"
                                 size="small"
                             >
-                                <MenuItem value="low">Low</MenuItem>
-                                <MenuItem value="medium">Medium</MenuItem>
-                                <MenuItem value="high">High</MenuItem>
-                                <MenuItem value="urgent">Urgent</MenuItem>
+                                <MenuItem value="low">{t('board.priority.low')}</MenuItem>
+                                <MenuItem value="medium">{t('board.priority.medium')}</MenuItem>
+                                <MenuItem value="high">{t('board.priority.high')}</MenuItem>
+                                <MenuItem value="urgent">{t('board.priority.urgent')}</MenuItem>
                             </TextField>
                             <TextField
                                 select
-                                label="Milestone"
+                                label={t('board.milestone')}
                                 fullWidth
                                 value={String(editForm.milestone)}
                                 onChange={(e) =>
@@ -1456,7 +1458,7 @@ export default function TaskShow({
                                         milestone: e.target.value === 'true',
                                     })
                                 }
-                                helperText="Mark as project milestone"
+                                helperText={t('board.markAsMilestone')}
                                 size="small"
                                 InputProps={{
                                     startAdornment: (
@@ -1467,19 +1469,19 @@ export default function TaskShow({
                                     ),
                                 }}
                             >
-                                <MenuItem value={'false'}>Regular Task</MenuItem>
-                                <MenuItem value={'true'}>Milestone</MenuItem>
+                                <MenuItem value={'false'}>{t('board.regularTask')}</MenuItem>
+                                <MenuItem value={'true'}>{t('board.milestone')}</MenuItem>
                             </TextField>
                         </Stack>
                         <TextField
                             select
-                            label="Duplicate Of"
+                            label={t('board.duplicateOf')}
                             fullWidth
                             value={editForm.duplicate_of}
                             onChange={(e) =>
                                 setEditForm({ ...editForm, duplicate_of: e.target.value })
                             }
-                            helperText="Mark this task as a duplicate of another task"
+                            helperText={t('board.selectDuplicate')}
                             size="small"
                             InputProps={{
                                 startAdornment: (
@@ -1490,7 +1492,7 @@ export default function TaskShow({
                                 ),
                             }}
                         >
-                            <MenuItem value="">Not a duplicate</MenuItem>
+                            <MenuItem value="">{t('board.duplicateOf')}</MenuItem>
                             {allTasks
                                 .filter((t) => t.id !== localTask.id)
                                 .map((task) => (
@@ -1557,7 +1559,7 @@ export default function TaskShow({
                         </Box>
                     </DialogContent>
                     <DialogActions sx={{ px: 2, py: 1.5 }}>
-                        <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={() => setEditDialogOpen(false)}>{t('common.cancel')}</Button>
                         <Button
                             type="submit"
                             variant="contained"
@@ -1605,8 +1607,8 @@ export default function TaskShow({
                         {editMode
                             ? 'Edit Task'
                             : createForm.parent_id
-                              ? 'Create Sub-Task'
-                              : 'Create Task'}
+                                ? 'Create Sub-Task'
+                                : 'Create Task'}
                         <Chip
                             size="small"
                             label={editMode ? 'Editing' : createForm.parent_id ? 'Sub-Task' : 'New'}
@@ -1678,7 +1680,7 @@ export default function TaskShow({
                             onChange={(e) => setData('title', e.target.value)}
                             error={!!errors.title}
                             helperText={errors.title}
-                            placeholder="Concise task name"
+                            placeholder={t('board.conciseTaskName')}
                             variant="outlined"
                             size="small"
                         />
@@ -1694,7 +1696,7 @@ export default function TaskShow({
                                 errors.description ||
                                 'Add optional context, acceptance criteria, etc.'
                             }
-                            placeholder="Add more context..."
+                            placeholder={t('board.addMoreContext')}
                             size="small"
                         />
 
@@ -1755,7 +1757,7 @@ export default function TaskShow({
                                     ),
                                 }}
                             >
-                                <MenuItem value="">— Unassigned —</MenuItem>
+                                <MenuItem value="">— {t('common.unassigned')} —</MenuItem>
                                 {Array.isArray(users) &&
                                     users.map((u) => (
                                         <MenuItem key={u.id} value={u.id}>
@@ -1856,7 +1858,7 @@ export default function TaskShow({
 
                     <DialogActions sx={{ px: 2, py: 1.5 }}>
                         <Button onClick={() => setCreateOpen(false)} disabled={processing}>
-                            Cancel
+                            {t('common.cancel')}
                         </Button>
                         <Button
                             type="submit"
@@ -1877,8 +1879,8 @@ export default function TaskShow({
                                     ? 'Updating…'
                                     : 'Creating…'
                                 : editMode
-                                  ? 'Update Task'
-                                  : 'Create Task'}
+                                    ? 'Update Task'
+                                    : 'Create Task'}
                         </Button>
                     </DialogActions>
                 </form>

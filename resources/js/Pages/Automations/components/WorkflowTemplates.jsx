@@ -15,6 +15,7 @@ import {
     ToggleButton,
 } from '@mui/material';
 import { alpha, useTheme, styled } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import {
     ArrowBack as ArrowBackIcon,
     Search as SearchIcon,
@@ -119,7 +120,6 @@ const TEMPLATES = [
                 type: 'email',
                 config: {
                     to: '{{project.manager.email}}',
-                    subject: 'Task Completed: {{task.title}}',
                     body: 'Great news! The task "{{task.title}}" has been marked as completed by {{task.assignee.name}}.\n\nTask details:\n- Priority: {{task.priority}}\n- Completed on: {{current_date}}\n\nWell done!',
                 },
             },
@@ -406,7 +406,9 @@ const AnimatedIcon = styled(Box)(({ theme, color }) => ({
 }));
 
 export default function WorkflowTemplates({ project, onBack, onSelectTemplate }) {
+
     const theme = useTheme();
+    const { t } = useTranslation();
     const [category, setCategory] = useState('all');
     const [q, setQ] = useState('');
     const [density, setDensity] = useState('comfortable');
@@ -476,15 +478,14 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                             }}
                         >
                             <AutoAwesomeIcon sx={{ mr: 1.5, fontSize: 32 }} />
-                            Workflow Templates
+                            {t('workflows.templates.title', 'Workflow Templates')}
                         </Typography>
                         <Typography
                             variant="body1"
                             color="text.secondary"
                             sx={{ ml: 5.5, maxWidth: 600 }}
                         >
-                            Pick a vibrant starting point and customize your workflow with our
-                            professionally designed templates
+                            {t('workflows.templates.description', 'Pick a vibrant starting point and customize your workflow with our professionally designed templates')}
                         </Typography>
                     </Box>
 
@@ -497,7 +498,6 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                             py: 1,
                             bgcolor: alpha(theme.palette.primary.main, 0.15),
                             color: theme.palette.primary.dark,
-                            border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
                             boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.1)}`,
                         }}
                     />
@@ -515,10 +515,10 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                         }}
                     >
                         <ToggleButton value="compact" sx={{ borderRadius: 2, px: 1.5 }}>
-                            Compact
+                            {t('workflows.templates.compact', 'Compact')}
                         </ToggleButton>
                         <ToggleButton value="comfortable" sx={{ borderRadius: 2, px: 1.5 }}>
-                            Comfort
+                            {t('workflows.templates.comfort', 'Comfort')}
                         </ToggleButton>
                     </ToggleButtonGroup>
                 </Stack>
@@ -526,15 +526,13 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                 <TextField
                     fullWidth
                     size="medium"
-                    placeholder="Search templates by name or description..."
+                    placeholder={t('workflows.templates.searchPlaceholder', 'Search templates by name or description...')}
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
-                                <SearchIcon
-                                    sx={{ color: alpha(theme.palette.text.secondary, 0.8) }}
-                                />
+                                <SearchIcon sx={{ color: alpha(theme.palette.text.secondary, 0.8) }} />
                             </InputAdornment>
                         ),
                     }}
@@ -774,7 +772,7 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                                         },
                                     }}
                                 >
-                                    Use Template
+                                    {t('workflows.templates.useTemplate', 'Use Template')}
                                 </FloatingButton>
                             </CardContent>
                         </GlowCard>
@@ -802,10 +800,10 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                         }}
                     />
                     <Typography variant="h5" fontWeight={700} color="text.primary">
-                        No Templates Found
+                        {t('workflows.templates.noTemplatesFound', 'No Templates Found')}
                     </Typography>
                     <Typography color="text.secondary" sx={{ mt: 1, mb: 3 }}>
-                        Try adjusting your search or category to find what you need
+                        {t('workflows.templates.noTemplatesMessage', 'Try adjusting your search or category to find what you need')}
                     </Typography>
                     <Button
                         variant="outlined"
@@ -822,7 +820,7 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                             py: 1,
                         }}
                     >
-                        Reset Filters
+                        {t('workflows.templates.resetFilters', 'Reset Filters')}
                     </Button>
                 </Paper>
             )}
@@ -854,15 +852,14 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
             >
                 <Box position="relative" zIndex={1}>
                     <Typography variant="h5" fontWeight={800} color="success.dark" sx={{ mb: 1.5 }}>
-                        Need a Custom Workflow?
+                        {t('workflows.templates.customWorkflow', 'Need a Custom Workflow?')}
                     </Typography>
                     <Typography
                         variant="body1"
                         color="text.secondary"
                         sx={{ mb: 3, maxWidth: 600 }}
                     >
-                        Templates are great starters—customize triggers, actions, and more to create
-                        a workflow that fits your team perfectly.
+                        {t('workflows.templates.customWorkflowDescription', 'Templates are great starters—customize triggers, actions, and more to create a workflow that fits your team perfectly.')}
                     </Typography>
                     <Button
                         variant="contained"
@@ -881,7 +878,7 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                             },
                         }}
                     >
-                        Create Custom Workflow
+                        {t('workflows.templates.createCustomWorkflow', 'Create Custom Workflow')}
                     </Button>
                 </Box>
             </Paper>

@@ -2229,11 +2229,15 @@ window.addEventListener('beforeunload', () => {
     public function deleteCustomView(Project $project, int $userId, string $viewName = 'default'): bool
     {
         $customView = CustomView::getActiveForProject($project->id, $userId, $viewName);
-        
+
         if ($customView) {
-            return $customView->delete();
+            // Explicitly clear metadata to ensure no orphaned child data remains
+            $customView->metadata = null;
+            $customView->save();
+
+            return (bool) $customView->delete();
         }
-        
+
         return false;
     }
 

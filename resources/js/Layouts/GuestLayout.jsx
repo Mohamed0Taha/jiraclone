@@ -3,8 +3,10 @@ import CookieConsent from '@/Components/CookieConsent';
 import ThemeLanguageSwitcher from '@/Components/ThemeLanguageSwitcher';
 import { Link } from '@inertiajs/react';
 import { Box, Container, Paper, Avatar, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 export default function GuestLayout({ children }) {
+    const { t } = useTranslation();
     return (
         <Box
             sx={{
@@ -42,7 +44,7 @@ export default function GuestLayout({ children }) {
                             <Box
                                 component="img"
                                 src="/taskpilot-logo.png"
-                                alt="TaskPilot Logo"
+                                alt={t('branding.taskpilotLogoAlt')}
                                 sx={{
                                     width: 48,
                                     height: 48,

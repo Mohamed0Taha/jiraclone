@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     TextField,
@@ -22,6 +23,7 @@ import { Head, useForm } from '@inertiajs/react';
 
 export default function ResetPassword({ token, email }) {
     const theme = useTheme();
+    const { t } = useTranslation();
     const [showPassword, setShowPassword] = useState(false);
     const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
 
@@ -42,7 +44,7 @@ export default function ResetPassword({ token, email }) {
 
     return (
         <GuestLayout>
-            <Head title="Reset Password" />
+            <Head title={t('head.auth.resetPassword')} />
 
             <Card
                 sx={{
@@ -79,11 +81,11 @@ export default function ResetPassword({ token, email }) {
                                     fontFamily: '"Inter", "Segoe UI", sans-serif',
                                 }}
                             >
-                                Reset Password
+                                {t('auth.resetPasswordTitle', 'Reset Password')}
                             </Typography>
                         </Box>
                         <Typography variant="body1" color="textSecondary" sx={{ mb: 1 }}>
-                            Create a new password for your TaskPilot account
+                            {t('auth.resetPasswordDesc', 'Create a new password for your TaskPilot account')}
                         </Typography>
                     </Box>
 
@@ -92,7 +94,7 @@ export default function ResetPassword({ token, email }) {
                             fullWidth
                             id="email"
                             name="email"
-                            label="Email"
+                            label={t('common.emailAddress', 'Email')}
                             type="email"
                             value={data.email}
                             onChange={(e) => setData('email', e.target.value)}
@@ -121,7 +123,7 @@ export default function ResetPassword({ token, email }) {
                             fullWidth
                             id="password"
                             name="password"
-                            label="New Password"
+                            label={t('auth.newPassword', 'New Password')}
                             type={showPassword ? 'text' : 'password'}
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
@@ -139,7 +141,7 @@ export default function ResetPassword({ token, email }) {
                                 endAdornment: (
                                     <InputAdornment position="end">
                                         <IconButton
-                                            aria-label="toggle password visibility"
+                                            aria-label={t('authPage.togglePasswordVisibility', 'Toggle password visibility')}
                                             onClick={() => setShowPassword(!showPassword)}
                                             edge="end"
                                         >
@@ -162,7 +164,7 @@ export default function ResetPassword({ token, email }) {
                             fullWidth
                             id="password_confirmation"
                             name="password_confirmation"
-                            label="Confirm New Password"
+                            label={t('auth.confirmNewPassword', 'Confirm New Password')}
                             type={showPasswordConfirmation ? 'text' : 'password'}
                             value={data.password_confirmation}
                             onChange={(e) => setData('password_confirmation', e.target.value)}
@@ -179,7 +181,7 @@ export default function ResetPassword({ token, email }) {
                                 endAdornment: (
                                     <InputAdornment position="end">
                                         <IconButton
-                                            aria-label="toggle password confirmation visibility"
+                                            aria-label={t('authPage.togglePasswordConfirmVisibility', 'Toggle password confirm visibility')}
                                             onClick={() =>
                                                 setShowPasswordConfirmation(
                                                     !showPasswordConfirmation
@@ -227,7 +229,7 @@ export default function ResetPassword({ token, email }) {
                                 },
                             }}
                         >
-                            {processing ? 'Resetting Password...' : 'Reset Password'}
+                            {processing ? t('auth.resettingPassword', 'Resetting Password...') : t('auth.resetPassword', 'Reset Password')}
                         </Button>
                     </Box>
                 </CardContent>

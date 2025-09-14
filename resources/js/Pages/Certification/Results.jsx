@@ -14,7 +14,9 @@ import {
 } from '@mui/material';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
-export default function Results({ attempt, theoryQuestions, overall, message, auth }) {
+
+import { useTranslation } from 'react-i18next';export default function Results({ attempt, theoryQuestions, overall, message, auth }) {
+  const { t } = useTranslation();
     const safeOverall = overall || {};
     const passed = Boolean(safeOverall.passed);
     const rawPct = Number(safeOverall.percentage);
@@ -23,7 +25,7 @@ export default function Results({ attempt, theoryQuestions, overall, message, au
     const maxScore = Number.isFinite(Number(safeOverall.maxScore)) ? safeOverall.maxScore : 0;
     return (
         <AuthenticatedLayout user={auth?.user}>
-            <Head title="Certification Results" />
+            <Head title={t('head.certification.results')} />
             <Container maxWidth="md" sx={{ py: 6 }}>
                 <Stack spacing={3}>
                     <Box textAlign="center">

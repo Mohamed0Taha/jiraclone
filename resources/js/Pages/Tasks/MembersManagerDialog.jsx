@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Dialog,
     DialogTitle,
@@ -43,6 +44,7 @@ import {
 import { router } from '@inertiajs/react';
 
 const MembersManagerDialog = ({ open, onClose, project }) => {
+    const { t } = useTranslation();
     const theme = useTheme();
     const [email, setEmail] = useState('');
     const [role, setRole] = useState('member');
@@ -119,7 +121,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
             if (typeof data.used !== 'undefined') setMemberUsed(data.used);
             if (typeof data.plan !== 'undefined') setMemberPlan(data.plan);
         } catch (err) {
-            setError('Failed to load members: ' + err.message);
+            setError(t('teamManagement.failedToLoadMembers', { error: err.message }));
             console.error('Error loading members:', err);
         } finally {
             setLoading(false);
@@ -134,7 +136,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
         }
         if (memberLimit != null && memberUsed != null && memberUsed >= memberLimit) {
             setError(
-                `You have reached your member limit (${memberUsed}/${memberLimit}). Upgrade your plan to add more team members.`
+                t('teamManagement.memberLimitError', { used: memberUsed, limit: memberLimit })
             );
             return;
         }
@@ -169,7 +171,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
             const data = await response.json();
 
             if (data.type === 'direct_add') {
-                setSuccess(`${data.user.name} has been added to the project!`);
+                setSuccess(t('teamManagement.memberInvitedSuccess'));
                 setMembers((prev) => [
                     ...prev,
                     {
@@ -181,13 +183,13 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                 ]);
                 if (memberUsed != null) setMemberUsed((u) => (u != null ? u + 1 : u));
             } else {
-                setSuccess(`Invitation sent to ${email}!`);
+                setSuccess(t('teamManagement.memberInvitedSuccess'));
                 setInvitations((prev) => [...prev, data.invitation]);
             }
             setEmail('');
             setRole('member');
         } catch (err) {
-            setError('Failed to invite member: ' + err.message);
+            setError(t('teamManagement.failedToInviteMember', { error: err.message }));
             console.error('Error inviting member:', err);
         } finally {
             setLoading(false);
@@ -221,9 +223,9 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
             setMembers((prev) =>
                 prev.filter((member) => String(extractMemberId(member)) !== String(userId))
             );
-            setSuccess('Member removed successfully');
+            setSuccess(t('teamManagement.memberRemovedSuccess'));
         } catch (err) {
-            setError('Failed to remove member: ' + err.message);
+            setError(t('teamManagement.failedToRemoveMember', { error: err.message }));
             console.error('Error removing member:', err);
         } finally {
             setLoading(false);
@@ -255,9 +257,9 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
 
             await response.json();
             setInvitations((prev) => prev.filter((inv) => String(inv.id) !== String(invitationId)));
-            setSuccess('Invitation cancelled successfully');
+            setSuccess(t('teamManagement.invitationCancelledSuccess'));
         } catch (err) {
-            setError('Failed to cancel invitation: ' + err.message);
+            setError(t('teamManagement.failedToCancelInvitation', { error: err.message }));
             console.error('Error cancelling invitation:', err);
         } finally {
             setLoading(false);
@@ -304,21 +306,31 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
         const permissions = [
             {
                 key: 'viewProject',
-                label: 'View Project',
+                label: t('teamManagement.viewProject'),
                 icon: <Visibility />,
                 enabled: auth.canViewProject,
             },
-            { key: 'viewTasks', label: 'View Tasks', icon: <Task />, enabled: auth.canViewTasks },
-            { key: 'editTasks', label: 'Edit Tasks', icon: <Edit />, enabled: auth.canEditTasks },
+            {
+                key: 'viewTasks',
+                label: t('teamManagement.viewTasks'),
+                icon: <Task />,
+                enabled: auth.canViewTasks
+            },
+            {
+                key: 'editTasks',
+                label: t('teamManagement.editTasks'),
+                icon: <Edit />,
+                enabled: auth.canEditTasks
+            },
             {
                 key: 'editProject',
-                label: 'Edit Project',
+                label: t('teamManagement.editProject'),
                 icon: <Settings />,
                 enabled: auth.canEditProject,
             },
             {
                 key: 'manageMembers',
-                label: 'Manage Members',
+                label: t('teamManagement.manageMembers'),
                 icon: <Group />,
                 enabled: auth.canManageMembers,
             },
@@ -332,13 +344,13 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                     sx={{ fontWeight: 600, mb: 0.5, display: 'block' }}
                 >
                     <Security sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
-                    Permissions {auth.isOwner ? '(Full Access - Owner)' : '(Member Access)'}:
+                    {t('teamManagement.permissions')} {auth.isOwner ? t('teamManagement.fullAccessOwner') : t('teamManagement.memberAccess')}:
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {permissions.map((perm) => (
                         <Tooltip
                             key={perm.key}
-                            title={perm.enabled ? `Can ${perm.label}` : `Cannot ${perm.label}`}
+                            title={perm.enabled ? t('teamManagement.canAction', { action: perm.label }) : t('teamManagement.cannotAction', { action: perm.label })}
                         >
                             <Chip
                                 icon={perm.icon}
@@ -448,14 +460,14 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="subtitle1" fontWeight={800} sx={{ lineHeight: 1.1 }} noWrap>
-                    Team Members
+                    {t('teamManagement.title')}
                 </Typography>
                 <Typography
                     variant="caption"
                     sx={{ opacity: designVariant === 'compact' ? 0.75 : 0.85 }}
                     noWrap
                 >
-                    Manage project collaborators
+                    {t('teamManagement.subtitle')}
                 </Typography>
             </Box>
             <Stack direction="row" spacing={1} alignItems="center">
@@ -477,8 +489,8 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                 <Tooltip
                     title={
                         designVariant === 'compact'
-                            ? 'Switch to enhanced design'
-                            : 'Switch to compact design'
+                            ? t('teamManagement.switchToEnhanced')
+                            : t('teamManagement.switchToCompact')
                     }
                 >
                     <IconButton
@@ -548,7 +560,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                 fontWeight={700}
                                 sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}
                             >
-                                Usage
+                                {t('teamManagement.usage')}
                             </Typography>
                             <Chip
                                 size="small"
@@ -565,8 +577,8 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
                             <Typography variant="caption" sx={{ opacity: 0.8 }}>
                                 {atLimit
-                                    ? `Limit reached for ${memberPlan} plan`
-                                    : `${memberLimit - memberUsed} slot${memberLimit - memberUsed === 1 ? '' : 's'} left`}
+                                    ? t('teamManagement.limitReached', { plan: memberPlan })
+                                    : t('teamManagement.slotsLeft', { count: memberLimit - memberUsed })}
                             </Typography>
                             {atLimit && (
                                 <Button
@@ -575,7 +587,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                     onClick={() => (window.location.href = '/billing')}
                                     sx={{ textTransform: 'none', fontWeight: 600 }}
                                 >
-                                    Upgrade
+                                    {t('teamManagement.upgrade')}
                                 </Button>
                             )}
                         </Stack>
@@ -599,11 +611,11 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                 >
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                         <Typography variant="subtitle2" fontWeight={700}>
-                            Invite New Member
+                            {t('teamManagement.inviteNewMember')}
                         </Typography>
                         {atLimit && (
                             <Chip
-                                label="Limit Reached"
+                                label={t('teamManagement.limitReachedLabel')}
                                 size="small"
                                 color="warning"
                                 sx={{ fontWeight: 600 }}
@@ -612,7 +624,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                     </Stack>
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                         <TextField
-                            label="Email"
+                            label={t('common.email')}
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -625,14 +637,14 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                             size="small"
                             disabled={loading || atLimit}
                         >
-                            <InputLabel>Role</InputLabel>
+                            <InputLabel>{t('teamManagement.role')}</InputLabel>
                             <Select
                                 value={role}
-                                label="Role"
+                                label={t('teamManagement.role')}
                                 onChange={(e) => setRole(e.target.value)}
                             >
-                                <MenuItem value="member">Member</MenuItem>
-                                <MenuItem value="admin">Admin</MenuItem>
+                                <MenuItem value="member">{t('teamManagement.member')}</MenuItem>
+                                <MenuItem value="admin">{t('teamManagement.admin')}</MenuItem>
                             </Select>
                         </FormControl>
                         <Button
@@ -640,7 +652,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                             variant="contained"
                             startIcon={loading ? <CircularProgress size={18} /> : <PersonAdd />}
                             disabled={loading || !email.trim() || atLimit}
-                            title={atLimit ? 'Member limit reached – upgrade to add more' : ''}
+                            title={atLimit ? t('teamManagement.limitReachedTooltip') : ''}
                             sx={{
                                 px: 3,
                                 fontWeight: 600,
@@ -649,12 +661,12 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                 height: 40,
                             }}
                         >
-                            {atLimit ? 'Limit' : loading ? 'Inviting' : 'Invite'}
+                            {atLimit ? t('teamManagement.limit') : loading ? t('teamManagement.inviting') : t('teamManagement.invite')}
                         </Button>
                     </Stack>
                     {atLimit && (
                         <Typography variant="caption" color="warning.main" sx={{ mt: 0.5 }}>
-                            Remove an existing member or upgrade to increase your limit.
+                            {t('teamManagement.removeExistingOrUpgrade')}
                         </Typography>
                     )}
                 </Box>
@@ -664,7 +676,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                 {/* Current members */}
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
                     <Typography variant="subtitle1" fontWeight={700}>
-                        Current Members
+                        {t('teamManagement.currentMembers')}
                     </Typography>
                     <Chip
                         label={members.length}
@@ -695,9 +707,9 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                         >
                             <Group />
                         </Avatar>
-                        <Typography fontWeight={600}>No members yet</Typography>
+                        <Typography fontWeight={600}>{t('teamManagement.noMembersYet')}</Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            Invite your first collaborator using the form above.
+                            {t('teamManagement.inviteFirstCollaborator')}
                         </Typography>
                     </Paper>
                 ) : (
@@ -760,21 +772,21 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                                     {member.name || member.email}
                                                 </Typography>
                                                 <Chip
-                                                    label={member?.pivot?.role || 'member'}
+                                                    label={t(`teamManagement.${member?.pivot?.role || 'member'}`)}
                                                     size="small"
                                                     color={getRoleColor(member?.pivot?.role)}
                                                     sx={{ fontWeight: 600 }}
                                                 />
                                                 {isOwnerFlag && (
                                                     <Chip
-                                                        label="owner"
+                                                        label={t('teamManagement.owner')}
                                                         size="small"
                                                         color="warning"
                                                         sx={{ fontWeight: 600 }}
                                                     />
                                                 )}
                                                 <Chip
-                                                    label="Active"
+                                                    label={t('teamManagement.active')}
                                                     size="small"
                                                     color="success"
                                                     variant="outlined"
@@ -794,7 +806,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                                     color="text.secondary"
                                                     sx={{ mb: 1, display: 'block' }}
                                                 >
-                                                    Joined {formatDate(member.pivot.joined_at)}
+                                                    {t('teamManagement.joined', { date: formatDate(member.pivot.joined_at) })}
                                                 </Typography>
                                             )}
                                             <AuthorizationChips
@@ -804,7 +816,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                         </Box>
                                         <Box>
                                             {!isOwnerFlag && (
-                                                <Tooltip title="Remove member">
+                                                <Tooltip title={t('teamManagement.removeMember')}>
                                                     <IconButton
                                                         onClick={() => handleRemoveMember(memberId)}
                                                         color="error"
@@ -829,7 +841,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                         <Divider sx={{ my: 2 }} />
                         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
                             <Typography variant="subtitle1" fontWeight={700}>
-                                Pending Invitations
+                                {t('teamManagement.pendingInvitations')}
                             </Typography>
                             <Chip
                                 label={invitations.length}
@@ -880,7 +892,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                                 </Typography>
                                                 <Chip
                                                     icon={<Pending />}
-                                                    label="Pending"
+                                                    label={t('teamManagement.pending')}
                                                     size="small"
                                                     color="warning"
                                                     sx={{
@@ -895,7 +907,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                                 />
                                                 {invitation.role && (
                                                     <Chip
-                                                        label={invitation.role}
+                                                        label={t(`teamManagement.${invitation.role}`)}
                                                         size="small"
                                                         variant="outlined"
                                                     />
@@ -912,7 +924,7 @@ const MembersManagerDialog = ({ open, onClose, project }) => {
                                             <InvitationPermissionPreview invitation={invitation} />
                                         </Box>
                                         <Box>
-                                            <Tooltip title="Cancel invitation">
+                                            <Tooltip title={t('teamManagement.cancelInvitation')}>
                                                 <IconButton
                                                     onClick={() =>
                                                         handleCancelInvitation(invitation.id)

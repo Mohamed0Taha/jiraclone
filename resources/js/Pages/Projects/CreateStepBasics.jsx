@@ -2,34 +2,36 @@
 // resources/js/Pages/Projects/CreateStepBasics.jsx
 
 import React, { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, TextField, Typography, InputAdornment, Stack } from '@mui/material';
 import TitleIcon from '@mui/icons-material/Title';
 import KeyIcon from '@mui/icons-material/Key';
 import DescriptionIcon from '@mui/icons-material/Description';
 
 const CreateStepBasics = memo(({ data, setData, errors, localErrors, nameRef }) => {
+    const { t } = useTranslation();
     const eFor = (field) => errors[field] || localErrors[field] || '';
 
     return (
         <Stack spacing={3}>
             <Box>
                 <Typography variant="h6" fontWeight={600} mb={2}>
-                    Project Basics
+                    {t('projects.basics.title')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" mb={3}>
-                    Start with the fundamental details of your project.
+                    {t('projects.basics.subtitle')}
                 </Typography>
             </Box>
 
             <TextField
                 ref={nameRef}
                 fullWidth
-                label="Project Name"
-                placeholder="Enter a descriptive project name..."
+                label={t('projects.basics.nameLabel')}
+                placeholder={t('projects.basics.namePlaceholder')}
                 value={data.name}
                 onChange={(e) => setData('name', e.target.value)}
                 error={!!eFor('name')}
-                helperText={eFor('name') || 'The name should be clear and memorable'}
+                helperText={eFor('name') || t('projects.basics.nameHelper')}
                 InputProps={{
                     startAdornment: (
                         <InputAdornment position="start">
@@ -41,15 +43,15 @@ const CreateStepBasics = memo(({ data, setData, errors, localErrors, nameRef }) 
 
             <TextField
                 fullWidth
-                label="Project Key"
-                placeholder="AUTO"
+                label={t('projects.basics.keyLabel')}
+                placeholder={t('projects.basics.keyPlaceholder')}
                 value={data.key}
                 onChange={(e) => {
                     setData('key', e.target.value.toUpperCase());
                     setData('meta', { ...data.meta, __keyTouched: true });
                 }}
                 error={!!eFor('key')}
-                helperText={eFor('key') || 'A unique identifier (uppercase letters & numbers only)'}
+                helperText={eFor('key') || t('projects.basics.keyHelper')}
                 InputProps={{
                     startAdornment: (
                         <InputAdornment position="start">
@@ -63,14 +65,12 @@ const CreateStepBasics = memo(({ data, setData, errors, localErrors, nameRef }) 
                 fullWidth
                 multiline
                 rows={4}
-                label="Description"
-                placeholder="Describe the project's purpose, goals, and scope..."
+                label={t('projects.basics.descriptionLabel')}
+                placeholder={t('projects.basics.descriptionPlaceholder')}
                 value={data.description}
                 onChange={(e) => setData('description', e.target.value)}
                 error={!!eFor('description')}
-                helperText={
-                    eFor('description') || 'Provide context and objectives for team members'
-                }
+                helperText={eFor('description') || t('projects.basics.descriptionHelper')}
                 InputProps={{
                     startAdornment: (
                         <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1 }}>

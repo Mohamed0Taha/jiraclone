@@ -1,6 +1,7 @@
 // resources/js/Pages/Billing/Overview.jsx
 import React, { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
     alpha,
@@ -48,7 +49,7 @@ const CANCELLATION_REASONS = [
 ];
 
 // Cancellation confirmation dialog
-function CancellationDialog({ open, onClose, onConfirm, planName }) {
+function CancellationDialog({ open, onClose, onConfirm, planName, t }) {
     const [step, setStep] = useState(1); // 1: confirmation, 2: reason selection
     const [selectedReason, setSelectedReason] = useState('');
     const theme = useTheme();
@@ -96,7 +97,7 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
                 <Stack direction="row" alignItems="center" spacing={1}>
                     <WarningAmberIcon color="warning" />
                     <Typography variant="h6" fontWeight={700}>
-                        {step === 1 ? 'Cancel Subscription?' : 'Why are you canceling?'}
+                        {step === 1 ? t('billing.cancelSubscription', 'Cancel Subscription?') : t('billing.whyCancel', 'Why are you canceling?')}
                     </Typography>
                 </Stack>
                 <IconButton onClick={handleClose} size="small">
@@ -111,9 +112,7 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
                             variant="body1"
                             sx={{ color: alpha(theme.palette.text.primary, 0.8) }}
                         >
-                            Are you sure you want to cancel your <strong>{planName}</strong>{' '}
-                            subscription? You'll lose access to premium features at the end of your
-                            current billing period.
+                            {t('billing.cancelConfirmation', 'Are you sure you want to cancel your {{planName}} subscription? You\'ll lose access to premium features at the end of your current billing period.', { planName })}
                         </Typography>
 
                         <Stack direction="row" spacing={2} justifyContent="flex-end">
@@ -122,7 +121,7 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
                                 onClick={handleClose}
                                 sx={{ textTransform: 'none', fontWeight: 600 }}
                             >
-                                Keep Subscription
+                                {t('billing.keepSubscription', 'Keep Subscription')}
                             </Button>
                             <Button
                                 variant="contained"
@@ -130,7 +129,7 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
                                 onClick={handleConfirmStep1}
                                 sx={{ textTransform: 'none', fontWeight: 600 }}
                             >
-                                Yes, Continue
+                                {t('billing.yesContinue', 'Yes, Continue')}
                             </Button>
                         </Stack>
                     </Stack>
@@ -142,7 +141,7 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
                             variant="body1"
                             sx={{ color: alpha(theme.palette.text.primary, 0.8) }}
                         >
-                            Help us improve by letting us know why you're canceling:
+                            {t('billing.helpImprove', 'Help us improve by letting us know why you\'re canceling:')}
                         </Typography>
 
                         <FormControl component="fieldset">
@@ -155,7 +154,7 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
                                         key={reason.value}
                                         value={reason.value}
                                         control={<Radio />}
-                                        label={reason.label}
+                                        label={t(`billing.cancellationReasons.${reason.value}`, reason.label)}
                                         sx={{ mb: 0.5 }}
                                     />
                                 ))}
@@ -168,7 +167,7 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
                                 onClick={() => setStep(1)}
                                 sx={{ textTransform: 'none', fontWeight: 600 }}
                             >
-                                Back
+                                {t('common.back', 'Back')}
                             </Button>
                             <Button
                                 variant="contained"
@@ -177,7 +176,7 @@ function CancellationDialog({ open, onClose, onConfirm, planName }) {
                                 disabled={!selectedReason}
                                 sx={{ textTransform: 'none', fontWeight: 600 }}
                             >
-                                Cancel Subscription
+                                {t('billing.cancelSubscriptionAction', 'Cancel Subscription')}
                             </Button>
                         </Stack>
                     </Stack>
@@ -199,6 +198,7 @@ function PlanCard({
     hasUsedTrial,
 }) {
     const theme = useTheme();
+    const { t } = useTranslation();
     const isBusiness = /business/i.test(plan.name); // highlights the business plan
     const canUseTrial = plan.trial_days > 0 && !hasUsedTrial;
 
@@ -284,7 +284,7 @@ function PlanCard({
                                 fontStyle: 'italic',
                             }}
                         >
-                            Price loading...
+                            {t('billing.priceLoading', 'Price loading...')}
                         </Typography>
                     )}
                 </Stack>
@@ -294,7 +294,7 @@ function PlanCard({
                         <Chip
                             size="small"
                             icon={<TrendingUpRoundedIcon />}
-                            label="Most Popular"
+                            label={t('billing.mostPopular', 'Most Popular')}
                             sx={{
                                 height: 22,
                                 fontWeight: 700,
@@ -306,7 +306,7 @@ function PlanCard({
                     {canUseTrial && !subscribed && !onTrial && (
                         <Chip
                             size="small"
-                            label={`${plan.trial_days} day trial`}
+                            label={t('billing.dayTrial', '{{days}} day trial', { days: plan.trial_days })}
                             sx={{
                                 height: 22,
                                 fontWeight: 700,
@@ -325,7 +325,7 @@ function PlanCard({
                             size="small"
                             color="success"
                             icon={<CheckCircleRoundedIcon />}
-                            label="Current Plan"
+                            label={t('billing.currentPlan', 'Current Plan')}
                             sx={{ fontWeight: 700, height: 24 }}
                         />
                     )}
@@ -334,7 +334,7 @@ function PlanCard({
                             size="small"
                             color="success"
                             icon={<CheckCircleRoundedIcon />}
-                            label="On Trial"
+                            label={t('billing.onTrial', 'On Trial')}
                             sx={{ fontWeight: 700, height: 24 }}
                         />
                     )}
@@ -378,7 +378,9 @@ function PlanCard({
                             },
                         }}
                     >
-                        Start {canUseTrial ? `${plan.trial_days}-Day Trial` : plan.name}
+                        {canUseTrial
+                            ? t('billing.startDayTrial', 'Start {{days}}-day trial', { days: plan.trial_days })
+                            : t('billing.startPlan', 'Start {{plan}}', { plan: plan.name })}
                     </Button>
                 )}
 
@@ -390,7 +392,7 @@ function PlanCard({
                         onClick={() => onCancel(plan.name)}
                         sx={{ textTransform: 'none', fontWeight: 700 }}
                     >
-                        Cancel Subscription
+                        {t('billing.cancelSubscriptionAction', 'Cancel subscription')}
                     </Button>
                 )}
 
@@ -402,7 +404,7 @@ function PlanCard({
                         onClick={onResume}
                         sx={{ textTransform: 'none', fontWeight: 800 }}
                     >
-                        Resume Subscription
+                        {t('billing.resumeSubscription', 'Resume subscription')}
                     </Button>
                 )}
 
@@ -424,7 +426,7 @@ function PlanCard({
                             },
                         }}
                     >
-                        Upgrade to {plan.name}
+                        {t('billing.upgradeToPlan', 'Upgrade to {{plan}}', { plan: plan.name })}
                     </Button>
                 )}
             </Box>
@@ -441,6 +443,7 @@ export default function BillingOverview({
     stripe_key,
 }) {
     const theme = useTheme();
+    const { t } = useTranslation();
     const { flash } = usePage().props;
 
     // Cancellation dialog state
@@ -475,7 +478,7 @@ export default function BillingOverview({
 
     return (
         <>
-            <Head title="Billing" />
+            <Head title={t('subscription.billing')} />
             <AuthenticatedLayout user={auth?.user}>
                 <Box
                     sx={{
@@ -532,7 +535,7 @@ export default function BillingOverview({
                                     color: 'transparent',
                                 }}
                             >
-                                Billing & Subscription
+                                {t('billing.title', 'Billing & Subscription')}
                             </Typography>
                             <Typography
                                 variant="body2"
@@ -541,9 +544,7 @@ export default function BillingOverview({
                                     maxWidth: 720,
                                 }}
                             >
-                                Choose your plan and start with a free trial. Access premium
-                                features like AI task generation, team collaboration, and advanced
-                                reporting.
+                                {t('billing.subtitle', 'Choose your plan and start with a free trial. Access premium features like AI task generation, team collaboration, and advanced reporting.')}
                             </Typography>
 
                             <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
@@ -551,10 +552,10 @@ export default function BillingOverview({
                                     icon={<AutoAwesomeIcon />}
                                     label={
                                         onTrial
-                                            ? 'On Trial'
+                                            ? t('billing.onTrial', 'On trial')
                                             : subscribed
-                                              ? 'Active Subscriber'
-                                              : 'Free Tier'
+                                                ? t('billing.activeSubscriber', 'Active subscriber')
+                                                : t('billing.freeTier', 'Free tier')
                                     }
                                     color={onTrial || subscribed ? 'success' : 'default'}
                                     variant={subscribed || onTrial ? 'filled' : 'outlined'}
@@ -564,7 +565,7 @@ export default function BillingOverview({
                                     <Chip
                                         icon={<CancelScheduleSendRoundedIcon />}
                                         color="success"
-                                        label={`Trial ends ${trialEndsAt.toLocaleDateString()}`}
+                                        label={t('billing.trialEndsOn', 'Trial ends {{date}}', { date: trialEndsAt.toLocaleDateString() })}
                                         sx={{ fontWeight: 700, height: 32 }}
                                     />
                                 )}
@@ -572,7 +573,7 @@ export default function BillingOverview({
                                     <Chip
                                         icon={<CancelScheduleSendRoundedIcon />}
                                         color="warning"
-                                        label={`Cancels on ${endsAt.toLocaleDateString()}`}
+                                        label={t('billing.cancelsOn', 'Cancels on {{date}}', { date: endsAt.toLocaleDateString() })}
                                         size="small"
                                         sx={{ fontWeight: 700 }}
                                     />
@@ -606,7 +607,7 @@ export default function BillingOverview({
                                         (subscribed || onTrial) && plan.key === current?.plan_name;
 
                                     return (
-                                        <Grid item xs={12} md={4} key={plan.price_id}>
+                                        <Grid size={{ xs: 12, md: 4 }} key={plan.price_id}>
                                             <PlanCard
                                                 plan={plan}
                                                 isCurrent={isCurrent}
@@ -634,8 +635,7 @@ export default function BillingOverview({
                                 variant="caption"
                                 sx={{ color: alpha(theme.palette.text.primary, 0.65) }}
                             >
-                                All payments securely processed by Stripe. Start your free trial
-                                with any valid credit card.
+                                {t('billing.stripeNotice', 'All payments securely processed by Stripe. Start your free trial with any valid credit card.')}
                             </Typography>
                         </Stack>
                     </Paper>
@@ -647,6 +647,7 @@ export default function BillingOverview({
                     onClose={() => setCancelDialogOpen(false)}
                     onConfirm={handleCancelConfirm}
                     planName={cancellingPlanName}
+                    t={t}
                 />
             </AuthenticatedLayout>
         </>

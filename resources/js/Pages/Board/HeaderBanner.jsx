@@ -99,7 +99,7 @@ export default function HeaderBanner({
                     <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                         <Chip
                             icon={<AutoGraphRoundedIcon />}
-                            label={`${totalTasks} Task${totalTasks === 1 ? '' : 's'}`}
+                            label={t('board.taskCount', { count: totalTasks })}
                             sx={{
                                 fontWeight: 700,
                                 background: `linear-gradient(120deg, ${alpha(theme.palette.primary.main, 0.2)}, ${alpha(theme.palette.primary.light, 0.15)})`,
@@ -109,7 +109,7 @@ export default function HeaderBanner({
                         />
                         <Chip
                             icon={<CheckCircleRoundedIcon />}
-                            label={`${percentDone}% Complete`}
+                            label={t('board.percentComplete', { percent: percentDone })}
                             sx={{
                                 fontWeight: 700,
                                 background: `linear-gradient(120deg, ${alpha(theme.palette.success.main, 0.2)}, ${alpha(theme.palette.success.main, 0.1)})`,
@@ -119,7 +119,7 @@ export default function HeaderBanner({
                         />
                         <Chip
                             icon={<PersonRoundedIcon />}
-                            label={`${usersCount} Member${usersCount === 1 ? '' : 's'}`}
+                            label={t('members.memberCount', { count: usersCount })}
                             sx={{
                                 fontWeight: 700,
                                 background: `linear-gradient(120deg, ${alpha(theme.palette.info.main, 0.18)}, ${alpha(theme.palette.info.main, 0.08)})`,

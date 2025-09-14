@@ -67,7 +67,7 @@ export default function Landing({ errors }) {
                 v.muted = true;
                 setMuted(true);
                 const retry = v.play();
-                if (retry && retry.catch) retry.catch(() => {});
+                if (retry && retry.catch) retry.catch(() => { });
             });
         }
     }, []);
@@ -167,7 +167,7 @@ export default function Landing({ errors }) {
 
     return (
         <>
-            <Head title="TaskPilot - The AI workspace where all your work gets done">
+            <Head title={t('head.landing')}>
                 <meta
                     name="description"
                     content="The converged AI workspace, where all your work gets done. A single place for projects, tasks, chat, docs, and more. Where humans, AI, and agents work—together."
@@ -271,7 +271,7 @@ export default function Landing({ errors }) {
                             <Box sx={{ display: 'flex', gap: 2 }}>
                                 {/* Theme and Language Switcher */}
                                 <ThemeLanguageSwitcher />
-                                
+
                                 <Button
                                     variant="outlined"
                                     size="small"
@@ -368,7 +368,7 @@ export default function Landing({ errors }) {
                                                 videoRef.current.muted = false;
                                                 videoRef.current.volume = 1.0;
                                                 const p = videoRef.current.play();
-                                                if (p && p.catch) p.catch(() => {});
+                                                if (p && p.catch) p.catch(() => { });
                                                 setMuted(false);
                                             }
                                         }}
@@ -485,7 +485,7 @@ export default function Landing({ errors }) {
 
                             <Grid container spacing={3} justifyContent="center" alignItems="center">
                                 {methodologies.map((methodology, index) => (
-                                    <Grid item xs={6} sm={4} md={3} key={index}>
+                                    <Grid size={{ xs: 6, sm: 4, md: 3 }} key={index}>
                                         <Box
                                             sx={{
                                                 display: 'flex',
@@ -645,7 +645,7 @@ export default function Landing({ errors }) {
                                                 ],
                                             },
                                         ].map((column, colIndex) => (
-                                            <Grid item xs={4} key={column.key}>
+                                            <Grid size={{ xs: 4 }} key={column.key}>
                                                 <Box
                                                     sx={{
                                                         p: 2, // reduced from 3
@@ -743,26 +743,26 @@ export default function Landing({ errors }) {
                                                                         fontWeight: 600,
                                                                         bgcolor:
                                                                             task.priority ===
-                                                                            'urgent'
+                                                                                'urgent'
                                                                                 ? '#ffebee'
                                                                                 : task.priority ===
                                                                                     'high'
-                                                                                  ? '#fff3e0'
-                                                                                  : task.priority ===
-                                                                                      'medium'
-                                                                                    ? '#e3f2fd'
-                                                                                    : '#e8f5e8',
+                                                                                    ? '#fff3e0'
+                                                                                    : task.priority ===
+                                                                                        'medium'
+                                                                                        ? '#e3f2fd'
+                                                                                        : '#e8f5e8',
                                                                         color:
                                                                             task.priority ===
-                                                                            'urgent'
+                                                                                'urgent'
                                                                                 ? '#d32f2f'
                                                                                 : task.priority ===
                                                                                     'high'
-                                                                                  ? '#f57c00'
-                                                                                  : task.priority ===
-                                                                                      'medium'
-                                                                                    ? '#1976d2'
-                                                                                    : '#388e3c',
+                                                                                    ? '#f57c00'
+                                                                                    : task.priority ===
+                                                                                        'medium'
+                                                                                        ? '#1976d2'
+                                                                                        : '#388e3c',
                                                                     }}
                                                                 />
                                                             </Box>
@@ -835,7 +835,7 @@ export default function Landing({ errors }) {
                                                 icon: '⏰',
                                             },
                                         ].map((stat, i) => (
-                                            <Grid item xs={6} key={i}>
+                                            <Grid size={{ xs: 6 }} key={i}>
                                                 <Box
                                                     sx={{
                                                         p: 3,
@@ -977,7 +977,7 @@ export default function Landing({ errors }) {
 
                         {/* Workflow Automation Widget - Real workflow styling */}
                         <Grid container spacing={8} sx={{ mb: 10 }}>
-                            <Grid item xs={12} lg={6}>
+                            <Grid size={{ xs: 12, lg: 6 }}>
                                 <Box
                                     sx={{
                                         p: 5,
@@ -1104,7 +1104,7 @@ export default function Landing({ errors }) {
                             </Grid>
 
                             {/* AI Assistant Widget - Real chat styling */}
-                            <Grid item xs={12} lg={6}>
+                            <Grid size={{ xs: 12, lg: 6 }}>
                                 <Box
                                     sx={{
                                         p: 5,
@@ -1298,14 +1298,7 @@ export default function Landing({ errors }) {
                                 👥 Project Management Dashboard
                             </Typography>
 
-                            <Grid
-                                container
-                                spacing={5}
-                                sx={{
-                                    '--card-radius': '20px',
-                                    '--card-border': '1px solid rgba(2,119,189,0.12)',
-                                }}
-                            >
+                            <Grid container spacing={5} sx={{ '--card-radius': '20px', '--card-border': '1px solid rgba(2,119,189,0.12)', }} >
                                 {/* Shared card style helper */}
                                 {[
                                     {
@@ -1603,7 +1596,7 @@ export default function Landing({ errors }) {
                                         ),
                                     },
                                 ].map((card) => (
-                                    <Grid key={card.key} item xs={12} sm={6} md={4}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={card.key}>
                                         <Box
                                             sx={{
                                                 position: 'relative',
@@ -1678,14 +1671,9 @@ export default function Landing({ errors }) {
                             </Typography>
                         </Box>
 
-                        <Grid
-                            container
-                            spacing={6}
-                            justifyContent="center"
-                            sx={{ maxWidth: 1200, mx: 'auto' }}
-                        >
+                        <Grid container spacing={6} justifyContent="center" sx={{ maxWidth: 1200, mx: 'auto' }} >
                             {features.map((feature, index) => (
-                                <Grid item xs={12} md={6} lg={4} key={index}>
+                                <Grid size={{ xs: 12, md: 6, lg: 4 }} key={index}>
                                     <Box
                                         sx={{
                                             textAlign: 'center',
@@ -1768,7 +1756,7 @@ export default function Landing({ errors }) {
                                     Welcome back
                                 </Typography>
                                 <Typography variant="body1" color="grey.600">
-                                    Sign in to continue to your workspace
+                                    {t('landing.signInDescription')}
                                 </Typography>
                             </Box>
 
@@ -1792,13 +1780,13 @@ export default function Landing({ errors }) {
                                         },
                                     }}
                                 >
-                                    Continue with Google
+                                    {t('landing.continueWithGoogle')}
                                 </Button>
 
                                 <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
                                     <Divider sx={{ flex: 1 }} />
                                     <Typography variant="body2" sx={{ px: 2, color: 'grey.500' }}>
-                                        OR
+                                        {t('common.or')}
                                     </Typography>
                                     <Divider sx={{ flex: 1 }} />
                                 </Box>
@@ -1807,7 +1795,7 @@ export default function Landing({ errors }) {
                             <form onSubmit={submit}>
                                 <Stack spacing={3}>
                                     <TextField
-                                        label="Email"
+                                        label={t('auth.email')}
                                         type="email"
                                         name="email"
                                         value={data.email}
@@ -1834,7 +1822,7 @@ export default function Landing({ errors }) {
                                     />
 
                                     <TextField
-                                        label="Password"
+                                        label={t('auth.password')}
                                         type="password"
                                         name="password"
                                         value={data.password}
@@ -1889,7 +1877,7 @@ export default function Landing({ errors }) {
                                             },
                                         }}
                                     >
-                                        {processing ? 'Signing In...' : 'Log In'}
+                                        {processing ? t('auth.signingIn') : t('auth.logIn')}
                                     </Button>
 
                                     <Box sx={{ textAlign: 'center' }}>
@@ -1921,7 +1909,7 @@ export default function Landing({ errors }) {
                                                 '&:hover': { color: '#6B5CE6' },
                                             }}
                                         >
-                                            Sign up now
+                                            {t('auth.signUpNow')}
                                         </Link>
                                     </Typography>
                                 </Stack>

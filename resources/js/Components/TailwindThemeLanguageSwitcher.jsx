@@ -5,8 +5,8 @@ import { useThemeMode } from '../contexts/ThemeContext';
 import { languages, getCurrentLanguage, setLanguage } from '../utils/languageUtils';
 
 export default function TailwindThemeLanguageSwitcher() {
-    const { mode, toggleMode } = useThemeMode();
     const { t, i18n } = useTranslation();
+    const { mode, toggleMode } = useThemeMode();
     const [isOpen, setIsOpen] = useState(false);
     const [isLanguageOpen, setIsLanguageOpen] = useState(false);
     const [isChangingLanguage, setIsChangingLanguage] = useState(false);
@@ -49,9 +49,9 @@ export default function TailwindThemeLanguageSwitcher() {
 
     const handleLanguageChange = async (languageCode) => {
         setIsChangingLanguage(true);
-        
+
         const success = await setLanguage(i18n, languageCode);
-        
+
         if (success) {
             setIsLanguageOpen(false);
             setIsOpen(false);
@@ -59,7 +59,7 @@ export default function TailwindThemeLanguageSwitcher() {
             // Show error message or fallback behavior
             console.error('Failed to change language to:', languageCode);
         }
-        
+
         setIsChangingLanguage(false);
     };
 
@@ -82,10 +82,10 @@ export default function TailwindThemeLanguageSwitcher() {
                 aria-haspopup="menu"
             >
                 <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
                         d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
                     />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -93,7 +93,7 @@ export default function TailwindThemeLanguageSwitcher() {
             </button>
 
             {isOpen && (
-                <div 
+                <div
                     className="
                         absolute right-0 mt-2 w-64 
                         bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700
@@ -166,10 +166,10 @@ export default function TailwindThemeLanguageSwitcher() {
                                     </span>
                                     <span className="text-sm">{currentLanguage.flag}</span>
                                 </div>
-                                <svg 
-                                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isLanguageOpen ? 'rotate-180' : ''}`} 
-                                    fill="none" 
-                                    stroke="currentColor" 
+                                <svg
+                                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isLanguageOpen ? 'rotate-180' : ''}`}
+                                    fill="none"
+                                    stroke="currentColor"
                                     viewBox="0 0 24 24"
                                 >
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -209,9 +209,9 @@ export default function TailwindThemeLanguageSwitcher() {
                                                 </div>
                                                 {isChangingLanguage && currentLanguage.code === language.code ? (
                                                     <div className="ml-auto">
-                                                        <svg 
-                                                            className="w-4 h-4 animate-spin text-indigo-600" 
-                                                            fill="none" 
+                                                        <svg
+                                                            className="w-4 h-4 animate-spin text-indigo-600"
+                                                            fill="none"
                                                             viewBox="0 0 24 24"
                                                             aria-hidden="true"
                                                         >
@@ -220,9 +220,9 @@ export default function TailwindThemeLanguageSwitcher() {
                                                         </svg>
                                                     </div>
                                                 ) : isSelected ? (
-                                                    <svg 
-                                                        className="w-4 h-4 ml-auto text-indigo-600" 
-                                                        fill="currentColor" 
+                                                    <svg
+                                                        className="w-4 h-4 ml-auto text-indigo-600"
+                                                        fill="currentColor"
                                                         viewBox="0 0 20 20"
                                                         aria-hidden="true"
                                                     >

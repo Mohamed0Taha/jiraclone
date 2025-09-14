@@ -21,13 +21,15 @@ import {
     Verified as VerifiedIcon,
 } from '@mui/icons-material';
 
-export default function CertificateChoice({
+
+import { useTranslation } from 'react-i18next';export default function CertificateChoice({
     auth,
     existingCertificate,
     certificateUrl,
     badgeUrl,
     canRetake,
 }) {
+  const { t } = useTranslation();
     const getScoreColor = (score) => {
         if (score >= 90) return 'success';
         if (score >= 80) return 'info';
@@ -64,7 +66,7 @@ export default function CertificateChoice({
                 </h2>
             }
         >
-            <Head title="Certification Status" />
+            <Head title={t('head.certification.status')} />
 
             <Container maxWidth="md" sx={{ py: 4 }}>
                 <Paper elevation={3} sx={{ p: 4 }}>

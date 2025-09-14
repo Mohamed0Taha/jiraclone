@@ -2,8 +2,11 @@ import React from 'react';
 import { Box, Typography, Button, Container, Card, CardContent, Alert } from '@mui/material';
 import { Warning, Home } from '@mui/icons-material';
 import { Link } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 
 const InvitationMismatch = ({ invitationEmail, userEmail }) => {
+    const { t } = useTranslation();
+
     return (
         <Container maxWidth="sm" sx={{ py: 8 }}>
             <Card elevation={3}>
@@ -16,22 +19,25 @@ const InvitationMismatch = ({ invitationEmail, userEmail }) => {
                         }}
                     />
                     <Typography variant="h4" gutterBottom color="warning.main">
-                        Email Mismatch
+                        {t('errors.emailMismatch')}
                     </Typography>
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                        This invitation was sent to {invitationEmail}, but you're logged in as{' '}
-                        {userEmail}.
+                        {t('errors.emailMismatchMessage', {
+                            invitationEmail,
+                            userEmail
+                        })}
                     </Typography>
 
                     <Alert severity="info" sx={{ mb: 4, textAlign: 'left' }}>
-                        To accept this invitation, please:
-                        <br />• Log out and log in with {invitationEmail}
-                        <br />• Or ask the project owner to send an invitation to {userEmail}
+                        {t('errors.invitationInstructions', {
+                            invitationEmail,
+                            userEmail
+                        })}
                     </Alert>
 
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
                         <Button component={Link} href="/logout" variant="outlined" size="large">
-                            Logout
+                            {t('auth.logout')}
                         </Button>
                         <Button
                             component={Link}
@@ -40,7 +46,7 @@ const InvitationMismatch = ({ invitationEmail, userEmail }) => {
                             startIcon={<Home />}
                             size="large"
                         >
-                            Go to Homepage
+                            {t('common.goToHomepage')}
                         </Button>
                     </Box>
                 </CardContent>

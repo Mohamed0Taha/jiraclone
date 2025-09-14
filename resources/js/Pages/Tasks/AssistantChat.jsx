@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { generateCustomView } from '@/lib/ai-actions';
 import { router, usePage } from '@inertiajs/react';
 import { csrfFetch } from '@/utils/csrf';
@@ -101,7 +102,8 @@ const palette = {
 };
 
 export default function AssistantChat({ project, tasks, allTasks, users, methodology, open, onClose, isCustomView = false, onSpaGenerated = null, viewName, currentComponentCode = null }) {
-    
+    const { t } = useTranslation();
+
     useEffect(() => {
         if (open && isCustomView) {
             console.log('[AssistantChat Debug] Dialog opened - Project data:', project);
@@ -111,14 +113,14 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
             console.log('[AssistantChat Debug] Dialog opened - Methodology:', methodology);
         }
     }, [open, isCustomView, project, tasks, allTasks, users, methodology]);
-    
+
     // Methodology-aware status mapping (matches the backend ProjectContextService)
     const getMethodologyStatusLabels = (methodology) => {
         switch (methodology) {
             case 'waterfall':
                 return {
                     todo: 'Requirements',
-                    inprogress: 'Design', 
+                    inprogress: 'Design',
                     review: 'Verification',
                     done: 'Maintenance'
                 };
@@ -126,7 +128,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                 return {
                     todo: 'Backlog',
                     inprogress: 'Todo',
-                    review: 'Testing', 
+                    review: 'Testing',
                     done: 'Done'
                 };
             case 'scrum':
@@ -141,7 +143,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
             default:
                 return {
                     todo: 'Todo',
-                    inprogress: 'In Progress', 
+                    inprogress: 'In Progress',
                     review: 'Review',
                     done: 'Done'
                 };
@@ -198,7 +200,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
 
     useEffect(() => {
         if (!open) return;
-        
+
         // Use different suggestions for custom view
         if (isCustomView) {
             setSuggestions([
@@ -220,7 +222,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                 .then((d) => {
                     if (Array.isArray(d?.suggestions)) setSuggestions(d.suggestions);
                 })
-                .catch(() => {});
+                .catch(() => { });
         }
     }, [open, project?.id, isCustomView]);
 
@@ -422,7 +424,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
         }
 
         setBusy(true);
-        
+
         // For custom view mode, show detailed progress
         if (isCustomView) {
             setGenerationProgress({
@@ -459,40 +461,40 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                         description: `This project uses ${methodology || 'kanban'} methodology. Use the correct status terminology in generated components.`
                     },
                     tasks: tasks ? {
-                        todo: (tasks.todo || []).map(t => ({ 
-                            id: t.id, 
-                            title: t.title, 
-                            status: t.status, 
+                        todo: (tasks.todo || []).map(t => ({
+                            id: t.id,
+                            title: t.title,
+                            status: t.status,
                             description: t.description,
                             priority: t.priority,
                             due_date: t.due_date || t.end_date || null,
                             assignee: t.assignee?.name || null,
                             creator: t.creator?.name || null,
                         })),
-                        inprogress: (tasks.inprogress || []).map(t => ({ 
-                            id: t.id, 
-                            title: t.title, 
-                            status: t.status, 
+                        inprogress: (tasks.inprogress || []).map(t => ({
+                            id: t.id,
+                            title: t.title,
+                            status: t.status,
                             description: t.description,
                             priority: t.priority,
                             due_date: t.due_date || t.end_date || null,
                             assignee: t.assignee?.name || null,
                             creator: t.creator?.name || null,
                         })),
-                        review: (tasks.review || []).map(t => ({ 
-                            id: t.id, 
-                            title: t.title, 
-                            status: t.status, 
+                        review: (tasks.review || []).map(t => ({
+                            id: t.id,
+                            title: t.title,
+                            status: t.status,
                             description: t.description,
                             priority: t.priority,
                             due_date: t.due_date || t.end_date || null,
                             assignee: t.assignee?.name || null,
                             creator: t.creator?.name || null,
                         })),
-                        done: (tasks.done || []).map(t => ({ 
-                            id: t.id, 
-                            title: t.title, 
-                            status: t.status, 
+                        done: (tasks.done || []).map(t => ({
+                            id: t.id,
+                            title: t.title,
+                            status: t.status,
                             description: t.description,
                             priority: t.priority,
                             due_date: t.due_date || t.end_date || null,
@@ -500,20 +502,20 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             creator: t.creator?.name || null,
                         })),
                         // Include additional status categories
-                        backlog: (tasks.backlog || []).map(t => ({ 
-                            id: t.id, 
-                            title: t.title, 
-                            status: t.status, 
+                        backlog: (tasks.backlog || []).map(t => ({
+                            id: t.id,
+                            title: t.title,
+                            status: t.status,
                             description: t.description,
                             priority: t.priority,
                             due_date: t.due_date || t.end_date || null,
                             assignee: t.assignee?.name || null,
                             creator: t.creator?.name || null,
                         })),
-                        testing: (tasks.testing || []).map(t => ({ 
-                            id: t.id, 
-                            title: t.title, 
-                            status: t.status, 
+                        testing: (tasks.testing || []).map(t => ({
+                            id: t.id,
+                            title: t.title,
+                            status: t.status,
                             description: t.description,
                             priority: t.priority,
                             due_date: t.due_date || t.end_date || null,
@@ -574,7 +576,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
             });
 
             // Route to different endpoints based on context
-            const endpoint = isCustomView 
+            const endpoint = isCustomView
                 ? `/projects/${project.id}/custom-views/chat` // moved from /api to web route for session auth
                 : `/projects/${project.id}/assistant/chat`;
 
@@ -642,9 +644,9 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     total: 4,
                     message: '🤔 AI needs more information...'
                 });
-                
+
                 setTimeout(() => setGenerationProgress(null), 2000);
-                
+
                 const asstMsg = {
                     role: 'assistant',
                     text: data?.message || 'I need some clarification to provide you with the best solution.',
@@ -653,7 +655,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     requires_response: data?.requires_user_response,
                     ts: Date.now(),
                 };
-                
+
                 setMessages((prev) => [...prev, asstMsg]);
                 setBusy(false);
                 return;
@@ -683,14 +685,14 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     response: data,
                     ts: Date.now(),
                 };
-                
+
                 setMessages((prev) => [...prev, asstMsg]);
-                
+
                 // Notify parent component about the generated SPA
                 if (onSpaGenerated) {
                     onSpaGenerated(data.html, data);
                 }
-                
+
                 // Clear progress after a moment
                 setTimeout(() => setGenerationProgress(null), 2000);
                 setBusy(false);
@@ -770,14 +772,14 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
             await navigator.clipboard.writeText(text || '');
             setCopiedIndex(idx);
             setTimeout(() => setCopiedIndex(null), 1200);
-        } catch {}
+        } catch { }
     };
 
     return (
-    <Dialog
-        open={open}
-        onClose={onClose}
-        maxWidth={false}
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth={false}
             PaperProps={{
                 sx: {
                     borderRadius: 3,
@@ -786,8 +788,8 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     border: 'none',
                     boxShadow: '0 30px 60px -12px rgba(31,41,255,0.45)',
                     display: 'flex',
-            width: 'clamp(420px, 92vw, 900px)',
-            minWidth: 400,
+                    width: 'clamp(420px, 92vw, 900px)',
+                    minWidth: 400,
                     height: '85vh',
                 },
             }}
@@ -877,7 +879,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                 <IconButton
                     onClick={onClose}
                     sx={{ position: 'absolute', top: 8, right: 8 }}
-                    aria-label="Close assistant chat"
+                    aria-label={t('assistantChat.close')}
                 >
                     <CloseRoundedIcon fontSize="small" sx={{ color: 'white' }} />
                 </IconButton>
@@ -1210,13 +1212,13 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                         boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
                                         ...(isUser
                                             ? {
-                                                  borderTopRightRadius: 10,
-                                                  borderBottomLeftRadius: 18,
-                                              }
+                                                borderTopRightRadius: 10,
+                                                borderBottomLeftRadius: 18,
+                                            }
                                             : {
-                                                  borderTopLeftRadius: 10,
-                                                  borderBottomRightRadius: 18,
-                                              }),
+                                                borderTopLeftRadius: 10,
+                                                borderBottomRightRadius: 18,
+                                            }),
                                         position: 'relative',
                                         overflow: 'hidden',
                                         '&::before': {
@@ -1259,12 +1261,12 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                             })}
                                         </Typography>
                                         {!isUser && (
-                                            <Tooltip title="Copy message">
+                                            <Tooltip title={t('assistantChat.copyMessage')}>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => copyMessage(idx, m?.text)}
                                                     sx={{ ml: 'auto' }}
-                                                    aria-label="Copy assistant message"
+                                                    aria-label={t('assistantChat.copyMessage')}
                                                 >
                                                     {copiedIndex === idx ? (
                                                         <CheckRoundedIcon
@@ -1291,16 +1293,16 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                 borderRadius: 1.5,
                                                 background: alpha(
                                                     m.conversation_type === 'question' ? colors.warning :
-                                                    m.conversation_type === 'clarification' ? colors.info :
-                                                    m.conversation_type === 'solution' ? colors.success :
-                                                    colors.secondary,
+                                                        m.conversation_type === 'clarification' ? colors.info :
+                                                            m.conversation_type === 'solution' ? colors.success :
+                                                                colors.secondary,
                                                     0.2
                                                 ),
                                                 border: `1px solid ${alpha(
                                                     m.conversation_type === 'question' ? colors.warning :
-                                                    m.conversation_type === 'clarification' ? colors.info :
-                                                    m.conversation_type === 'solution' ? colors.success :
-                                                    colors.secondary,
+                                                        m.conversation_type === 'clarification' ? colors.info :
+                                                            m.conversation_type === 'solution' ? colors.success :
+                                                                colors.secondary,
                                                     0.4
                                                 )}`,
                                                 display: 'flex',
@@ -1314,8 +1316,8 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                 }}
                                             >
                                                 {m.conversation_type === 'question' ? '🤔' :
-                                                 m.conversation_type === 'clarification' ? '❓' :
-                                                 m.conversation_type === 'solution' ? '✨' : '💬'}
+                                                    m.conversation_type === 'clarification' ? '❓' :
+                                                        m.conversation_type === 'solution' ? '✨' : '💬'}
                                             </Box>
                                             <Typography
                                                 variant="caption"
@@ -1326,8 +1328,8 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                 }}
                                             >
                                                 {m.conversation_type === 'question' ? 'Asking for details' :
-                                                 m.conversation_type === 'clarification' ? 'Seeking clarification' :
-                                                 m.conversation_type === 'solution' ? 'Solution ready' : 'Continuing conversation'}
+                                                    m.conversation_type === 'clarification' ? 'Seeking clarification' :
+                                                        m.conversation_type === 'solution' ? 'Solution ready' : 'Continuing conversation'}
                                             </Typography>
                                             {m?.requires_response && (
                                                 <Chip
@@ -1427,7 +1429,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                         },
                                                         transition: 'all 0.25s ease',
                                                     }}
-                                                    aria-label="Confirm and execute command"
+                                                    aria-label={t('assistantChat.confirmExecute')}
                                                 >
                                                     {m?.executed ? 'Executed' : 'Confirm'}
                                                 </Button>
@@ -1448,7 +1450,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                             borderColor: 'rgba(255,255,255,0.9)',
                                                         },
                                                     }}
-                                                    aria-label="Cancel command"
+                                                    aria-label={t('assistantChat.cancelCommand')}
                                                 >
                                                     Cancel
                                                 </Button>
@@ -1543,20 +1545,20 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                         ))}
                                                     {typeof m?.response?.data?.tasks?.overdue ===
                                                         'number' && (
-                                                        <Chip
-                                                            size="small"
-                                                            label={`⚠️ Overdue: ${m.response.data.tasks.overdue}`}
-                                                            sx={{
-                                                                fontWeight: 800,
-                                                                background: alpha(
-                                                                    colors.error,
-                                                                    0.22
-                                                                ),
-                                                                color: colors.error,
-                                                                border: `1px solid ${alpha(colors.error, 0.45)}`,
-                                                            }}
-                                                        />
-                                                    )}
+                                                            <Chip
+                                                                size="small"
+                                                                label={`⚠️ Overdue: ${m.response.data.tasks.overdue}`}
+                                                                sx={{
+                                                                    fontWeight: 800,
+                                                                    background: alpha(
+                                                                        colors.error,
+                                                                        0.22
+                                                                    ),
+                                                                    color: colors.error,
+                                                                    border: `1px solid ${alpha(colors.error, 0.45)}`,
+                                                                }}
+                                                            />
+                                                        )}
                                                 </Stack>
                                             </Box>
                                         )}
@@ -1752,10 +1754,10 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             inputRef={inputRef}
                             fullWidth
                             size="small"
-                            placeholder={isCustomView 
-                                ? (currentComponentCode 
-                                    ? "Describe how you want to update your application..." 
-                                    : "Describe the SPA you want to create...") 
+                            placeholder={isCustomView
+                                ? (currentComponentCode
+                                    ? "Describe how you want to update your application..."
+                                    : "Describe the SPA you want to create...")
                                 : "Type your message..."}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
@@ -1819,7 +1821,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                 transition: 'all 0.25s ease',
                             }}
                             startIcon={!busy ? <SendRoundedIcon /> : null}
-                            aria-label="Send message"
+                            aria-label={t('assistantChat.sendMessage')}
                         >
                             {busy ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Send'}
                         </Button>
@@ -1873,8 +1875,8 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                 {listening
                                     ? transcript || 'Listening... Speak now'
                                     : isProcessingVoice
-                                      ? 'Processing speech...'
-                                      : 'Tap microphone to start speaking'}
+                                        ? 'Processing speech...'
+                                        : 'Tap microphone to start speaking'}
                             </Typography>
                         </Box>
 

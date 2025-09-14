@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useForm, Head } from '@inertiajs/react';
 import {
     Box,
@@ -29,6 +30,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 export default function ProjectsIndex({ projects, auth }) {
     const theme = useTheme();
+    const { t } = useTranslation();
     const [showForm, setShowForm] = useState(projects.length === 0);
     const { data, setData, post, processing, errors } = useForm({
         name: '',
@@ -67,7 +69,7 @@ export default function ProjectsIndex({ projects, auth }) {
     };
 
     const ProjectCard = ({ project }) => (
-        <Grid item xs={12} sm={6} md={4} key={project.id}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={project.id}>
             <Card
                 sx={{
                     height: '100%',
@@ -138,7 +140,7 @@ export default function ProjectsIndex({ projects, auth }) {
 
     return (
         <AuthenticatedLayout user={auth.user}>
-            <Head title="My Projects" />
+            <Head title={t('dashboard.myProjects')} />
             <Container maxWidth="lg" sx={{ py: 4 }}>
                 <Box sx={{ mb: 4 }}>
                     <Typography variant="h3" component="h1" fontWeight={700} sx={{ mb: 2 }}>
@@ -253,7 +255,7 @@ export default function ProjectsIndex({ projects, auth }) {
                     <Card sx={{ mt: 4, borderRadius: theme.shape.borderRadius }}>
                         <CardContent sx={{ p: 4 }}>
                             <Typography variant="h5" sx={{ mb: 3 }}>
-                                Create New Project
+                                {t('projects.createNewProjectTitle')}
                             </Typography>
                             <Box
                                 component="form"
@@ -262,7 +264,7 @@ export default function ProjectsIndex({ projects, auth }) {
                             >
                                 <TextField
                                     fullWidth
-                                    label="Project Name"
+                                    label={t('projects.basics.nameLabel')}
                                     value={data.name}
                                     onChange={(e) => setData('name', e.target.value)}
                                     error={!!errors.name}
@@ -277,7 +279,7 @@ export default function ProjectsIndex({ projects, auth }) {
 
                                 <TextField
                                     fullWidth
-                                    label="Description"
+                                    label={t('projects.basics.descriptionLabel')}
                                     value={data.description}
                                     onChange={(e) => setData('description', e.target.value)}
                                     error={!!errors.description}
@@ -297,7 +299,7 @@ export default function ProjectsIndex({ projects, auth }) {
                                         onClick={() => setShowForm(false)}
                                         sx={{ borderRadius: theme.shape.borderRadius }}
                                     >
-                                        Cancel
+                                        {t('buttons.cancel')}
                                     </Button>
                                     <Button
                                         type="submit"
@@ -311,7 +313,7 @@ export default function ProjectsIndex({ projects, auth }) {
                                             },
                                         }}
                                     >
-                                        {processing ? 'Creating...' : 'Create Project'}
+                                        {processing ? t('projects.creating') : t('projects.createProject')}
                                     </Button>
                                 </Stack>
                             </Box>

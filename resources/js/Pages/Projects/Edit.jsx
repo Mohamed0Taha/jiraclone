@@ -1,5 +1,6 @@
 // resources/js/Pages/Projects/Edit.jsx
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Head, useForm, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
@@ -47,6 +48,7 @@ import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 
 export default function Edit({ auth, project }) {
     const theme = useTheme();
+    const { t } = useTranslation();
 
     const { data, setData, patch, processing, errors, reset, transform } = useForm({
         name: project?.name || '',
@@ -80,7 +82,11 @@ export default function Edit({ auth, project }) {
 
     const [activeStep, setActiveStep] = useState(0);
 
-    const steps = ['Basics', 'Context', 'Description & Preview'];
+    const steps = [
+        t('projects.edit.steps.basics'),
+        t('projects.edit.steps.context'),
+        t('projects.edit.steps.descriptionPreview'),
+    ];
 
     const next = () => setActiveStep((s) => Math.min(steps.length - 1, s + 1));
     const back = () => setActiveStep((s) => Math.max(0, s - 1));
@@ -89,7 +95,7 @@ export default function Edit({ auth, project }) {
         e.preventDefault();
         patch(route('projects.update', project.id), {
             preserveScroll: true,
-            onSuccess: () => {},
+            onSuccess: () => { },
         });
     };
 
@@ -306,7 +312,7 @@ export default function Edit({ auth, project }) {
                                     sx={{ flexWrap: 'wrap' }}
                                 >
                                     <IconButton
-                                        aria-label="Back to projects"
+                                        aria-label={t('projects.backToProjects')}
                                         size="small"
                                         href={`/projects/${project.id}/tasks`}
                                         sx={{
@@ -319,7 +325,7 @@ export default function Edit({ auth, project }) {
                                         <ArrowBackIcon fontSize="small" />
                                     </IconButton>
                                     <Typography variant="h5" fontWeight={700}>
-                                        Project Details
+                                        {t('project.projectDetails')}
                                     </Typography>
                                 </Stack>
 
@@ -342,7 +348,7 @@ export default function Edit({ auth, project }) {
                                     {activeStep === 0 && (
                                         <Stack spacing={3}>
                                             <TextField
-                                                label="Project Name"
+                                                label={t('project.projectName')}
                                                 required
                                                 value={data.name}
                                                 onChange={(e) => setData('name', e.target.value)}
@@ -358,10 +364,10 @@ export default function Edit({ auth, project }) {
                                             />
 
                                             <Grid container spacing={2}>
-                                                <Grid item xs={12} sm={6}>
+                                                <Grid size={{ xs: 12, sm: 6 }}>
                                                     <TextField
-                                                        label="Project Key"
-                                                        placeholder="ABC"
+                                                        label={t('project.projectKey')}
+                                                        placeholder={t('projects.basics.keyPlaceholder')}
                                                         value={data.key}
                                                         onChange={(e) =>
                                                             setData('key', e.target.value)
@@ -369,7 +375,7 @@ export default function Edit({ auth, project }) {
                                                         error={Boolean(errors.key)}
                                                         helperText={
                                                             errors.key ||
-                                                            'Uppercase letters & digits only (max 12).'
+                                                            t('projects.basics.keyHelper')
                                                         }
                                                         InputProps={{
                                                             startAdornment: (
@@ -383,9 +389,9 @@ export default function Edit({ auth, project }) {
                                                         }}
                                                     />
                                                 </Grid>
-                                                <Grid item xs={12} sm={6}>
+                                                <Grid size={{ xs: 12, sm: 6 }}>
                                                     <TextField
-                                                        label="Team Size"
+                                                        label={t('projectScope.teamSize')}
                                                         type="number"
                                                         value={data.meta.team_size}
                                                         onChange={(e) =>
@@ -410,9 +416,9 @@ export default function Edit({ auth, project }) {
                                             </Grid>
 
                                             <Grid container spacing={2}>
-                                                <Grid item xs={12} sm={6}>
+                                                <Grid size={{ xs: 12, sm: 6 }}>
                                                     <TextField
-                                                        label="Start Date"
+                                                        label={t('projectScope.startDate')}
                                                         type="date"
                                                         value={data.start_date || ''}
                                                         onChange={(e) =>
@@ -430,9 +436,9 @@ export default function Edit({ auth, project }) {
                                                         }}
                                                     />
                                                 </Grid>
-                                                <Grid item xs={12} sm={6}>
+                                                <Grid size={{ xs: 12, sm: 6 }}>
                                                     <TextField
-                                                        label="End Date"
+                                                        label={t('projectScope.endDate')}
                                                         type="date"
                                                         value={data.end_date || ''}
                                                         onChange={(e) =>
@@ -463,7 +469,7 @@ export default function Edit({ auth, project }) {
                                                     onClick={next}
                                                     sx={{ textTransform: 'none', fontWeight: 700 }}
                                                 >
-                                                    Next
+                                                    {t('projects.next')}
                                                 </Button>
                                             </Stack>
                                         </Stack>
@@ -472,9 +478,9 @@ export default function Edit({ auth, project }) {
                                     {activeStep === 1 && (
                                         <Stack spacing={3}>
                                             <Grid container spacing={2}>
-                                                <Grid item xs={12} sm={6}>
+                                                <Grid size={{ xs: 12, sm: 6 }}>
                                                     <TextField
-                                                        label="Project Type"
+                                                        label={t('projectScope.projectType')}
                                                         value={data.meta.project_type}
                                                         onChange={(e) =>
                                                             setData('meta', {
@@ -516,9 +522,9 @@ export default function Edit({ auth, project }) {
                                                     </TextField>
                                                 </Grid>
 
-                                                <Grid item xs={12} sm={6}>
+                                                <Grid size={{ xs: 12, sm: 6 }}>
                                                     <TextField
-                                                        label="Domain / Industry"
+                                                        label={t('projectScope.domain')}
                                                         value={data.meta.domain}
                                                         onChange={(e) =>
                                                             setData('meta', {
@@ -540,9 +546,9 @@ export default function Edit({ auth, project }) {
                                             </Grid>
 
                                             <Grid container spacing={2}>
-                                                <Grid item xs={12} sm={6}>
+                                                <Grid size={{ xs: 12, sm: 6 }}>
                                                     <TextField
-                                                        label="Area / Department"
+                                                        label={t('projectScope.areaLocationLabel')}
                                                         value={data.meta.area}
                                                         onChange={(e) =>
                                                             setData('meta', {
@@ -562,9 +568,9 @@ export default function Edit({ auth, project }) {
                                                     />
                                                 </Grid>
 
-                                                <Grid item xs={12} sm={6}>
+                                                <Grid size={{ xs: 12, sm: 6 }}>
                                                     <TextField
-                                                        label="Location"
+                                                        label={t('projectScope.location')}
                                                         value={data.meta.location}
                                                         onChange={(e) =>
                                                             setData('meta', {
@@ -586,9 +592,9 @@ export default function Edit({ auth, project }) {
                                             </Grid>
 
                                             <Grid container spacing={2}>
-                                                <Grid item xs={12} sm={6}>
+                                                <Grid size={{ xs: 12, sm: 6 }}>
                                                     <TextField
-                                                        label="Budget"
+                                                        label={t('projects.review.budget')}
                                                         value={data.meta.budget}
                                                         onChange={(e) =>
                                                             setData('meta', {
@@ -608,9 +614,9 @@ export default function Edit({ auth, project }) {
                                                     />
                                                 </Grid>
 
-                                                <Grid item xs={12} sm={6}>
+                                                <Grid size={{ xs: 12, sm: 6 }}>
                                                     <TextField
-                                                        label="Primary Stakeholder"
+                                                        label={t('projects.review.primaryStakeholder')}
                                                         value={data.meta.primary_stakeholder}
                                                         onChange={(e) =>
                                                             setData('meta', {
@@ -636,7 +642,7 @@ export default function Edit({ auth, project }) {
                                             </Grid>
 
                                             <TextField
-                                                label="Objectives"
+                                                label={t('projects.objectives.primaryObjectivesLabel')}
                                                 value={data.meta.objectives}
                                                 onChange={(e) =>
                                                     setData('meta', {
@@ -661,7 +667,7 @@ export default function Edit({ auth, project }) {
                                             />
 
                                             <TextField
-                                                label="Constraints"
+                                                label={t('projects.objectives.constraintsLabel')}
                                                 value={data.meta.constraints}
                                                 onChange={(e) =>
                                                     setData('meta', {
@@ -728,8 +734,8 @@ export default function Edit({ auth, project }) {
                                             </Alert>
 
                                             <TextField
-                                                label="Project Description"
-                                                placeholder="Purpose, scope, goals, success criteria..."
+                                                label={t('projects.basics.descriptionLabel')}
+                                                placeholder={t('projects.basics.descriptionPlaceholder')}
                                                 value={data.description}
                                                 onChange={(e) =>
                                                     setData('description', e.target.value)

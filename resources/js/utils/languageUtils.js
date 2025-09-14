@@ -6,7 +6,7 @@ export const languages = [
     { code: 'es', name: 'language.spanish', flag: '🇪🇸', nativeName: 'Español' },
     { code: 'de', name: 'language.german', flag: '🇩🇪', nativeName: 'Deutsch' },
     { code: 'fi', name: 'language.finnish', flag: '🇫🇮', nativeName: 'Suomi' },
-    { code: 'se', name: 'language.swedish', flag: '🇸🇪', nativeName: 'Svenska' },
+    { code: 'sv', name: 'language.swedish', flag: '🇸🇪', nativeName: 'Svenska' },
     { code: 'nl', name: 'language.dutch', flag: '🇳🇱', nativeName: 'Nederlands' },
     { code: 'fr', name: 'language.french', flag: '🇫🇷', nativeName: 'Français' },
 ];
@@ -59,7 +59,15 @@ export const normalizeLanguageCode = (languageCode) => {
 export const getCurrentLanguage = (i18n) => {
     const currentLang = i18n.language || i18n.languages?.[0] || 'en';
     const normalizedLang = normalizeLanguageCode(currentLang);
-    return getLanguageByCode(normalizedLang) || getDefaultLanguage();
+    const languageObj = getLanguageByCode(normalizedLang) || getDefaultLanguage();
+    
+    // Ensure we only return the clean language object without any codes
+    return {
+        code: languageObj.code,
+        name: languageObj.name,
+        flag: languageObj.flag,
+        nativeName: languageObj.nativeName
+    };
 };
 
 /**

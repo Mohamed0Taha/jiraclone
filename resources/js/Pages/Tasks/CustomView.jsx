@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Head } from '@inertiajs/react';
 import { useChat } from '@ai-sdk/react';
+import { useTranslation } from 'react-i18next';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
     Box,
@@ -98,6 +99,47 @@ const shimmer = keyframes`
 `;
 
 export default function CustomView({ auth, project, tasks, allTasks, users, methodology, viewName }) {
+    const { t } = useTranslation();
+
+    // Function to convert slug back to original name
+    const getOriginalNameFromSlug = (slug) => {
+        try {
+            // Get custom views from localStorage
+            const stored = localStorage.getItem(`customViews:${project?.id}`);
+            if (stored) {
+                const customViews = JSON.parse(stored);
+
+                // Find view by slug or by creating slug from name
+                const view = customViews.find(view => {
+                    const viewSlug = view.slug || createSlug(view.name);
+                    return viewSlug === slug;
+                });
+
+                if (view) {
+                    return view.name;
+                }
+            }
+        } catch (error) {
+            console.error('Error retrieving original name from slug:', error);
+        }
+
+        // Fallback: convert slug back to a reasonable name
+        return slug.replace(/-/g, ' ');
+    };
+
+    // Function to create slug (should match the one in Board.jsx)
+    const createSlug = (name) => {
+        return name
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '-') // Replace spaces with dashes
+            .replace(/[^a-z0-9-]/g, '') // Remove special characters except dashes
+            .replace(/-+/g, '-') // Replace multiple dashes with single dash
+            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+    };
+
+    // Convert viewName (slug) back to original name for API calls
+    const originalViewName = getOriginalNameFromSlug(viewName);
 
     const theme = useTheme();
     const [assistantOpen, setAssistantOpen] = useState(false);
@@ -450,7 +492,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             const response = await csrfFetch(`/projects/${project.id}/custom-views/save`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    view_name: viewName,
+                    view_name: originalViewName,
                     component_code: componentCode,
                     custom_view_id: customViewId
                 }),
@@ -460,13 +502,13 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 const data = await response.json();
                 setCustomViewId(data.customViewId);
                 setIsPersisted(true);
-                showSnackbar('Micro-application saved successfully!', 'success');
+                showSnackbar(t('customViews.saveSuccess'), 'success');
             } else {
                 throw new Error('Save failed');
             }
         } catch (error) {
             console.error('Save error:', error);
-            showSnackbar('Failed to save. Please try again.', 'error');
+            showSnackbar(t('customViews.saveFailed'), 'error');
         } finally {
             setIsSaving(false);
         }
@@ -499,7 +541,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
         // Debounce auto-save to prevent excessive saves
         const timeoutId = setTimeout(() => {
-            const backupKey = `microapp-backup-${project?.id || 'unknown'}-${viewName || 'default'}`;
+            const backupKey = `microapp-backup-${project?.id || 'unknown'}-${originalViewName || 'default'}`;
             const backupData = {
                 componentCode,
                 timestamp: new Date().toISOString(),
@@ -513,18 +555,18 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         return () => {
             clearTimeout(timeoutId);
         };
-    }, [componentCode, isLocked, autoSaveEnabled, project?.id, viewName, customViewId]);
+    }, [componentCode, isLocked, autoSaveEnabled, project?.id, originalViewName, customViewId]);
 
     // Load existing custom view on mount (optimized)
     useEffect(() => {
         const loadCustomView = async () => {
-            if (!project?.id || !viewName) {
+            if (!project?.id || !originalViewName) {
                 setIsLoading(false);
                 return;
             }
 
             try {
-                const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${encodeURIComponent(viewName)}`);
+                const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${encodeURIComponent(originalViewName)}`);
                 const data = await response.json();
 
                 console.log('[CustomView] Server response:', data);
@@ -545,7 +587,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     setIsPersisted(false);
                     setIsLocked(true);
 
-                    const backupKey = `microapp-backup-${project.id}-${viewName}`;
+                    const backupKey = `microapp-backup-${project.id}-${originalViewName}`;
                     localStorage.removeItem(backupKey); // ensure we don't resurrect deleted views
 
                     if (!data.success) {
@@ -561,7 +603,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 console.error('[CustomView] Error loading custom view:', error);
 
                 // Fallback to local backup
-                const backupKey = `microapp-backup-${project.id}-${viewName}`;
+                const backupKey = `microapp-backup-${project.id}-${originalViewName}`;
                 const backup = localStorage.getItem(backupKey);
                 if (backup) {
                     try {
@@ -589,7 +631,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         };
 
         loadCustomView();
-    }, [project?.id, viewName]);
+    }, [project?.id, originalViewName]);
 
     // Memoize component code for AssistantChat to prevent unnecessary re-renders
     const memoizedComponentCode = useMemo(() => {
@@ -645,7 +687,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && (key.includes(`microapp-`) || key.includes(`${project?.id}-${viewName}`))) {
+            if (key && (key.includes(`microapp-`) || key.includes(`${project?.id}-${originalViewName}`))) {
                 keysToRemove.push(key);
             }
         }
@@ -656,7 +698,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             const response = await csrfFetch(`/projects/${project.id}/custom-views/delete`, {
                 method: 'DELETE',
                 body: JSON.stringify({
-                    view_name: viewName,
+                    view_name: originalViewName,
                     custom_view_id: customViewId || null,
                 }),
             });
@@ -682,6 +724,17 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         setIsPersisted(false);
         setIsLocked(true);
         setDeleteConfirmOpen(false);
+
+        // Defensive: also clear any scoped localStorage data for this view
+        try {
+            const prefix = `microapp-${project?.id}-${originalViewName}-`;
+            const toRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(prefix)) toRemove.push(key);
+            }
+            toRemove.forEach((k) => localStorage.removeItem(k));
+        } catch (_) { }
     };
 
     // Emergency recovery function to clear problematic component
@@ -697,14 +750,14 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && (key.includes(`microapp-`) || key.includes(`${project?.id}-${viewName}`))) {
+            if (key && (key.includes(`microapp-`) || key.includes(`${project?.id}-${originalViewName}`))) {
                 keysToRemove.push(key);
             }
         }
         keysToRemove.forEach(key => localStorage.removeItem(key));
 
         showSnackbar('Component reset. You can now generate a new micro-application.', 'info');
-    }, [project?.id, viewName]);
+    }, [project?.id, originalViewName]);
 
     const handleComponentError = (error) => {
         console.error('[CustomView] Component error:', error);
@@ -743,7 +796,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         <AuthenticatedLayout
             user={auth.user}
         >
-            <Head title={`Custom View: ${viewName} - ${project.name}`} />
+            <Head title={`${t('customViews.headTitle', { name: originalViewName, project: project.name })}`} />
 
             {/* Enhanced Generation Progress Dialog */}
             <Dialog
@@ -753,7 +806,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     sx: {
                         borderRadius: designTokens.radii.xl,
                         minWidth: 400,
-                        background: designTokens.gradients.primary,
+                        background: (theme) => theme.palette.mode === 'dark' ? theme.palette.background.paper : designTokens.gradients.primary,
                         boxShadow: designTokens.shadows.floating,
                     }
                 }}
@@ -812,7 +865,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
             {/* Professional Main Container */}
             <Box sx={{
-                background: designTokens.gradients.primary,
+                background: (theme) => theme.palette.mode === 'dark' ? theme.palette.background.default : designTokens.gradients.primary,
                 minHeight: '100vh',
                 p: 3
             }}>
@@ -825,7 +878,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         right: 24,
                         zIndex: 1200,
                         borderRadius: designTokens.radii.xl,
-                        background: alpha(theme.palette.background.paper, 0.95),
+                        background: (theme) => alpha(theme.palette.background.paper, 0.95),
                         backdropFilter: 'blur(12px)',
                         border: `1px solid ${alpha(designTokens.colors.primary, 0.1)}`,
                         boxShadow: designTokens.shadows.floating,
@@ -835,7 +888,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 >
                     <Stack direction="column" spacing={0}>
                         {/* Generate Button */}
-                        <Tooltip title={componentCode ? "Update Application" : "Generate New Application"} placement="left">
+                        <Tooltip title={componentCode ? t('customViews.updateApplication') : t('customViews.generateNewApplication')} placement="left">
                             <IconButton
                                 onClick={() => setAssistantOpen(true)}
                                 sx={{
@@ -856,7 +909,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
                         {/* Save Button */}
                         {componentCode && (
-                            <Tooltip title="Save Application" placement="left">
+                            <Tooltip title={t('customViews.saveApplication')} placement="left">
                                 <IconButton
                                     onClick={handleManualSave}
                                     disabled={isSaving}
@@ -877,7 +930,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
                         {/* Lock/Unlock */}
                         {componentCode && (
-                            <Tooltip title={isLocked ? "Unlock for Editing" : "Lock Application"} placement="left">
+                            <Tooltip title={isLocked ? t('customViews.unlockForEditing') : t('customViews.lockApplication')} placement="left">
                                 <IconButton
                                     onClick={handleToggleLock}
                                     sx={{
@@ -897,7 +950,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
                         {/* Refresh */}
                         {componentCode && (
-                            <Tooltip title="Refresh Application" placement="left">
+                            <Tooltip title={t('customViews.refreshApplication')} placement="left">
                                 <IconButton
                                     onClick={handleRefresh}
                                     sx={{
@@ -917,7 +970,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
                         {/* Delete (when component exists) */}
                         {componentCode && (
-                            <Tooltip title={isPersisted ? "Delete Saved Application" : "Clear Working Area"} placement="left">
+                            <Tooltip title={isPersisted ? t('customViews.deleteSavedApplication') : t('customViews.clearWorkingArea')} placement="left">
                                 <IconButton
                                     onClick={() => setDeleteConfirmOpen(true)}
                                     sx={{
@@ -937,7 +990,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
                         {/* Emergency Reset - always visible when there's an error */}
                         {componentError && (
-                            <Tooltip title="Emergency Reset (fixes freeze)" placement="left">
+                            <Tooltip title={t('customViews.emergencyReset')} placement="left">
                                 <IconButton
                                     onClick={handleEmergencyReset}
                                     sx={{
@@ -969,7 +1022,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         p: '5%', // 5% padding for working area
                         borderRadius: 3,
                         overflow: 'hidden',
-                        background: alpha(theme.palette.background.paper, 0.8),
+                        background: (theme) => alpha(theme.palette.background.paper, 0.8),
                         backdropFilter: 'blur(12px)',
                         border: isLocked
                             ? `2px solid ${designTokens.colors.success}`
@@ -986,7 +1039,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                 componentCode={componentCode}
                                 project={project}
                                 auth={auth}
-                                viewName={viewName}
+                                viewName={originalViewName}
                                 onError={handleComponentError}
                                 tasks={tasks}
                                 allTasks={allTasks}
@@ -1018,10 +1071,10 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                 <AutoAwesomeIcon fontSize="large" />
                             </Box>
                             <Typography variant="h6" fontWeight="500" mb={1}>
-                                Loading Application Studio...
+                                {t('customViews.loadingStudio')}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Preparing your custom application environment
+                                {t('customViews.preparingEnvironment')}
                             </Typography>
                         </Box>
                     ) : (
@@ -1057,31 +1110,30 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             </Box>
 
                             <Typography variant="h4" fontWeight="600" color="text.primary" mb={2}>
-                                Ready to Create Something Amazing?
+                                {t('customViews.readyToCreate')}
                             </Typography>
                             <Typography variant="body1" color="text.secondary" mb={4} maxWidth={600}>
-                                Welcome to your custom application studio. Use AI to generate powerful,
-                                data-driven micro-applications tailored to your project needs.
+                                {t('customViews.welcomeStudio')}
                             </Typography>
 
                             <Stack direction="row" spacing={2} flexWrap="wrap" justifyContent="center">
                                 <Chip
-                                    label="📊 Data Dashboard"
+                                    label={t('customViews.examples.dataDashboard')}
                                     variant="outlined"
                                     sx={{ borderRadius: designTokens.radii.lg }}
                                 />
                                 <Chip
-                                    label="📋 Task Manager"
+                                    label={t('customViews.examples.taskManager')}
                                     variant="outlined"
                                     sx={{ borderRadius: designTokens.radii.lg }}
                                 />
                                 <Chip
-                                    label="📈 Analytics View"
+                                    label={t('customViews.examples.analyticsView')}
                                     variant="outlined"
                                     sx={{ borderRadius: designTokens.radii.lg }}
                                 />
                                 <Chip
-                                    label="🎯 Custom Tool"
+                                    label={t('customViews.examples.customTool')}
                                     variant="outlined"
                                     sx={{ borderRadius: designTokens.radii.lg }}
                                 />
@@ -1108,7 +1160,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                     transition: 'all 0.3s ease',
                                 }}
                             >
-                                Start Creating
+                                {t('customViews.startCreating')}
                             </Button>
                         </Box>
                     )}
@@ -1141,15 +1193,15 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             <DeleteIcon />
                         </Box>
                         <Typography variant="h6" fontWeight="600">
-                            {isPersisted ? "Delete Application" : "Clear Working Area"}
+                            {isPersisted ? t('customViews.deleteApplication') : t('customViews.clearWorkingArea')}
                         </Typography>
                     </Stack>
                 </DialogTitle>
                 <DialogContent>
                     <Typography color="text.secondary">
                         {isPersisted
-                            ? "Are you sure you want to delete this saved application? This action cannot be undone. All saved data will be permanently removed from the database."
-                            : "Are you sure you want to clear this working area? The current component will be removed but no saved data will be affected."
+                            ? t('customViews.deleteConfirmSaved')
+                            : t('customViews.deleteConfirmWorking')
                         }
                     </Typography>
                 </DialogContent>
@@ -1158,7 +1210,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         onClick={() => setDeleteConfirmOpen(false)}
                         sx={{ borderRadius: designTokens.radii.lg }}
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         onClick={handleClearWorkingArea}
@@ -1169,7 +1221,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             fontWeight: 600,
                         }}
                     >
-                        {isPersisted ? "Delete Permanently" : "Clear Working Area"}
+                        {isPersisted ? t('customViews.deletePermanently') : t('customViews.clearWorkingArea')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -1212,10 +1264,10 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             <Box textAlign="center" py={4}>
                                 <AutoAwesomeIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
                                 <Typography variant="h6" gutterBottom>
-                                    Generate Custom Components with AI
+                                    {t('customViews.generateWithAITitle')}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Describe what you want to build and I'll create a React component for you
+                                    {t('customViews.generateWithAIDesc')}
                                 </Typography>
                             </Box>
                         ) : (
@@ -1253,7 +1305,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                             <Stack direction="row" spacing={1} alignItems="center">
                                                 <CircularProgress size={16} />
                                                 <Typography variant="body2" color="text.secondary">
-                                                    Generating component...
+                                                    {t('customViews.generatingComponent')}
                                                 </Typography>
                                             </Stack>
                                         </Paper>
@@ -1271,7 +1323,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                     fullWidth
                                     value={chatInput}
                                     onChange={handleChatInputChange}
-                                    placeholder="Describe the component you want to generate..."
+                                    placeholder={t('customViews.generatePrompt')}
                                     disabled={isGenerating}
                                     variant="outlined"
                                     size="small"
@@ -1282,7 +1334,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                     disabled={isGenerating || isManuallyGenerating || !chatInput?.trim()}
                                     startIcon={(isGenerating || isManuallyGenerating) ? <CircularProgress size={16} /> : <SendRoundedIcon />}
                                 >
-                                    {(isGenerating || isManuallyGenerating) ? 'Generating...' : 'Generate'}
+                                    {(isGenerating || isManuallyGenerating) ? t('customViews.generating') : t('customViews.generate')}
                                 </Button>
                                 {(isGenerating || isManuallyGenerating) && (
                                     <Button
@@ -1295,7 +1347,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                             setIsManuallyGenerating(false);
                                         }}
                                     >
-                                        Stop
+                                        {t('common.stop')}
                                     </Button>
                                 )}
                             </Stack>
@@ -1303,7 +1355,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
                         {chatError && (
                             <Alert severity="error" sx={{ mt: 1 }}>
-                                {chatError.message}
+                                {t('customViews.chatError')}
                             </Alert>
                         )}
                     </Box>
@@ -1314,10 +1366,10 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         setMessages([]);
                         setChatInput('');
                     }}>
-                        Clear Chat
+                        {t('customViews.clearChat')}
                     </Button>
                     <Button onClick={() => setAssistantOpen(false)}>
-                        Close
+                        {t('common.close')}
                     </Button>
                 </DialogActions>
             </Dialog>

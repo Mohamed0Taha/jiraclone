@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import {
     Dialog,
     DialogTitle,
@@ -38,6 +39,7 @@ import {
 } from '@mui/material';
 
 export default function Index({ auth, simulation, certificationAttempt }) {
+    const { t } = useTranslation();
     const totalWeeks = simulation?.project?.total_weeks || 10;
     const [currentWeek, setCurrentWeek] = useState(1);
     const [projectWeeks] = useState(totalWeeks);
@@ -114,7 +116,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                     const lowProgressHighEffort =
                                         t.progress < 50 &&
                                         (t.estimated_hours || t.remaining_hours || 0) >
-                                            t.original_estimate;
+                                        t.original_estimate;
                                     const inProgressWithExpansion =
                                         t.status === 'In Progress' &&
                                         t.progress > 0 &&
@@ -531,7 +533,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             remaining_budget: remainingBudget,
                             team_utilization: team.length
                                 ? team.reduce((s, m) => s + (m.workload || 50), 0) /
-                                  (team.length * 100)
+                                (team.length * 100)
                                 : 0.5,
                             team_morale_avg: team.length
                                 ? team.reduce((s, m) => s + (m.morale || 70), 0) / team.length
@@ -630,7 +632,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                     const pct = parseInt(m[1], 10);
                                     updatedTask.estimated_hours = Math.round(
                                         (updatedTask.estimated_hours || task.estimated_hours || 0) *
-                                            (1 + pct / 100)
+                                        (1 + pct / 100)
                                     );
                                 }
                             }
@@ -762,9 +764,9 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                     Math.max(
                         0,
                         totalBudget -
-                            calcSpent(tasks) -
-                            overheadCostsRef.current +
-                            adjustmentsRef.current
+                        calcSpent(tasks) -
+                        overheadCostsRef.current +
+                        adjustmentsRef.current
                     )
                 );
             }
@@ -804,11 +806,11 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                     prev.map((t) =>
                         departed && t.assignee === departed.name
                             ? {
-                                  ...t,
-                                  assignee: null,
-                                  status: t.status === 'In Progress' ? 'Pending' : t.status,
-                                  capacity_loss: true,
-                              }
+                                ...t,
+                                assignee: null,
+                                status: t.status === 'In Progress' ? 'Pending' : t.status,
+                                capacity_loss: true,
+                            }
                             : t
                     )
                 );
@@ -847,10 +849,10 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 task.priority === 'Low' || affectedTaskIds.includes(task.id)
                                     ? {
-                                          ...task,
-                                          status: 'Cancelled',
-                                          cancellation_reason: 'Budget constraints',
-                                      }
+                                        ...task,
+                                        status: 'Cancelled',
+                                        cancellation_reason: 'Budget constraints',
+                                    }
                                     : task
                             )
                         );
@@ -875,15 +877,15 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 affectedTaskIds.includes(task.id) || task.status === 'Pending'
                                     ? {
-                                          ...task,
-                                          estimated_hours: Math.floor(
-                                              (task.estimated_hours || 0) * 0.75
-                                          ),
-                                          budget: Math.floor((task.budget || 0) * 0.8),
-                                          scope_reduced: true,
-                                          scope_reduction_notes:
-                                              '25% scope reduction due to budget constraints',
-                                      }
+                                        ...task,
+                                        estimated_hours: Math.floor(
+                                            (task.estimated_hours || 0) * 0.75
+                                        ),
+                                        budget: Math.floor((task.budget || 0) * 0.8),
+                                        scope_reduced: true,
+                                        scope_reduction_notes:
+                                            '25% scope reduction due to budget constraints',
+                                    }
                                     : task
                             )
                         );
@@ -894,14 +896,14 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 affectedTaskIds.includes(task.id)
                                     ? {
-                                          ...task,
-                                          status: 'Pending',
-                                          deferred: true,
-                                          deferral_reason:
-                                              'Moved to Phase 2 due to budget constraints',
-                                          original_priority: task.priority,
-                                          priority: 'Low', // Reduce priority for deferred items
-                                      }
+                                        ...task,
+                                        status: 'Pending',
+                                        deferred: true,
+                                        deferral_reason:
+                                            'Moved to Phase 2 due to budget constraints',
+                                        original_priority: task.priority,
+                                        priority: 'Low', // Reduce priority for deferred items
+                                    }
                                     : task
                             )
                         );
@@ -939,7 +941,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                     if (availableMembers.length > 0) {
                                         const newAssignee =
                                             availableMembers[
-                                                Math.floor(Math.random() * availableMembers.length)
+                                            Math.floor(Math.random() * availableMembers.length)
                                             ];
                                         return {
                                             ...task,
@@ -974,16 +976,16 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             setTasks((prev) =>
                                 prev.map((task) =>
                                     task.assignee === memberName &&
-                                    affectedTaskIds.includes(task.id)
+                                        affectedTaskIds.includes(task.id)
                                         ? {
-                                              ...task,
-                                              assignee: 'External Contractor',
-                                              outsourced: true,
-                                              outsourcing_cost: 1500,
-                                              estimated_hours: Math.floor(
-                                                  (task.estimated_hours || 0) * 0.9
-                                              ), // Specialists work faster
-                                          }
+                                            ...task,
+                                            assignee: 'External Contractor',
+                                            outsourced: true,
+                                            outsourcing_cost: 1500,
+                                            estimated_hours: Math.floor(
+                                                (task.estimated_hours || 0) * 0.9
+                                            ), // Specialists work faster
+                                        }
                                         : task
                                 )
                             );
@@ -992,14 +994,14 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             setTasks((prev) =>
                                 prev.map((task) =>
                                     task.assignee === memberName &&
-                                    affectedTaskIds.includes(task.id)
+                                        affectedTaskIds.includes(task.id)
                                         ? {
-                                              ...task,
-                                              status: 'Pending',
-                                              assignee: null,
-                                              delay_reason:
-                                                  'Insufficient budget for temporary help',
-                                          }
+                                            ...task,
+                                            status: 'Pending',
+                                            assignee: null,
+                                            delay_reason:
+                                                'Insufficient budget for temporary help',
+                                        }
                                         : task
                                 )
                             );
@@ -1011,14 +1013,14 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 task.assignee === memberName && affectedTaskIds.includes(task.id)
                                     ? {
-                                          ...task,
-                                          status: 'Pending',
-                                          delayed: true,
-                                          delay_reason: `Delayed due to ${memberName}'s unavailability`,
-                                          estimated_hours: (task.estimated_hours || 0) * 1.15, // 15% time penalty
-                                          original_assignee: task.assignee,
-                                          assignee: null,
-                                      }
+                                        ...task,
+                                        status: 'Pending',
+                                        delayed: true,
+                                        delay_reason: `Delayed due to ${memberName}'s unavailability`,
+                                        estimated_hours: (task.estimated_hours || 0) * 1.15, // 15% time penalty
+                                        original_assignee: task.assignee,
+                                        assignee: null,
+                                    }
                                     : task
                             )
                         );
@@ -1031,14 +1033,14 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                         prev.map((member) =>
                             affectedMemberIds.includes(member.id)
                                 ? {
-                                      ...member,
-                                      availability: 'Limited',
-                                      availability_reason:
-                                          actionKey === 'approve_sick_leave'
-                                              ? 'Sick Leave'
-                                              : 'Time Off',
-                                      morale: Math.min(100, (member.morale || 70) + 10), // Morale boost for approved leave
-                                  }
+                                    ...member,
+                                    availability: 'Limited',
+                                    availability_reason:
+                                        actionKey === 'approve_sick_leave'
+                                            ? 'Sick Leave'
+                                            : 'Time Off',
+                                    morale: Math.min(100, (member.morale || 70) + 10), // Morale boost for approved leave
+                                }
                                 : member
                         )
                     );
@@ -1057,11 +1059,11 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 task.priority === 'Low' && task.status !== 'Done'
                                     ? {
-                                          ...task,
-                                          status: 'Cancelled',
-                                          cancellation_reason: 'Budget cut - scope reduction',
-                                          scope_reduced: true,
-                                      }
+                                        ...task,
+                                        status: 'Cancelled',
+                                        cancellation_reason: 'Budget cut - scope reduction',
+                                        scope_reduced: true,
+                                    }
                                     : task
                             )
                         );
@@ -1078,17 +1080,17 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                         setTasks((prev) =>
                             prev.map((task, index) =>
                                 index < affectedTaskCount &&
-                                task.status !== 'Done' &&
-                                task.priority !== 'High'
+                                    task.status !== 'Done' &&
+                                    task.priority !== 'High'
                                     ? {
-                                          ...task,
-                                          status: 'Pending',
-                                          deferred: true,
-                                          deferral_reason:
-                                              'Moved to Phase 2 due to budget constraints',
-                                          original_priority: task.priority,
-                                          priority: 'Low',
-                                      }
+                                        ...task,
+                                        status: 'Pending',
+                                        deferred: true,
+                                        deferral_reason:
+                                            'Moved to Phase 2 due to budget constraints',
+                                        original_priority: task.priority,
+                                        priority: 'Low',
+                                    }
                                     : task
                             )
                         );
@@ -1121,12 +1123,12 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 prev.map((member) =>
                                     affectedMemberIds.includes(member.id)
                                         ? {
-                                              ...member,
-                                              morale: Math.min(100, (member.morale || 70) + 8),
-                                              workload: Math.min(100, (member.workload || 50) + 10), // Increased productivity
-                                              salary_increased: true,
-                                              retention_risk: 'Low',
-                                          }
+                                            ...member,
+                                            morale: Math.min(100, (member.morale || 70) + 8),
+                                            workload: Math.min(100, (member.workload || 50) + 10), // Increased productivity
+                                            salary_increased: true,
+                                            retention_risk: 'Low',
+                                        }
                                         : member
                                 )
                             );
@@ -1139,10 +1141,10 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 prev.map((member) =>
                                     affectedMemberIds.includes(member.id)
                                         ? {
-                                              ...member,
-                                              morale: Math.min(100, (member.morale || 70) + 3),
-                                              bonus_received: true,
-                                          }
+                                            ...member,
+                                            morale: Math.min(100, (member.morale || 70) + 3),
+                                            bonus_received: true,
+                                        }
                                         : member
                                 )
                             );
@@ -1155,11 +1157,11 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 prev.map((member) =>
                                     affectedMemberIds.includes(member.id)
                                         ? {
-                                              ...member,
-                                              morale: Math.max(0, (member.morale || 70) - 5),
-                                              retention_risk: 'High',
-                                              attrition_risk: true,
-                                          }
+                                            ...member,
+                                            morale: Math.max(0, (member.morale || 70) - 5),
+                                            retention_risk: 'High',
+                                            attrition_risk: true,
+                                        }
                                         : member
                                 )
                             );
@@ -1186,11 +1188,11 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 prev.map((task) =>
                                     affectedTaskIds.includes(task.id)
                                         ? {
-                                              ...task,
-                                              assignee: expert.name,
-                                              consolidated_to_expert: true,
-                                              quality_assured: true,
-                                          }
+                                            ...task,
+                                            assignee: expert.name,
+                                            consolidated_to_expert: true,
+                                            quality_assured: true,
+                                        }
                                         : task
                                 )
                             );
@@ -1199,10 +1201,10 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 prev.map((member) =>
                                     member.id === expert.id
                                         ? {
-                                              ...member,
-                                              morale: Math.max(0, (member.morale || 70) - 10),
-                                              workload: 'High',
-                                          }
+                                            ...member,
+                                            morale: Math.max(0, (member.morale || 70) - 10),
+                                            workload: 'High',
+                                        }
                                         : member
                                 )
                             );
@@ -1215,13 +1217,13 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 affectedTaskIds.includes(task.id)
                                     ? {
-                                          ...task,
-                                          paired_programming: true,
-                                          estimated_hours: Math.floor(
-                                              (task.estimated_hours || 0) * 1.2
-                                          ), // 20% overhead initially
-                                          skill_transfer: true,
-                                      }
+                                        ...task,
+                                        paired_programming: true,
+                                        estimated_hours: Math.floor(
+                                            (task.estimated_hours || 0) * 1.2
+                                        ), // 20% overhead initially
+                                        skill_transfer: true,
+                                    }
                                     : task
                             )
                         );
@@ -1230,12 +1232,12 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((member) =>
                                 !affectedMemberIds.includes(member.id) // Non-experts get skill boost
                                     ? {
-                                          ...member,
-                                          skills: [...(member.skills || []), skillRequired].filter(
-                                              (s, i, arr) => arr.indexOf(s) === i
-                                          ),
-                                          morale: Math.min(100, (member.morale || 70) + 5), // Learning morale boost
-                                      }
+                                        ...member,
+                                        skills: [...(member.skills || []), skillRequired].filter(
+                                            (s, i, arr) => arr.indexOf(s) === i
+                                        ),
+                                        morale: Math.min(100, (member.morale || 70) + 5), // Learning morale boost
+                                    }
                                     : member
                             )
                         );
@@ -1252,10 +1254,10 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((member) =>
                                 affectedMemberIds.includes(member.id)
                                     ? {
-                                          ...member,
-                                          morale: Math.min(100, (member.morale || 70) + 10),
-                                          conflict_resolved: true,
-                                      }
+                                        ...member,
+                                        morale: Math.min(100, (member.morale || 70) + 10),
+                                        conflict_resolved: true,
+                                    }
                                     : member
                             )
                         );
@@ -1270,15 +1272,15 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 prev.map((task) =>
                                     affectedTaskIds.includes(task.id)
                                         ? {
-                                              ...task,
-                                              assignee:
-                                                  neutralMembers[
-                                                      Math.floor(
-                                                          Math.random() * neutralMembers.length
-                                                      )
-                                                  ].name,
-                                              conflict_resolution: 'Reassigned to neutral member',
-                                          }
+                                            ...task,
+                                            assignee:
+                                                neutralMembers[
+                                                    Math.floor(
+                                                        Math.random() * neutralMembers.length
+                                                    )
+                                                ].name,
+                                            conflict_resolution: 'Reassigned to neutral member',
+                                        }
                                         : task
                                 )
                             );
@@ -1313,11 +1315,11 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 task.status === 'In Progress'
                                     ? {
-                                          ...task,
-                                          progress: Math.min(100, (task.progress || 0) + 8),
-                                          standup_boost: 'focused',
-                                          coordination_level: 'high',
-                                      }
+                                        ...task,
+                                        progress: Math.min(100, (task.progress || 0) + 8),
+                                        standup_boost: 'focused',
+                                        coordination_level: 'high',
+                                    }
                                     : task
                             )
                         );
@@ -1335,11 +1337,11 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 task.status === 'In Progress' || task.status === 'Pending'
                                     ? {
-                                          ...task,
-                                          progress: Math.min(100, (task.progress || 0) + 8),
-                                          detailed_planning: true,
-                                          blocker_addressed: true,
-                                      }
+                                        ...task,
+                                        progress: Math.min(100, (task.progress || 0) + 8),
+                                        detailed_planning: true,
+                                        blocker_addressed: true,
+                                    }
                                     : task
                             )
                         );
@@ -1359,10 +1361,10 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 task.status === 'In Progress'
                                     ? {
-                                          ...task,
-                                          progress: Math.min(100, (task.progress || 0) + 5),
-                                          standup_skipped: true,
-                                      }
+                                        ...task,
+                                        progress: Math.min(100, (task.progress || 0) + 5),
+                                        standup_skipped: true,
+                                    }
                                     : task
                             )
                         );
@@ -1385,13 +1387,13 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 affectedTaskIds.includes(task.id)
                                     ? {
-                                          ...task,
-                                          quality_assured: true,
-                                          code_review_implemented: true,
-                                          estimated_hours: Math.floor(
-                                              (task.estimated_hours || 0) * 1.15
-                                          ), // 15% overhead for reviews
-                                      }
+                                        ...task,
+                                        quality_assured: true,
+                                        code_review_implemented: true,
+                                        estimated_hours: Math.floor(
+                                            (task.estimated_hours || 0) * 1.15
+                                        ), // 15% overhead for reviews
+                                    }
                                     : task
                             )
                         );
@@ -1401,12 +1403,12 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 affectedTaskIds.includes(task.id)
                                     ? {
-                                          ...task,
-                                          status: 'In Progress', // Restart for refactor
-                                          progress: Math.max(0, (task.progress || 0) - 30), // Step back for refactor
-                                          refactored: true,
-                                          quality_improved: true,
-                                      }
+                                        ...task,
+                                        status: 'In Progress', // Restart for refactor
+                                        progress: Math.max(0, (task.progress || 0) - 30), // Step back for refactor
+                                        refactored: true,
+                                        quality_improved: true,
+                                    }
                                     : task
                             )
                         );
@@ -1416,11 +1418,11 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 affectedTaskIds.includes(task.id)
                                     ? {
-                                          ...task,
-                                          technical_debt: true,
-                                          debt_documented: true,
-                                          future_refactor_required: true,
-                                      }
+                                        ...task,
+                                        technical_debt: true,
+                                        debt_documented: true,
+                                        future_refactor_required: true,
+                                    }
                                     : task
                             )
                         );
@@ -1436,17 +1438,17 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 affectedTaskIds.includes(task.id)
                                     ? {
-                                          ...task,
-                                          status:
-                                              task.status === 'Completed'
-                                                  ? 'In Progress'
-                                                  : task.status, // Reopen if needed
-                                          progress: Math.max(0, (task.progress || 0) - 20), // Rework required
-                                          client_feedback_incorporated: true,
-                                          estimated_hours: Math.floor(
-                                              (task.estimated_hours || 0) * 1.3
-                                          ), // 30% more work
-                                      }
+                                        ...task,
+                                        status:
+                                            task.status === 'Completed'
+                                                ? 'In Progress'
+                                                : task.status, // Reopen if needed
+                                        progress: Math.max(0, (task.progress || 0) - 20), // Rework required
+                                        client_feedback_incorporated: true,
+                                        estimated_hours: Math.floor(
+                                            (task.estimated_hours || 0) * 1.3
+                                        ), // 30% more work
+                                    }
                                     : task
                             )
                         );
@@ -1457,11 +1459,11 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 affectedTaskIds.includes(task.id)
                                     ? {
-                                          ...task,
-                                          scope_negotiated: true,
-                                          stakeholder_alignment: true,
-                                          admin_overhead: (task.admin_overhead || 0) + 0.1,
-                                      }
+                                        ...task,
+                                        scope_negotiated: true,
+                                        stakeholder_alignment: true,
+                                        admin_overhead: (task.admin_overhead || 0) + 0.1,
+                                    }
                                     : task
                             )
                         );
@@ -1471,11 +1473,11 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 affectedTaskIds.includes(task.id)
                                     ? {
-                                          ...task,
-                                          feedback_deferred: true,
-                                          future_rework_risk: 'high',
-                                          technical_debt: true,
-                                      }
+                                        ...task,
+                                        feedback_deferred: true,
+                                        future_rework_risk: 'high',
+                                        technical_debt: true,
+                                    }
                                     : task
                             )
                         );
@@ -1491,13 +1493,13 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 affectedTaskIds.includes(task.id)
                                     ? {
-                                          ...task,
-                                          workaround_implemented: true,
-                                          technical_debt: true,
-                                          estimated_hours: Math.floor(
-                                              (task.estimated_hours || 0) * 1.1
-                                          ), // 10% overhead
-                                      }
+                                        ...task,
+                                        workaround_implemented: true,
+                                        technical_debt: true,
+                                        estimated_hours: Math.floor(
+                                            (task.estimated_hours || 0) * 1.1
+                                        ), // 10% overhead
+                                    }
                                     : task
                             )
                         );
@@ -1511,12 +1513,12 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 prev.map((task) =>
                                     affectedTaskIds.includes(task.id)
                                         ? {
-                                              ...task,
-                                              infrastructure_upgraded: true,
-                                              estimated_hours: Math.floor(
-                                                  (task.estimated_hours || 0) * 0.85
-                                              ), // 15% efficiency gain
-                                          }
+                                            ...task,
+                                            infrastructure_upgraded: true,
+                                            estimated_hours: Math.floor(
+                                                (task.estimated_hours || 0) * 0.85
+                                            ), // 15% efficiency gain
+                                        }
                                         : task
                                 )
                             );
@@ -1526,10 +1528,10 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 prev.map((task) =>
                                     affectedTaskIds.includes(task.id)
                                         ? {
-                                              ...task,
-                                              workaround_implemented: true,
-                                              upgrade_deferred: true,
-                                          }
+                                            ...task,
+                                            workaround_implemented: true,
+                                            upgrade_deferred: true,
+                                        }
                                         : task
                                 )
                             );
@@ -1540,12 +1542,12 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             prev.map((task) =>
                                 affectedTaskIds.includes(task.id)
                                     ? {
-                                          ...task,
-                                          status: 'Pending',
-                                          delay_reason:
-                                              'Infrastructure issues - waiting for resolution',
-                                          delayed_weeks: 1,
-                                      }
+                                        ...task,
+                                        status: 'Pending',
+                                        delay_reason:
+                                            'Infrastructure issues - waiting for resolution',
+                                        delayed_weeks: 1,
+                                    }
                                     : task
                             )
                         );
@@ -1573,7 +1575,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 Math.max(
                                     0,
                                     (member.morale || 70) +
-                                        evaluation.metrics_impact.team_morale_change
+                                    evaluation.metrics_impact.team_morale_change
                                 )
                             ),
                         }))
@@ -1624,9 +1626,9 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                         prev.map((task) =>
                             task.status === 'In Progress'
                                 ? {
-                                      ...task,
-                                      progress: Math.min(100, (task.progress || 0) + 5),
-                                  }
+                                    ...task,
+                                    progress: Math.min(100, (task.progress || 0) + 5),
+                                }
                                 : task
                         )
                     );
@@ -1637,9 +1639,9 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                         prev.map((task) =>
                             task.priority === 'High'
                                 ? {
-                                      ...task,
-                                      quality_assured: true,
-                                  }
+                                    ...task,
+                                    quality_assured: true,
+                                }
                                 : task
                         )
                     );
@@ -2311,9 +2313,9 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                         Math.max(
                             0,
                             totalBudget -
-                                calcSpent(tasks) -
-                                overheadCostsRef.current +
-                                adjustmentsRef.current
+                            calcSpent(tasks) -
+                            overheadCostsRef.current +
+                            adjustmentsRef.current
                         )
                     );
 
@@ -2421,11 +2423,11 @@ export default function Index({ auth, simulation, certificationAttempt }) {
             prev.map((m) =>
                 m.id === memberId
                     ? {
-                          ...m,
-                          workload: Math.max(5, (m.workload || 50) - 5),
-                          morale: Math.min(100, (m.morale ?? 70) + 10),
-                          status: 'Active',
-                      }
+                        ...m,
+                        workload: Math.max(5, (m.workload || 50) - 5),
+                        morale: Math.min(100, (m.morale ?? 70) + 10),
+                        status: 'Active',
+                    }
                     : m
             )
         );
@@ -2537,7 +2539,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
         if (currentWeek > 1) {
             try {
                 new Audio('/sounds/notify.mp3').play();
-            } catch (e) {}
+            } catch (e) { }
         }
     }, [currentWeek]);
 
@@ -2666,9 +2668,9 @@ export default function Index({ auth, simulation, certificationAttempt }) {
         const skillsMatch = /skills?:\s*([^\)]+)/i.exec(d);
         const skills = skillsMatch
             ? skillsMatch[1]
-                  .split(/[,\n]/)
-                  .map((s) => s.trim())
-                  .filter(Boolean)
+                .split(/[,\n]/)
+                .map((s) => s.trim())
+                .filter(Boolean)
             : ['General'];
         return {
             title: titleMatch ? titleMatch[1] : 'New Task',
@@ -2817,10 +2819,10 @@ export default function Index({ auth, simulation, certificationAttempt }) {
             raw >= 85
                 ? 'Elite'
                 : raw >= 70
-                  ? 'Strong'
-                  : raw >= 55
-                    ? 'Developing'
-                    : 'Needs Improvement';
+                    ? 'Strong'
+                    : raw >= 55
+                        ? 'Developing'
+                        : 'Needs Improvement';
         return {
             summary: {
                 totalWeeks: projectWeeks,
@@ -3109,31 +3111,31 @@ export default function Index({ auth, simulation, certificationAttempt }) {
 
     return (
         <Layout {...layoutProps}>
-            <Head title="Project Management Simulator" />
+            <Head title={t('head.simulator')} />
             {/* Scaled UI wrapper fills full viewport (after scale) without horizontal scroll */}
             <div
                 ref={wrapperRef}
                 style={
                     isFirefox
                         ? {
-                              transform: `scale(${uiScale})`,
-                              transformOrigin: 'top left',
-                              height: `calc((100vh - 5vh) / ${uiScale})`,
-                              width: `${100 / uiScale}%`,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              background: dashboardGradient,
-                              fontSize: `${fontScale}em`,
-                          }
+                            transform: `scale(${uiScale})`,
+                            transformOrigin: 'top left',
+                            height: `calc((100vh - 5vh) / ${uiScale})`,
+                            width: `${100 / uiScale}%`,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            background: dashboardGradient,
+                            fontSize: `${fontScale}em`,
+                        }
                         : {
-                              zoom: uiScale,
-                              height: `calc((100vh - 5vh) / ${uiScale})`,
-                              width: '100%',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              background: dashboardGradient,
-                              fontSize: `${fontScale}em`,
-                          }
+                            zoom: uiScale,
+                            height: `calc((100vh - 5vh) / ${uiScale})`,
+                            width: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            background: dashboardGradient,
+                            fontSize: `${fontScale}em`,
+                        }
                 }
             >
                 {/* Header Section */}
@@ -3292,8 +3294,8 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                                     ? totalScore / actionCount >= 80
                                                         ? '#2e7d32'
                                                         : totalScore / actionCount >= 60
-                                                          ? '#ed6c02'
-                                                          : '#d32f2f'
+                                                            ? '#ed6c02'
+                                                            : '#d32f2f'
                                                     : dashboardAccent,
                                         }}
                                     >
@@ -3357,7 +3359,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                         onClick={handleStandup}
                                         sx={actionIconSx}
                                         disabled={remainingBudget < STANDUP_COST}
-                                        aria-label="run standup"
+                                        aria-label={t('simulator.runStandupAria')}
                                     >
                                         <GroupIcon fontSize="inherit" />
                                     </IconButton>
@@ -3370,7 +3372,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                             size="small"
                                             onClick={openAddTask}
                                             sx={actionIconSx}
-                                            aria-label="add task from directive"
+                                            aria-label={t('simulator.addTaskFromDirectiveAria')}
                                         >
                                             +
                                         </IconButton>
@@ -3384,7 +3386,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                         onClick={openConflictResolver}
                                         sx={actionIconSx}
                                         disabled={weekAdjustedTeam.length < 2}
-                                        aria-label="mediate conflict"
+                                        aria-label={t('simulator.mediateConflictAria')}
                                     >
                                         <HandshakeIcon fontSize="inherit" />
                                     </IconButton>
@@ -3397,7 +3399,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                         onClick={handleTeamEvent}
                                         sx={{ ...actionIconSx, bgcolor: 'rgba(255,255,255,0.20)' }}
                                         disabled={remainingBudget < TEAM_EVENT_COST}
-                                        aria-label="team event"
+                                        aria-label={t('simulator.teamEventAria')}
                                     >
                                         <CelebrationIcon fontSize="inherit" />
                                     </IconButton>
@@ -3414,7 +3416,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                             opacity: 0.7,
                                             fontSize: '12px',
                                         }}
-                                        aria-label="resolve all events"
+                                        aria-label={t('simulator.resolveAllEventsAria')}
                                     >
                                         ✓
                                     </IconButton>
@@ -3431,7 +3433,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                             opacity: 0.5,
                                             fontSize: '10px',
                                         }}
-                                        aria-label="debug resolution"
+                                        aria-label={t('simulator.debugResolutionAria')}
                                     >
                                         🔍
                                     </IconButton>
@@ -3444,7 +3446,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 if (walkStep === 4) advanceWalk();
                             }}
                             disabled={currentWeek >= projectWeeks}
-                            aria-label="advance week"
+                            aria-label={t('simulator.advanceWeekAria')}
                             sx={{
                                 ...actionIconSx,
                                 // unify base appearance, but add accent ring + subtle gradient
@@ -3491,11 +3493,12 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                         </Dialog>
                         {walkStep === 4 && (
                             <GuideOverlayLeft
-                                title="Navigate Weeks"
-                                description="Use this button to advance the simulation one week at a time. Strategy shifts as new events appear."
+                                title={t('simulator.guide.navigateWeeks.title')}
+                                description={t('simulator.guide.navigateWeeks.description')}
                                 onNext={advanceWalk}
                                 onSkip={skipWalk}
                                 final
+                                t={t}
                             />
                         )}
                         {/* Coin bursts */}
@@ -3571,8 +3574,9 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 <GuideOverlay
                                     onNext={advanceWalk}
                                     onSkip={skipWalk}
-                                    title="Events"
-                                    description="Assess and resolve events directly here. Select an event and choose an option inline."
+                                    title={t('simulator.guide.events.title')}
+                                    description={t('simulator.guide.events.description')}
+                                    t={t}
                                 />
                             </div>
                         )}
@@ -3616,7 +3620,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                     teamMorale:
                                         team.length > 0
                                             ? team.reduce((sum, m) => sum + (m.morale || 70), 0) /
-                                              team.length
+                                            team.length
                                             : 70,
                                     weekProgress: currentWeek / projectWeeks,
                                     tasksCompleted: tasks.filter((t) => t.status === 'Completed')
@@ -3651,16 +3655,16 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                                     remaining_budget: remainingBudget,
                                                     team_utilization: team.length
                                                         ? team.reduce(
-                                                              (s, m) => s + (m.workload || 50),
-                                                              0
-                                                          ) /
-                                                          (team.length * 100)
+                                                            (s, m) => s + (m.workload || 50),
+                                                            0
+                                                        ) /
+                                                        (team.length * 100)
                                                         : 0.5,
                                                     team_morale_avg: team.length
                                                         ? team.reduce(
-                                                              (s, m) => s + (m.morale || 70),
-                                                              0
-                                                          ) / team.length
+                                                            (s, m) => s + (m.morale || 70),
+                                                            0
+                                                        ) / team.length
                                                         : 70,
                                                     timeline_buffer_weeks: Math.max(
                                                         0,
@@ -3702,8 +3706,9 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 <GuideOverlay
                                     onNext={advanceWalk}
                                     onSkip={skipWalk}
-                                    title="Tasks"
-                                    description="Update task status, progress, priority, or assignee. Expanded first task for you to explore."
+                                    title={t('simulator.guide.tasks.title')}
+                                    description={t('simulator.guide.tasks.description')}
+                                    t={t}
                                 />
                             </div>
                         )}
@@ -3738,8 +3743,9 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                 <GuideOverlay
                                     onNext={advanceWalk}
                                     onSkip={skipWalk}
-                                    title="Team"
-                                    description="Assign team members to tasks matching their skills and adapt to weekly availability changes."
+                                    title={t('simulator.guide.team.title')}
+                                    description={t('simulator.guide.team.description')}
+                                    t={t}
                                 />
                             </div>
                         )}
@@ -3936,7 +3942,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                                 </Typography>
                                             );
                                         }
-                                    } catch (e) {}
+                                    } catch (e) { }
                                     return null;
                                 })()}
                             </Box>
@@ -3956,8 +3962,8 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                                 <>
                                                     <MUIButton
                                                         onClick={() =>
-                                                            (window.location.href =
-                                                                '/certification/certificate')
+                                                        (window.location.href =
+                                                            '/certification/certificate')
                                                         }
                                                         variant="contained"
                                                     >
@@ -3965,8 +3971,8 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                                     </MUIButton>
                                                     <MUIButton
                                                         onClick={() =>
-                                                            (window.location.href =
-                                                                '/certification/badge')
+                                                        (window.location.href =
+                                                            '/certification/badge')
                                                         }
                                                     >
                                                         View Badge
@@ -3974,7 +3980,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                                 </>
                                             );
                                         }
-                                    } catch (e) {}
+                                    } catch (e) { }
                                     return (
                                         <MUIButton
                                             onClick={() =>
@@ -3995,7 +4001,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                         // Clear completion flag only when user explicitly wants to restart
                                         try {
                                             sessionStorage.removeItem('simulationCompleted');
-                                        } catch (e) {}
+                                        } catch (e) { }
                                         setSimulationCompleted(false);
                                         setResultsOpen(false);
                                         setCurrentWeek(1);
@@ -4010,7 +4016,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                                         setResolvedEventIds([]);
                                     }}
                                 >
-                                    Start New Simulation
+                                    {t('simulator.button.startNew')}
                                 </MUIButton>
                             </>
                         )}
@@ -4018,17 +4024,16 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                 </Dialog>
             )}
             <MuiDialog open={conflictOpen} onClose={closeConflictResolver} maxWidth="sm" fullWidth>
-                <MuiDialogTitle>Conflict Resolution</MuiDialogTitle>
+                <MuiDialogTitle>{t('simulator.conflict.title')}</MuiDialogTitle>
                 <MuiDialogContent dividers>
                     <Typography variant="body2" mb={2}>
-                        Select two members experiencing friction and apply mediation to resolve the
-                        conflict event for this week.
+                        {t('simulator.conflict.description')}
                     </Typography>
                     <Box display="flex" gap={2}>
                         <FormControl fullWidth size="small">
-                            <InputLabel>Member A</InputLabel>
+                            <InputLabel>{t('simulator.conflict.memberA')}</InputLabel>
                             <Select
-                                label="Member A"
+                                label={t('simulator.conflict.memberA')}
                                 value={conflictMemberA}
                                 onChange={(e) => setConflictMemberA(e.target.value)}
                             >
@@ -4040,9 +4045,9 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                             </Select>
                         </FormControl>
                         <FormControl fullWidth size="small">
-                            <InputLabel>Member B</InputLabel>
+                            <InputLabel>{t('simulator.conflict.memberB')}</InputLabel>
                             <Select
-                                label="Member B"
+                                label={t('simulator.conflict.memberB')}
                                 value={conflictMemberB}
                                 onChange={(e) => setConflictMemberB(e.target.value)}
                             >
@@ -4056,25 +4061,25 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                     </Box>
                     {conflictMemberA && conflictMemberB && conflictMemberA === conflictMemberB && (
                         <Typography color="error" variant="caption" mt={1} display="block">
-                            Select two different members.
+                            {t('simulator.conflict.differentMembers')}
                         </Typography>
                     )}
                 </MuiDialogContent>
                 <MuiDialogActions>
-                    <MUIButton onClick={closeConflictResolver}>Cancel</MUIButton>
+                    <MUIButton onClick={closeConflictResolver}>{t('common.cancel')}</MUIButton>
                     <MUIButton onClick={handleMediate} disabled={!canMediate} variant="contained">
-                        Mediate
+                        {t('simulator.conflict.mediate')}
                     </MUIButton>
                 </MuiDialogActions>
             </MuiDialog>
             <MuiDialog open={addTaskOpen} onClose={closeAddTask} maxWidth="sm" fullWidth>
-                <MuiDialogTitle>Create Task From Directive</MuiDialogTitle>
+                <MuiDialogTitle>{t('simulator.addTask.title')}</MuiDialogTitle>
                 <MuiDialogContent dividers>
                     <Typography variant="body2" mb={1}>
-                        Add the requested task. You can tweak fields before creating.
+                        {t('simulator.addTask.description')}
                     </Typography>
                     <TextField
-                        label="Title"
+                        label={t('common.title')}
                         fullWidth
                         size="small"
                         sx={{ mb: 1.2 }}
@@ -4082,15 +4087,15 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                         onChange={(e) => setNewTaskTitle(e.target.value)}
                     />
                     <FormControl fullWidth size="small" sx={{ mb: 1.2 }} required>
-                        <InputLabel>Priority</InputLabel>
+                        <InputLabel>{t('common.priority')}</InputLabel>
                         <Select
-                            label="Priority"
+                            label={t('common.priority')}
                             value={newTaskPriority}
                             onChange={(e) => setNewTaskPriority(e.target.value)}
                             displayEmpty
                         >
                             <MenuItem value="">
-                                <em>Select priority</em>
+                                <em>{t('simulator.addTask.selectPriority')}</em>
                             </MenuItem>
                             {['High', 'Medium', 'Low'].map((p) => (
                                 <MenuItem key={p} value={p}>
@@ -4100,8 +4105,8 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                         </Select>
                     </FormControl>
                     <TextField
-                        label="Estimated Hours"
-                        placeholder="e.g. 10"
+                        label={t('simulator.addTask.estimatedHours')}
+                        placeholder={t('simulator.exampleNumberPlaceholder')}
                         type="number"
                         size="small"
                         fullWidth
@@ -4111,8 +4116,8 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                         required
                     />
                     <TextField
-                        label="Required Skills (comma separated)"
-                        placeholder="e.g. Governance, Analysis"
+                        label={t('simulator.addTask.requiredSkills')}
+                        placeholder={t('simulator.exampleCategoriesPlaceholder')}
                         size="small"
                         fullWidth
                         sx={{ mb: 0.6 }}
@@ -4120,17 +4125,17 @@ export default function Index({ auth, simulation, certificationAttempt }) {
                         onChange={(e) => setNewTaskSkills(e.target.value)}
                     />
                     <Typography variant="caption" color="text.secondary">
-                        Priority, hours & skills must be chosen to create. Budget auto-calculated.
+                        {t('simulator.addTask.requirements')}
                     </Typography>
                 </MuiDialogContent>
                 <MuiDialogActions>
-                    <MUIButton onClick={closeAddTask}>Cancel</MUIButton>
+                    <MUIButton onClick={closeAddTask}>{t('common.cancel')}</MUIButton>
                     <MUIButton
                         variant="contained"
                         onClick={handleCreateTask}
                         disabled={!newTaskTitle.trim() || !newTaskPriority || !newTaskEst}
                     >
-                        Create Task
+                        {t('simulator.addTask.create')}
                     </MUIButton>
                 </MuiDialogActions>
             </MuiDialog>
@@ -4139,7 +4144,7 @@ export default function Index({ auth, simulation, certificationAttempt }) {
 }
 
 // Lightweight overlay component for walkthrough steps
-function GuideOverlay({ title, description, onNext, onSkip, final }) {
+function GuideOverlay({ title, description, onNext, onSkip, final, t }) {
     return (
         <Box
             sx={{
@@ -4170,10 +4175,10 @@ function GuideOverlay({ title, description, onNext, onSkip, final }) {
                 </Typography>
                 <Box display="flex" justifyContent="space-between" mt={1}>
                     <MUIButton size="small" onClick={onSkip}>
-                        Skip
+                        {t('common.skip')}
                     </MUIButton>
                     <MUIButton size="small" variant="contained" onClick={onNext}>
-                        {final ? 'Finish' : 'Next'}
+                        {final ? t('common.finish') : t('common.next')}
                     </MUIButton>
                 </Box>
                 {/* Arrow */}
@@ -4207,7 +4212,7 @@ function GuideOverlay({ title, description, onNext, onSkip, final }) {
 }
 
 // Overlay that sits to the left of the navigation buttons
-function GuideOverlayLeft({ title, description, onNext, onSkip, final }) {
+function GuideOverlayLeft({ title, description, onNext, onSkip, final, t }) {
     return (
         <Box
             sx={{
@@ -4238,10 +4243,10 @@ function GuideOverlayLeft({ title, description, onNext, onSkip, final }) {
                 </Typography>
                 <Box display="flex" justifyContent="space-between" mt={1}>
                     <MUIButton size="small" onClick={onSkip}>
-                        Skip
+                        {t('common.skip')}
                     </MUIButton>
                     <MUIButton size="small" variant="contained" onClick={onNext}>
-                        {final ? 'Finish' : 'Next'}
+                        {final ? t('common.finish') : t('common.next')}
                     </MUIButton>
                 </Box>
                 {/* Arrow pointing right toward button */}

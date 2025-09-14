@@ -22,7 +22,8 @@ import {
     Logout as LogoutIcon,
 } from '@mui/icons-material';
 
-// Landing page color scheme
+
+import { useTranslation } from 'react-i18next';// Landing page color scheme
 const colors = {
     primary: '#FF6B6B',
     secondary: '#4ECDC4',
@@ -34,9 +35,10 @@ const colors = {
 };
 
 export default function VerifyEmail({ status }) {
+  const { t } = useTranslation();
     return (
         <>
-            <Head title="Verify your email" />
+            <Head title={t('head.auth.verifyEmail')} />
             <Box
                 sx={{
                     minHeight: '100vh',

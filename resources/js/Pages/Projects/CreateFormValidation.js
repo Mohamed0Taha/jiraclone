@@ -6,34 +6,35 @@ export const NAME_MIN = 3;
 export const NAME_MAX = 80;
 export const DESC_MAX = 4000;
 
-// Basic validators
-export const validators = {
+// Basic validators that accept a translation function
+export const createValidators = (t) => ({
     name: (v) => {
-        if (!v?.trim()) return 'Project name is required.';
-        if (v.trim().length < NAME_MIN) return `At least ${NAME_MIN} characters.`;
-        if (v.length > NAME_MAX) return `Maximum ${NAME_MAX} characters.`;
+        if (!v?.trim()) return t('projects.validation.nameRequired');
+        if (v.trim().length < NAME_MIN) return t('projects.validation.nameMinLength', { min: NAME_MIN });
+        if (v.length > NAME_MAX) return t('projects.validation.nameMaxLength', { max: NAME_MAX });
         return '';
     },
     key: (v) => {
-        if (!v?.trim()) return 'Key is required.';
-        if (!KEY_REGEX.test(v)) return 'Uppercase letters & digits only.';
-        if (v.length > 12) return 'Max 12 characters.';
+        if (!v?.trim()) return t('projects.validation.keyRequired');
+        if (!KEY_REGEX.test(v)) return t('projects.validation.keyFormat');
+        if (v.length > 12) return t('projects.validation.keyMaxLength');
         return '';
     },
     description: (v) => {
-        if ((v || '').length > DESC_MAX) return `Maximum ${DESC_MAX} characters.`;
+        if ((v || '').length > DESC_MAX) return t('projects.validation.descriptionMaxLength', { max: DESC_MAX });
         return '';
     },
     start_end: (start, end) => {
         if (start && end && new Date(end) < new Date(start)) {
-            return 'End date must be after or equal to start date.';
+            return t('projects.validation.endDateAfterStart');
         }
         return '';
     },
-};
+});
 
 // Per-step validation logic
-export const validateStep = (idx, data, setLocalErrors) => {
+export const validateStep = (idx, data, setLocalErrors, t) => {
+    const validators = createValidators(t);
     const err = {};
 
     if (idx === 0) {

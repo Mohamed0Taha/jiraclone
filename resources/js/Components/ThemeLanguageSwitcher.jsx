@@ -29,14 +29,14 @@ const languages = [
     { code: 'es', name: 'language.spanish', flag: '🇪🇸' },
     { code: 'de', name: 'language.german', flag: '🇩🇪' },
     { code: 'fi', name: 'language.finnish', flag: '🇫🇮' },
-    { code: 'se', name: 'language.swedish', flag: '🇸🇪' },
+    { code: 'sv', name: 'language.swedish', flag: '🇸🇪' },
     { code: 'nl', name: 'language.dutch', flag: '🇳🇱' },
     { code: 'fr', name: 'language.french', flag: '🇫🇷' },
 ];
 
 export default function ThemeLanguageSwitcher() {
-    const { mode, toggleMode } = useThemeMode();
     const { t, i18n } = useTranslation();
+    const { mode, toggleMode } = useThemeMode();
     const [anchorEl, setAnchorEl] = useState(null);
     const [languageAnchorEl, setLanguageAnchorEl] = useState(null);
 

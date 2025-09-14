@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Head, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
@@ -32,6 +33,7 @@ export default function AITasksPreview({
     upgradeUrl = '/billing',
     limitExceeded = false,
 }) {
+    const { t } = useTranslation();
     const theme = useTheme();
     const [pinnedTasks, setPinnedTasks] = useState(new Set());
 
@@ -87,7 +89,7 @@ export default function AITasksPreview({
 
     return (
         <>
-            <Head title="AI Tasks Preview" />
+            <Head title={t('aiTask.previewTitle', 'AI Tasks Preview')} />
             <AuthenticatedLayout user={auth.user}>
                 <Box
                     sx={{
@@ -386,9 +388,9 @@ export default function AITasksPreview({
                                                             color: pinnedTasks.has(i)
                                                                 ? accent
                                                                 : alpha(
-                                                                      theme.palette.grey[500],
-                                                                      0.5
-                                                                  ),
+                                                                    theme.palette.grey[500],
+                                                                    0.5
+                                                                ),
                                                             filter: pinnedTasks.has(i)
                                                                 ? `drop-shadow(0 1px 2px ${alpha(accent, 0.3)})`
                                                                 : 'drop-shadow(0 1px 1px rgba(0,0,0,0.05))',

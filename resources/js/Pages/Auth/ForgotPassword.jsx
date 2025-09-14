@@ -9,12 +9,14 @@ import {
     CardContent,
     InputAdornment,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { Email as EmailIcon, LockReset as LockResetIcon } from '@mui/icons-material';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 
 export default function ForgotPassword({ status }) {
     const theme = useTheme();
+    const { t } = useTranslation();
 
     const { data, setData, post, processing, errors } = useForm({
         email: '',
@@ -28,7 +30,7 @@ export default function ForgotPassword({ status }) {
 
     return (
         <GuestLayout>
-            <Head title="Forgot Password" />
+            <Head title={t('head.auth.forgotPassword')} />
 
             <Card
                 sx={{
@@ -65,19 +67,17 @@ export default function ForgotPassword({ status }) {
                                     fontFamily: '"Inter", "Segoe UI", sans-serif',
                                 }}
                             >
-                                Reset Password
+                                {t('auth.resetPasswordTitle', 'Reset Password')}
                             </Typography>
                         </Box>
                         <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
-                            Forgot your password? No problem. Just let us know your email address
-                            and we will email you a password reset link that will allow you to
-                            choose a new one.
+                            {t('auth.resetPasswordDesc', 'Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.')}
                         </Typography>
                     </Box>
 
                     {status && (
                         <Alert severity="success" sx={{ mb: 3 }}>
-                            {status}
+                            {t('auth.resetStatus', { status })}
                         </Alert>
                     )}
 
@@ -86,7 +86,7 @@ export default function ForgotPassword({ status }) {
                             fullWidth
                             id="email"
                             name="email"
-                            label="Email Address"
+                            label={t('common.emailAddress', 'Email Address')}
                             type="email"
                             value={data.email}
                             onChange={(e) => setData('email', e.target.value)}
@@ -133,7 +133,7 @@ export default function ForgotPassword({ status }) {
                                 },
                             }}
                         >
-                            {processing ? 'Sending...' : 'Email Password Reset Link'}
+                            {processing ? t('auth.sending', 'Sending...') : t('auth.emailPasswordReset', 'Email Password Reset Link')}
                         </Button>
                     </Box>
                 </CardContent>

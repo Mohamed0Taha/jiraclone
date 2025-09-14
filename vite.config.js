@@ -18,11 +18,7 @@ export default defineConfig({
         }),
         react(),
     ],
-    build: {
-        rollupOptions: {
-            output: {
-                manualChunks: undefined,
-            },
-        },
-    },
+    // Use Vite/Rollup defaults for code splitting to keep memory usage reasonable
+    // during production builds. Forcing a single chunk can lead to OOM (137) on
+    // constrained environments.
 });

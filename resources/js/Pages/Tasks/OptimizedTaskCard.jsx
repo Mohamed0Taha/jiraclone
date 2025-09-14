@@ -1,4 +1,5 @@
 import React, { useState, memo, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Card,
     CardContent,
@@ -54,6 +55,7 @@ const OptimizedTaskCard = memo(
         onParentClick,
         onAddSubTask,
     }) => {
+        const { t } = useTranslation();
         const theme = useTheme();
         const defaultAccent = theme.palette.primary.main;
         const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -358,8 +360,8 @@ const OptimizedTaskCard = memo(
                                     cursor: task.duplicate_of?.id ? 'pointer' : 'default',
                                     '&:hover': task.duplicate_of?.id
                                         ? {
-                                              bgcolor: alpha(theme.palette.warning.main, 0.15),
-                                          }
+                                            bgcolor: alpha(theme.palette.warning.main, 0.15),
+                                        }
                                         : {},
                                 }}
                                 onClick={(e) => {
@@ -424,8 +426,8 @@ const OptimizedTaskCard = memo(
                                     cursor: task.parent?.id ? 'pointer' : 'default',
                                     '&:hover': task.parent?.id
                                         ? {
-                                              bgcolor: alpha(theme.palette.primary.main, 0.15),
-                                          }
+                                            bgcolor: alpha(theme.palette.primary.main, 0.15),
+                                        }
                                         : {},
                                 }}
                                 onClick={(e) => {
@@ -661,7 +663,7 @@ const OptimizedTaskCard = memo(
                                     },
                                 }}
                             >
-                                <Tooltip title="Add image">
+                                <Tooltip title={t('buttons.upload')}>
                                     <IconButton
                                         size="small"
                                         onClick={(e) => {
@@ -673,7 +675,7 @@ const OptimizedTaskCard = memo(
                                         <AddPhotoAlternateIcon fontSize="small" />
                                     </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Edit task">
+                                <Tooltip title={t('board.editTask')}>
                                     <IconButton
                                         size="small"
                                         onClick={(e) => {
@@ -685,7 +687,7 @@ const OptimizedTaskCard = memo(
                                         <EditIcon fontSize="small" />
                                     </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Add sub-task">
+                                <Tooltip title={t('board.createSubTask', 'Add sub-task')}>
                                     <IconButton
                                         size="small"
                                         onClick={(e) => {
@@ -697,7 +699,7 @@ const OptimizedTaskCard = memo(
                                         <SubdirectoryArrowRightIcon fontSize="small" />
                                     </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Delete task">
+                                <Tooltip title={t('board.deleteTask')}>
                                     <IconButton
                                         size="small"
                                         onClick={(e) => {

@@ -746,18 +746,13 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
         try {
             // Get or create the custom view
             $customView = CustomView::getActiveForProject($project->id, $userId, $viewName);
-            
+
             if (!$customView) {
-                // Create a minimal custom view for data persistence if it doesn't exist
-                $customView = CustomView::create([
-                    'project_id' => $project->id,
-                    'user_id' => $userId,
-                    'name' => $viewName,
-                    'description' => 'Auto-created for data persistence',
-                    'html_content' => '// Data persistence container',
-                    'metadata' => [],
-                    'is_active' => true,
-                ]);
+                // Do NOT recreate deleted views implicitly. Respect explicit deletes.
+                return [
+                    'success' => false,
+                    'message' => 'Custom view not found; data not saved',
+                ];
             }
 
             // Get existing metadata or create new
@@ -921,6 +916,10 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
                 ]);
                 return false;
             }
+
+            // Clear any stored metadata/component_data before delete
+            $customView->metadata = null;
+            $customView->save();
 
             $deleted = $customView->delete();
 

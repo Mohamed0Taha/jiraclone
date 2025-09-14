@@ -8,7 +8,7 @@ import enTranslations from './locales/en.json';
 import esTranslations from './locales/es.json';
 import deTranslations from './locales/de.json';
 import fiTranslations from './locales/fi.json';
-import seTranslations from './locales/se.json';
+import svTranslations from './locales/sv.json';
 import nlTranslations from './locales/nl.json';
 import frTranslations from './locales/fr.json';
 
@@ -17,13 +17,13 @@ const resources = {
     es: { translation: esTranslations },
     de: { translation: deTranslations },
     fi: { translation: fiTranslations },
-    se: { translation: seTranslations },
+    sv: { translation: svTranslations },
     nl: { translation: nlTranslations },
     fr: { translation: frTranslations },
 };
 
 // List of supported languages for validation
-export const supportedLanguages = ['en', 'es', 'de', 'fi', 'se', 'nl', 'fr'];
+export const supportedLanguages = ['en', 'es', 'de', 'fi', 'sv', 'nl', 'fr'];
 
 i18n
     .use(LanguageDetector)

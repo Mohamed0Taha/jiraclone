@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Typography,
@@ -31,30 +32,30 @@ const typeColor = (t) =>
         Information: 'info',
     })[t] || 'default';
 
-const actionTypeStyle = (actionType) => {
+const actionTypeStyle = (actionType, t) => {
     switch (actionType) {
         case 'standup':
-            return { chipLabel: 'Standup', color: 'info', tone: 'rgba(37,99,235,0.08)' };
+            return { chipLabel: t('simulator.events.standup'), color: 'info', tone: 'rgba(37,99,235,0.08)' };
         case 'team_event':
-            return { chipLabel: 'Team Event', color: 'secondary', tone: 'rgba(124,58,237,0.10)' };
+            return { chipLabel: t('simulator.events.teamEvent'), color: 'secondary', tone: 'rgba(124,58,237,0.10)' };
         case 'attrition':
-            return { chipLabel: 'Attrition', color: 'error', tone: 'rgba(220,38,38,0.10)' };
+            return { chipLabel: t('simulator.events.attrition'), color: 'error', tone: 'rgba(220,38,38,0.10)' };
         case 'team_conflict':
-            return { chipLabel: 'Conflict', color: 'warning', tone: 'rgba(249,115,22,0.12)' };
+            return { chipLabel: t('simulator.events.conflict'), color: 'warning', tone: 'rgba(249,115,22,0.12)' };
         case 'budget_request':
-            return { chipLabel: 'Budget Req', color: 'warning', tone: 'rgba(245,158,11,0.10)' };
+            return { chipLabel: t('simulator.events.budgetReq'), color: 'warning', tone: 'rgba(245,158,11,0.10)' };
         case 'funding_injection':
-            return { chipLabel: 'Funding', color: 'success', tone: 'rgba(5,150,105,0.12)' };
+            return { chipLabel: t('simulator.events.funding'), color: 'success', tone: 'rgba(5,150,105,0.12)' };
         case 'scope_creep':
-            return { chipLabel: 'Scope', color: 'warning', tone: 'rgba(245,158,11,0.10)' };
+            return { chipLabel: t('simulator.events.scope'), color: 'warning', tone: 'rgba(245,158,11,0.10)' };
         case 'quality_issue':
-            return { chipLabel: 'Quality', color: 'default', tone: 'rgba(107,114,128,0.12)' };
+            return { chipLabel: t('simulator.events.quality'), color: 'default', tone: 'rgba(107,114,128,0.12)' };
         case 'vendor_delay':
-            return { chipLabel: 'Vendor', color: 'error', tone: 'rgba(220,38,38,0.10)' };
+            return { chipLabel: t('simulator.events.vendor'), color: 'error', tone: 'rgba(220,38,38,0.10)' };
         case 'morale_slump':
-            return { chipLabel: 'Morale', color: 'secondary', tone: 'rgba(99,102,241,0.12)' };
+            return { chipLabel: t('simulator.events.morale'), color: 'secondary', tone: 'rgba(99,102,241,0.12)' };
         case 'technical_debt':
-            return { chipLabel: 'Tech Debt', color: 'error', tone: 'rgba(185,28,28,0.12)' };
+            return { chipLabel: t('simulator.events.techDebt'), color: 'error', tone: 'rgba(185,28,28,0.12)' };
         default:
             return null;
     }
@@ -70,6 +71,7 @@ function EventsComponent({
     onResolve,
     onResolveOption,
 }) {
+    const { t } = useTranslation();
     const [dismissed, setDismissed] = useState([]);
 
     const visibleEvents = useMemo(() => {
@@ -141,7 +143,7 @@ function EventsComponent({
                                 position: 'relative',
                                 borderColor: actionable ? 'warning.light' : undefined,
                                 background: (() => {
-                                    const style = actionTypeStyle(e.action_type);
+                                    const style = actionTypeStyle(e.action_type, t);
                                     if (selected) return 'rgba(25,118,210,0.08)';
                                     if (actionable && style) return style.tone;
                                     if (actionable)
@@ -205,8 +207,8 @@ function EventsComponent({
                                                         e.severity === 'high'
                                                             ? 'error'
                                                             : e.severity === 'medium'
-                                                              ? 'warning'
-                                                              : 'default'
+                                                                ? 'warning'
+                                                                : 'default'
                                                     }
                                                 />
                                             )}
@@ -281,7 +283,7 @@ function EventsComponent({
                                         )}
                                         {e.action_type &&
                                             (() => {
-                                                const st = actionTypeStyle(e.action_type);
+                                                const st = actionTypeStyle(e.action_type, t);
                                                 return st ? (
                                                     <Chip
                                                         size="small"
@@ -314,7 +316,7 @@ function EventsComponent({
                                                             evt.stopPropagation();
                                                             handleDismiss(e.id);
                                                         }}
-                                                        aria-label="dismiss event"
+                                                        aria-label={t('simulator.dismissEventAria')}
                                                     >
                                                         <CloseIcon fontSize="inherit" />
                                                     </IconButton>

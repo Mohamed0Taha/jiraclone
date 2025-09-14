@@ -1,5 +1,6 @@
 // resources/js/Pages/Automations/components/WorkflowBuilder.jsx
 import React, { useMemo, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Button,
@@ -45,13 +46,8 @@ import {
 } from '@mui/icons-material';
 import VariableChips from './VariableChips';
 
-/**
- * Trigger & Action catalogs
- * - trigger.id and action.id are "slugs" that will be sent to the backend.
- * - triggerConfig / action.config are plain JSON objects created from the field definitions below.
- */
-
-const TRIGGERS = [
+// Static data for triggers and actions
+const TRIGGERS_RAW = [
     {
         id: 'task_created',
         name: 'Task Created',
@@ -153,7 +149,7 @@ const TRIGGERS = [
     },
 ];
 
-const ACTIONS = [
+const ACTIONS_RAW = [
     {
         id: 'send_email',
         name: 'Send Email',
@@ -395,133 +391,92 @@ const ACTIONS = [
     },
 ];
 
-function uid() {
-    return `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
+export default function WorkflowBuilder({ onBack = () => { } }) {
+    const { t } = useTranslation();
     const theme = useTheme();
 
-    // Core state
-    const [name, setName] = useState(workflow?.name || '');
-    const [description, setDescription] = useState(workflow?.description || '');
-    const [isActive, setIsActive] = useState(workflow?.status === 'active');
+    // State for builder
     const [selectedTrigger, setSelectedTrigger] = useState(null);
     const [triggerConfig, setTriggerConfig] = useState({});
-    const [actions, setActions] = useState([]);
-    const [error, setError] = useState('');
+    const [selectedActions, setSelectedActions] = useState([]); // {id, type, config}
+    const [isActive, setIsActive] = useState(true);
     const [snack, setSnack] = useState('');
+    const [error, setError] = useState('');
 
-    // Preload from incoming workflow (template or existing)
-    useEffect(() => {
-        if (workflow) {
-            setName(workflow.name || '');
-            setDescription(workflow.description || '');
-            setIsActive((workflow.status || 'active') === 'active');
+    // Translate triggers and actions definitions
+    const triggers = useMemo(() => TRIGGERS_RAW.map(tr => ({
+        ...tr,
+        name: t(`automations.${tr.id}`, tr.name),
+        description: t(`automations.${tr.id}Desc`, tr.description),
+        fields: (tr.fields || []).map(f => ({
+            ...f,
+            label: t(`automations.${tr.id}.${f.name}`, f.label),
+            options: f.options ? f.options.map(opt => t(`automations.${tr.id}.${f.name}.${opt}`, opt)) : undefined
+        }))
+    })), [t]);
 
-            const t = TRIGGERS.find((tr) => tr.id === workflow.trigger) || null;
-            setSelectedTrigger(t);
-            setTriggerConfig(workflow.triggerConfig || workflow.trigger_config || {});
+    const actionDefs = useMemo(() => ACTIONS_RAW.map(act => ({
+        ...act,
+        name: t(`automations.${act.id}`, act.name),
+        description: t(`automations.${act.id}Desc`, act.description),
+        fields: (act.fields || []).map(f => ({
+            ...f,
+            label: t(`automations.${act.id}.${f.name}`, f.label),
+            options: f.options ? f.options.map(opt => t(`automations.${act.id}.${f.name}.${opt}`, opt)) : undefined,
+            placeholder: f.placeholder ? t(`automations.${act.id}.${f.name}.placeholder`, f.placeholder) : undefined
+        }))
+    })), [t]);
 
-            const mapped = Array.isArray(workflow.actions)
-                ? workflow.actions.map((a) => ({
-                      id: uid(),
-                      type: a.type,
-                      config: a.config || {},
-                  }))
-                : [];
-            setActions(mapped);
+    const canSave = Boolean(selectedTrigger) && selectedActions.length > 0;
+
+    // Helpers
+    function addAction(def) {
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const cfg = {};
+        for (const f of def.fields || []) {
+            if (typeof f.default !== 'undefined') cfg[f.name] = f.default;
+            else cfg[f.name] = '';
         }
-    }, [workflow]);
+        setSelectedActions((prev) => [...prev, { id, type: def.id, config: cfg }]);
+    }
 
-    const canSave = useMemo(() => {
-        return Boolean(name.trim()) && Boolean(selectedTrigger?.id) && actions.length > 0;
-    }, [name, selectedTrigger, actions.length]);
+    function removeAction(id) {
+        setSelectedActions((prev) => prev.filter((a) => a.id !== id));
+    }
 
-    // ---- Helpers ----
-    const renderField = (field, value, onChange) => {
-        // Check if this is a field that should have template variable support
-        const isTemplateField =
-            field.type === 'textarea' &&
-            (field.name === 'body' ||
-                field.name === 'message' ||
-                field.name === 'content' ||
-                field.name === 'subject' ||
-                field.name === 'title' ||
-                field.name === 'description');
+    function setActionConfig(actionId, name, value) {
+        setSelectedActions((prev) => prev.map((a) => (a.id === actionId ? { ...a, config: { ...a.config, [name]: value } } : a)));
+    }
 
+    function handleSave() {
+        if (!canSave) {
+            setError(t('automations.addTriggerAndAction', 'Add a trigger and at least one action'));
+            return;
+        }
+        setError('');
+        setSnack(t('automations.saved', 'Saved'));
+    }
+
+    function renderField(field, value, onChange) {
+        const common = {
+            fullWidth: true,
+            label: field.label,
+            value: value ?? '',
+            onChange: (e) => onChange(e.target.value),
+            size: 'small',
+        };
         switch (field.type) {
-            case 'text':
-            case 'password':
-                // Support template variables for subject fields
-                if (field.name === 'subject' || field.name === 'title') {
-                    return (
-                        <VariableChips
-                            value={value ?? ''}
-                            onChange={onChange}
-                            label={field.label}
-                            placeholder={field.placeholder || ''}
-                            multiline={false}
-                            size="small"
-                        />
-                    );
-                }
-                return (
-                    <TextField
-                        fullWidth
-                        size="small"
-                        type={field.type === 'password' ? 'password' : 'text'}
-                        label={field.label}
-                        placeholder={field.placeholder || ''}
-                        value={value ?? ''}
-                        onChange={(e) => onChange(e.target.value)}
-                    />
-                );
             case 'textarea':
-                // Use VariableChips for message/email body fields
-                if (isTemplateField) {
-                    return (
-                        <VariableChips
-                            value={value ?? ''}
-                            onChange={onChange}
-                            label={field.label}
-                            placeholder={field.placeholder || ''}
-                            multiline={true}
-                            rows={3}
-                            size="small"
-                        />
-                    );
-                }
                 return (
-                    <TextField
-                        fullWidth
-                        size="small"
-                        multiline
-                        rows={3}
-                        label={field.label}
-                        placeholder={field.placeholder || ''}
-                        value={value ?? ''}
-                        onChange={(e) => onChange(e.target.value)}
-                    />
-                );
-            case 'number':
-                return (
-                    <TextField
-                        fullWidth
-                        size="small"
-                        type="number"
-                        label={field.label}
-                        value={value ?? field.default ?? ''}
-                        onChange={(e) => onChange(Number(e.target.value))}
-                    />
+                    <TextField {...common} multiline minRows={3} placeholder={field.placeholder || ''} />
                 );
             case 'select':
                 return (
                     <FormControl fullWidth size="small">
                         <InputLabel>{field.label}</InputLabel>
                         <Select
+                            value={value ?? ''}
                             label={field.label}
-                            value={value ?? field.default ?? field.options?.[0] ?? ''}
                             onChange={(e) => onChange(e.target.value)}
                         >
                             {(field.options || []).map((opt) => (
@@ -538,8 +493,8 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                         <InputLabel>{field.label}</InputLabel>
                         <Select
                             multiple
-                            label={field.label}
                             value={Array.isArray(value) ? value : []}
+                            label={field.label}
                             onChange={(e) => onChange(e.target.value)}
                         >
                             {(field.options || []).map((opt) => (
@@ -550,164 +505,31 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                         </Select>
                     </FormControl>
                 );
+            case 'number':
+                return <TextField {...common} type="number" placeholder={field.placeholder || ''} />;
+            case 'password':
+                return <TextField {...common} type="password" placeholder={field.placeholder || ''} />;
             case 'time':
-                return (
-                    <TextField
-                        fullWidth
-                        size="small"
-                        type="time"
-                        label={field.label}
-                        value={value ?? field.default ?? '09:00'}
-                        onChange={(e) => onChange(e.target.value)}
-                    />
-                );
+                return <TextField {...common} type="time" placeholder={field.placeholder || ''} />;
             default:
-                return (
-                    <TextField
-                        fullWidth
-                        size="small"
-                        label={field.label || 'Unknown Field'}
-                        disabled
-                        value=""
-                        helperText="Unsupported field type"
-                    />
-                );
+                return <TextField {...common} placeholder={field.placeholder || ''} />;
         }
-    };
+    }
 
-    const addAction = (actionDef) => {
-        setActions((prev) => [
-            ...prev,
-            {
-                id: uid(),
-                type: actionDef.id,
-                config: {},
-            },
-        ]);
-    };
-
-    const removeAction = (id) => {
-        setActions((prev) => prev.filter((a) => a.id !== id));
-    };
-
-    const setActionConfig = (id, field, value) => {
-        setActions((prev) =>
-            prev.map((a) => (a.id === id ? { ...a, config: { ...a.config, [field]: value } } : a))
-        );
-    };
-
-    const handleSave = () => {
-        setError('');
-        if (!canSave) {
-            setError('Please provide a name, choose a trigger, and add at least one action.');
-            return;
-        }
-
-        const payload = {
-            name: name.trim(),
-            description: description || '',
-            status: isActive ? 'active' : 'paused',
-            trigger: selectedTrigger.id,
-            triggerConfig,
-            actions: actions.map((a) => ({ type: a.type, config: a.config })),
-            lastRun: new Date().toISOString(),
-            runsCount: workflow?.runsCount || 0,
-        };
-
-        onSave?.(payload);
-        setSnack('Workflow saved');
-    };
-
-    // ---- UI ----
     return (
-        <Box sx={{ p: 3, maxWidth: 1100, mx: 'auto' }}>
-            {/* Header */}
-            <Paper
-                elevation={0}
-                sx={{
-                    mb: 3,
-                    p: 3,
-                    borderRadius: 3,
-                    background:
-                        'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.05))',
-                    border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                }}
-            >
-                <Stack direction="row" alignItems="center" spacing={2}>
-                    <IconButton
-                        onClick={onBack}
-                        sx={{
-                            bgcolor: alpha(theme.palette.primary.main, 0.1),
-                            '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
-                        }}
-                    >
-                        <ArrowBackIcon />
-                    </IconButton>
-
-                    <Box sx={{ flex: 1 }}>
-                        <Typography
-                            variant="h4"
-                            fontWeight={800}
-                            sx={{ mb: 0.5, display: 'flex', alignItems: 'center' }}
-                        >
-                            <BuildIcon sx={{ mr: 1 }} />
-                            {workflow?._persisted ? 'Edit Workflow' : 'Create Workflow'}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Build powerful automations with triggers and actions
-                        </Typography>
-                    </Box>
-
-                    {/* Save action moved to sticky bottom bar */}
-                </Stack>
-            </Paper>
-
+        <Box>
             <Stack spacing={3}>
-                {/* Details */}
-                <Paper elevation={1} sx={{ p: 3, borderRadius: 3 }}>
-                    <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-                        Workflow Details
-                    </Typography>
-                    <Stack spacing={2}>
-                        <TextField
-                            fullWidth
-                            label="Workflow Name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="e.g., Due Date Reminders"
-                        />
-                        <TextField
-                            fullWidth
-                            multiline
-                            rows={2}
-                            label="Description"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Describe what this workflow does..."
-                        />
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={isActive}
-                                    onChange={(e) => setIsActive(e.target.checked)}
-                                />
-                            }
-                            label="Activate workflow immediately"
-                        />
-                    </Stack>
-                </Paper>
-
                 {/* Trigger */}
                 <Paper elevation={1} sx={{ p: 3, borderRadius: 3 }}>
                     <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-                        Choose a Trigger
+                        {t('automations.chooseTrigger', 'Choose a Trigger')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        Select what event will start this workflow.
+                        {t('automations.selectEvent', 'Select what event will start this workflow.')}
                     </Typography>
 
                     <Stack spacing={2}>
-                        {TRIGGERS.map((trigger) => {
+                        {triggers.map((trigger) => {
                             const isSelected = selectedTrigger?.id === trigger.id;
                             return (
                                 <Card
@@ -731,12 +553,12 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                                         transform: isSelected ? 'scale(1.01)' : 'scale(1)',
                                         background: isSelected
                                             ? `linear-gradient(135deg, ${alpha(theme.palette[trigger.color || 'primary'].main, 0.12)} 0%, ${alpha(
-                                                  theme.palette.mode === 'dark' ? '#0f172a' : '#ffffff',
-                                                  0.8
-                                              )} 100%)`
+                                                theme.palette.mode === 'dark' ? '#0f172a' : '#ffffff',
+                                                0.8
+                                            )} 100%)`
                                             : theme.palette.mode === 'dark'
-                                              ? alpha('#0f172a', 0.9)
-                                              : '#ffffff',
+                                                ? alpha('#0f172a', 0.9)
+                                                : '#ffffff',
                                         '&:hover': {
                                             transform: 'scale(1.01)',
                                             boxShadow: `0 10px 25px ${alpha(theme.palette[trigger.color || 'primary'].main, 0.18)}`,
@@ -770,13 +592,13 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                                             </Box>
                                             {isSelected ? (
                                                 <Chip
-                                                    label="Selected"
+                                                    label={t('automations.selected', 'Selected')}
                                                     color="primary"
                                                     sx={{ fontWeight: 700 }}
                                                 />
                                             ) : (
                                                 <Button variant="outlined" size="small">
-                                                    Select
+                                                    {t('automations.select', 'Select')}
                                                 </Button>
                                             )}
                                         </Stack>
@@ -789,7 +611,7 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                     {selectedTrigger && (
                         <Box sx={{ mt: 3 }}>
                             <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
-                                Configure Trigger
+                                {t('automations.configureTrigger', 'Configure Trigger')}
                             </Typography>
                             <Stack spacing={2}>
                                 {(selectedTrigger.fields || []).map((field) => (
@@ -817,10 +639,10 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                     >
                         <Box>
                             <Typography variant="h6" fontWeight={700}>
-                                Actions
+                                {t('automations.actions', 'Actions')}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Add one or more actions that will run when the trigger fires.
+                                {t('automations.addActionsDesc', 'Add one or more actions that will run when the trigger fires.')}
                             </Typography>
                         </Box>
                     </Stack>
@@ -828,10 +650,10 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                     {/* Action picker */}
                     <Box sx={{ mb: 2 }}>
                         <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1 }}>
-                            Add Action
+                            {t('automations.addAction', 'Add Action')}
                         </Typography>
                         <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
-                            {ACTIONS.map((a) => (
+                            {actionDefs.map((a) => (
                                 <Button
                                     key={a.id}
                                     variant="outlined"
@@ -886,14 +708,14 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
 
                     <Divider sx={{ my: 2 }} />
 
-                    {actions.length === 0 ? (
+                    {selectedActions.length === 0 ? (
                         <Alert severity="info" sx={{ borderRadius: 2 }}>
-                            🎬 Add your first action to bring this workflow to life!
+                            {t('automations.addFirstAction', '🎬 Add your first action to bring this workflow to life!')}
                         </Alert>
                     ) : (
                         <Stack spacing={2}>
-                            {actions.map((action, idx) => {
-                                const def = ACTIONS.find((x) => x.id === action.type);
+                            {selectedActions.map((action, idx) => {
+                                const def = actionDefs.find((x) => x.id === action.type);
                                 if (!def) {
                                     return (
                                         <Card
@@ -906,14 +728,13 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                                                     fontWeight={800}
                                                     color="warning.main"
                                                 >
-                                                    Unknown Action: {action.type}
+                                                    {t('automations.unknownAction', 'Unknown Action')}: {action.type}
                                                 </Typography>
                                                 <Typography variant="body2" color="text.secondary">
-                                                    This action type is not recognized. Please
-                                                    remove it or choose a different action.
+                                                    {t('automations.unknownActionDesc', 'This action type is not recognized. Please remove it or choose a different action.')}
                                                 </Typography>
                                                 <Box sx={{ mt: 2 }}>
-                                                    <Tooltip title="Remove">
+                                                    <Tooltip title={t('automations.remove', 'Remove')}>
                                                         <IconButton
                                                             color="error"
                                                             onClick={() => removeAction(action.id)}
@@ -963,7 +784,7 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                                                     Step {idx + 1}: {def?.name || 'Unknown Action'}
                                                 </Typography>
                                                 <Box sx={{ flex: 1 }} />
-                                                <Tooltip title="Remove">
+                                                <Tooltip title={t('automations.remove', 'Remove')}>
                                                     <IconButton
                                                         color="error"
                                                         onClick={() => removeAction(action.id)}
@@ -978,7 +799,7 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                                                 color="text.secondary"
                                                 sx={{ mb: 1.5 }}
                                             >
-                                                {def?.description || 'No description available'}
+                                                {def?.description || t('automations.noDescription', 'No description available')}
                                             </Typography>
 
                                             <Stack spacing={2}>
@@ -1007,9 +828,8 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
 
                 {/* Tip */}
                 <Alert severity="info" sx={{ borderRadius: 2 }}>
-                    💡 Pro tip: Use variables like <code>{'{{task.title}}'}</code>,{' '}
-                    <code>{'{{task.priority}}'}</code>, <code>{'{{project.name}}'}</code> in
-                    messages and webhooks.
+                    {t('automations.proTip', '💡 Pro tip: Use variables like')} <code>{'{{task.title}}'}</code>,{' '}
+                    <code>{'{{task.priority}}'}</code>, <code>{'{{project.name}}'}</code> {t('automations.inMessages', 'in messages and webhooks.')}
                 </Alert>
 
                 {error && (
@@ -1045,7 +865,7 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                 >
                     <Stack direction="row" spacing={1.5} alignItems="center">
                         <Chip
-                            label={isActive ? 'Will activate on save' : 'Will be paused on save'}
+                            label={isActive ? t('automations.willActivate', 'Will activate on save') : t('automations.willPause', 'Will be paused on save')}
                             color={isActive ? 'success' : 'warning'}
                             sx={{ fontWeight: 700 }}
                         />
@@ -1056,7 +876,7 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                                     onChange={(e) => setIsActive(e.target.checked)}
                                 />
                             }
-                            label={isActive ? 'Active' : 'Paused'}
+                            label={isActive ? t('automations.active', 'Active') : t('automations.paused', 'Paused')}
                         />
                     </Stack>
                     <Stack direction="row" spacing={1.5} justifyContent="flex-end">
@@ -1065,11 +885,11 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                             onClick={onBack}
                             sx={{ textTransform: 'none', fontWeight: 700 }}
                         >
-                            Cancel
+                            {t('automations.cancel', 'Cancel')}
                         </Button>
                         <Tooltip
                             title={
-                                !canSave ? 'Add a trigger and at least one action' : 'Save workflow'
+                                !canSave ? t('automations.addTriggerAndAction', 'Add a trigger and at least one action') : t('automations.saveWorkflow', 'Save workflow')
                             }
                         >
                             <span>
@@ -1089,7 +909,7 @@ export default function WorkflowBuilder({ project, workflow, onBack, onSave }) {
                                             `0 10px 24px ${alpha(theme.palette.primary.main, 0.3)}`,
                                     }}
                                 >
-                                    Save Workflow
+                                    {t('automations.saveWorkflow', 'Save Workflow')}
                                 </Button>
                             </span>
                         </Tooltip>

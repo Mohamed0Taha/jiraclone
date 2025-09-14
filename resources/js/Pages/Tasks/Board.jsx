@@ -220,6 +220,17 @@ export default function Board({
     const { shouldShowOverlay, userPlan } = useSubscription();
     const automationLocked = shouldShowOverlay('automation');
 
+    // Function to create slug from name
+    const createSlug = (name) => {
+        return name
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '-') // Replace spaces with dashes
+            .replace(/[^a-z0-9-]/g, '') // Remove special characters except dashes
+            .replace(/-+/g, '-') // Replace multiple dashes with single dash
+            .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+    };
+
     const initialMethod = (() => {
         const allowed = Object.values(METHODOLOGIES);
         const fromMeta = project?.meta?.methodology;
@@ -274,7 +285,7 @@ export default function Board({
                 phaseStorageKey(project?.id || 'p', methodology),
                 JSON.stringify(phaseMap)
             );
-        } catch {}
+        } catch { }
     }, [phaseMap, project?.id, methodology]);
 
     /**
@@ -319,7 +330,7 @@ export default function Board({
             if (changed) {
                 setPhaseMap(next);
             }
-        } catch {}
+        } catch { }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialTasks, methodology]);
 
@@ -350,7 +361,15 @@ export default function Board({
         // Load custom views from localStorage
         try {
             const stored = localStorage.getItem(`customViews:${project?.id}`);
-            return stored ? JSON.parse(stored) : [];
+            if (stored) {
+                const views = JSON.parse(stored);
+                // Ensure all views have a slug field
+                return views.map(view => ({
+                    ...view,
+                    slug: view.slug || createSlug(view.name)
+                }));
+            }
+            return [];
         } catch {
             return [];
         }
@@ -466,10 +485,10 @@ export default function Board({
                                 mappedPhase && STATUS_ORDER.includes(mappedPhase)
                                     ? mappedPhase
                                     : STATUS_ORDER.find(
-                                          (ph) =>
-                                              (METHOD_TO_SERVER[methodology][ph] || 'todo') ===
-                                              serverStatus
-                                      ) || STATUS_ORDER[0];
+                                        (ph) =>
+                                            (METHOD_TO_SERVER[methodology][ph] || 'todo') ===
+                                            serverStatus
+                                    ) || STATUS_ORDER[0];
                             next[localPhase].push({ ...t, status: localPhase });
                         });
                     });
@@ -577,7 +596,7 @@ export default function Board({
                     onSuccess: () => {
                         try {
                             if (project.meta) project.meta.methodology = next;
-                        } catch {}
+                        } catch { }
                     },
                 }
             );
@@ -585,7 +604,7 @@ export default function Board({
                 if (project?.id && next) {
                     localStorage.setItem(`project:${project.id}:methodology`, next);
                 }
-            } catch {}
+            } catch { }
         } catch (err) {
             console.error('Failed to persist methodology', err);
         }
@@ -880,6 +899,7 @@ export default function Board({
         const newView = {
             id: Date.now().toString(),
             name: newViewName.trim(),
+            slug: createSlug(newViewName.trim()),
             createdAt: new Date().toISOString(),
         };
 
@@ -898,7 +918,10 @@ export default function Board({
     };
 
     const handleViewClick = (viewName) => {
-        router.visit(`/projects/${project.id}/custom-views/${encodeURIComponent(viewName)}`);
+        // Find the view object to get its slug, or create slug from name as fallback
+        const view = customViews.find(v => v.name === viewName);
+        const slug = view?.slug || createSlug(viewName);
+        router.visit(`/projects/${project.id}/custom-views/${slug}`);
     };
 
     const handleDeleteView = (viewId) => {
@@ -969,7 +992,7 @@ export default function Board({
             if (project?.id && methodology) {
                 localStorage.setItem(`project:${project.id}:methodology`, methodology);
             }
-        } catch {}
+        } catch { }
     }, [project?.id, methodology]);
 
     const ProjectSummaryBar = () => {
@@ -1010,7 +1033,7 @@ export default function Board({
                             variant="subtitle1"
                             sx={{ fontWeight: 800, letterSpacing: 0.1 }}
                         >
-                            {project?.name || 'Project'}
+                            {project?.name || t('common.project')}
                         </Typography>
 
                         <Button
@@ -1033,7 +1056,7 @@ export default function Board({
                                 },
                             }}
                         >
-                            Timeline
+                            {t('board.timeline')}
                         </Button>
                     </Stack>
 
@@ -1122,7 +1145,7 @@ export default function Board({
 
     return (
         <>
-            <Head title={`${project?.name ?? 'Project'} – Task Board`} />
+            <Head title={`${project?.name ?? t('common.project')} – ${t('board.taskBoard')}`} />
             <AuthenticatedLayout user={auth?.user}>
                 <Box
                     sx={{
@@ -1143,10 +1166,13 @@ export default function Board({
                             display: 'flex',
                             flexDirection: 'column',
                             p: { xs: 1.5, md: 2 },
+                            minWidth: 0, // Important: allows flex child to shrink
+                            maxWidth: '100%',
+                            overflow: 'hidden', // Prevent main container from expanding
                         }}
                     >
                         <HeaderBanner
-                            projectName={project?.name ?? 'Project'}
+                            projectName={project?.name ?? t('common.project')}
                             totalTasks={totalTasks}
                             percentDone={percentDone}
                             usersCount={Array.isArray(users) ? users.length : 0}
@@ -1188,11 +1214,11 @@ export default function Board({
                                     },
                                 }}
                             >
-                                <MenuItem value={METHODOLOGIES.KANBAN}>Kanban</MenuItem>
-                                <MenuItem value={METHODOLOGIES.SCRUM}>Scrum</MenuItem>
-                                <MenuItem value={METHODOLOGIES.AGILE}>Agile</MenuItem>
-                                <MenuItem value={METHODOLOGIES.WATERFALL}>Waterfall</MenuItem>
-                                <MenuItem value={METHODOLOGIES.LEAN}>Lean</MenuItem>
+                                <MenuItem value={METHODOLOGIES.KANBAN}>{t('board.methodologyName.kanban')}</MenuItem>
+                                <MenuItem value={METHODOLOGIES.SCRUM}>{t('board.methodologyName.scrum')}</MenuItem>
+                                <MenuItem value={METHODOLOGIES.AGILE}>{t('board.methodologyName.agile')}</MenuItem>
+                                <MenuItem value={METHODOLOGIES.WATERFALL}>{t('board.methodologyName.waterfall')}</MenuItem>
+                                <MenuItem value={METHODOLOGIES.LEAN}>{t('board.methodologyName.lean')}</MenuItem>
                             </TextField>
                             <Chip
                                 size="small"
@@ -1210,7 +1236,7 @@ export default function Board({
                         <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
                             <TextField
                                 size="small"
-                                placeholder={t('board.searchPlaceholder')}
+                                placeholder={t('board.searchTasks')}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 sx={{
@@ -1293,11 +1319,11 @@ export default function Board({
                                         <FilterListIcon sx={{ color: 'text.secondary', mr: 1 }} />
                                     }
                                 >
-                                    <MenuItem value="">All Priorities</MenuItem>
-                                    <MenuItem value="low">Low</MenuItem>
-                                    <MenuItem value="medium">Medium</MenuItem>
-                                    <MenuItem value="high">High</MenuItem>
-                                    <MenuItem value="urgent">Urgent</MenuItem>
+                                    <MenuItem value="">{t('board.allPriorities')}</MenuItem>
+                                    <MenuItem value="low">{t('task.low')}</MenuItem>
+                                    <MenuItem value="medium">{t('task.medium')}</MenuItem>
+                                    <MenuItem value="high">{t('task.high')}</MenuItem>
+                                    <MenuItem value="urgent">{t('task.urgent')}</MenuItem>
                                 </Select>
                             </FormControl>
 
@@ -1336,8 +1362,8 @@ export default function Board({
                                         />
                                     }
                                 >
-                                    <MenuItem value="">All Members</MenuItem>
-                                    <MenuItem value="unassigned">Unassigned</MenuItem>
+                                    <MenuItem value="">{t('board.allMembers')}</MenuItem>
+                                    <MenuItem value="unassigned">{t('board.unassigned')}</MenuItem>
                                     {Array.isArray(users) &&
                                         users.map((user) => (
                                             <MenuItem key={user.id} value={user.id}>
@@ -1372,7 +1398,7 @@ export default function Board({
                                         },
                                         borderColor: (t) => methodStyles.chipBorder(t),
                                     }}
-                                    >
+                                >
                                     {t('board.clearFilters')}
                                 </Button>
                             )}
@@ -1383,99 +1409,111 @@ export default function Board({
                         <DragDropContext key={methodology} onDragEnd={onDragEnd}>
                             <Box
                                 sx={{
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    alignItems: 'stretch',
-                                    gap: 'var(--col-gap)',
-                                    pb: 3,
-                                    overflowX: 'auto',
-                                    overflowY: 'hidden',
-                                    scrollSnapType: 'x proximity',
-                                    '&::-webkit-scrollbar': { height: 8 },
-                                    '&::-webkit-scrollbar-thumb': {
-                                        background: alpha('#000', 0.2),
-                                        borderRadius: 8,
-                                    },
+                                    width: '100%',
+                                    maxWidth: '100%',
+                                    minWidth: 0, // Important: allows flex child to shrink below content size
                                 }}
                             >
-                                {STATUS_ORDER.map((statusKey) => (
-                                    <Column
-                                        key={statusKey}
-                                        statusKey={statusKey}
-                                        tasks={filteredTaskState[statusKey] || []}
-                                        onAddTask={showCreate}
-                                        statusMeta={STATUS_META}
-                                        project={project}
-                                        showProjectSummary={false}
-                                        renderTaskCard={(task, dragSnapshot) => (
-                                            <Box
-                                                sx={{
-                                                    transition: 'transform .18s, box-shadow .22s',
-                                                    transform: dragSnapshot.isDragging
-                                                        ? 'rotate(1.5deg) scale(1.02)'
-                                                        : 'none',
-                                                    boxShadow: dragSnapshot.isDragging
-                                                        ? `0 8px 20px -6px ${alpha(STATUS_META[statusKey]?.accent || methodStyles.accent, 0.45)}`
-                                                        : '0 1px 3px rgba(0,0,0,.12)',
-                                                    borderRadius: 2,
-                                                }}
-                                            >
-                                                <OptimizedTaskCard
-                                                    task={task}
-                                                    onEdit={() => showEdit(task)}
-                                                    onDelete={askDelete}
-                                                    onClick={() =>
-                                                        router.get(
-                                                            route('tasks.show', [
-                                                                project.id,
-                                                                task.id,
-                                                            ])
-                                                        )
-                                                    }
-                                                    onDuplicateClick={(duplicateOfId) =>
-                                                        router.get(
-                                                            route('tasks.show', [
-                                                                project.id,
-                                                                duplicateOfId,
-                                                            ])
-                                                        )
-                                                    }
-                                                    onParentClick={(parentId) =>
-                                                        router.get(
-                                                            route('tasks.show', [
-                                                                project.id,
-                                                                parentId,
-                                                            ])
-                                                        )
-                                                    }
-                                                    onAddSubTask={(parentTask) =>
-                                                        showAddSubTask(parentTask)
-                                                    }
-                                                    onImageUpload={(taskId) => {
-                                                        const input =
-                                                            document.createElement('input');
-                                                        input.type = 'file';
-                                                        input.accept = 'image/*';
-                                                        input.onchange = (e) => {
-                                                            const file = e.target.files[0];
-                                                            if (file) handleImageUpload(task, file);
-                                                        };
-                                                        input.click();
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        flexDirection: 'row',
+                                        alignItems: 'stretch',
+                                        gap: 'var(--col-gap)',
+                                        pb: 3,
+                                        overflowX: 'auto',
+                                        overflowY: 'hidden',
+                                        scrollSnapType: 'x proximity',
+                                        width: '100%',
+                                        '&::-webkit-scrollbar': { height: 8 },
+                                        '&::-webkit-scrollbar-thumb': {
+                                            background: alpha('#000', 0.2),
+                                            borderRadius: 8,
+                                        },
+                                        '&::-webkit-scrollbar-track': {
+                                            background: 'transparent',
+                                        },
+                                    }}
+                                >
+                                    {STATUS_ORDER.map((statusKey) => (
+                                        <Column
+                                            key={statusKey}
+                                            statusKey={statusKey}
+                                            tasks={filteredTaskState[statusKey] || []}
+                                            onAddTask={showCreate}
+                                            statusMeta={STATUS_META}
+                                            project={project}
+                                            showProjectSummary={false}
+                                            renderTaskCard={(task, dragSnapshot) => (
+                                                <Box
+                                                    sx={{
+                                                        transition: 'transform .18s, box-shadow .22s',
+                                                        transform: dragSnapshot.isDragging
+                                                            ? 'rotate(1.5deg) scale(1.02)'
+                                                            : 'none',
+                                                        boxShadow: dragSnapshot.isDragging
+                                                            ? `0 8px 20px -6px ${alpha(STATUS_META[statusKey]?.accent || methodStyles.accent, 0.45)}`
+                                                            : '0 1px 3px rgba(0,0,0,.12)',
+                                                        borderRadius: 2,
                                                     }}
-                                                    accent={
-                                                        STATUS_META[statusKey]?.accent ||
-                                                        methodStyles.accent
-                                                    }
-                                                    isPending={
-                                                        !!task.__temp || pendingMoves.has(task.id)
-                                                    }
-                                                    isUpdating={task.uploading || false}
-                                                    lazy={true}
-                                                />
-                                            </Box>
-                                        )}
-                                    />
-                                ))}
+                                                >
+                                                    <OptimizedTaskCard
+                                                        task={task}
+                                                        onEdit={() => showEdit(task)}
+                                                        onDelete={askDelete}
+                                                        onClick={() =>
+                                                            router.get(
+                                                                route('tasks.show', [
+                                                                    project.id,
+                                                                    task.id,
+                                                                ])
+                                                            )
+                                                        }
+                                                        onDuplicateClick={(duplicateOfId) =>
+                                                            router.get(
+                                                                route('tasks.show', [
+                                                                    project.id,
+                                                                    duplicateOfId,
+                                                                ])
+                                                            )
+                                                        }
+                                                        onParentClick={(parentId) =>
+                                                            router.get(
+                                                                route('tasks.show', [
+                                                                    project.id,
+                                                                    parentId,
+                                                                ])
+                                                            )
+                                                        }
+                                                        onAddSubTask={(parentTask) =>
+                                                            showAddSubTask(parentTask)
+                                                        }
+                                                        onImageUpload={(taskId) => {
+                                                            const input =
+                                                                document.createElement('input');
+                                                            input.type = 'file';
+                                                            input.accept = 'image/*';
+                                                            input.onchange = (e) => {
+                                                                const file = e.target.files[0];
+                                                                if (file) handleImageUpload(task, file);
+                                                            };
+                                                            input.click();
+                                                        }}
+                                                        accent={
+                                                            STATUS_META[statusKey]?.accent ||
+                                                            methodStyles.accent
+                                                        }
+                                                        isPending={
+                                                            !!task.__temp || pendingMoves.has(task.id)
+                                                        }
+                                                        isUpdating={task.uploading || false}
+                                                        lazy={true}
+                                                    />
+                                                </Box>
+                                            )}
+                                        />
+                                    ))}
+                                </Box>
                             </Box>
                         </DragDropContext>
 
@@ -1521,18 +1559,18 @@ export default function Board({
                                     }}
                                 >
                                     {editMode
-                                        ? 'Edit Task'
+                                        ? t('board.editTask')
                                         : data.parent_id
-                                          ? 'Create Sub-Task'
-                                          : 'Create Task'}
+                                            ? t('board.createSubTask')
+                                            : t('board.createTask')}
                                     <Chip
                                         size="small"
                                         label={
                                             editMode
                                                 ? 'Editing'
                                                 : data.parent_id
-                                                  ? 'Sub-Task'
-                                                  : 'New'
+                                                    ? 'Sub-Task'
+                                                    : 'New'
                                         }
                                         sx={{
                                             fontWeight: 700,
@@ -1550,7 +1588,7 @@ export default function Board({
                                     />
                                     <IconButton
                                         size="small"
-                                        aria-label="Close"
+                                        aria-label={t('common.close')}
                                         onClick={() => setOpenForm(false)}
                                         sx={{ ml: 'auto' }}
                                     >
@@ -1599,7 +1637,7 @@ export default function Board({
                                         </Box>
                                     )}
                                     <TextField
-                                        label="Title"
+                                        label={t('board.taskTitle')}
                                         required
                                         fullWidth
                                         inputRef={titleRef}
@@ -1607,12 +1645,12 @@ export default function Board({
                                         onChange={(e) => setData('title', e.target.value)}
                                         error={!!errors.title}
                                         helperText={errors.title}
-                                        placeholder="Concise task name"
+                                        placeholder={t('board.conciseTaskName')}
                                         variant="outlined"
                                         size="small"
                                     />
                                     <TextField
-                                        label="Description"
+                                        label={t('board.taskDescription')}
                                         multiline
                                         minRows={3}
                                         fullWidth
@@ -1621,22 +1659,22 @@ export default function Board({
                                         error={!!errors.description}
                                         helperText={
                                             errors.description ||
-                                            'Add optional context, acceptance criteria, etc.'
+                                            t('board.addOptionalContext')
                                         }
-                                        placeholder="Add more context..."
+                                        placeholder={t('board.addMoreContext')}
                                         size="small"
                                     />
 
                                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                                         <TextField
-                                            label="Start Date"
+                                            label={t('board.startDate')}
                                             type="date"
                                             fullWidth
                                             InputLabelProps={{ shrink: true }}
                                             value={data.start_date}
                                             onChange={(e) => setData('start_date', e.target.value)}
                                             error={!!errors.start_date}
-                                            helperText={errors.start_date || 'Optional'}
+                                            helperText={errors.start_date || t('board.optional')}
                                             size="small"
                                             InputProps={{
                                                 startAdornment: (
@@ -1648,14 +1686,14 @@ export default function Board({
                                             }}
                                         />
                                         <TextField
-                                            label="Due / Execution Date"
+                                            label={t('board.dueDate')}
                                             type="date"
                                             fullWidth
                                             InputLabelProps={{ shrink: true }}
                                             value={data.end_date}
                                             onChange={(e) => setData('end_date', e.target.value)}
                                             error={!!errors.end_date}
-                                            helperText={errors.end_date || 'Optional'}
+                                            helperText={errors.end_date || t('board.optional')}
                                             size="small"
                                             InputProps={{
                                                 startAdornment: (
@@ -1697,23 +1735,23 @@ export default function Board({
                                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                                         <TextField
                                             select
-                                            label="Priority"
+                                            label={t('board.priorityLabel')}
                                             fullWidth
                                             value={data.priority}
                                             onChange={(e) => setData('priority', e.target.value)}
                                             error={!!errors.priority}
-                                            helperText={errors.priority || 'Task priority level'}
+                                            helperText={errors.priority || t('board.taskPriorityLevel')}
                                             size="small"
                                         >
-                                            <MenuItem value="low">Low</MenuItem>
-                                            <MenuItem value="medium">Medium</MenuItem>
-                                            <MenuItem value="high">High</MenuItem>
-                                            <MenuItem value="urgent">Urgent</MenuItem>
+                                            <MenuItem value="low">{t('task.low')}</MenuItem>
+                                            <MenuItem value="medium">{t('task.medium')}</MenuItem>
+                                            <MenuItem value="high">{t('task.high')}</MenuItem>
+                                            <MenuItem value="urgent">{t('task.urgent')}</MenuItem>
                                         </TextField>
 
                                         <TextField
                                             select
-                                            label="Milestone"
+                                            label={t('board.milestone')}
                                             fullWidth
                                             value={String(data.milestone)}
                                             onChange={(e) =>
@@ -1721,7 +1759,7 @@ export default function Board({
                                             }
                                             error={!!errors.milestone}
                                             helperText={
-                                                errors.milestone || 'Mark as project milestone'
+                                                errors.milestone || t('board.markAsMilestone')
                                             }
                                             size="small"
                                             InputProps={{
@@ -1733,8 +1771,8 @@ export default function Board({
                                                 ),
                                             }}
                                         >
-                                            <MenuItem value={'false'}>Regular Task</MenuItem>
-                                            <MenuItem value={'true'}>Milestone</MenuItem>
+                                            <MenuItem value={'false'}>{t('board.regularTask')}</MenuItem>
+                                            <MenuItem value={'true'}>{t('board.milestone')}</MenuItem>
                                         </TextField>
                                     </Stack>
 
@@ -1759,7 +1797,7 @@ export default function Board({
                                             ),
                                         }}
                                     >
-                                        <MenuItem value="">Not a duplicate</MenuItem>
+                                        <MenuItem value="">{t('board.duplicateOf')}</MenuItem>
                                         {Object.values(filteredTaskState)
                                             .flat()
                                             .filter((task) => task.id !== editingId) // Don't allow self-reference
@@ -1859,10 +1897,10 @@ export default function Board({
                                         onClick={() => setOpenForm(false)}
                                         disabled={processing}
                                     >
-                                        Cancel
+                                        {t('buttons.cancel')}
                                     </Button>
                                     {editMode && (
-                                        <Tooltip title="Delete task">
+                                        <Tooltip title={t('board.deleteTask')}>
                                             <IconButton
                                                 color="error"
                                                 onClick={() => {
@@ -1892,11 +1930,11 @@ export default function Board({
                                     >
                                         {processing
                                             ? editMode
-                                                ? 'Updating…'
-                                                : 'Creating…'
+                                                ? t('board.updating')
+                                                : t('board.creating')
                                             : editMode
-                                              ? 'Update Task'
-                                              : 'Create Task'}
+                                                ? t('board.updateTask')
+                                                : t('board.createTask')}
                                     </Button>
                                 </DialogActions>
                             </form>
@@ -1921,15 +1959,15 @@ export default function Board({
                                 },
                             }}
                         >
-                            <DialogTitle sx={{ fontWeight: 800, pr: 6 }}>Delete Task</DialogTitle>
+                            <DialogTitle sx={{ fontWeight: 800, pr: 6 }}>{t('board.deleteTask')}</DialogTitle>
                             <DialogContent
                                 dividers
                                 sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
                             >
                                 <Typography variant="body2">
-                                    Are you sure you want to permanently delete
+                                    {t('board.confirmDeleteTask')}
                                     {pendingTask ? ' "' + pendingTask.title + '"' : ' this task'}?
-                                    This action cannot be undone.
+                                    {t('board.actionCannotBeUndone')}
                                 </Typography>
                             </DialogContent>
                             <DialogActions sx={{ px: 2, py: 1.25 }}>
@@ -1939,7 +1977,7 @@ export default function Board({
                                         setPendingDeleteId(null);
                                     }}
                                 >
-                                    Cancel
+                                    {t('buttons.cancel')}
                                 </Button>
                                 <Button
                                     onClick={confirmDelete}
@@ -1947,7 +1985,7 @@ export default function Board({
                                     variant="contained"
                                     sx={{ fontWeight: 700, textTransform: 'none' }}
                                 >
-                                    Delete
+                                    {t('buttons.delete')}
                                 </Button>
                             </DialogActions>
                         </Dialog>
@@ -2136,7 +2174,7 @@ export default function Board({
                             },
                         }}
                     >
-                        <DialogTitle sx={{ fontWeight: 700 }}>Create Custom View</DialogTitle>
+                        <DialogTitle sx={{ fontWeight: 700 }}>{t('customViews.createNew')}</DialogTitle>
                         <DialogContent>
                             <TextField
                                 autoFocus
@@ -2145,7 +2183,7 @@ export default function Board({
                                 variant="outlined"
                                 value={newViewName}
                                 onChange={(e) => setNewViewName(e.target.value)}
-                                placeholder="Enter a name for your custom view"
+                                placeholder={t('customViews.viewName')}
                                 sx={{ mt: 1 }}
                                 onKeyPress={(e) => {
                                     if (e.key === 'Enter' && newViewName.trim()) {

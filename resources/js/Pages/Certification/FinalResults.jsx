@@ -33,7 +33,8 @@ import {
     Badge as BadgeIcon,
 } from '@mui/icons-material';
 
-export default function FinalResults({
+
+import { useTranslation } from 'react-i18next';export default function FinalResults({
     auth,
     attempt,
     totalScore,
@@ -45,12 +46,13 @@ export default function FinalResults({
     projectPerformance,
     certificateReady,
 }) {
+  const { t } = useTranslation();
     const safePercentage =
         typeof percentage === 'number' && !isNaN(percentage)
             ? percentage
             : maxPossibleScore > 0
-              ? (totalScore / maxPossibleScore) * 100
-              : 0;
+                ? (totalScore / maxPossibleScore) * 100
+                : 0;
 
     const safePassed = passed !== undefined ? passed : safePercentage >= 70;
 
@@ -102,7 +104,7 @@ export default function FinalResults({
 
     return (
         <AuthenticatedLayout user={auth.user}>
-            <Head title="Final Results - Project Management Certification" />
+            <Head title={t('head.certification.finalResults')} />
 
             <Box sx={{ maxWidth: 'lg', mx: 'auto', p: 3 }}>
                 {/* Header */}
@@ -148,7 +150,7 @@ export default function FinalResults({
 
                 {/* Results Breakdown */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card>
                             <CardContent sx={{ textAlign: 'center' }}>
                                 <Typography variant="h6" gutterBottom color="primary">
@@ -171,7 +173,7 @@ export default function FinalResults({
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card>
                             <CardContent sx={{ textAlign: 'center' }}>
                                 <Typography variant="h6" gutterBottom color="secondary">
@@ -194,7 +196,7 @@ export default function FinalResults({
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card>
                             <CardContent sx={{ textAlign: 'center' }}>
                                 <Typography variant="h6" gutterBottom color="success.main">
@@ -226,7 +228,7 @@ export default function FinalResults({
                         </Typography>
 
                         <Grid container spacing={2} sx={{ mt: 2 }}>
-                            <Grid item xs={12} sm={6} md={3}>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <Box textAlign="center">
                                     <Typography
                                         variant="h4"
@@ -241,7 +243,7 @@ export default function FinalResults({
                                     <Typography variant="caption">Budget Utilization</Typography>
                                 </Box>
                             </Grid>
-                            <Grid item xs={12} sm={6} md={3}>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <Box textAlign="center">
                                     <Typography
                                         variant="h4"
@@ -256,7 +258,7 @@ export default function FinalResults({
                                     <Typography variant="caption">Task Completion</Typography>
                                 </Box>
                             </Grid>
-                            <Grid item xs={12} sm={6} md={3}>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <Box textAlign="center">
                                     <Typography variant="h4" color="info.main">
                                         {projectPerformance.clientSatisfaction || 0}%
@@ -264,7 +266,7 @@ export default function FinalResults({
                                     <Typography variant="caption">Client Satisfaction</Typography>
                                 </Box>
                             </Grid>
-                            <Grid item xs={12} sm={6} md={3}>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <Box textAlign="center">
                                     <Typography variant="h4" color="secondary.main">
                                         {projectPerformance.qualityScore || 0}%

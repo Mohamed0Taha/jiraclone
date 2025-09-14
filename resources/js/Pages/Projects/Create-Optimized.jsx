@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, Suspense, lazy } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Head, useForm, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import {
@@ -38,7 +39,13 @@ const StepLoader = () => (
 
 export default function Create({ auth, projectTypes = [], domains = [] }) {
     const theme = useTheme();
-    const steps = ['Basics', 'Scope & Team', 'Objectives', 'Review'];
+    const { t } = useTranslation();
+    const steps = [
+        t('projects.steps.basics'),
+        t('projects.steps.scopeTeam'),
+        t('projects.steps.objectives'),
+        t('projects.steps.review'),
+    ];
     const [active, setActive] = useState(0);
 
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -84,7 +91,7 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
     );
 
     // Validation function using extracted logic
-    const validate = useCallback((idx) => validateStep(idx, data, setLocalErrors), [data]);
+    const validate = useCallback((idx) => validateStep(idx, data, setLocalErrors, t), [data, t]);
 
     const next = useCallback(() => {
         if (!validate(active)) return;
@@ -174,7 +181,7 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
 
     return (
         <>
-            <Head title="Create Project" />
+            <Head title={t('projects.createProject')} />
             <AuthenticatedLayout user={auth.user}>
                 {/* Hero */}
                 <Box
@@ -229,7 +236,7 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
                                 href="/dashboard"
                                 sx={{ fontWeight: 500 }}
                             >
-                                Dashboard
+                                {t('common.dashboard')}
                             </MuiLink>
                             <MuiLink
                                 underline="hover"
@@ -237,10 +244,10 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
                                 href="/projects"
                                 sx={{ fontWeight: 500 }}
                             >
-                                Projects
+                                {t('common.projects')}
                             </MuiLink>
                             <Typography color="inherit" sx={{ fontWeight: 600 }}>
-                                Create
+                                {t('buttons.create')}
                             </Typography>
                         </Breadcrumbs>
 
@@ -253,14 +260,13 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
                                 textShadow: '0 4px 22px rgba(0,0,0,0.25)',
                             }}
                         >
-                            Create a New Project
+                            {t('projects.createNewProjectTitle')}
                         </Typography>
                         <Typography
                             variant="h6"
                             sx={{ mt: 2, maxWidth: 720, color: alpha('#fff', 0.92) }}
                         >
-                            Step through basics, scope, and goals so AI can generate hyper-relevant
-                            suggestions later.
+                            {t('projects.createNewProjectSubtitle')}
                         </Typography>
                     </Container>
                 </Box>
@@ -311,10 +317,10 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
                                         href="/projects"
                                         sx={{ textTransform: 'none' }}
                                     >
-                                        Back to Projects
+                                        {t('projects.backToProjects')}
                                     </Button>
                                     <Typography variant="h5" fontWeight={700}>
-                                        Project Setup
+                                        {t('projects.projectSetup')}
                                     </Typography>
                                 </Stack>
 
@@ -340,7 +346,7 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
                                             variant="outlined"
                                             sx={{ textTransform: 'none' }}
                                         >
-                                            Back
+                                            {t('projects.back')}
                                         </Button>
 
                                         {active === steps.length - 1 ? (
@@ -351,7 +357,7 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
                                                 startIcon={<SaveIcon />}
                                                 sx={{ textTransform: 'none', fontWeight: 600 }}
                                             >
-                                                {processing ? 'Creating...' : 'Create Project'}
+                                                {processing ? t('projects.creating') : t('projects.createProject')}
                                             </Button>
                                         ) : (
                                             <Button
@@ -359,7 +365,7 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
                                                 variant="contained"
                                                 sx={{ textTransform: 'none', fontWeight: 600 }}
                                             >
-                                                Next: {steps[active + 1]}
+                                                {t('projects.nextWith', { label: steps[active + 1] })}
                                             </Button>
                                         )}
                                     </Stack>

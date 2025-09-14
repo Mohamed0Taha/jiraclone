@@ -1,10 +1,13 @@
 import { Head } from '@inertiajs/react';
 import { Paper } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 export default function PrivacyPolicy() {
+    const { t } = useTranslation();
+
     return (
         <>
-            <Head title="Privacy Policy - TaskPilot" />
+            <Head title={t('legal.privacyTitle', 'Privacy Policy - TaskPilot')} />
             <div
                 style={{
                     minHeight: '100vh',

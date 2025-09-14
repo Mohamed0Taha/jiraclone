@@ -24,7 +24,8 @@ import {
     Refresh as RetryIcon,
 } from '@mui/icons-material';
 
-export default function PhaseResults({
+
+import { useTranslation } from 'react-i18next';export default function PhaseResults({
     auth,
     attempt,
     answeredQuestions,
@@ -35,13 +36,14 @@ export default function PhaseResults({
     phase,
     nextPhase,
 }) {
+  const { t } = useTranslation();
     // Ensure percentage is a valid number
     const safePercentage =
         typeof percentage === 'number' && !isNaN(percentage)
             ? percentage
             : maxPossibleScore > 0
-              ? (totalScore / maxPossibleScore) * 100
-              : 0;
+                ? (totalScore / maxPossibleScore) * 100
+                : 0;
 
     // Ensure passed status
     const safePassed = passed !== undefined ? passed : safePercentage >= 70;
@@ -69,7 +71,7 @@ export default function PhaseResults({
 
     return (
         <AuthenticatedLayout user={auth.user}>
-            <Head title="Assessment Results - Project Management Certification" />
+            <Head title={t('head.certification.phaseResults')} />
 
             <Box sx={{ maxWidth: 'lg', mx: 'auto', p: 3 }}>
                 <Typography variant="h4" gutterBottom align="center" sx={{ mb: 4 }}>
@@ -200,28 +202,28 @@ export default function PhaseResults({
                                         </Stack>
 
                                         <Grid container spacing={2} sx={{ mt: 1 }}>
-                                            <Grid item xs={12} md={6}>
+                                            <Grid size={{ xs: 12, md: 6 }}>
                                                 <Typography variant="body2" color="text.secondary">
                                                     <strong>Your Answer:</strong> {userAns}
                                                 </Typography>
                                             </Grid>
-                                            <Grid item xs={12} md={6}>
+                                            <Grid size={{ xs: 12, md: 6 }}>
                                                 <Typography variant="body2" color="success.main">
                                                     <strong>Correct Answer:</strong> {correctAns}
                                                 </Typography>
                                             </Grid>
                                             {(answer.explanation ||
                                                 answer.question?.explanation) && (
-                                                <Grid item xs={12}>
-                                                    <Alert severity="info" sx={{ mt: 1 }}>
-                                                        <Typography variant="body2">
-                                                            <strong>Explanation:</strong>{' '}
-                                                            {answer.explanation ||
-                                                                answer.question?.explanation}
-                                                        </Typography>
-                                                    </Alert>
-                                                </Grid>
-                                            )}
+                                                    <Grid size={{ xs: 12 }}>
+                                                        <Alert severity="info" sx={{ mt: 1 }}>
+                                                            <Typography variant="body2">
+                                                                <strong>Explanation:</strong>{' '}
+                                                                {answer.explanation ||
+                                                                    answer.question?.explanation}
+                                                            </Typography>
+                                                        </Alert>
+                                                    </Grid>
+                                                )}
                                         </Grid>
                                     </ListItem>
                                 );

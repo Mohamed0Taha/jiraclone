@@ -1,6 +1,7 @@
 // resources/js/Pages/ProjectAccordion.jsx
 import React, { useMemo } from 'react';
 import { router } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import {
     Accordion,
     AccordionSummary,
@@ -26,45 +27,43 @@ import RocketLaunchRoundedIcon from '@mui/icons-material/RocketLaunchRounded';
 import RateReviewRoundedIcon from '@mui/icons-material/RateReviewRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 
-/**
- * Consider extracting STATUS_META + ORDER to a shared file
- * (e.g. resources/js/config/statuses.js) to avoid duplication.
- */
-const STATUS_META = {
-    todo: {
-        title: 'To Do',
-        accent: '#FFA432',
-        gradient: 'linear-gradient(135deg,#FFF8EC 0%,#FFE2BC 100%)',
-        iconBg: 'linear-gradient(145deg,#FFD088,#FFAE45)',
-        icon: <LightbulbOutlinedIcon sx={{ fontSize: 15 }} />,
-    },
-    inprogress: {
-        title: 'In Progress',
-        accent: '#2C8DFF',
-        gradient: 'linear-gradient(135deg,#F1F8FF 0%,#CFE5FF 100%)',
-        iconBg: 'linear-gradient(145deg,#77B6FF,#3B8DFF)',
-        icon: <RocketLaunchRoundedIcon sx={{ fontSize: 15 }} />,
-    },
-    review: {
-        title: 'Review',
-        accent: '#9C4DFF',
-        gradient: 'linear-gradient(135deg,#F9F3FF 0%,#E3D2FF 100%)',
-        iconBg: 'linear-gradient(145deg,#C39BFF,#9C4DFF)',
-        icon: <RateReviewRoundedIcon sx={{ fontSize: 15 }} />,
-    },
-    done: {
-        title: 'Done',
-        accent: '#22B36B',
-        gradient: 'linear-gradient(135deg,#F2FFF5 0%,#CDEFD8 100%)',
-        iconBg: 'linear-gradient(145deg,#5FD598,#22B36B)',
-        icon: <CheckCircleRoundedIcon sx={{ fontSize: 15 }} />,
-    },
-};
-
 const ORDER = ['todo', 'inprogress', 'review', 'done'];
 
 export default function ProjectAccordion({ project, ownership, rowSx = {}, onDelete, endActions }) {
+    const { t } = useTranslation();
     const theme = useTheme();
+
+    // STATUS_META moved inside component to access translation function
+    const STATUS_META = {
+        todo: {
+            title: t('tasks.status.todo'),
+            accent: '#FFA432',
+            gradient: 'linear-gradient(135deg,#FFF8EC 0%,#FFE2BC 100%)',
+            iconBg: 'linear-gradient(145deg,#FFD088,#FFAE45)',
+            icon: <LightbulbOutlinedIcon sx={{ fontSize: 15 }} />,
+        },
+        inprogress: {
+            title: t('tasks.status.inprogress'),
+            accent: '#2C8DFF',
+            gradient: 'linear-gradient(135deg,#F1F8FF 0%,#CFE5FF 100%)',
+            iconBg: 'linear-gradient(145deg,#77B6FF,#3B8DFF)',
+            icon: <RocketLaunchRoundedIcon sx={{ fontSize: 15 }} />,
+        },
+        review: {
+            title: t('tasks.status.review'),
+            accent: '#9C4DFF',
+            gradient: 'linear-gradient(135deg,#F9F3FF 0%,#E3D2FF 100%)',
+            iconBg: 'linear-gradient(145deg,#C39BFF,#9C4DFF)',
+            icon: <RateReviewRoundedIcon sx={{ fontSize: 15 }} />,
+        },
+        done: {
+            title: t('tasks.status.done'),
+            accent: '#22B36B',
+            gradient: 'linear-gradient(135deg,#F2FFF5 0%,#CDEFD8 100%)',
+            iconBg: 'linear-gradient(145deg,#5FD598,#22B36B)',
+            icon: <CheckCircleRoundedIcon sx={{ fontSize: 15 }} />,
+        },
+    };
 
     // Determine ownership colors
     const isOwner = ownership === 'owner';
@@ -416,7 +415,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                         onClick={(e) => e.stopPropagation()}
                         sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
                     >
-                        <Tooltip title="Edit project" arrow>
+                        <Tooltip title={t('dashboard.editProject')} arrow>
                             <Box
                                 component="div"
                                 role="button"
@@ -428,7 +427,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                                         gotoEdit(e);
                                     }
                                 }}
-                                aria-label={`Edit project ${project.name}`}
+                                aria-label={t('projects.editProject', { name: project.name })}
                                 sx={{
                                     width: 32,
                                     height: 32,
@@ -438,7 +437,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                                     justifyContent: 'center',
                                     cursor: 'pointer',
                                     color: alpha('#243A63', 0.7),
-                                    '&:hover': { 
+                                    '&:hover': {
                                         color: alpha('#243A63', 0.95),
                                         backgroundColor: alpha('#243A63', 0.08),
                                     },
@@ -452,7 +451,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                             </Box>
                         </Tooltip>
 
-                        <Tooltip title="Delete project" arrow>
+                        <Tooltip title={t('dashboard.deleteProject')} arrow>
                             <Box
                                 component="div"
                                 role="button"
@@ -468,7 +467,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                                         onDelete?.(e, project);
                                     }
                                 }}
-                                aria-label={`Delete project ${project.name}`}
+                                aria-label={t('projects.deleteProject', { name: project.name })}
                                 sx={{
                                     width: 32,
                                     height: 32,
@@ -478,7 +477,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                                     justifyContent: 'center',
                                     cursor: 'pointer',
                                     color: alpha('#243A63', 0.7),
-                                    '&:hover': { 
+                                    '&:hover': {
                                         color: alpha('#243A63', 0.95),
                                         backgroundColor: alpha('#243A63', 0.08),
                                     },

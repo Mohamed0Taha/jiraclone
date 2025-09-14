@@ -1,5 +1,6 @@
 // resources/js/Pages/Tasks/AutomationsDialog.jsx
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     alpha,
     Box,
@@ -20,6 +21,7 @@ import EmailRoundedIcon from '@mui/icons-material/EmailRounded';
 import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsActiveRounded';
 
 export default function AutomationsDialog({ open, onClose, project }) {
+    const { t } = useTranslation();
     const theme = useTheme();
     const [dailySummary, setDailySummary] = useState(true);
     const [dueReminders, setDueReminders] = useState(true);
@@ -45,12 +47,12 @@ export default function AutomationsDialog({ open, onClose, project }) {
                 },
             }}
         >
-            <DialogTitle sx={{ fontWeight: 800 }}>{project.name}: Automations</DialogTitle>
+            <DialogTitle sx={{ fontWeight: 800 }}>{t('automation.title', { projectName: project.name })}</DialogTitle>
             <DialogContent sx={{ pt: 1 }}>
                 <Stack spacing={2}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <AccessTimeRoundedIcon color="primary" />
-                        <Typography fontWeight={700}>Daily Summary</Typography>
+                        <Typography fontWeight={700}>{t('automation.dailySummary')}</Typography>
                     </Box>
                     <FormControlLabel
                         control={
@@ -59,12 +61,12 @@ export default function AutomationsDialog({ open, onClose, project }) {
                                 onChange={(e) => setDailySummary(e.target.checked)}
                             />
                         }
-                        label="Email me a daily summary of activity"
+                        label={t('automation.dailySummaryDescription')}
                     />
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                         <NotificationsActiveRoundedIcon color="primary" />
-                        <Typography fontWeight={700}>Due Date Reminders</Typography>
+                        <Typography fontWeight={700}>{t('automation.dueDateReminders')}</Typography>
                     </Box>
                     <FormControlLabel
                         control={
@@ -73,16 +75,16 @@ export default function AutomationsDialog({ open, onClose, project }) {
                                 onChange={(e) => setDueReminders(e.target.checked)}
                             />
                         }
-                        label="Send reminders 24h before task due dates"
+                        label={t('automation.dueDateRemindersDescription')}
                     />
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                         <EmailRoundedIcon color="primary" />
-                        <Typography fontWeight={700}>Slack Webhook (optional)</Typography>
+                        <Typography fontWeight={700}>{t('automation.slackWebhook')}</Typography>
                     </Box>
                     <TextField
                         size="small"
-                        placeholder="https://hooks.slack.com/services/…"
+                        placeholder={t('automation.slackWebhookPlaceholder')}
                         value={slackWebhook}
                         onChange={(e) => setSlackWebhook(e.target.value)}
                         fullWidth
@@ -91,14 +93,14 @@ export default function AutomationsDialog({ open, onClose, project }) {
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>
                 <Button onClick={onClose} sx={{ textTransform: 'none' }}>
-                    Cancel
+                    {t('common.cancel')}
                 </Button>
                 <Button
                     onClick={save}
                     variant="contained"
                     sx={{ textTransform: 'none', fontWeight: 700 }}
                 >
-                    Save
+                    {t('common.save')}
                 </Button>
             </DialogActions>
         </Dialog>

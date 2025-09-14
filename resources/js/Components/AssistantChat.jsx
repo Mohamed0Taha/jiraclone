@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Paper,
@@ -72,6 +73,7 @@ const shimmer = keyframes`
 
 // Robot typing animation component
 function RobotTypingIndicator() {
+    const { t } = useTranslation();
     return (
         <Box
             sx={{
@@ -119,7 +121,7 @@ function RobotTypingIndicator() {
             {/* Typing message */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    🤖 Assistant is crafting a response
+                    🤖 {t('chat.typing')}
                 </Typography>
 
                 {/* Animated typing dots */}
@@ -171,6 +173,7 @@ function RobotTypingIndicator() {
 }
 
 export default function AssistantChat({ project, open, onClose }) {
+    const { t } = useTranslation();
     const { shouldShowOverlay, userPlan } = useSubscription();
     // Inline upgrade card model for free/limited users
 
@@ -200,7 +203,7 @@ export default function AssistantChat({ project, open, onClose }) {
 
     // Helper to append upgrade card
     const pushUpgradeCard = (
-        bodyText = "To continue and view AI insights, you'll need to subscribe."
+        bodyText = t('chat.subscribeMessage')
     ) => {
         const billing = userPlan?.billing_url || '/billing';
         setUpgradeUrl(billing);
@@ -209,7 +212,7 @@ export default function AssistantChat({ project, open, onClose }) {
             {
                 role: 'assistant',
                 type: 'upgrade',
-                title: 'Subscribe to continue',
+                title: t('chat.subscribeTitle'),
                 body: bodyText,
                 upgradeUrl: billing,
                 timestamp: new Date(),
@@ -284,7 +287,7 @@ export default function AssistantChat({ project, open, onClose }) {
             if (data.show_overlay) {
                 pushUpgradeCard(
                     data.message ||
-                        'To see this AI answer and keep chatting, subscribe to a paid plan.'
+                        t('chat.subscribeToSeeAnswer')
                 );
             } else if (data.success || data.type === 'message') {
                 setConversation((prev) => [
@@ -296,10 +299,10 @@ export default function AssistantChat({ project, open, onClose }) {
                     },
                 ]);
             } else {
-                setError(data.message || 'Failed to get response from assistant');
+                setError(data.message || t('chat.failedResponse'));
             }
         } catch (err) {
-            setError(err.message || 'Network error. Please check your connection and try again.');
+            setError(err.message || t('chat.networkError'));
             console.error('Assistant chat error:', err);
         } finally {
             setIsLoading(false);
@@ -400,10 +403,10 @@ export default function AssistantChat({ project, open, onClose }) {
                     <SmartToyIcon />
                     <Box>
                         <Typography variant="h6" sx={{ fontSize: '1rem', lineHeight: 1 }}>
-                            Project Assistant
+                            {t('chat.projectAssistant')}
                         </Typography>
                         <Typography variant="caption" sx={{ opacity: 0.85 }}>
-                            Ask for summaries or actions. First reply visible preview.
+                            {t('chat.assistantDescription')}
                         </Typography>
                     </Box>
                 </Stack>
@@ -424,7 +427,7 @@ export default function AssistantChat({ project, open, onClose }) {
             {/* Project Info */}
             <Box sx={{ p: 2, bgcolor: 'grey.50', borderBottom: 1, borderColor: 'grey.200' }}>
                 <Typography variant="body2" color="text.secondary">
-                    Chatting about: <strong>{project.name}</strong>
+                    {t('chat.chattingAbout')} <strong>{project.name}</strong>
                 </Typography>
             </Box>
 
@@ -452,8 +455,7 @@ export default function AssistantChat({ project, open, onClose }) {
                             <Box sx={{ textAlign: 'center', mb: 3 }}>
                                 <SmartToyIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    Hi! I'm your project assistant. Ask me anything about "
-                                    {project.name}".
+                                    {t('chat.welcomeMessage', { projectName: project.name })}
                                 </Typography>
                             </Box>
 
@@ -469,7 +471,7 @@ export default function AssistantChat({ project, open, onClose }) {
                                             textAlign: 'center',
                                         }}
                                     >
-                                        💡 Suggested Questions
+                                        💡 {t('chat.suggestionsTitle')}
                                     </Typography>
                                     <Box
                                         sx={{
@@ -604,7 +606,7 @@ export default function AssistantChat({ project, open, onClose }) {
                                                             alignSelf: 'flex-start',
                                                         }}
                                                     >
-                                                        See plans
+                                                        {t('chat.upgradeNow')}
                                                     </Button>
                                                 </Box>
                                             ) : (
@@ -667,7 +669,7 @@ export default function AssistantChat({ project, open, onClose }) {
                         multiline
                         maxRows={3}
                         size="small"
-                        placeholder="Ask about your project..."
+                        placeholder={t('chat.askAboutProject')}
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
                         disabled={isLoading || chatLocked}

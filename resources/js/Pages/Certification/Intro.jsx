@@ -1,7 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Box, Paper, Typography, Stack, Button, Grid, Chip, Divider } from '@mui/material';
+import { Box, Paper, Typography, Stack, Button, Chip, Divider } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import QuizIcon from '@mui/icons-material/Quiz';
@@ -17,6 +19,7 @@ export default function Intro({
     practicalEstimatedMinutes,
     passingScore,
 }) {
+    const { t } = useTranslation();
     const [starting, setStarting] = useState(false);
     const startedRef = useRef(false);
     const startExam = () => {
@@ -37,19 +40,18 @@ export default function Intro({
 
     return (
         <AuthenticatedLayout user={auth.user}>
-            <Head title="Certification Overview" />
+            <Head title={t('head.certification.overview')} />
             <Box sx={{ maxWidth: '900px', mx: 'auto', py: 6, px: 2 }}>
                 <Typography variant="h3" fontWeight={700} gutterBottom>
-                    Project Management with AI Certification
+                    {t('certification.title', 'Project Management with AI Certification')}
                 </Typography>
                 <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                    Demonstrate mastery of core PM concepts, applied scenario judgment, and
-                    AI-enabled delivery practices.
+                    {t('certification.subtitle', 'Demonstrate mastery of core PM concepts, applied scenario judgment, and AI-enabled delivery practices.')}
                 </Typography>
 
                 <Paper sx={{ p: 4, mb: 4 }} elevation={3}>
                     <Grid container spacing={3}>
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Stack spacing={2}>
                                 <Box>
                                     <Typography variant="h6" gutterBottom>
@@ -103,7 +105,7 @@ export default function Intro({
                                 </Box>
                             </Stack>
                         </Grid>
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Stack spacing={2}>
                                 <Box>
                                     <Typography variant="h6" gutterBottom>
@@ -178,7 +180,7 @@ export default function Intro({
                             onClick={startExam}
                             disabled={starting}
                         >
-                            {starting ? 'Starting...' : 'Begin Certification'}
+                            {starting ? t('certification.starting', 'Starting...') : t('certification.beginCertification', 'Begin Certification')}
                         </Button>
                         <Typography variant="caption" display="block" mt={1} color="text.secondary">
                             Timer starts when you click Begin.

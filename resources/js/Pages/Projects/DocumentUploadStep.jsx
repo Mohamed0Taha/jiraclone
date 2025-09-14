@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Typography,
@@ -25,6 +26,7 @@ import { getCsrfToken } from '@/utils/csrf';
 
 const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
     const theme = useTheme();
+    const { t } = useTranslation();
     const [dragOver, setDragOver] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState('');
@@ -60,14 +62,12 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
     useEffect(() => {
         const handler = (e) => {
             if (e.detail?.reason === 'missing_core_fields') {
-                setAiWarning(
-                    'AI could not reliably extract the project name or description. You can retry with a clearer document or proceed with manual creation.'
-                );
+                setAiWarning(t('projects.aiWarningMissingCore'));
             }
         };
         window.addEventListener('project-ai-empty', handler);
         return () => window.removeEventListener('project-ai-empty', handler);
-    }, []);
+    }, [t]);
 
     const handleFileUpload = useCallback(
         async (file) => {
@@ -75,9 +75,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
 
             // Check quota before proceeding
             if (quota && quota.remaining <= 0) {
-                setError(
-                    'Document extraction quota exceeded. Upgrade your plan to extract more documents.'
-                );
+                setError(t('projects.quotaExceededError'));
                 return;
             }
 
@@ -110,13 +108,13 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                 '.xlsx',
             ].some((ext) => name.endsWith(ext));
             if (!allowedTypes.includes(file.type) && !extAllowed) {
-                setError('Allowed types: TXT, PDF, DOC, DOCX, RTF, MD, CSV, XLS, XLSX (max 8MB).');
+                setError(t('projects.allowedTypesError'));
                 return;
             }
 
             // Validate file size (8MB)
             if (file.size > 8 * 1024 * 1024) {
-                setError('File size must be less than 8MB.');
+                setError(t('projects.fileTooLargeError'));
                 return;
             }
 
@@ -153,14 +151,12 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                     onDocumentAnalyzed(result.data);
                 } else {
                     console.error('API Error:', result.message); // Debug log
-                    let errorMessage = result.message || 'Failed to analyze document';
+                    let errorMessage = result.message || t('projects.failedToAnalyze');
 
                     // Handle quota exceeded error specifically
                     if (response.status === 403 && result.quota) {
                         setQuota(result.quota);
-                        errorMessage =
-                            result.message ||
-                            'Document extraction quota exceeded. Upgrade your plan to extract more documents.';
+                        errorMessage = result.message || t('projects.quotaExceededError');
                     }
 
                     // Handle specific error types
@@ -173,11 +169,11 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                 }
             } catch (err) {
                 console.error('Document upload error:', err);
-                let errorMessage = 'Failed to upload and analyze document. Please try again.';
+                let errorMessage = t('projects.failedToUploadAnalyze');
 
                 // Handle network errors
                 if (err.name === 'TypeError' && err.message.includes('fetch')) {
-                    errorMessage = 'Network error. Please check your connection and try again.';
+                    errorMessage = t('chat.networkError');
                 } else if (err.message) {
                     errorMessage = err.message;
                 }
@@ -187,7 +183,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                 setUploading(false);
             }
         },
-        [onDocumentAnalyzed]
+        [onDocumentAnalyzed, t]
     );
 
     const handleDrop = useCallback(
@@ -197,9 +193,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
 
             // Check quota before proceeding
             if (quota && quota.remaining <= 0) {
-                setError(
-                    'Document extraction quota exceeded. Upgrade your plan to extract more documents.'
-                );
+                setError(t('projects.quotaExceededError'));
                 return;
             }
 
@@ -242,7 +236,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                     textAlign: 'center',
                 }}
             >
-                How would you like to create your project?
+                {t('projects.howToCreateQuestion')}
             </Typography>
 
             <Typography
@@ -255,8 +249,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                     mx: 'auto',
                 }}
             >
-                Choose to upload a project requirements document for AI analysis, or create your
-                project manually step by step.
+                {t('projects.methodDescription')}
             </Typography>
 
             <Stack spacing={3} sx={{ maxWidth: 800, mx: 'auto' }}>
@@ -264,11 +257,10 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                 <Card
                     elevation={0}
                     sx={{
-                        border: `2px solid ${
-                            dragOver
-                                ? theme.palette.primary.main
-                                : alpha(theme.palette.primary.main, 0.2)
-                        }`,
+                        border: `2px solid ${dragOver
+                            ? theme.palette.primary.main
+                            : alpha(theme.palette.primary.main, 0.2)
+                            }`,
                         borderRadius: 3,
                         transition: 'all 0.3s ease',
                         position: 'relative',
@@ -312,7 +304,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 }}
                             />
                             <Chip
-                                label="AI Powered"
+                                label={t('projects.aiPowered')}
                                 size="small"
                                 sx={{
                                     bgcolor: alpha(theme.palette.primary.main, 0.1),
@@ -330,7 +322,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 color: theme.palette.text.primary,
                             }}
                         >
-                            Upload Project Requirements Document
+                            {t('projects.uploadRequirements')}
                         </Typography>
 
                         <Typography
@@ -342,8 +334,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 mx: 'auto',
                             }}
                         >
-                            Upload a document and let AI extract project details, timeline,
-                            objectives, and constraints automatically.
+                            {t('projects.uploadRequirementsDescription')}
                         </Typography>
 
                         {quota && (
@@ -361,15 +352,11 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 >
                                     {quota.remaining > 0 ? (
                                         <>
-                                            Documents remaining this period:{' '}
-                                            <strong>{quota.remaining}</strong> (used {quota.used} of{' '}
-                                            {quota.limit})
+                                            {t('projects.quotaRemaining', { remaining: quota.remaining, used: quota.used, limit: quota.limit })}
                                         </>
                                     ) : (
                                         <>
-                                            <strong>Document extraction quota reached.</strong>{' '}
-                                            You've used {quota.used} of {quota.limit} this period.
-                                            Upgrade your plan to extract more documents.
+                                            <strong>{t('projects.quotaReachedTitle')}</strong> {t('projects.quotaReachedBody', { used: quota.used, limit: quota.limit })}
                                         </>
                                     )}
                                 </Alert>
@@ -378,26 +365,25 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
 
                         <Box
                             sx={{
-                                border: `2px dashed ${
-                                    dragOver
-                                        ? theme.palette.primary.main
-                                        : alpha(theme.palette.grey[400], 0.5)
-                                }`,
+                                border: `2px dashed ${dragOver
+                                    ? theme.palette.primary.main
+                                    : alpha(theme.palette.divider, 0.5)
+                                    }`,
                                 borderRadius: 2,
                                 p: 3,
                                 mb: 3,
                                 bgcolor: dragOver
-                                    ? alpha(theme.palette.primary.main, 0.05)
-                                    : alpha(theme.palette.grey[50], 0.5),
+                                    ? alpha(theme.palette.primary.main, 0.08)
+                                    : (theme.palette.mode === 'dark'
+                                        ? 'rgba(255,255,255,0.03)'
+                                        : alpha(theme.palette.grey[50], 0.5)),
                                 cursor: quota && quota.remaining <= 0 ? 'not-allowed' : 'pointer',
                                 transition: 'all 0.3s ease',
                                 opacity: quota && quota.remaining <= 0 ? 0.6 : 1,
                             }}
                             onClick={() => {
                                 if (quota && quota.remaining <= 0) {
-                                    setError(
-                                        'Document extraction quota exceeded. Upgrade your plan to extract more documents.'
-                                    );
+                                    setError(t('projects.quotaExceededError'));
                                     return;
                                 }
                                 document.getElementById('document-input')?.click();
@@ -412,15 +398,15 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                             />
                             <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                                 {quota && quota.remaining <= 0
-                                    ? 'Document extraction quota reached'
+                                    ? t('projects.quotaReachedTitle')
                                     : dragOver
-                                      ? 'Drop your document here'
-                                      : 'Click to browse or drag & drop your document'}
+                                        ? t('projects.dropHere')
+                                        : t('projects.browseOrDrop')}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                                 {quota && quota.remaining <= 0
-                                    ? 'Upgrade your plan to extract more documents'
-                                    : 'Supports: PDF, Word (.doc/.docx), Text (.txt), RTF • Max 5MB'}
+                                    ? t('projects.upgradeToExtract')
+                                    : t('projects.supports')}
                             </Typography>
                         </Box>
 
@@ -459,7 +445,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 sx={{ mb: 2, textAlign: 'left' }}
                                 icon={<AutoAwesomeIcon />}
                             >
-                                Analyzing your document with AI... This may take a few moments.
+                                {t('projects.analyzing')}
                             </Alert>
                         )}
                     </CardContent>
@@ -498,7 +484,7 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 color: theme.palette.text.primary,
                             }}
                         >
-                            Create Project Manually
+                            {t('projects.createManually')}
                         </Typography>
 
                         <Typography
@@ -510,12 +496,11 @@ const DocumentUploadStep = ({ onDocumentAnalyzed, onManualCreate }) => {
                                 mx: 'auto',
                             }}
                         >
-                            Fill out the project details step by step using our guided form with
-                            basics, scope, and objectives.
+                            {t('projects.createManuallyDescription')}
                         </Typography>
 
                         <Button variant="outlined" color="secondary" sx={{ mt: 2 }}>
-                            Start Manual Creation
+                            {t('projects.startManualCreation')}
                         </Button>
                     </CardContent>
                 </Card>

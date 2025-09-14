@@ -23,6 +23,7 @@ export const DEFAULT_METHOD = METHODOLOGIES.KANBAN;
 const KANBAN_STATUS_META = {
     todo: {
         title: 'To Do',
+        titleKey: 'board.status.todo',
         base: '#FFF4E0',
         accent: '#FFA432',
         gradient: 'linear-gradient(135deg,#FFF8EC 0%,#FFE2BC 100%)',
@@ -31,6 +32,7 @@ const KANBAN_STATUS_META = {
     },
     inprogress: {
         title: 'In Progress',
+        titleKey: 'board.status.inprogress',
         base: '#E4F2FF',
         accent: '#2C8DFF',
         gradient: 'linear-gradient(135deg,#F1F8FF 0%,#CFE5FF 100%)',
@@ -39,6 +41,7 @@ const KANBAN_STATUS_META = {
     },
     review: {
         title: 'Review',
+        titleKey: 'board.status.review',
         base: '#F4E9FF',
         accent: '#9C4DFF',
         gradient: 'linear-gradient(135deg,#F9F3FF 0%,#E3D2FF 100%)',
@@ -47,6 +50,7 @@ const KANBAN_STATUS_META = {
     },
     done: {
         title: 'Done',
+        titleKey: 'board.status.done',
         base: '#E9F9ED',
         accent: '#22B36B',
         gradient: 'linear-gradient(135deg,#F2FFF5 0%,#CDEFD8 100%)',
@@ -61,24 +65,26 @@ const KANBAN_STATUS_ORDER = ['todo', 'inprogress', 'review', 'done'];
 const SCRUM_STATUS_META = {
     backlog: {
         title: 'Product Backlog',
+        titleKey: 'board.status.backlog',
         base: '#F5F5F5',
         accent: '#6B7280',
         gradient: 'linear-gradient(135deg,#FAFAFA 0%,#EAEAEA 100%)',
         iconBg: 'linear-gradient(145deg,#A1A1AA,#71717A)',
         iconEl: <AssignmentOutlinedIcon sx={{ fontSize: 18 }} />,
     },
-    todo: KANBAN_STATUS_META.todo,
-    inprogress: KANBAN_STATUS_META.inprogress,
+    todo: { ...KANBAN_STATUS_META.todo },
+    inprogress: { ...KANBAN_STATUS_META.inprogress },
     testing: {
         title: 'QA',
+        titleKey: 'board.status.testing',
         base: '#E6FBFF',
         accent: '#06B6D4',
         gradient: 'linear-gradient(135deg,#F2FDFF 0%,#CBF7FF 100%)',
         iconBg: 'linear-gradient(145deg,#67E8F9,#06B6D4)',
         iconEl: <ScienceOutlinedIcon sx={{ fontSize: 18 }} />,
     },
-    review: { ...KANBAN_STATUS_META.review, title: 'Sprint Review' },
-    done: { ...KANBAN_STATUS_META.done, title: 'Done (Increment)' },
+    review: { ...KANBAN_STATUS_META.review, title: 'Sprint Review', titleKey: 'board.status.review' },
+    done: { ...KANBAN_STATUS_META.done, title: 'Done (Increment)', titleKey: 'board.status.done' },
 };
 const SCRUM_STATUS_ORDER = ['backlog', 'todo', 'inprogress', 'testing', 'review', 'done'];
 
@@ -159,23 +165,25 @@ const WATERFALL_STATUS_ORDER = [
 const LEAN_STATUS_META = {
     backlog: {
         title: 'Ideas',
+        titleKey: 'board.columns.ideas',
         base: '#F5F5F5',
         accent: '#6B7280',
         gradient: 'linear-gradient(135deg,#FAFAFA 0%,#EAEAEA 100%)',
         iconBg: 'linear-gradient(145deg,#A1A1AA,#71717A)',
         iconEl: <AssignmentOutlinedIcon sx={{ fontSize: 18 }} />,
     },
-    todo: { ...KANBAN_STATUS_META.todo, title: 'Build' },
+    todo: { ...KANBAN_STATUS_META.todo, title: 'Build', titleKey: 'board.columns.build' },
     testing: {
         title: 'Measure',
+        titleKey: 'board.columns.measure',
         base: '#E6FBFF',
         accent: '#06B6D4',
         gradient: 'linear-gradient(135deg,#F2FDFF 0%,#CBF7FF 100%)',
         iconBg: 'linear-gradient(145deg,#67E8F9,#06B6D4)',
         iconEl: <ScienceOutlinedIcon sx={{ fontSize: 18 }} />,
     },
-    review: { ...KANBAN_STATUS_META.review, title: 'Learn' },
-    done: { ...KANBAN_STATUS_META.done, title: 'Validated' },
+    review: { ...KANBAN_STATUS_META.review, title: 'Learn', titleKey: 'board.columns.learn' },
+    done: { ...KANBAN_STATUS_META.done, title: 'Validated', titleKey: 'board.columns.validated' },
 };
 const LEAN_STATUS_ORDER = ['backlog', 'todo', 'testing', 'review', 'done'];
 

@@ -9,7 +9,13 @@
         "postinstall": "npm run build",
         "format": "./scripts/cleanup-and-format.sh",
         "format-quick": "prettier --write \"resources/**/*.{js,jsx,ts,tsx,json,css,scss}\" && ./vendor/bin/pint --quiet",
-        "cleanup": "./scripts/cleanup-and-format.sh"
+        "cleanup": "./scripts/cleanup-and-format.sh",
+        "i18n:replace-placeholders": "node tests/translation-placeholder-replacer.cjs --locales=fi",
+        "i18n:replace-all": "node tests/translation-placeholder-replacer.cjs --locales=fi,de,es,fr,nl,se",
+        "test:translations": "node tests/translation-test-suite.cjs",
+        "codemod:mui-grid-v2": "node scripts/mui-grid-v2-codemod.cjs",
+        "codemod:mui-grid-repair": "node scripts/repair-gridsize-regressions.cjs",
+        "codemod:mui-grid-migrate": "npm run codemod:mui-grid-v2 && npm run codemod:mui-grid-repair"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.3",

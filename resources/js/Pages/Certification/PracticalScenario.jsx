@@ -30,7 +30,8 @@ import {
     Assignment as ProjectIcon,
 } from '@mui/icons-material';
 
-export default function PracticalScenario({
+
+import { useTranslation } from 'react-i18next';export default function PracticalScenario({
     auth,
     attempt,
     scenario,
@@ -38,6 +39,7 @@ export default function PracticalScenario({
     step,
     totalSteps,
 }) {
+  const { t } = useTranslation();
     const [response, setResponse] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -74,7 +76,7 @@ export default function PracticalScenario({
 
     return (
         <AuthenticatedLayout user={auth.user}>
-            <Head title="Practical Scenario - Project Management Certification" />
+            <Head title={t('head.certification.practicalScenario')} />
 
             <Box sx={{ maxWidth: 'lg', mx: 'auto', p: 3 }}>
                 <Typography variant="h4" gutterBottom align="center" sx={{ mb: 4 }}>
@@ -110,7 +112,7 @@ export default function PracticalScenario({
                     </AccordionSummary>
                     <AccordionDetails>
                         <Grid container spacing={3}>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <Card variant="outlined">
                                     <CardContent>
                                         <Typography variant="h6" gutterBottom color="primary">
@@ -146,7 +148,7 @@ export default function PracticalScenario({
                                 </Card>
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <Card variant="outlined">
                                     <CardContent>
                                         <Typography variant="h6" gutterBottom>
@@ -215,7 +217,7 @@ export default function PracticalScenario({
                         rows={8}
                         fullWidth
                         variant="outlined"
-                        placeholder="Provide a detailed response explaining your approach, reasoning, and specific actions you would take as the project manager. Consider the impact on scope, time, cost, quality, and team dynamics."
+                        placeholder={t('certification.detailedResponsePlaceholder')}
                         value={response}
                         onChange={(e) => setResponse(e.target.value)}
                         helperText={`${response.length}/50 minimum characters. Be specific and detailed in your response.`}

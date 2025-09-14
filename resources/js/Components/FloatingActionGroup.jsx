@@ -61,7 +61,7 @@ export default function FloatingActionGroup({
                     timeout={200}
                     style={{ transitionDelay: expanded ? '200ms' : '0ms' }}
                 >
-                    <Tooltip title="Custom Views" placement="left">
+                    <Tooltip title={t('floating.customViews', 'Custom Views')} placement="left">
                         <Fab
                             size="medium"
                             onClick={() => {
@@ -142,7 +142,7 @@ export default function FloatingActionGroup({
                     timeout={200}
                     style={{ transitionDelay: expanded ? '150ms' : '0ms' }}
                 >
-                    <Tooltip title="Export Jira CSV" placement="left">
+                    <Tooltip title={t('floating.exportJira', 'Export to JIRA')} placement="left">
                         <Fab
                             size="medium"
                             onClick={handleExportJira}

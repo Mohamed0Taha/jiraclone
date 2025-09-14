@@ -1,5 +1,6 @@
 // resources/js/Pages/Tasks/AutomationsDialog.jsx
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Button,
     Dialog,
@@ -11,23 +12,29 @@ import {
 } from '@mui/material';
 
 export default function AutomationsDialog({ open, onClose, project }) {
+    const { t } = useTranslation();
+
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle>Automations — {project?.name}</DialogTitle>
+            <DialogTitle>{t('automation.title', 'Automations')} — {project?.name}</DialogTitle>
             <DialogContent dividers>
                 <Stack spacing={2}>
-                    <TextField label="Trigger" placeholder="e.g. task moved to Done" size="small" />
                     <TextField
-                        label="Action"
-                        placeholder="e.g. send email to assignee"
+                        label={t('automation.triggerEvent', 'Trigger Event')}
+                        placeholder={t('automation.triggerPlaceholder', 'Select a trigger event')}
+                        size="small"
+                    />
+                    <TextField
+                        label={t('automation.action', 'Action')}
+                        placeholder={t('automation.actionPlaceholder', 'Define the action')}
                         size="small"
                     />
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose}>Close</Button>
+                <Button onClick={onClose}>{t('common.close', 'Close')}</Button>
                 <Button disabled variant="contained">
-                    Save (soon)
+                    {t('automation.save', 'Save (soon)')}
                 </Button>
             </DialogActions>
         </Dialog>

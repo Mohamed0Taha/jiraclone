@@ -1,10 +1,13 @@
 import { Head } from '@inertiajs/react';
 import { Paper } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 export default function TermsOfService() {
+    const { t } = useTranslation();
+
     return (
         <>
-            <Head title="Terms of Service - TaskPilot" />
+            <Head title={t('legal.termsTitle', 'Terms of Service - TaskPilot')} />
             <div
                 style={{
                     minHeight: '100vh',

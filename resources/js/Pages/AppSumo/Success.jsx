@@ -1,10 +1,12 @@
 import { Head, Link } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import PrimaryButton from '@/Components/PrimaryButton';
 
 export default function Success({ user, features }) {
+    const { t } = useTranslation();
     return (
         <>
-            <Head title="Welcome to TaskPilot - Lifetime Access Activated!" />
+            <Head title={t('head.appsumoSuccess')} />
 
             <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
                 <div className="w-full max-w-2xl">
@@ -26,13 +28,13 @@ export default function Success({ user, features }) {
                             </svg>
                         </div>
                         <h1 className="text-4xl font-bold text-gray-900 mb-3">
-                            Welcome to TaskPilot!
+                            {t('appsumo.welcomeTitle')}
                         </h1>
                         <p className="text-xl text-gray-600 mb-2">
-                            🎉 Your lifetime access has been activated
+                            🎉 {t('appsumo.lifetimeActivated')}
                         </p>
                         <p className="text-gray-500">
-                            Hi {user?.name || 'there'}! Your account is ready to go.
+                            {t('appsumo.hiUser', { name: user?.name || t('common.there') })}
                         </p>
                     </div>
 
@@ -47,10 +49,10 @@ export default function Success({ user, features }) {
                                 >
                                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                 </svg>
-                                What's Included in Your Lifetime Access
+                                {t('appsumo.whatsIncluded')}
                             </h2>
                             <p className="text-gray-600">
-                                All premium features, forever. No recurring payments.
+                                {t('appsumo.lifetimeDescription')}
                             </p>
                         </div>
 
@@ -71,10 +73,10 @@ export default function Success({ user, features }) {
                                 </svg>
                                 <div>
                                     <h3 className="font-semibold text-gray-900">
-                                        AI Project Assistant
+                                        {t('appsumo.aiProjectAssistant')}
                                     </h3>
                                     <p className="text-sm text-gray-600">
-                                        Smart project insights and recommendations
+                                        {t('appsumo.aiProjectDescription')}
                                     </p>
                                 </div>
                             </div>
@@ -95,10 +97,10 @@ export default function Success({ user, features }) {
                                 </svg>
                                 <div>
                                     <h3 className="font-semibold text-gray-900">
-                                        AI Task Generation
+                                        {t('appsumo.aiTaskGeneration')}
                                     </h3>
                                     <p className="text-sm text-gray-600">
-                                        Automatically generate project tasks
+                                        {t('appsumo.aiTaskDescription')}
                                     </p>
                                 </div>
                             </div>
@@ -119,10 +121,10 @@ export default function Success({ user, features }) {
                                 </svg>
                                 <div>
                                     <h3 className="font-semibold text-gray-900">
-                                        Team Collaboration
+                                        {t('appsumo.teamCollaboration')}
                                     </h3>
                                     <p className="text-sm text-gray-600">
-                                        Invite unlimited team members
+                                        {t('appsumo.teamDescription')}
                                     </p>
                                 </div>
                             </div>
@@ -143,10 +145,10 @@ export default function Success({ user, features }) {
                                 </svg>
                                 <div>
                                     <h3 className="font-semibold text-gray-900">
-                                        Smart Automations
+                                        {t('appsumo.smartAutomations')}
                                     </h3>
                                     <p className="text-sm text-gray-600">
-                                        Automate repetitive workflows
+                                        {t('appsumo.automationsDescription')}
                                     </p>
                                 </div>
                             </div>
@@ -155,9 +157,9 @@ export default function Success({ user, features }) {
                         <div className="p-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg text-white">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <h3 className="font-semibold">PM Certification Program</h3>
+                                    <h3 className="font-semibold">{t('appsumo.certificationProgram')}</h3>
                                     <p className="text-sm text-blue-100">
-                                        Get certified as a Project Management Professional
+                                        {t('appsumo.certificationDescription')}
                                     </p>
                                 </div>
                                 <svg
@@ -179,22 +181,22 @@ export default function Success({ user, features }) {
 
                     {/* Next Steps */}
                     <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                        <h2 className="text-xl font-bold text-gray-900 mb-2">Get Started</h2>
-                        <p className="text-gray-600 mb-4">Here's what you can do right now</p>
+                        <h2 className="text-xl font-bold text-gray-900 mb-2">{t('appsumo.getStarted')}</h2>
+                        <p className="text-gray-600 mb-4">{t('appsumo.getStartedDescription')}</p>
 
                         <div className="space-y-3">
                             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                 <div>
                                     <h3 className="font-medium text-gray-900">
-                                        Create your first project
+                                        {t('appsumo.createFirstProject')}
                                     </h3>
                                     <p className="text-sm text-gray-600">
-                                        Start managing your tasks with AI assistance
+                                        {t('appsumo.createProjectDescription')}
                                     </p>
                                 </div>
                                 <Link href="/projects">
                                     <PrimaryButton className="flex items-center gap-1">
-                                        Start Now
+                                        {t('appsumo.startNow')}
                                         <svg
                                             className="w-4 h-4"
                                             fill="none"
@@ -215,15 +217,15 @@ export default function Success({ user, features }) {
                             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                 <div>
                                     <h3 className="font-medium text-gray-900">
-                                        Take the PM Certification
+                                        {t('appsumo.takeCertification')}
                                     </h3>
                                     <p className="text-sm text-gray-600">
-                                        Get certified and enhance your career
+                                        {t('appsumo.takeCertificationDescription')}
                                     </p>
                                 </div>
                                 <Link href="/certification">
                                     <button className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150 gap-1">
-                                        Get Certified
+                                        {t('appsumo.getCertified')}
                                         <svg
                                             className="w-4 h-4"
                                             fill="none"
@@ -247,7 +249,7 @@ export default function Success({ user, features }) {
                     <div className="text-center">
                         <Link href="/dashboard">
                             <PrimaryButton className="text-lg px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 flex items-center gap-2 mx-auto">
-                                Go to Dashboard
+                                {t('appsumo.goToDashboard')}
                                 <svg
                                     className="w-5 h-5"
                                     fill="none"
@@ -265,7 +267,7 @@ export default function Success({ user, features }) {
                         </Link>
 
                         <p className="mt-4 text-sm text-gray-500">
-                            Questions? Reach out to us at{' '}
+                            {t('appsumo.questionsContact')}{' '}
                             <a
                                 href="mailto:support@taskpilot.app"
                                 className="text-blue-600 hover:underline"

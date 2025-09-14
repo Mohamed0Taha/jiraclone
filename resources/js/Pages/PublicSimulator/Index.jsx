@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import PublicLayout from '@/Layouts/PublicLayout';
+import { useTranslation } from 'react-i18next';
 
 export default function PublicSimulator({ title, description }) {
+    const { t } = useTranslation();
     const [isStarting, setIsStarting] = useState(false);
 
     const startSimulation = () => {
@@ -18,7 +20,7 @@ export default function PublicSimulator({ title, description }) {
                 },
                 onError: (errors) => {
                     setIsStarting(false);
-                    alert('Failed to start simulation. Please try again.');
+                    alert(t('simulator.startFailed'));
                 },
                 onFinish: () => {
                     setIsStarting(false);
@@ -51,7 +53,7 @@ export default function PublicSimulator({ title, description }) {
                             </svg>
                         </div>
                         <h1 className="text-5xl font-bold text-gray-900 mb-6">
-                            Project Management Simulator
+                            {t('simulator.title')}
                         </h1>
                         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
                             {description}
@@ -76,12 +78,11 @@ export default function PublicSimulator({ title, description }) {
                                     />
                                 </svg>
                             </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                                Real Scenarios
+                            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                                {t('simulator.features.analytics.title')}
                             </h3>
-                            <p className="text-gray-600">
-                                Practice with authentic project management challenges based on
-                                real-world situations.
+                            <p className="text-gray-600 mb-4">
+                                {t('simulator.features.analytics.description')}
                             </p>
                         </div>
 
@@ -102,11 +103,10 @@ export default function PublicSimulator({ title, description }) {
                                 </svg>
                             </div>
                             <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                                Instant Feedback
+                                {t('simulator.features.instantFeedback.title')}
                             </h3>
                             <p className="text-gray-600">
-                                Get immediate evaluation of your decisions and learn from each
-                                choice you make.
+                                {t('simulator.features.instantFeedback.description')}
                             </p>
                         </div>
 
@@ -127,11 +127,10 @@ export default function PublicSimulator({ title, description }) {
                                 </svg>
                             </div>
                             <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                                No Registration
+                                {t('simulator.features.noRegistration.title')}
                             </h3>
                             <p className="text-gray-600">
-                                Start practicing immediately - no account required. Perfect for
-                                trying before you buy.
+                                {t('simulator.features.noRegistration.description')}
                             </p>
                         </div>
                     </div>
@@ -139,7 +138,7 @@ export default function PublicSimulator({ title, description }) {
                     {/* What You'll Experience */}
                     <div className="bg-white rounded-2xl p-8 mb-16 shadow-lg border border-gray-100">
                         <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
-                            What You'll Experience
+                            {t('simulator.whatYouExperience')}
                         </h2>
                         <div className="grid md:grid-cols-2 gap-8">
                             <div>
@@ -147,25 +146,25 @@ export default function PublicSimulator({ title, description }) {
                                     <li className="flex items-start">
                                         <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                                         <span className="text-gray-700">
-                                            Navigate complex project scenarios
+                                            {t('simulator.experience.navigateScenarios')}
                                         </span>
                                     </li>
                                     <li className="flex items-start">
                                         <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                                         <span className="text-gray-700">
-                                            Make critical decisions under pressure
+                                            {t('simulator.experience.criticalDecisions')}
                                         </span>
                                     </li>
                                     <li className="flex items-start">
                                         <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                                         <span className="text-gray-700">
-                                            Handle team conflicts and stakeholder demands
+                                            {t('simulator.experience.handleConflicts')}
                                         </span>
                                     </li>
                                     <li className="flex items-start">
                                         <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                                         <span className="text-gray-700">
-                                            Manage budgets and timelines
+                                            {t('simulator.experience.manageBudgets')}
                                         </span>
                                     </li>
                                 </ul>
@@ -175,25 +174,25 @@ export default function PublicSimulator({ title, description }) {
                                     <li className="flex items-start">
                                         <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                                         <span className="text-gray-700">
-                                            Adapt to changing requirements
+                                            {t('simulator.experience.adaptRequirements')}
                                         </span>
                                     </li>
                                     <li className="flex items-start">
                                         <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                                         <span className="text-gray-700">
-                                            Apply project management methodologies
+                                            {t('simulator.experience.applyMethodologies')}
                                         </span>
                                     </li>
                                     <li className="flex items-start">
                                         <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                                         <span className="text-gray-700">
-                                            Learn from realistic consequences
+                                            {t('simulator.experience.learnConsequences')}
                                         </span>
                                     </li>
                                     <li className="flex items-start">
                                         <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                                         <span className="text-gray-700">
-                                            Build confidence in your PM skills
+                                            {t('simulator.experience.buildConfidence')}
                                         </span>
                                     </li>
                                 </ul>
@@ -229,7 +228,7 @@ export default function PublicSimulator({ title, description }) {
                                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                         ></path>
                                     </svg>
-                                    Generating Your Simulation...
+                                    {t('simulator.button.generating')}
                                 </>
                             ) : (
                                 <>
@@ -246,22 +245,22 @@ export default function PublicSimulator({ title, description }) {
                                             d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                                         />
                                     </svg>
-                                    Start Free Simulation
+                                    {t('simulator.button.start')}
                                 </>
                             )}
                         </button>
 
                         <p className="text-gray-500 mt-4 text-sm">
-                            Takes 10-15 minutes • No registration required
+                            {t('simulator.subtitle')}
                         </p>
 
                         <div className="mt-8 text-center">
-                            <p className="text-gray-600 mb-2">Ready for certification?</p>
+                            <p className="text-gray-600 mb-2">{t('simulator.cta.certification')}</p>
                             <Link
                                 href="/login"
                                 className="text-blue-600 hover:text-blue-800 font-medium underline"
                             >
-                                Create an account for full access
+                                {t('simulator.cta.createAccount')}
                             </Link>
                         </div>
                     </div>

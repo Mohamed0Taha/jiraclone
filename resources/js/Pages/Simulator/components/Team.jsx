@@ -14,7 +14,8 @@ import {
 import ThumbUpAltOutlinedIcon from '@mui/icons-material/ThumbUpAltOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
-// Fallback mock data - removed to avoid showing placeholders
+
+import { useTranslation } from 'react-i18next';// Fallback mock data - removed to avoid showing placeholders
 const MOCK_TEAM = [];
 
 const statusColor = (s) =>
@@ -26,6 +27,7 @@ const statusColor = (s) =>
     })[s] || 'default';
 
 export default function Team({ members, onPraise, onRemove, praiseBursts = [] }) {
+  const { t } = useTranslation();
     const data = members && members.length ? members : MOCK_TEAM;
     // Adaptive density: only compact when >6 to keep cards readable
     const compact = data.length > 6;
@@ -126,8 +128,8 @@ export default function Team({ members, onPraise, onRemove, praiseBursts = [] })
                                                 (m.morale || 0) > 80
                                                     ? 'success.main'
                                                     : (m.morale || 0) < 50
-                                                      ? 'error.main'
-                                                      : 'text.secondary'
+                                                        ? 'error.main'
+                                                        : 'text.secondary'
                                             }
                                         >
                                             {m.morale ?? 70}%
@@ -145,8 +147,8 @@ export default function Team({ members, onPraise, onRemove, praiseBursts = [] })
                                                     (m.morale || 0) > 80
                                                         ? '#2e7d32'
                                                         : (m.morale || 0) < 50
-                                                          ? '#ed6c02'
-                                                          : '#1976d2',
+                                                            ? '#ed6c02'
+                                                            : '#1976d2',
                                             },
                                         }}
                                     />
@@ -173,7 +175,7 @@ export default function Team({ members, onPraise, onRemove, praiseBursts = [] })
                                     <IconButton
                                         size="small"
                                         onClick={() => onPraise && onPraise(m.id)}
-                                        aria-label="praise member"
+                                        aria-label={t('simulator.praiseMemberAria')}
                                         sx={{ backgroundColor: 'rgba(0,0,0,0.04)' }}
                                     >
                                         <ThumbUpAltOutlinedIcon fontSize="inherit" />
@@ -184,7 +186,7 @@ export default function Team({ members, onPraise, onRemove, praiseBursts = [] })
                                         size="small"
                                         color="error"
                                         onClick={(e) => onRemove && onRemove(m.id, e)}
-                                        aria-label="remove member"
+                                        aria-label={t('simulator.removeMemberAria')}
                                         sx={{ backgroundColor: 'rgba(0,0,0,0.04)' }}
                                     >
                                         <DeleteOutlineIcon fontSize="inherit" />

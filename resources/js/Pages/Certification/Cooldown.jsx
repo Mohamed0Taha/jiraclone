@@ -18,7 +18,9 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LockIcon from '@mui/icons-material/Lock';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
-export default function Cooldown({ hoursRemaining, nextAttemptAt, reason }) {
+
+import { useTranslation } from 'react-i18next';export default function Cooldown({ hoursRemaining, nextAttemptAt, reason }) {
+  const { t } = useTranslation();
     const [timeLeft, setTimeLeft] = useState({
         hours: Math.floor(hoursRemaining),
         minutes: Math.floor((hoursRemaining % 1) * 60),
@@ -50,7 +52,7 @@ export default function Cooldown({ hoursRemaining, nextAttemptAt, reason }) {
 
     return (
         <AuthenticatedLayout>
-            <Head title="Exam Cooldown - TaskPilot Certification" />
+            <Head title={t('head.certification.cooldown')} />
 
             <Container maxWidth="md" sx={{ py: 4 }}>
                 <Card elevation={3}>

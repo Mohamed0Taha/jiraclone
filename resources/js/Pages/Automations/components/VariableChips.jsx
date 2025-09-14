@@ -1,5 +1,6 @@
 // resources/js/Pages/Automations/components/VariableChips.jsx
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Chip,
@@ -92,6 +93,7 @@ const VariableChips = ({
     size = 'small',
 }) => {
     const theme = useTheme();
+    const { t } = useTranslation();
     const [showVariables, setShowVariables] = useState(false);
     const [expandedCategories, setExpandedCategories] = useState(new Set());
     const textFieldRef = useRef(null);
@@ -166,7 +168,7 @@ const VariableChips = ({
                     }}
                 >
                     <Typography variant="subtitle2" gutterBottom color="primary">
-                        📝 Click any variable to add it to your message:
+                        📝 {t('automations.clickVariable', 'Click any variable to add it to your message:')}
                     </Typography>
 
                     {Object.entries(TEMPLATE_VARIABLES).map(([category, variables]) => (
@@ -222,7 +224,7 @@ const VariableChips = ({
                                                     cursor: 'pointer',
                                                     mb: 0.5,
                                                 }}
-                                                title={`Click to add {{${variable.key}}} - Example: ${variable.example}`}
+                                                title={t('automations.variableTooltip', { key: variable.key, example: variable.example }, `Click to add {{${variable.key}}} - Example: ${variable.example}`)}
                                             />
                                         ))}
                                     </Stack>
@@ -231,7 +233,7 @@ const VariableChips = ({
 
                             {category !==
                                 Object.keys(TEMPLATE_VARIABLES)[
-                                    Object.keys(TEMPLATE_VARIABLES).length - 1
+                                Object.keys(TEMPLATE_VARIABLES).length - 1
                                 ] && <Divider sx={{ my: 1 }} />}
                         </Box>
                     ))}
@@ -245,9 +247,7 @@ const VariableChips = ({
                         }}
                     >
                         <Typography variant="caption" color="textSecondary">
-                            💡 <strong>How to use:</strong> Variables like{' '}
-                            <code>{'{{task.title}}'}</code> will be replaced with actual values when
-                            the automation runs. You can also type them manually!
+                            💡 <strong>{t('automations.howToUse', 'How to use:')}</strong> {t('automations.variableUsage', 'Variables like')} <code>{'{{task.title}}'}</code> {t('automations.variableReplaced', 'will be replaced with actual values when the automation runs. You can also type them manually!')}
                         </Typography>
                     </Box>
                 </Paper>

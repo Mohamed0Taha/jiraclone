@@ -2,7 +2,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import Dropdown from '@/Components/Dropdown';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import CookieConsent from '@/Components/CookieConsent';
-import TailwindThemeLanguageSwitcher from '@/Components/TailwindThemeLanguageSwitcher';
+import ThemeToggle from '@/Components/ThemeToggle';
+import LanguageDropdown from '@/Components/LanguageDropdown';
 import { Link, usePage } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 
@@ -82,11 +83,10 @@ export default function AuthenticatedLayout({ header, children }) {
                   relative inline-flex items-center rounded-full px-4 py-2 text-sm font-medium
                   transition
                   focus:outline-none focus-visible:ring-2 ring-offset-2 ring-indigo-500
-                  ${
-                      onDashboard
-                          ? 'bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white shadow hover:from-indigo-500 hover:to-fuchsia-500'
-                          : 'bg-white/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-600'
-                  }
+                  ${onDashboard
+                                        ? 'bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white shadow hover:from-indigo-500 hover:to-fuchsia-500'
+                                        : 'bg-white/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-600'
+                                    }
                 `}
                             >
                                 {onDashboard && (
@@ -100,10 +100,13 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
 
                         {/* Right / User (desktop) */}
-                        <div className="hidden sm:flex items-center gap-4">
-                            {/* Theme and Language Switcher */}
-                            <TailwindThemeLanguageSwitcher />
-                            
+                        <div className="hidden sm:flex items-center gap-3">
+                            {/* Theme Toggle */}
+                            <ThemeToggle />
+
+                            {/* Language Dropdown */}
+                            <LanguageDropdown />
+
                             <div className="relative">
                                 <Dropdown>
                                     <Dropdown.Trigger>
@@ -235,7 +238,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     <div className="px-4 pt-3 pb-6 space-y-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-700">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-                                Navigation
+                                {t('navigation.navigation')}
                             </p>
                             <div className="space-y-1">
                                 <ResponsiveNavLink
@@ -243,8 +246,19 @@ export default function AuthenticatedLayout({ header, children }) {
                                     active={onDashboard}
                                     onClick={closeMobile}
                                 >
-                                    Dashboard
+                                    {t('common.dashboard')}
                                 </ResponsiveNavLink>
+                            </div>
+                        </div>
+
+                        {/* Mobile Theme and Language Controls */}
+                        <div className="border-t border-gray-200 pt-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">
+                                {t('navigation.settings')}
+                            </p>
+                            <div className="flex items-center gap-3">
+                                <ThemeToggle />
+                                <LanguageDropdown />
                             </div>
                         </div>
 
@@ -260,8 +274,8 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {initials}
                                 </span>
                                 <div className="min-w-0">
-                                <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-                                        {user.name || 'User'}
+                                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                                        {user.name || t('common.user')}
                                     </div>
                                     <div className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
                                         {user.email}
@@ -274,13 +288,13 @@ export default function AuthenticatedLayout({ header, children }) {
                                     href={route('profile.edit')}
                                     onClick={closeMobile}
                                 >
-                                    Profile
+                                    {t('common.profile')}
                                 </ResponsiveNavLink>
                                 <ResponsiveNavLink
                                     href={route('billing.show')}
                                     onClick={closeMobile}
                                 >
-                                    Subscriptions
+                                    {t('common.subscriptions')}
                                 </ResponsiveNavLink>
                                 <ResponsiveNavLink
                                     href={route('certification.index')}
@@ -290,13 +304,13 @@ export default function AuthenticatedLayout({ header, children }) {
                                         window.location.href = route('certification.index');
                                     }}
                                 >
-                                    Get Certified
+                                    {t('common.getCertified')}
                                 </ResponsiveNavLink>
                                 <ResponsiveNavLink
                                     href={route('contact.show')}
                                     onClick={closeMobile}
                                 >
-                                    Contact Us
+                                    {t('navigation.contact')}
                                 </ResponsiveNavLink>
                                 <ResponsiveNavLink
                                     method="post"
@@ -304,7 +318,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     as="button"
                                     onClick={closeMobile}
                                 >
-                                    Log Out
+                                    {t('common.logout')}
                                 </ResponsiveNavLink>
                             </div>
                         </div>

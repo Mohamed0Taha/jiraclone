@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Dialog,
     DialogTitle,
@@ -14,6 +15,7 @@ import {
 import { Close as CloseIcon } from '@mui/icons-material';
 
 export default function TaskFormDialog({ open, onClose, task = null, onSubmit, users = [] }) {
+    const { t } = useTranslation();
     const [formData, setFormData] = React.useState({
         title: task?.title || '',
         description: task?.description || '',
@@ -81,7 +83,7 @@ export default function TaskFormDialog({ open, onClose, task = null, onSubmit, u
                         fullWidth
                         value={formData.title}
                         onChange={(e) => handleChange('title', e.target.value)}
-                        placeholder="Task title"
+                        placeholder={t('certification.taskTitlePlaceholder')}
                         size="small"
                     />
 
@@ -92,7 +94,7 @@ export default function TaskFormDialog({ open, onClose, task = null, onSubmit, u
                         fullWidth
                         value={formData.description}
                         onChange={(e) => handleChange('description', e.target.value)}
-                        placeholder="Task description"
+                        placeholder={t('certification.taskDescriptionPlaceholder')}
                         size="small"
                     />
 

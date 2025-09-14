@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { alpha, Box, Chip, IconButton, Paper, Stack, Tooltip, Typography } from '@mui/material';
 import { keyframes } from '@mui/system';
 import GroupAddRoundedIcon from '@mui/icons-material/GroupAddRounded';
@@ -26,11 +27,12 @@ export default function ProCluster({
     busyReport = false,
     automationLocked = false,
 }) {
+    const { t } = useTranslation();
     const iconBg = '#BFE8FF';
     const iconFg = '#1380D8';
 
     const ActionItem = ({ label, icon, onClick, disabled }) => (
-        <Tooltip title={disabled ? `${label} — Pro feature` : label}>
+        <Tooltip title={disabled ? `${label} — ${t('paywall.premiumFeature', 'Premium feature')}` : label}>
             <Box
                 onClick={(e) => {
                     e.preventDefault();
@@ -140,7 +142,7 @@ export default function ProCluster({
                 >
                     <Chip
                         size="small"
-                        label="Pro features"
+                        label={t('paywall.premiumFeature', 'Pro features')}
                         icon={isPro ? <WorkspacePremiumRoundedIcon /> : <LockRoundedIcon />}
                         sx={{
                             position: 'absolute',
@@ -171,19 +173,19 @@ export default function ProCluster({
                         sx={{ px: 0.4 }}
                     >
                         <ActionItem
-                            label="Members"
+                            label={t('members.teamMembers', 'Members')}
                             icon={<GroupAddRoundedIcon />}
                             onClick={onOpenMembers}
                             disabled={!isPro}
                         />
                         <ActionItem
-                            label="Automations"
+                            label={t('automation.automations', 'Automations')}
                             icon={<BoltRoundedIcon />}
                             onClick={onOpenAutomations}
                             disabled={automationLocked}
                         />
                         <ActionItem
-                            label="Report"
+                            label={t('features.reports', 'Report')}
                             icon={<DescriptionRoundedIcon />}
                             onClick={onOpenReport}
                             disabled={!isPro || busyReport}

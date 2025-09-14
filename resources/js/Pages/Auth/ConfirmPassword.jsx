@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     TextField,
@@ -21,6 +22,7 @@ import { Head, useForm } from '@inertiajs/react';
 
 export default function ConfirmPassword() {
     const theme = useTheme();
+    const { t } = useTranslation();
     const [showPassword, setShowPassword] = useState(false);
 
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -37,7 +39,7 @@ export default function ConfirmPassword() {
 
     return (
         <GuestLayout>
-            <Head title="Confirm Password" />
+            <Head title={t('head.auth.confirmPassword')} />
 
             <Card
                 sx={{
@@ -74,12 +76,11 @@ export default function ConfirmPassword() {
                                     fontFamily: '"Inter", "Segoe UI", sans-serif',
                                 }}
                             >
-                                Confirm Password
+                                {t('auth.confirmPasswordTitle', 'Confirm Password')}
                             </Typography>
                         </Box>
                         <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
-                            This is a secure area of the application. Please confirm your password
-                            before continuing.
+                            {t('auth.confirmPasswordDesc', 'This is a secure area of the application. Please confirm your password before continuing.')}
                         </Typography>
                     </Box>
 
@@ -88,7 +89,7 @@ export default function ConfirmPassword() {
                             fullWidth
                             id="password"
                             name="password"
-                            label="Password"
+                            label={t('common.password', 'Password')}
                             type={showPassword ? 'text' : 'password'}
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
@@ -106,7 +107,7 @@ export default function ConfirmPassword() {
                                 endAdornment: (
                                     <InputAdornment position="end">
                                         <IconButton
-                                            aria-label="toggle password visibility"
+                                            aria-label={t('authPage.togglePasswordVisibility', 'Toggle password visibility')}
                                             onClick={() => setShowPassword(!showPassword)}
                                             edge="end"
                                         >
@@ -146,7 +147,7 @@ export default function ConfirmPassword() {
                                 },
                             }}
                         >
-                            {processing ? 'Confirming...' : 'Confirm'}
+                            {processing ? t('auth.confirming', 'Confirming...') : t('auth.confirm', 'Confirm')}
                         </Button>
                     </Box>
                 </CardContent>

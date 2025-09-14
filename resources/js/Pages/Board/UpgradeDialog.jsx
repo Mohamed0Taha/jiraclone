@@ -1,5 +1,6 @@
 // resources/js/Components/Board/UpgradeDialog.jsx
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Button,
     Dialog,
@@ -12,6 +13,8 @@ import WorkspacePremiumRoundedIcon from '@mui/icons-material/WorkspacePremiumRou
 import { router } from '@inertiajs/react';
 
 export default function UpgradeDialog({ open, onClose }) {
+    const { t } = useTranslation();
+
     return (
         <Dialog
             open={open}
@@ -36,24 +39,23 @@ export default function UpgradeDialog({ open, onClose }) {
                 }}
             >
                 <WorkspacePremiumRoundedIcon color="warning" />
-                Pro Feature
+                {t('upgrade.proFeature', 'Pro Feature')}
             </DialogTitle>
             <DialogContent>
                 <DialogContentText>
-                    Project members, automations, and reports are available on the Pro plan. Upgrade
-                    to unlock these features.
+                    {t('upgrade.proFeatureDescription', 'Project members, automations, and reports are available on the Pro plan. Upgrade to unlock these features.')}
                 </DialogContentText>
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>
                 <Button onClick={onClose} sx={{ textTransform: 'none' }}>
-                    Not now
+                    {t('common.notNow', 'Not now')}
                 </Button>
                 <Button
                     variant="contained"
                     onClick={() => router.visit(route('billing.show'))}
                     sx={{ textTransform: 'none', fontWeight: 700 }}
                 >
-                    View Plans
+                    {t('upgrade.viewPlans', 'View Plans')}
                 </Button>
             </DialogActions>
         </Dialog>

@@ -284,13 +284,13 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
     const statsItems = useMemo(
         () => [
             {
-                label: 'Owned',
+                label: t('dashboard.owner'),
                 value: stats.owned,
                 color: theme.palette.primary.main,
                 icon: <StarIcon />,
             },
             {
-                label: 'Shared',
+                label: t('dashboard.collaborator'),
                 value: stats.shared,
                 color: theme.palette.secondary.main,
                 icon: <GroupIcon />,
@@ -308,7 +308,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                 icon: <AdminPanelSettingsIcon />,
             },
         ],
-        [stats, theme.palette]
+        [stats, theme.palette, t]
     );
 
     // Enhanced hero styles with modern gradient
@@ -404,7 +404,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
 
     return (
         <>
-            <Head title="Dashboard" />
+            <Head title={t('common.dashboard')} />
 
             <AuthenticatedLayout user={auth.user}>
                 {/* AppSumo Welcome Message */}
@@ -583,7 +583,6 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                 >
                                     {t('dashboard.yourWorkspace')}
                                 </Typography>
-                                {/* Scope Toggle (positioned under subtitle) */}
                                 <Stack direction="row" spacing={1.5} sx={{ mb: { xs: 3, md: 0 } }}>
                                     <Button
                                         onClick={() => setScope('owned')}
@@ -650,7 +649,10 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                             },
                                         }}
                                     >
-                                        {t('dashboard.allProjects')} ({filtered.length})
+                                        {t('dashboard.allProjectsWithCount', {
+                                            count: filtered.length,
+                                            defaultValue: `${t('dashboard.allProjects')} (${filtered.length})`,
+                                        })}
                                     </Button>
                                 </Stack>
                             </Box>
@@ -693,7 +695,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                         },
                                     }}
                                 >
-                                    Create Project
+                                    {t('dashboard.createProject', { defaultValue: 'Create Project' })}
                                 </Button>
                             </Stack>
                         </Stack>
@@ -776,11 +778,11 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                                         ),
                                                     },
                                                     '&.Mui-focused .MuiOutlinedInput-notchedOutline':
-                                                        {
-                                                            borderColor: theme.palette.primary.main,
-                                                            borderWidth: '2px',
-                                                            boxShadow: `0 0 0 4px ${alpha(theme.palette.primary.main, 0.1)}`,
-                                                        },
+                                                    {
+                                                        borderColor: theme.palette.primary.main,
+                                                        borderWidth: '2px',
+                                                        boxShadow: `0 0 0 4px ${alpha(theme.palette.primary.main, 0.1)}`,
+                                                    },
                                                 },
                                             }}
                                             sx={{
@@ -827,9 +829,9 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                                 displayEmpty
                                                 aria-label="Sort projects"
                                             >
-                                                <MenuItem value="recent">Most Recent</MenuItem>
-                                                <MenuItem value="name_asc">Name (A → Z)</MenuItem>
-                                                <MenuItem value="name_desc">Name (Z → A)</MenuItem>
+                                                <MenuItem value="recent">{t('dashboard.sortRecent')}</MenuItem>
+                                                <MenuItem value="name_asc">{t('dashboard.sortNameAsc')}</MenuItem>
+                                                <MenuItem value="name_desc">{t('dashboard.sortNameDesc')}</MenuItem>
                                             </Select>
                                         </Stack>
 
@@ -875,11 +877,11 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                         >
                                             <ToggleButton value="list" aria-label="List view">
                                                 <ViewListIcon fontSize="small" sx={{ mr: 1 }} />
-                                                List
+                                                {t('floating.list')}
                                             </ToggleButton>
                                             <ToggleButton value="grid" aria-label="Grid view">
                                                 <ViewModuleIcon fontSize="small" sx={{ mr: 1 }} />
-                                                Grid
+                                                {t('floating.grid')}
                                             </ToggleButton>
                                         </ToggleButtonGroup>
 
@@ -903,7 +905,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                                 },
                                             }}
                                         >
-                                            New Project
+                                            {t('dashboard.createFirstProject')}
                                         </Button>
                                     </Stack>
                                 </Stack>
@@ -1004,8 +1006,8 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                     <Box>
                                         <Typography variant="body2" color="text.secondary">
                                             {displayCount === 0
-                                                ? 'No projects match your current filters.'
-                                                : `Showing ${displayCount} project${displayCount === 1 ? '' : 's'}`}
+                                                ? t('dashboard.noProjectsFound')
+                                                : t('dashboard.projectsCount', { count: displayCount })}
                                         </Typography>
                                     </Box>
                                     {query && (
@@ -1018,7 +1020,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                                 fontWeight: 600,
                                             }}
                                         >
-                                            Clear search
+                                            {t('common.search')}
                                         </Button>
                                     )}
                                 </Stack>
@@ -1031,7 +1033,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                     <Grid container spacing={3} aria-label="Projects grid view">
                                         {(scope === 'owned' ? ownedProjects : ownedProjects).map(
                                             (p, idx) => (
-                                                <Grid item xs={12} sm={6} md={4} key={p.id}>
+                                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={p.id}>
                                                     <Fade
                                                         in
                                                         timeout={500}
@@ -1051,24 +1053,24 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                         {scope === 'owned'
                                             ? null
                                             : memberProjects.map((p, idx) => (
-                                                  <Grid item xs={12} sm={6} md={4} key={p.id}>
-                                                      <Fade
-                                                          in
-                                                          timeout={500}
-                                                          style={{
-                                                              transitionDelay: `${(idx + ownedProjects.length) * 50}ms`,
-                                                          }}
-                                                      >
-                                                          <div>
-                                                              <ProjectCard
-                                                                  project={p}
-                                                                  ownership="member"
-                                                                  onDelete={askDelete}
-                                                              />
-                                                          </div>
-                                                      </Fade>
-                                                  </Grid>
-                                              ))}
+                                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={p.id}>
+                                                    <Fade
+                                                        in
+                                                        timeout={500}
+                                                        style={{
+                                                            transitionDelay: `${(idx + ownedProjects.length) * 50}ms`,
+                                                        }}
+                                                    >
+                                                        <div>
+                                                            <ProjectCard
+                                                                project={p}
+                                                                ownership="member"
+                                                                onDelete={askDelete}
+                                                            />
+                                                        </div>
+                                                    </Fade>
+                                                </Grid>
+                                            ))}
                                     </Grid>
                                 ) : (
                                     <Stack spacing={3}>
@@ -1134,53 +1136,53 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                             {scope === 'owned'
                                                 ? null
                                                 : memberProjects.map((p, idx) => (
-                                                      <Box
-                                                          key={p.id}
-                                                          sx={{
-                                                              position: 'relative',
-                                                              borderLeft: `4px solid ${theme.palette.secondary.main}`,
-                                                              borderRadius: 1, // 4px
-                                                              background: `linear-gradient(145deg, ${alpha(theme.palette.secondary.main, 0.02)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
-                                                              boxShadow: `0 2px 8px ${alpha(theme.palette.secondary.main, 0.1)}`,
-                                                              overflow: 'hidden',
-                                                              opacity: 0,
-                                                              transform: 'translateY(8px)',
-                                                              animation:
-                                                                  'fadeSlide 0.55s ease forwards',
-                                                              animationDelay: `${0.1 + idx * 0.02}s`,
-                                                              '&::before': {
-                                                                  content: '""',
-                                                                  position: 'absolute',
-                                                                  top: 0,
-                                                                  left: 0,
-                                                                  right: 0,
-                                                                  height: '2px',
-                                                                  background: `linear-gradient(90deg, ${theme.palette.secondary.main}, transparent)`,
-                                                              },
-                                                              '@keyframes fadeSlide': {
-                                                                  to: {
-                                                                      opacity: 1,
-                                                                      transform: 'translateY(0)',
-                                                                  },
-                                                              },
-                                                          }}
-                                                      >
-                                                          <ProjectAccordion
-                                                              project={p}
-                                                              ownership="member"
-                                                              rowSx={rowSx(
-                                                                  idx + ownedProjects.length
-                                                              )}
-                                                              onDelete={askDelete}
-                                                              endActions={
-                                                                  <ProjectActionButtons
-                                                                      project={p}
-                                                                      onDelete={askDelete}
-                                                                  />
-                                                              }
-                                                          />
-                                                      </Box>
-                                                  ))}
+                                                    <Box
+                                                        key={p.id}
+                                                        sx={{
+                                                            position: 'relative',
+                                                            borderLeft: `4px solid ${theme.palette.secondary.main}`,
+                                                            borderRadius: 1, // 4px
+                                                            background: `linear-gradient(145deg, ${alpha(theme.palette.secondary.main, 0.02)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
+                                                            boxShadow: `0 2px 8px ${alpha(theme.palette.secondary.main, 0.1)}`,
+                                                            overflow: 'hidden',
+                                                            opacity: 0,
+                                                            transform: 'translateY(8px)',
+                                                            animation:
+                                                                'fadeSlide 0.55s ease forwards',
+                                                            animationDelay: `${0.1 + idx * 0.02}s`,
+                                                            '&::before': {
+                                                                content: '""',
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                right: 0,
+                                                                height: '2px',
+                                                                background: `linear-gradient(90deg, ${theme.palette.secondary.main}, transparent)`,
+                                                            },
+                                                            '@keyframes fadeSlide': {
+                                                                to: {
+                                                                    opacity: 1,
+                                                                    transform: 'translateY(0)',
+                                                                },
+                                                            },
+                                                        }}
+                                                    >
+                                                        <ProjectAccordion
+                                                            project={p}
+                                                            ownership="member"
+                                                            rowSx={rowSx(
+                                                                idx + ownedProjects.length
+                                                            )}
+                                                            onDelete={askDelete}
+                                                            endActions={
+                                                                <ProjectActionButtons
+                                                                    project={p}
+                                                                    onDelete={askDelete}
+                                                                />
+                                                            }
+                                                        />
+                                                    </Box>
+                                                ))}
                                         </Box>
                                     </Stack>
                                 )}
@@ -1204,18 +1206,18 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                 }}
             >
                 <DialogTitle id="delete-project-title" sx={{ fontWeight: 700, fontSize: '1.5rem' }}>
-                    Delete Project
+                    {t('dashboard.deleteProject')}
                 </DialogTitle>
                 <DialogContent dividers>
                     <DialogContentText component="div" sx={{ lineHeight: 1.6, fontSize: '1.1rem' }}>
                         {projectToDelete ? (
                             <>
-                                Are you sure you want to permanently delete{' '}
-                                <strong>{projectToDelete.name}</strong>? This action cannot be
-                                undone and may impact related issues or references.
+                                {t('dashboard.deleteConfirmation', {
+                                    name: projectToDelete.name
+                                })}
                             </>
                         ) : (
-                            'Are you sure?'
+                            t('dashboard.areYouSure')
                         )}
                     </DialogContentText>
                 </DialogContent>
@@ -1228,7 +1230,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                             borderRadius: designTokens.radii.md,
                         }}
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         variant="contained"
@@ -1240,7 +1242,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                             borderRadius: designTokens.radii.md,
                         }}
                     >
-                        Delete
+                        {t('common.delete')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -1250,6 +1252,7 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
 
 // Enhanced Project Action Buttons
 const ProjectActionButtons = memo(({ project, onDelete }) => {
+    const { t } = useTranslation();
     const theme = useTheme();
     const [leaving, setLeaving] = useState(false);
 
@@ -1292,10 +1295,10 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
     return (
         <Stack direction="row" spacing={1} alignItems="center">
             {project.is_owner ? (
-                <Tooltip title="Owner" arrow>
+                <Tooltip title={t('dashboard.owner')} arrow>
                     <Chip
                         size="small"
-                        label="Owner"
+                        label={t('dashboard.owner')}
                         icon={<AdminPanelSettingsIcon sx={{ fontSize: 14 }} />}
                         sx={{
                             bgcolor: alpha(theme.palette.success.main, 0.15),
@@ -1309,12 +1312,12 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
                 </Tooltip>
             ) : (
                 <Tooltip
-                    title={project.owner?.name ? `Owner: ${project.owner.name}` : 'Collaborator'}
+                    title={project.owner?.name ? `${t('dashboard.owner')}: ${project.owner.name}` : t('dashboard.collaborator')}
                     arrow
                 >
                     <Chip
                         size="small"
-                        label="Collaborator"
+                        label={t('dashboard.collaborator')}
                         icon={<GroupIcon sx={{ fontSize: 14 }} />}
                         sx={{
                             bgcolor: alpha(theme.palette.warning.main, 0.15),
@@ -1329,7 +1332,7 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
             )}
             {project.is_owner ? (
                 <>
-                    <Tooltip title="Edit" arrow>
+                    <Tooltip title={t('buttons.edit')} arrow>
                         <IconButton
                             size="small"
                             onClick={handleEdit}
@@ -1346,7 +1349,7 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
                             <EditRoundedIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Delete" arrow>
+                    <Tooltip title={t('buttons.delete')} arrow>
                         <IconButton
                             size="small"
                             onClick={handleDelete}
@@ -1366,7 +1369,7 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
                     </Tooltip>
                 </>
             ) : (
-                <Tooltip title="Leave project" arrow>
+                <Tooltip title={t('dashboard.leaveProject', 'Leave project')} arrow>
                     <Button
                         size="small"
                         variant="outlined"
@@ -1495,6 +1498,7 @@ function FilteredEmptyState({ reset }) {
 
 // Enhanced Project Card for grid view
 const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) {
+    const { t } = useTranslation();
     const theme = useTheme();
     const isOwner = project.is_owner;
     const ownerName = !isOwner && project.owner ? project.owner.name : null;
@@ -1726,7 +1730,7 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                             {done} of {total} tasks
                         </Typography>
                         {isOwner ? (
-                            <Tooltip title="Delete project" arrow>
+                            <Tooltip title={t('dashboard.deleteProject')} arrow>
                                 <IconButton
                                     size="small"
                                     onClick={handleDelete}
@@ -1742,7 +1746,7 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
                                 </IconButton>
                             </Tooltip>
                         ) : (
-                            <Tooltip title="Leave project" arrow>
+                            <Tooltip title={t('dashboard.leaveProject')} arrow>
                                 <Button
                                     size="small"
                                     variant="text"

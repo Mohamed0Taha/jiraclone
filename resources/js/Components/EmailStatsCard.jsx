@@ -153,7 +153,7 @@ const EmailStatsCard = () => {
 
                 {/* Stats Grid */}
                 <Grid container spacing={2} mb={3}>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                         <Box textAlign="center">
                             <Typography variant="h4" color="primary" fontWeight={700}>
                                 {stats.total_emails}
@@ -163,7 +163,7 @@ const EmailStatsCard = () => {
                             </Typography>
                         </Box>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                         <Box textAlign="center">
                             <Typography variant="h4" color="success.main" fontWeight={700}>
                                 {stats.success_rate}%
@@ -173,7 +173,7 @@ const EmailStatsCard = () => {
                             </Typography>
                         </Box>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                         <Box textAlign="center">
                             <Typography variant="h4" color="success.main" fontWeight={700}>
                                 {stats.successful_emails}
@@ -183,7 +183,7 @@ const EmailStatsCard = () => {
                             </Typography>
                         </Box>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                         <Box textAlign="center">
                             <Typography variant="h4" color="error.main" fontWeight={700}>
                                 {stats.failed_emails}

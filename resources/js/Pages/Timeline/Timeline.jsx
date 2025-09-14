@@ -1,6 +1,7 @@
 // resources/js/Pages/Timeline/Timeline.jsx
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Head, router } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import {
     alpha,
     Box,
@@ -78,6 +79,7 @@ const statusColors = {
 };
 
 export default function Timeline({ project = {}, tasks = {}, users = [] }) {
+    const { t } = useTranslation();
     const theme = useTheme();
 
     /* ----------------------------- Flatten server groups ----------------------------- */
@@ -229,17 +231,17 @@ export default function Timeline({ project = {}, tasks = {}, users = [] }) {
     const today = new Date();
     const isTodayInRange =
         today >=
-            new Date(
-                dateRange.start.getFullYear(),
-                dateRange.start.getMonth(),
-                dateRange.start.getDate()
-            ) &&
+        new Date(
+            dateRange.start.getFullYear(),
+            dateRange.start.getMonth(),
+            dateRange.start.getDate()
+        ) &&
         today <=
-            new Date(
-                dateRange.end.getFullYear(),
-                dateRange.end.getMonth(),
-                dateRange.end.getDate()
-            );
+        new Date(
+            dateRange.end.getFullYear(),
+            dateRange.end.getMonth(),
+            dateRange.end.getDate()
+        );
 
     const scrollToToday = () => {
         if (!scrollRef.current) return;
@@ -285,7 +287,7 @@ export default function Timeline({ project = {}, tasks = {}, users = [] }) {
                         zIndex: 20,
                     }}
                 >
-                    <Tooltip title="Back to Board">
+                    <Tooltip title={t('timeline.backToBoard', 'Back to Board')}>
                         <IconButton
                             onClick={() => router.visit(route('tasks.index', project.id))}
                             sx={{
@@ -312,7 +314,7 @@ export default function Timeline({ project = {}, tasks = {}, users = [] }) {
                             color: 'transparent',
                         }}
                     >
-                        {project?.name || 'Project Timeline'}
+                        {project?.name || t('timeline.defaultTitle')}
                     </Typography>
 
                     <Chip
@@ -368,7 +370,7 @@ export default function Timeline({ project = {}, tasks = {}, users = [] }) {
                     <Box sx={{ flexGrow: 1 }} />
 
                     <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <Tooltip title="Zoom out">
+                        <Tooltip title={t('timeline.zoomOut', 'Zoom out')}>
                             <span>
                                 <IconButton
                                     onClick={zoomOut}
@@ -386,7 +388,7 @@ export default function Timeline({ project = {}, tasks = {}, users = [] }) {
                         >
                             {pixelsPerDay}px/day
                         </Typography>
-                        <Tooltip title="Zoom in">
+                        <Tooltip title={t('timeline.zoomIn', 'Zoom in')}>
                             <span>
                                 <IconButton
                                     onClick={zoomIn}
@@ -399,7 +401,7 @@ export default function Timeline({ project = {}, tasks = {}, users = [] }) {
                             </span>
                         </Tooltip>
                         {isTodayInRange && (
-                            <Tooltip title="Scroll to today">
+                            <Tooltip title={t('timeline.scrollToToday', 'Scroll to today')}>
                                 <IconButton
                                     onClick={scrollToToday}
                                     size="small"
@@ -426,8 +428,8 @@ export default function Timeline({ project = {}, tasks = {}, users = [] }) {
                 >
                     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                         {[
-                            ['To do', statusColors.todo],
-                            ['In progress', statusColors.inprogress],
+                            [t('timeline.status.todo'), statusColors.todo],
+                            [t('timeline.status.inProgress'), statusColors.inprogress],
                             ['Review', statusColors.review],
                             ['Done', statusColors.done],
                         ].map(([label, color]) => (
@@ -540,9 +542,9 @@ export default function Timeline({ project = {}, tasks = {}, users = [] }) {
                                                 background:
                                                     index % 2 === 0
                                                         ? alpha(
-                                                              theme.palette.background.paper,
-                                                              0.45
-                                                          )
+                                                            theme.palette.background.paper,
+                                                            0.45
+                                                        )
                                                         : 'transparent',
                                             }}
                                         >
@@ -635,9 +637,9 @@ export default function Timeline({ project = {}, tasks = {}, users = [] }) {
                                                     background:
                                                         i % 2 === 0
                                                             ? alpha(
-                                                                  theme.palette.primary.main,
-                                                                  0.02
-                                                              )
+                                                                theme.palette.primary.main,
+                                                                0.02
+                                                            )
                                                             : 'transparent',
                                                 }}
                                             >
@@ -681,10 +683,9 @@ export default function Timeline({ project = {}, tasks = {}, users = [] }) {
                                                 left,
                                                 width: 0,
                                                 borderLeft: (t) =>
-                                                    `${isStart ? 2 : 1}px dashed ${
-                                                        isStart
-                                                            ? alpha(t.palette.primary.main, 0.5)
-                                                            : alpha(t.palette.divider, 0.5)
+                                                    `${isStart ? 2 : 1}px dashed ${isStart
+                                                        ? alpha(t.palette.primary.main, 0.5)
+                                                        : alpha(t.palette.divider, 0.5)
                                                     }`,
                                                 pointerEvents: 'none',
                                             }}
