@@ -383,18 +383,28 @@ async function saveViewData(dataKey, data) {
     console.warn('Failed to save to localStorage:', e);
   }
   
-  // Try to save to server
+  // Try to save to server (shared project data)
   try {
     const url = '/projects/' + __projectId + '/custom-views/save-data';
     const res = await csrfFetch(url, {
       method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json' 
+      },
       body: JSON.stringify({ view_name: __viewName, data_key: String(dataKey || 'default'), data })
     });
     const result = await res.json();
-    return result;
+    
+    if (result.success) {
+      return { success: true, message: 'Data saved to shared project storage', source: 'server' };
+    } else {
+      console.warn('saveViewData server returned error:', result.message);
+      return { success: true, message: 'Data saved locally only', fallback: true };
+    }
   } catch (e) { 
     console.error('saveViewData server error, using localStorage fallback:', e); 
-    return { success: true, fallback: true };
+    return { success: true, message: 'Data saved locally only', fallback: true };
   }
 }
 
@@ -403,7 +413,23 @@ async function loadViewData(dataKey) {
   
   const localKey = 'microapp-' + __projectId + '-' + __viewName + '-' + String(dataKey || 'default');
   
-  // Use localStorage for data persistence (simplified for reliability)
+  // First try to load from server (shared project data)
+  try {
+    const url = '/projects/' + __projectId + '/custom-views/load-data?view_name=' + encodeURIComponent(__viewName) + '&data_key=' + encodeURIComponent(String(dataKey || 'default'));
+    const res = await csrfFetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' }
+    });
+    const result = await res.json();
+    
+    if (result.success && result.data?.data) {
+      return { data: result.data.data, source: 'server' };
+    }
+  } catch (e) {
+    console.warn('loadViewData server error, falling back to localStorage:', e);
+  }
+  
+  // Fallback to localStorage if server fails
   try {
     const localData = localStorage.getItem(localKey);
     if (localData) {
