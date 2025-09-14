@@ -291,18 +291,15 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                     <ExpandMoreRoundedIcon
                         sx={{
                             color: theme.palette.text.secondary,
-                            transition: 'all 0.3s ease',
-                            '&:hover': {
-                                color: theme.palette.primary.main,
-                                transform: 'scale(1.1)',
-                            },
+                            transition: 'all 0.2s ease',
+                            '&:hover': { color: theme.palette.primary.main, transform: 'scale(1.06)' },
                         }}
                     />
                 }
                 sx={{
-                    minHeight: 56, // Reduced from 72 to make slimmer
+                    minHeight: 56,
                     px: 3,
-                    py: 1.5, // Reduced padding
+                    py: 1.25,
                     background: `linear-gradient(135deg, 
                         ${alpha(theme.palette.background.default, 0.4)} 0%, 
                         ${alpha(theme.palette.background.default, 0.1)} 100%
@@ -310,13 +307,11 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                     '& .MuiAccordionSummary-content': {
                         alignItems: 'center',
                         my: 0,
-                        gap: 2,
+                        width: '100%',
                     },
                     '& .MuiAccordionSummary-expandIconWrapper': {
                         color: theme.palette.text.secondary,
-                        '&.Mui-expanded': {
-                            color: theme.palette.primary.main,
-                        },
+                        '&.Mui-expanded': { color: theme.palette.primary.main },
                     },
                     '&:hover': {
                         background: `linear-gradient(135deg, 
@@ -326,182 +321,203 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                     },
                 }}
             >
-                {/* Project name interactive element styled like a button (avoid nested button) */}
+                {/* Enterprise-grade responsive row layout */}
                 <Box
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        gotoBoard(e);
-                    }}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            gotoBoard(e);
-                        }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={t('projects.goToBoard', { name: project.name })}
                     sx={{
-                        flex: '1 1 auto',
-                        minWidth: 0, // Allow shrinking
-                        display: 'flex',
+                        display: 'grid',
+                        gridTemplateColumns: {
+                            xs: 'minmax(0,1fr) auto',
+                            sm: 'minmax(0,1fr) auto auto',
+                        },
                         alignItems: 'center',
-                        gap: 1.5,
-                        overflow: 'hidden',
-                        px: 0, // Remove padding to eliminate space before project name
-                        py: 0.3,
-                        borderRadius: 1,
-                        cursor: 'pointer',
-                        '&:hover': {
-                            backgroundColor: alpha(theme.palette.primary.main, 0.08),
-                            color: 'text.primary',
-                        },
-                        '&:focus-visible': {
-                            outline: `2px solid ${alpha(theme.palette.primary.main, 0.35)}`,
-                            outlineOffset: 2,
-                        },
+                        columnGap: 16,
+                        width: '100%',
+                        minWidth: 0,
                     }}
                 >
-                    <Typography
-                        component="span"
-                        sx={{ 
-                            fontSize: 'inherit', 
-                            fontWeight: 'inherit',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
+                    {/* Left: Project title + role badge (title truncates, badge fixed) */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 10 / 8, minWidth: 0 }}>
+                        <Typography
+                            component="span"
+                            title={project.name}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                gotoBoard(e);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    gotoBoard(e);
+                                }
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={t('projects.goToBoard', { name: project.name })}
+                            sx={{
+                                cursor: 'pointer',
+                                fontSize: 'inherit',
+                                fontWeight: 'inherit',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                minWidth: 0,
+                                flex: 1,
+                                px: 0,
+                                py: 0.25,
+                                borderRadius: 1,
+                                '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.08) },
+                                '&:focus-visible': {
+                                    outline: `2px solid ${alpha(theme.palette.primary.main, 0.35)}`,
+                                    outlineOffset: 2,
+                                },
+                            }}
+                        >
+                            {project.name}
+                        </Typography>
+                        <Chip
+                            size="small"
+                            label={isOwner ? 'OWNER' : 'COLLABORATOR'}
+                            sx={{
+                                height: 20,
+                                fontWeight: 700,
+                                fontSize: '0.65rem',
+                                letterSpacing: '0.05em',
+                                background: alpha(ownershipColor, 0.12),
+                                color: ownershipColor,
+                                border: `1px solid ${alpha(ownershipColor, 0.25)}`,
+                                flexShrink: 0,
+                                '& .MuiChip-label': { px: 1 },
+                            }}
+                        />
+                    </Box>
+
+                    {/* Middle: Status pills (no wrap, subtle fade when clipped) */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8 / 8,
                             minWidth: 0,
-                            flex: '1 1 auto',
-                            maxWidth: '60%', // Limit project name width to ensure other components are visible
+                            overflow: 'hidden',
+                            pr: 0.5,
+                            WebkitMaskImage: `linear-gradient(90deg, black 85%, transparent)`,
+                            maskImage: `linear-gradient(90deg, black 85%, transparent)`,
                         }}
                     >
-                        {project.name}
-                    </Typography>
-                    <Chip
-                        size="small"
-                        label={isOwner ? 'OWNER' : 'COLLABORATOR'}
+                        <Stack direction="row" spacing={1.1} sx={{ flexWrap: 'nowrap' }}>
+                            {ORDER.map((s) => (
+                                <StatusPill key={s} status={s} />
+                            ))}
+                        </Stack>
+                    </Box>
+
+                    {/* Right: Actions (normalize sizes; support custom endActions like Leave) */}
+                    <Box
+                        onClick={(e) => e.stopPropagation()}
                         sx={{
-                            height: 20,
-                            fontWeight: 700,
-                            fontSize: '0.65rem',
-                            letterSpacing: '0.05em',
-                            background: alpha(ownershipColor, 0.12),
-                            color: ownershipColor,
-                            border: `1px solid ${alpha(ownershipColor, 0.25)}`,
-                            flexShrink: 0, // Prevent chip from shrinking
-                            '& .MuiChip-label': {
-                                px: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                            gap: 0.5,
+                            minWidth: 0,
+                            '& .MuiButton-root': {
+                                height: 32,
+                                minHeight: 32,
+                                paddingInline: 1,
+                                borderRadius: 1,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                whiteSpace: 'nowrap',
+                            },
+                            '& .MuiButton-root.MuiButton-containedError': {
+                                // ensure destructive button doesn't dominate layout
+                                boxShadow: 'none',
                             },
                         }}
-                    />
+                    >
+                        {endActions ? (
+                            endActions
+                        ) : (
+                            <>
+                                <Tooltip title={t('dashboard.editProject')} arrow>
+                                    <Box
+                                        component="div"
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={gotoEdit}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                gotoEdit(e);
+                                            }
+                                        }}
+                                        aria-label={t('projects.editProject', { name: project.name })}
+                                        sx={{
+                                            width: 32,
+                                            height: 32,
+                                            borderRadius: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer',
+                                            color: alpha('#243A63', 0.7),
+                                            '&:hover': {
+                                                color: alpha('#243A63', 0.95),
+                                                backgroundColor: alpha('#243A63', 0.08),
+                                            },
+                                            '&:focus-visible': {
+                                                outline: `2px solid ${alpha('#243A63', 0.35)}`,
+                                                outlineOffset: 1,
+                                            },
+                                        }}
+                                    >
+                                        <EditRoundedIcon fontSize="small" />
+                                    </Box>
+                                </Tooltip>
+                                <Tooltip title={t('dashboard.deleteProject')} arrow>
+                                    <Box
+                                        component="div"
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDelete?.(e, project);
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onDelete?.(e, project);
+                                            }
+                                        }}
+                                        aria-label={t('projects.deleteProject', { name: project.name })}
+                                        sx={{
+                                            width: 32,
+                                            height: 32,
+                                            borderRadius: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer',
+                                            color: alpha('#243A63', 0.7),
+                                            '&:hover': {
+                                                color: alpha('#243A63', 0.95),
+                                                backgroundColor: alpha('#243A63', 0.08),
+                                            },
+                                            '&:focus-visible': {
+                                                outline: `2px solid ${alpha('#243A63', 0.35)}`,
+                                                outlineOffset: 1,
+                                            },
+                                        }}
+                                    >
+                                        <DeleteRoundedIcon fontSize="small" />
+                                    </Box>
+                                </Tooltip>
+                            </>
+                        )}
+                    </Box>
                 </Box>
-
-                <Stack
-                    direction="row"
-                    spacing={1.1}
-                    sx={{
-                        flexShrink: 0, // Prevent shrinking
-                        flexWrap: 'nowrap',
-                        overflow: 'hidden',
-                        alignItems: 'center',
-                        ml: 1, // Add left margin to create space from project name
-                    }}
-                >
-                    {ORDER.map((s) => (
-                        <StatusPill key={s} status={s} />
-                    ))}
-                </Stack>
-
-                {endActions ? (
-                    <Box
-                        onClick={(e) => e.stopPropagation()}
-                        sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-                    >
-                        {endActions}
-                    </Box>
-                ) : (
-                    <Box
-                        onClick={(e) => e.stopPropagation()}
-                        sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-                    >
-                        <Tooltip title={t('dashboard.editProject')} arrow>
-                            <Box
-                                component="div"
-                                role="button"
-                                tabIndex={0}
-                                onClick={gotoEdit}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        gotoEdit(e);
-                                    }
-                                }}
-                                aria-label={t('projects.editProject', { name: project.name })}
-                                sx={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    color: alpha('#243A63', 0.7),
-                                    '&:hover': {
-                                        color: alpha('#243A63', 0.95),
-                                        backgroundColor: alpha('#243A63', 0.08),
-                                    },
-                                    '&:focus-visible': {
-                                        outline: `2px solid ${alpha('#243A63', 0.35)}`,
-                                        outlineOffset: 1,
-                                    },
-                                }}
-                            >
-                                <EditRoundedIcon fontSize="small" />
-                            </Box>
-                        </Tooltip>
-
-                        <Tooltip title={t('dashboard.deleteProject')} arrow>
-                            <Box
-                                component="div"
-                                role="button"
-                                tabIndex={0}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDelete?.(e, project);
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        onDelete?.(e, project);
-                                    }
-                                }}
-                                aria-label={t('projects.deleteProject', { name: project.name })}
-                                sx={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    color: alpha('#243A63', 0.7),
-                                    '&:hover': {
-                                        color: alpha('#243A63', 0.95),
-                                        backgroundColor: alpha('#243A63', 0.08),
-                                    },
-                                    '&:focus-visible': {
-                                        outline: `2px solid ${alpha('#243A63', 0.35)}`,
-                                        outlineOffset: 1,
-                                    },
-                                }}
-                            >
-                                <DeleteRoundedIcon fontSize="small" />
-                            </Box>
-                        </Tooltip>
-                    </Box>
-                )}
             </AccordionSummary>
 
             <AccordionDetails

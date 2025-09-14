@@ -174,7 +174,7 @@ export default function ProCluster({
                         spacing={{ xs: 0.6, sm: 1.0, md: 1.4 }} // More aggressive dynamic spacing
                         alignItems="center"
                         justifyContent="space-between"
-                        sx={{ 
+                        sx={{
                             px: { xs: 0.2, sm: 0.4 }, // Dynamic padding
                             flexWrap: 'nowrap',
                             minWidth: 0,
