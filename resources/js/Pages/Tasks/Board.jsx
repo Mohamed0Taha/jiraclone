@@ -366,6 +366,7 @@ export default function Board({
         fetch(route('custom-views.list', project.id), {
             method: 'GET',
             headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
             signal: controller.signal,
         })
             .then((res) => res.ok ? res.json() : Promise.reject(res))
@@ -936,6 +937,7 @@ export default function Board({
             // Refresh list after deletion
             const list = await fetch(route('custom-views.list', project.id), {
                 headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
             }).then((r) => (r.ok ? r.json() : { custom_views: [] }));
             const items = Array.isArray(list?.custom_views) ? list.custom_views : [];
             const normalized = items.map((v) => ({

@@ -2246,9 +2246,8 @@ window.addEventListener('beforeunload', () => {
      */
     public function getAllCustomViews(Project $project, int $userId): array
     {
-        return CustomView::where('project_id', $project->id)
-            ->where('is_active', true)
-            ->orderBy('last_accessed_at', 'desc')
+        // Fetch using the project's relationship for clarity and correctness
+        return $project->customViews()
             ->get()
             ->map(function ($view) {
                 return [

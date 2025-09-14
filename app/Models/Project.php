@@ -69,4 +69,15 @@ class Project extends Model
     {
         return $this->hasMany(ProjectReport::class);
     }
+
+    /**
+     * Project's shared custom views (active only).
+     * Usage: $project->customViews()->get();
+     */
+    public function customViews()
+    {
+        return $this->hasMany(\App\Models\CustomView::class)
+            ->where('is_active', true)
+            ->orderBy('last_accessed_at', 'desc');
+    }
 }

@@ -545,7 +545,7 @@ Route::middleware('auth')->group(function () {
         /* CUSTOM VIEWS */
         Route::get('/custom-views/{name}', [CustomViewPageController::class, 'show'])
         // Prevent collisions with API-like endpoints so they don't get caught by {name}
-        ->where('name', '^(?!get$|delete$|chat$)[A-Za-z0-9_-]+')
+        ->where('name', '^(?!get$|delete$|chat$|list$)[A-Za-z0-9_-]+')
         ->name('custom-views.show');
 
         Route::get('/custom-views/get', [ProjectViewsController::class, 'getCustomView'])->name('custom-views.get');

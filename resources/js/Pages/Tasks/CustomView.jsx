@@ -123,6 +123,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             try {
                 const res = await fetch(`/projects/${project.id}/custom-views/list`, {
                     headers: { Accept: 'application/json' },
+                    credentials: 'same-origin',
                 });
                 if (!res.ok) throw new Error('Failed to load views');
                 const data = await res.json();
