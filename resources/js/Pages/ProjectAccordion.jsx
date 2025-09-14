@@ -298,7 +298,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                 }
                 sx={{
                     minHeight: 56,
-                    px: 3,
+                    px: { xs: 2, sm: 2.5 },
                     py: 1.25,
                     background: `linear-gradient(135deg, 
                         ${alpha(theme.palette.background.default, 0.4)} 0%, 
@@ -330,13 +330,13 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                             sm: 'minmax(0,1fr) auto auto',
                         },
                         alignItems: 'center',
-                        columnGap: 16,
+                        columnGap: { xs: 1, sm: 1.5 },
                         width: '100%',
                         minWidth: 0,
                     }}
                 >
                     {/* Left: Project title + role badge (title truncates, badge fixed) */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 10 / 8, minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
                         <Typography
                             component="span"
                             title={project.name}
@@ -387,7 +387,8 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                                 color: ownershipColor,
                                 border: `1px solid ${alpha(ownershipColor, 0.25)}`,
                                 flexShrink: 0,
-                                '& .MuiChip-label': { px: 1 },
+                                maxWidth: { xs: 90, sm: 120 },
+                                '& .MuiChip-label': { px: 0.75 },
                             }}
                         />
                     </Box>
@@ -399,10 +400,12 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                             alignItems: 'center',
                             gap: 8 / 8,
                             minWidth: 0,
-                            overflow: 'hidden',
+                            overflowX: 'auto',
+                            overflowY: 'hidden',
                             pr: 0.5,
-                            WebkitMaskImage: `linear-gradient(90deg, black 85%, transparent)`,
-                            maskImage: `linear-gradient(90deg, black 85%, transparent)`,
+                            scrollbarWidth: 'none', // Firefox
+                            msOverflowStyle: 'none', // IE/Edge
+                            '&::-webkit-scrollbar': { display: 'none' }, // Chrome/Safari
                         }}
                     >
                         <Stack direction="row" spacing={1.1} sx={{ flexWrap: 'nowrap' }}>
