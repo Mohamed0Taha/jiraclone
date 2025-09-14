@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[heroku-build-node] Installing node deps..." >&2
+echo "[heroku-build-node] Installing node deps... (local/helper script)" >&2
 npm ci --include=dev
 
 echo "[heroku-build-node] Building assets with Vite..." >&2
