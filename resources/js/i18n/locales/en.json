@@ -535,6 +535,7 @@
   },
   "board": {
     "details": "Details",
+    "timeline": "Timeline",
     "taskBoard": "Task Board",
     "methodology": "Methodology",
     "methodologyName": {

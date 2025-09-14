@@ -345,12 +345,11 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                     sx={{
                         flex: '1 1 auto',
                         minWidth: 0, // Allow shrinking
-                        mr: 1,
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1.5,
                         overflow: 'hidden',
-                        px: 0.25,
+                        px: 0, // Remove padding to eliminate space before project name
                         py: 0.3,
                         borderRadius: 1,
                         cursor: 'pointer',
@@ -374,6 +373,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                             whiteSpace: 'nowrap',
                             minWidth: 0,
                             flex: '1 1 auto',
+                            maxWidth: '60%', // Limit project name width to ensure other components are visible
                         }}
                     >
                         {project.name}
@@ -405,7 +405,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                         flexWrap: 'nowrap',
                         overflow: 'hidden',
                         alignItems: 'center',
-                        mr: 1.5,
+                        ml: 1, // Add left margin to create space from project name
                     }}
                 >
                     {ORDER.map((s) => (

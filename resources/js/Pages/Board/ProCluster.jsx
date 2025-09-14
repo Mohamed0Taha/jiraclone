@@ -101,17 +101,15 @@ export default function ProCluster({
                         fontWeight: 700,
                         letterSpacing: 0.3,
                         color: alpha('#0B2545', 0.85),
-                        px: 0.75,
+                        px: { xs: 0.5, sm: 0.75 }, // Dynamic padding
                         py: 0.35,
                         borderRadius: 999,
                         background: alpha('#0EA5E9', 0.08),
                         border: `1px solid ${alpha('#0EA5E9', 0.25)}`,
                         backdropFilter: 'blur(4px)',
                         whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        maxWidth: '100%',
                         textAlign: 'center',
+                        fontSize: { xs: '0.65rem', sm: '0.75rem' }, // Dynamic font size
                     }}
                 >
                     {label}
@@ -121,7 +119,7 @@ export default function ProCluster({
     );
 
     return (
-        <Box sx={{ width: '100%', maxWidth: 360, justifySelf: 'end' }}>
+        <Box sx={{ width: '100%', maxWidth: { xs: 320, sm: 360, md: 400 }, justifySelf: 'end' }}>
             <Box
                 sx={{
                     p: '2px',
@@ -173,13 +171,13 @@ export default function ProCluster({
 
                     <Stack
                         direction="row"
-                        spacing={{ xs: 0.8, sm: 1.2, md: 1.4 }} // Dynamic spacing
+                        spacing={{ xs: 0.6, sm: 1.0, md: 1.4 }} // More aggressive dynamic spacing
                         alignItems="center"
                         justifyContent="space-between"
                         sx={{ 
-                            px: 0.4,
-                            flexWrap: 'nowrap', // Prevent wrapping
-                            minWidth: 0, // Allow shrinking
+                            px: { xs: 0.2, sm: 0.4 }, // Dynamic padding
+                            flexWrap: 'nowrap',
+                            minWidth: 0,
                         }}
                     >
                         <ActionItem
