@@ -346,8 +346,8 @@
     "addTask": "Lägg till uppgift",
     "exportJira": "xportera till JIRA",
     "customViews": "Anpassade vyer",
-    "list": "List",
-    "grid": "Grid"
+    "list": "Lista",
+    "grid": "Rutnät"
   },
   "buttons": {
     "create": "Skapa",

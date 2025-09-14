@@ -346,8 +346,8 @@
     "addTask": "Agregar tarea",
     "exportJira": "xportar a JIRA",
     "customViews": "Vistas personalizadas",
-    "list": "List",
-    "grid": "Grid"
+    "list": "Lista",
+    "grid": "Cuadrícula"
   },
   "buttons": {
     "create": "Crear",
