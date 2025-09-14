@@ -326,17 +326,18 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                     sx={{
                         display: 'grid',
                         gridTemplateColumns: {
-                            xs: 'auto minmax(0,1fr) auto',
-                            sm: 'auto minmax(0,1fr) auto',
+                            xs: 'minmax(0, fit-content(60%)) minmax(0,1fr) auto',
+                            sm: 'minmax(0, fit-content(50%)) minmax(0,1fr) auto',
+                            md: 'minmax(0, fit-content(45%)) minmax(0,1fr) auto',
                         },
                         alignItems: 'center',
-                        columnGap: { xs: 1, sm: 1.5 },
+                        columnGap: { xs: 0.75, sm: 1, md: 1.25 },
                         width: '100%',
                         minWidth: 0,
                     }}
                 >
                     {/* Left: Project title + role badge (title truncates, badge fixed) */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, maxWidth: { xs: '58vw', sm: '50vw', md: '45vw' } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, width: '100%' }}>
                         <Typography
                             component="span"
                             title={project.name}
@@ -362,7 +363,7 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
                                 minWidth: 0,
-                                flex: '0 1 auto',
+                                flex: '1 1 auto',
                                 px: 0,
                                 py: 0.25,
                                 borderRadius: 1,
