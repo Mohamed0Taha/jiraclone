@@ -357,23 +357,34 @@ export default function Board({
     const [customViewsDrawerOpen, setCustomViewsDrawerOpen] = useState(false);
     const [createViewDialogOpen, setCreateViewDialogOpen] = useState(false);
     const [newViewName, setNewViewName] = useState('');
-    const [customViews, setCustomViews] = useState(() => {
-        // Load custom views from localStorage
-        try {
-            const stored = localStorage.getItem(`customViews:${project?.id}`);
-            if (stored) {
-                const views = JSON.parse(stored);
-                // Ensure all views have a slug field
-                return views.map(view => ({
-                    ...view,
-                    slug: view.slug || createSlug(view.name)
+    const [customViews, setCustomViews] = useState([]);
+
+    // Load custom views from server (shared across team)
+    useEffect(() => {
+        if (!project?.id) return;
+        const controller = new AbortController();
+        fetch(route('custom-views.list', project.id), {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+        })
+            .then((res) => res.ok ? res.json() : Promise.reject(res))
+            .then((data) => {
+                const items = Array.isArray(data?.custom_views) ? data.custom_views : [];
+                const normalized = items.map((v) => ({
+                    id: v.id,
+                    name: v.name,
+                    createdAt: v.created_at,
+                    slug: createSlug(String(v.name || '')),
                 }));
-            }
-            return [];
-        } catch {
-            return [];
-        }
-    });
+                setCustomViews(normalized);
+            })
+            .catch((err) => {
+                console.warn('Failed to load custom views list:', err);
+            });
+        return () => controller.abort();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [project?.id]);
 
     const buildColumnsFromServer = (incomingTasksObj) => {
         const cols = {};
@@ -895,43 +906,47 @@ export default function Board({
     // Custom Views handlers
     const handleCreateView = () => {
         if (!newViewName.trim()) return;
-
-        const newView = {
-            id: Date.now().toString(),
-            name: newViewName.trim(),
-            slug: createSlug(newViewName.trim()),
-            createdAt: new Date().toISOString(),
-        };
-
-        const updatedViews = [...customViews, newView];
-        setCustomViews(updatedViews);
-
-        // Save to localStorage
-        try {
-            localStorage.setItem(`customViews:${project?.id}`, JSON.stringify(updatedViews));
-        } catch (error) {
-            console.error('Failed to save custom views:', error);
-        }
-
+        const slug = createSlug(newViewName.trim());
         setNewViewName('');
         setCreateViewDialogOpen(false);
+        // Navigate to the new view; persistence happens when saved from the editor
+        router.visit(`/projects/${project.id}/custom-views/${slug}`);
     };
 
     const handleViewClick = (viewName) => {
-        // Find the view object to get its slug, or create slug from name as fallback
-        const view = customViews.find(v => v.name === viewName);
+        const view = customViews.find((v) => v.name === viewName);
         const slug = view?.slug || createSlug(viewName);
         router.visit(`/projects/${project.id}/custom-views/${slug}`);
     };
 
-    const handleDeleteView = (viewId) => {
-        const updatedViews = customViews.filter((view) => view.id !== viewId);
-        setCustomViews(updatedViews);
-
+    const handleDeleteView = async (viewId) => {
         try {
-            localStorage.setItem(`customViews:${project?.id}`, JSON.stringify(updatedViews));
+            const target = customViews.find((v) => v.id === viewId);
+            if (!target) return;
+            const res = await fetch(`/projects/${project.id}/custom-views/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({ view_name: target.name }),
+            });
+            if (!res.ok) throw new Error('Delete failed');
+            // Refresh list after deletion
+            const list = await fetch(route('custom-views.list', project.id), {
+                headers: { Accept: 'application/json' },
+            }).then((r) => (r.ok ? r.json() : { custom_views: [] }));
+            const items = Array.isArray(list?.custom_views) ? list.custom_views : [];
+            const normalized = items.map((v) => ({
+                id: v.id,
+                name: v.name,
+                createdAt: v.created_at,
+                slug: createSlug(String(v.name || '')),
+            }));
+            setCustomViews(normalized);
         } catch (error) {
-            console.error('Failed to save custom views:', error);
+            console.error('Failed to delete custom view:', error);
         }
     };
 

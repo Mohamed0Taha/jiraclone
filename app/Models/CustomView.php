@@ -49,29 +49,31 @@ class CustomView extends Model
     }
 
     /**
-     * Get the active custom view for a project and user
+     * Get the active custom view for a project (shared across users)
+     * Note: Previously filtered by user_id; now shared at project+name level.
      */
     public static function getActiveForProject(int $projectId, int $userId, string $viewName = 'default'): ?self
     {
         return static::where('project_id', $projectId)
-            ->where('user_id', $userId)
             ->where('name', $viewName)
             ->where('is_active', true)
+            ->orderByDesc('updated_at')
             ->first();
     }
 
     /**
      * Create or update a custom view with React component code
+     * Shared across users: uniqueness is project_id + name (user_id stored for audit only)
      */
     public static function createOrUpdate(int $projectId, int $userId, string $name, string $componentCode, array $metadata = []): self
     {
         return static::updateOrCreate(
             [
                 'project_id' => $projectId,
-                'user_id' => $userId,
                 'name' => $name,
             ],
             [
+                'user_id' => $userId,
                 'html_content' => $componentCode, // Now stores React component code
                 'metadata' => array_merge($metadata, ['type' => 'react_component']),
                 'is_active' => true,

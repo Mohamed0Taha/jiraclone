@@ -101,31 +101,8 @@ const shimmer = keyframes`
 export default function CustomView({ auth, project, tasks, allTasks, users, methodology, viewName }) {
     const { t } = useTranslation();
 
-    // Function to convert slug back to original name
-    const getOriginalNameFromSlug = (slug) => {
-        try {
-            // Get custom views from localStorage
-            const stored = localStorage.getItem(`customViews:${project?.id}`);
-            if (stored) {
-                const customViews = JSON.parse(stored);
-
-                // Find view by slug or by creating slug from name
-                const view = customViews.find(view => {
-                    const viewSlug = view.slug || createSlug(view.name);
-                    return viewSlug === slug;
-                });
-
-                if (view) {
-                    return view.name;
-                }
-            }
-        } catch (error) {
-            console.error('Error retrieving original name from slug:', error);
-        }
-
-        // Fallback: convert slug back to a reasonable name
-        return slug.replace(/-/g, ' ');
-    };
+    // Resolve original view name from slug via server list (shared views)
+    const [originalViewName, setOriginalViewName] = useState('');
 
     // Function to create slug (should match the one in Board.jsx)
     const createSlug = (name) => {
@@ -138,8 +115,30 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
     };
 
-    // Convert viewName (slug) back to original name for API calls
-    const originalViewName = getOriginalNameFromSlug(viewName);
+    // Resolve original name once project is available
+    useEffect(() => {
+        if (!project?.id || !viewName) return;
+        let cancelled = false;
+        const fetchList = async () => {
+            try {
+                const res = await fetch(`/projects/${project.id}/custom-views/list`, {
+                    headers: { Accept: 'application/json' },
+                });
+                if (!res.ok) throw new Error('Failed to load views');
+                const data = await res.json();
+                const items = Array.isArray(data?.custom_views) ? data.custom_views : [];
+                const match = items.find((v) => createSlug(String(v.name || '')) === viewName);
+                if (!cancelled) {
+                    setOriginalViewName(match?.name || viewName.replace(/-/g, ' '));
+                }
+            } catch (_e) {
+                if (!cancelled) setOriginalViewName(viewName.replace(/-/g, ' '));
+            }
+        };
+        fetchList();
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [project?.id, viewName]);
 
     const theme = useTheme();
     const [assistantOpen, setAssistantOpen] = useState(false);

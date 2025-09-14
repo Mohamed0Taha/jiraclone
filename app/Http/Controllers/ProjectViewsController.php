@@ -222,7 +222,7 @@ class ProjectViewsController extends Controller
     }
 
     /**
-     * List user's custom views
+     * List project's custom views (shared across users)
      */
     public function listCustomViews(Request $request, Project $project): JsonResponse
     {
@@ -231,7 +231,7 @@ class ProjectViewsController extends Controller
             $this->authorize('view', $project);
             
             $userId = auth()->id();
-            $customViews = $this->projectViewsService->getUserCustomViews($project, $userId);
+            $customViews = $this->projectViewsService->getAllCustomViews($project, $userId);
 
             return response()->json([
                 'type' => 'success',

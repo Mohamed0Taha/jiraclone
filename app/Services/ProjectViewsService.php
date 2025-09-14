@@ -2242,12 +2242,11 @@ window.addEventListener('beforeunload', () => {
     }
 
     /**
-     * Get all custom views for a project and user
+     * Get all active custom views for a project (shared across users)
      */
     public function getAllCustomViews(Project $project, int $userId): array
     {
         return CustomView::where('project_id', $project->id)
-            ->where('user_id', $userId)
             ->where('is_active', true)
             ->orderBy('last_accessed_at', 'desc')
             ->get()
