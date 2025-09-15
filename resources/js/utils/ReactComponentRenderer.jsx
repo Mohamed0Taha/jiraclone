@@ -102,6 +102,18 @@ export class ReactComponentRenderer extends React.Component {
         // 1) Extract a fenced block if the assistant wrapped the code in markdown
         let src = this.extractFirstFence(raw).trim();
 
+        // Extract embedded data from the component code before processing
+        let extractedEmbeddedData = {};
+        const embeddedDataMatch = src.match(/const __EMBEDDED_DATA__ = (\{[\s\S]*?\});/);
+        if (embeddedDataMatch) {
+            try {
+                extractedEmbeddedData = JSON.parse(embeddedDataMatch[1]);
+                console.log('[ReactComponentRenderer] Extracted embedded data:', extractedEmbeddedData);
+            } catch (e) {
+                console.warn('[ReactComponentRenderer] Failed to parse embedded data:', e);
+            }
+        }
+
         // Helpers for fallback normalization
         const hasExportDefault = /export\s+default\s+/.test(src);
         const looksLikeJSX = /<\w[\s\S]*>/.test(src) || /React\.createElement\(/.test(src);
@@ -343,6 +355,7 @@ const __tasks = tasks;
 const __allTasks = allTasks;
 const __users = users;
 const __methodology = methodology;
+const __auth = auth;
 
 // Stable identifiers for persistence scoped to project + view
 const __projectId = ${JSON.stringify(String(projectId || ''))};
@@ -363,12 +376,19 @@ const usersDataFromProps = __users;
 const methodologyDataFromProps = __methodology;
 const projectData = __project;
 
+// IMPORTANT: Always use the current user's auth data from props (dynamic per viewer)
+// Never use embedded auth data as that would be static to the component creator
+const authUser = __auth;
+
 // Debug data availability
 console.log('[ReactComponentRenderer] Data available to component:', {
   tasksCount: tasksDataFromProps?.length || 0,
   usersCount: usersDataFromProps?.length || 0,
   projectName: projectData?.name || 'Unknown',
-  hasMethodology: !!methodologyDataFromProps
+  hasMethodology: !!methodologyDataFromProps,
+  authUser: authUser?.name || 'Not authenticated',
+  authUserId: authUser?.id || 'Unknown',
+  authSource: 'current_session_props'
 });
 
 // Server-backed persistence helpers available to generated components
@@ -412,9 +432,10 @@ async function saveViewData(dataKey, data) {
 async function loadViewData(dataKey) {
   if (!__projectId) return null;
   
-  // First check for embedded data (universal approach)
-  if (typeof __EMBEDDED_DATA__ !== 'undefined' && __EMBEDDED_DATA__[dataKey]) {
-    return __EMBEDDED_DATA__[dataKey];
+  // First check for extracted embedded data (universal approach)
+  if (typeof extractedEmbeddedData !== 'undefined' && extractedEmbeddedData[dataKey]) {
+    console.log('[loadViewData] Using extracted embedded data for key:', dataKey);
+    return extractedEmbeddedData[dataKey];
   }
   
   const localKey = 'microapp-' + __projectId + '-' + __viewName + '-' + String(dataKey || 'default');
@@ -448,6 +469,80 @@ async function loadViewData(dataKey) {
   return null;
 }
 
+// Load data directly from server (bypassing embedded data) for collaborative updates
+async function loadViewDataFromServer(dataKey) {
+  if (!__projectId) return null;
+  
+  // Always query server for latest data
+  try {
+    const url = '/projects/' + __projectId + '/custom-views/load-data?view_name=' + encodeURIComponent(__viewName) + '&data_key=' + encodeURIComponent(String(dataKey || 'default'));
+    const res = await csrfFetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' }
+    });
+    const result = await res.json();
+    
+    if (result.success && result.data?.data) {
+      console.log('[loadViewDataFromServer] Loaded latest data from server for:', dataKey);
+      return result.data.data;
+    }
+  } catch (e) {
+    console.warn('loadViewDataFromServer server error:', e);
+  }
+  
+  return null;
+}
+
+// Safe data initialization helper to prevent race conditions
+function useEmbeddedData(dataKey, defaultValue = null) {
+  const [data, setData] = useState(() => {
+    // Initialize with embedded data if available for fast initial render
+    if (typeof extractedEmbeddedData !== 'undefined' && extractedEmbeddedData[dataKey]) {
+      console.log('[useEmbeddedData] Initialized with embedded data for:', dataKey);
+      return extractedEmbeddedData[dataKey];
+    }
+    return defaultValue;
+  });
+  
+  const [isLoaded, setIsLoaded] = useState(false);
+  
+  // Always check server for latest collaborative data
+  useEffect(() => {
+    const loadLatestData = async () => {
+      // Load from server to get latest collaborative updates
+      const serverData = await loadViewDataFromServer(dataKey);
+      
+      if (serverData !== null) {
+        // Compare with current data to see if we need to update
+        const currentDataStr = JSON.stringify(data);
+        const serverDataStr = JSON.stringify(serverData);
+        
+        if (currentDataStr !== serverDataStr) {
+          console.log('[useEmbeddedData] Updating with latest server data for:', dataKey);
+          setData(serverData);
+        } else {
+          console.log('[useEmbeddedData] Server data matches current data for:', dataKey);
+        }
+      } else if (!data || (typeof extractedEmbeddedData === 'undefined' || !extractedEmbeddedData[dataKey])) {
+        // Only fall back to default if no embedded data and no server data
+        console.log('[useEmbeddedData] No server data, using default for:', dataKey);
+        setData(defaultValue);
+      }
+      
+      setIsLoaded(true);
+    };
+    
+    loadLatestData();
+  }, [dataKey]);
+  
+  const saveData = useCallback((newData) => {
+    setData(newData);
+    saveViewData(dataKey, newData);
+  }, [dataKey]);
+  
+  return [data, saveData, isLoaded];
+}
+
 ${transformed}
 
 return (${componentName});`;
@@ -462,6 +557,8 @@ return (${componentName});`;
                 'allTasks',
                 'users',
                 'methodology',
+                'auth',
+                'extractedEmbeddedData',
                 factoryCode
             );
 
@@ -500,6 +597,8 @@ return (${componentName});`;
                 this.props.allTasks,
                 this.props.users,
                 this.props.methodology,
+                this.props.auth,
+                extractedEmbeddedData
             );
         } catch (error) {
             throw new Error(`Failed to create component: ${error.message}`);

@@ -66,6 +66,7 @@ class CustomViewPageController extends Controller
             'methodology' => $methodology,
             'viewName' => $name,
             'isPro' => $request->user()?->hasActiveSubscription() ?? false,
+            'auth' => $request->user() ? $request->user()->only(['id', 'name', 'email']) : null,
         ]);
     }
 }

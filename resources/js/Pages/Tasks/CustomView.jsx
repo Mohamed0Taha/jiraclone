@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { useChat } from '@ai-sdk/react';
 import { useTranslation } from 'react-i18next';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -100,6 +100,16 @@ const shimmer = keyframes`
 
 export default function CustomView({ auth, project, tasks, allTasks, users, methodology, viewName }) {
     const { t } = useTranslation();
+
+    // Get current auth user - use prop first, then fall back to Inertia shared data
+    const { props } = usePage();
+    const currentAuth = auth || props.auth?.user || null;
+
+    console.log('[CustomView] Auth data check:', {
+        authProp: auth?.name || 'none',
+        sharedAuth: props.auth?.user?.name || 'none',
+        usingAuth: currentAuth?.name || 'none'
+    });
 
     // Resolve original view name from slug via server list (shared views)
     const [originalViewName, setOriginalViewName] = useState('');
@@ -1038,7 +1048,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             <ReactComponentRenderer
                                 componentCode={componentCode}
                                 project={project}
-                                auth={auth}
+                                auth={currentAuth}
                                 viewName={originalViewName}
                                 onError={handleComponentError}
                                 tasks={tasks}

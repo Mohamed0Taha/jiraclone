@@ -33,6 +33,12 @@ class GenerativeUIService
         ?string $currentComponentCode = null
     ): array {
         try {
+            // Get the authenticated user object for embedding in component
+            $authUser = \App\Models\User::find($userId);
+            if (!$authUser) {
+                throw new \Exception("User not found: {$userId}");
+            }
+            
             // Get existing view for context
             $existingView = CustomView::getActiveForProject($project->id, $userId, $viewName);
             
@@ -43,7 +49,8 @@ class GenerativeUIService
                 $existingView,
                 $conversationHistory,
                 $projectContext,
-                $currentComponentCode
+                $currentComponentCode,
+                $authUser
             );
 
             // Generate React component using OpenAI
@@ -98,7 +105,7 @@ class GenerativeUIService
             }
 
             // Validate and enhance the generated component
-            $enhancedComponent = $this->enhanceReactComponent($generatedComponent, $userMessage);
+            $enhancedComponent = $this->enhanceReactComponent($generatedComponent, $userMessage, $authUser);
 
             // Save the generated component
             $customView = CustomView::createOrUpdate(
@@ -213,7 +220,8 @@ REACT;
         ?CustomView $existingView = null,
         array $conversationHistory = [],
         ?array $projectContext = null,
-        ?string $currentComponentCode = null
+        ?string $currentComponentCode = null,
+        ?\App\Models\User $authUser = null
     ): string {
         // Use enhanced project context if provided, otherwise fall back to basic context
         $contextData = $projectContext ? $this->buildEnhancedProjectContext($project, $projectContext) : $this->buildProjectContext($project);
@@ -266,19 +274,27 @@ Remember: This is an UPDATE, not a complete rewrite. Preserve what works, modify
 
 CRITICAL REQUIREMENTS:
 1. Generate a COMPLETE, FUNCTIONAL React component that can be directly used
-2. Use React hooks (useState, useEffect) for state management  
-3. **NEVER use API calls like csrfFetch('/api/tasks') - USE THE PROVIDED REAL DATA instead**
-4. Initialize state with the ACTUAL project data provided in the context below AND via props injected by the host renderer
-5. **MANDATORY: Include FULL CRUD OPERATIONS (Create, Read, Update, Delete) for all data entities**
-6. Input controls must take LESS THAN 13% of the workspace - focus 87%+ on data display
-7. Use modern CSS-in-JS or Tailwind classes for styling
-8. Include proper TypeScript types if applicable
-9. Add loading states, error handling, and user feedback
-10. Ensure mobile-responsive design
-11. Export a default component: `export default function Name() { ... }`
-12. Persist user data using the helpers available in scope: `saveViewData(key, data)` and `loadViewData(key)`
-13. **CRITICAL: ALL React hooks (useState, useEffect, etc.) MUST be at the TOP LEVEL - NEVER inside conditions, loops, or functions**
-14. **CRITICAL: Follow the Rules of Hooks - hooks must always be called in the same order on every render**
+2. **MANDATORY: Use useEmbeddedData hook for ALL persistent data - prevents race conditions**
+3. **NEVER use separate useState + useEffect patterns for data loading/saving - causes data loss**
+4. **NEVER use API calls like csrfFetch('/api/tasks') - USE THE PROVIDED REAL DATA instead**
+5. **MANDATORY: Always include useEffect in imports if using it: import React, { useState, useEffect } from 'react';**
+6. **MANDATORY: Use authenticated user for current user: const currentUser = authUser || { name: 'Anonymous' }; NOT the first user from users array**
+7. **CRITICAL: authUser represents the CURRENT VIEWER/USER of the component, NOT the component creator - supports collaborative usage**
+8. **MANDATORY: Track user for ALL CRUD operations - CREATE (creator, created_by), UPDATE (updated_by, last_editor), DELETE (deleted_by, deleted_by_user)**
+9. **MANDATORY: Include timestamp tracking - created_at, updated_at, deleted_at for all operations**
+9. Initialize state with the ACTUAL project data provided in the context below AND via props injected by the host renderer
+10. **MANDATORY: Include FULL CRUD OPERATIONS (Create, Read, Update, Delete) for all data entities**
+11. Input controls must take LESS THAN 13% of the workspace - focus 87%+ on data display
+12. Use modern CSS-in-JS or Tailwind classes for styling
+13. Include proper TypeScript types if applicable
+14. Add loading states, error handling, and user feedback
+15. Ensure mobile-responsive design
+16. Export a default component: `export default function Name() { ... }`
+17. **CRITICAL: ALL React hooks (useState, useEmbeddedData, useEffect, etc.) MUST be at the TOP LEVEL - NEVER inside conditions, loops, or functions**
+18. **CRITICAL: Follow the Rules of Hooks - hooks must always be called in the same order on every render**
+19. **CRITICAL: Data persistence is handled by useEmbeddedData - ensures cross-user sharing and eliminates race conditions**
+20. **CRITICAL: Always check array length before accessing elements: users.length > 0 ? users[0] : defaultUser**
+21. **MANDATORY: Show who created/edited each item in the UI with timestamps for full collaboration transparency**
 
 MANDATORY CRUD OPERATIONS:
 - **CREATE**: Always include forms/inputs to add new items (modals, inline forms, or dedicated sections)
@@ -300,57 +316,83 @@ For data visualization, you have access to Recharts components (NO IMPORT NEEDED
 
 REQUIRED DATA PERSISTENCE PATTERN (COPY THIS EXACTLY):
 ```tsx
-const [items, setItems] = useState(() => []);
+// CRITICAL: Use useEmbeddedData hook for race-condition-free data persistence
+// This hook automatically handles embedded data initialization and server persistence
+const [itemsData, setItemsData] = useEmbeddedData('main-data', { items: [], deletions: [] });
+const items = itemsData?.items || [];
+
+// CRITICAL: Always track current user for proper collaboration
+// authUser represents the CURRENT VIEWER, not the component creator
+// Multiple project members can use the same component with their own identity
+const users = usersDataFromProps || __users || [];
+const currentUser = authUser || { id: 1, name: 'Anonymous', email: 'user@example.com' };
+
 const [loading, setLoading] = useState(false);
 const [error, setError] = useState(null);
 
-// CRITICAL: ALL hooks must be at the top level - NEVER inside conditions, loops, or nested functions
-// MANDATORY: Load persisted data on mount using localStorage
-useEffect(() => {
-  try {
-    const storageKey = 'microapp-data-' + Date.now(); // Or use a meaningful key
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setItems(parsed.items || []);
-    }
-  } catch (error) {
-    console.warn('Failed to load persisted data:', error);
-    setError('Failed to load data');
-  }
-}, []);
+// CRITICAL: useEmbeddedData replaces separate useState + useEffect patterns
+// NO NEED for separate loading/saving useEffect hooks - handled automatically
+// The hook safely initializes from embedded data and auto-saves changes
 
-// MANDATORY: Save when items change
-useEffect(() => {
-  if (items.length > 0) { // Only save when there's data to save
-    try {
-      const storageKey = 'microapp-data-' + Date.now(); // Or use a meaningful key
-      localStorage.setItem(storageKey, JSON.stringify({ 
-        items, 
-        lastUpdated: new Date().toISOString() 
-      }));
-    } catch (error) {
-      console.warn('Failed to save data:', error);
-    }
-  }
-}, [items]);
-
-// CRITICAL RULE: ALL useState and useEffect calls must be at the TOP LEVEL
-// NEVER put hooks inside if statements, loops, or functions
-
-// Example CRUD operations that update items and trigger auto-save
+// Example CRUD operations that update data and trigger auto-save WITH USER TRACKING
 const addItem = (newItem) => {
-  const item = { id: Date.now(), ...newItem };
-  setItems(prev => [...prev, item]);
+  const item = { 
+    id: Date.now(), 
+    ...newItem,
+    creator: currentUser,
+    created_at: new Date().toISOString(),
+    created_by: currentUser.id,
+    updated_at: new Date().toISOString(),
+    updated_by: currentUser.id
+  };
+  const updatedData = {
+    ...itemsData,
+    items: [...items, item],
+    lastUpdated: new Date().toISOString(),
+    lastUpdatedBy: currentUser
+  };
+  setItemsData(updatedData);
 };
 
 const updateItem = (id, updates) => {
-  setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+  const updatedData = {
+    ...itemsData,
+    items: items.map(item => item.id === id ? { 
+      ...item, 
+      ...updates, 
+      updated_at: new Date().toISOString(),
+      updated_by: currentUser.id,
+      last_editor: currentUser
+    } : item),
+    lastUpdated: new Date().toISOString(),
+    lastUpdatedBy: currentUser
+  };
+  setItemsData(updatedData);
 };
 
 const deleteItem = (id) => {
-  setItems(prev => prev.filter(item => item.id !== id));
+  // Track deletion with user info before removing
+  const itemToDelete = items.find(item => item.id === id);
+  const deletionRecord = {
+    id: itemToDelete?.id,
+    title: itemToDelete?.title || itemToDelete?.name || 'Unknown Item',
+    deleted_at: new Date().toISOString(),
+    deleted_by: currentUser.id,
+    deleted_by_user: currentUser
+  };
+  
+  const updatedData = {
+    ...itemsData,
+    items: items.filter(item => item.id !== id),
+    deletions: [...(itemsData.deletions || []), deletionRecord],
+    lastUpdated: new Date().toISOString(),
+    lastUpdatedBy: currentUser
+  };
+  setItemsData(updatedData);
 };
+
+// CRITICAL RULE: ALL useState and useEmbeddedData calls must be at the TOP LEVEL
+// NEVER put hooks inside if statements, loops, or functions
 ```
 
 DATA-FOCUSED DESIGN PRINCIPLES:
@@ -370,25 +412,111 @@ CRUD IMPLEMENTATION EXAMPLES:
 
 IMPORTANT: Instead of API calls or hardcoded arrays, initialize your state with the real data like this:
 ```jsx
-// ✅ CORRECT: Use provided real data (variables auto-injected by the host renderer)
-const [tasks, setTasks] = useState(() => {
-  // These variables are automatically available in your component scope:
-  // projectData - Full project object with details, metadata, methodology
-  // tasksDataFromProps - Array of all project tasks with status, priority, dates
-  // allTasksDataFromProps - Same as tasksDataFromProps (alias for consistency)
-  // usersDataFromProps - Array of project team members
-  // methodologyDataFromProps - Object with workflow details and status labels
-  // __flatTasks - Flattened array of all tasks (processed for easy use)
-  
-  return tasksDataFromProps || allTasksDataFromProps || __flatTasks || [];
+// ✅ CORRECT: Use useEmbeddedData hook for race-condition-free data persistence
+// This automatically handles embedded data, fallback to props, and server persistence
+
+// CRITICAL: Always safely handle undefined data with fallbacks
+const users = usersDataFromProps || __users || [];
+const currentUser = authUser || { id: 1, name: 'Anonymous', email: 'user@example.com' };
+const project = projectData || __project || { name: 'Untitled Project' };
+const tasks = tasksDataFromProps || allTasksDataFromProps || __flatTasks || [];
+
+// For main app data (tasks, items, etc.)
+const [appData, setAppData] = useEmbeddedData('main-data', { 
+  tasks: tasks,
+  users: users,
+  project: project,
+  lastUpdated: new Date().toISOString()
 });
 
-const [users, setUsers] = useState(() => usersDataFromProps || __users || []);
-const [project, setProject] = useState(() => projectData || __project || {});
+// Extract data for easy use
+const appTasks = appData?.tasks || [];
+const appUsers = appData?.users || [];
+const appProject = appData?.project || {};
 
-// Alternative approach: Use direct access to injected variables
-const [expenses, setExpenses] = useState(() => __flatTasks || []); // Use tasks as base data
-const [teamMembers, setTeamMembers] = useState(() => __users || []);
+// For specialized data types, use specific keys
+const [chatData, setChatData] = useEmbeddedData('chat-messages', { messages: [] });
+const [notesData, setNotesData] = useEmbeddedData('sticky-notes', { notes: [] });
+const [settingsData, setSettingsData] = useEmbeddedData('user-settings', { theme: 'light' });
+
+// When creating new items, always track the current user properly
+const createMessage = (content) => {
+  const message = {
+    id: Date.now(),
+    content,
+    sender: currentUser, // ✅ Safe - always defined with fallback
+    author: currentUser,
+    created_by: currentUser.id,
+    timestamp: new Date().toISOString(),
+    created_at: new Date().toISOString()
+  };
+  
+  const updatedData = {
+    ...chatData,
+    messages: [...(chatData.messages || []), message],
+    lastUpdated: new Date().toISOString(),
+    lastUpdatedBy: currentUser
+  };
+  setChatData(updatedData);
+};
+
+const editMessage = (messageId, newContent) => {
+  const updatedData = {
+    ...chatData,
+    messages: chatData.messages?.map(msg => 
+      msg.id === messageId 
+        ? { 
+            ...msg, 
+            content: newContent, 
+            edited_at: new Date().toISOString(),
+            edited_by: currentUser.id,
+            last_editor: currentUser
+          } 
+        : msg
+    ) || [],
+    lastUpdated: new Date().toISOString(),
+    lastUpdatedBy: currentUser
+  };
+  setChatData(updatedData);
+};
+
+const deleteMessage = (messageId) => {
+  const messageToDelete = (chatData.messages || []).find(msg => msg.id === messageId);
+  const deletionRecord = {
+    id: messageToDelete?.id,
+    content: messageToDelete?.content || 'Unknown Message',
+    original_author: messageToDelete?.sender?.name || 'Unknown',
+    deleted_at: new Date().toISOString(),
+    deleted_by: currentUser.id,
+    deleted_by_user: currentUser
+  };
+  
+  const updatedData = {
+    ...chatData,
+    messages: (chatData.messages || []).filter(msg => msg.id !== messageId),
+    deletions: [...(chatData.deletions || []), deletionRecord],
+    lastUpdated: new Date().toISOString(),
+    lastUpdatedBy: currentUser
+  };
+  setChatData(updatedData);
+};
+
+// These variables are automatically available as fallbacks:
+// projectData - Full project object with details, metadata, methodology
+// tasksDataFromProps - Array of all project tasks with status, priority, dates
+// allTasksDataFromProps - Same as tasksDataFromProps (alias for consistency)
+// usersDataFromProps - Array of project team members
+// methodologyDataFromProps - Object with workflow details and status labels
+// __flatTasks - Flattened array of all tasks (processed for easy use)
+// authUser - Currently authenticated user object { id, name, email } - USE THIS for currentUser
+
+// ❌ WRONG: Don't use separate useState + useEffect patterns (causes race conditions)
+// const [tasks, setTasks] = useState([]);
+// useEffect(() => { loadViewData('tasks').then(setTasks) }, []);
+// useEffect(() => { saveViewData('tasks', tasks) }, [tasks]);
+
+// ❌ WRONG: Don't access arrays without checking length first
+// const sender = usersDataFromProps[0]; // Could be undefined!
 
 // ❌ WRONG: Don't make API calls or hardcode arrays  
 // const expensesData = [{ id: 1, title: 'Fake' }];
@@ -430,35 +558,33 @@ VISUALIZATION EXAMPLES:
 - **Kanban Boards**: Custom status flows with drag-drop (if needed)
 - **Charts & Graphs**: Burn-down charts, velocity tracking, status trends
 
-PERSISTENCE HELPERS (available in runtime; use them to save UI state/data):
+PERSISTENCE HELPERS (useEmbeddedData hook handles everything automatically):
 ```tsx
-// MANDATORY: Load any previously-saved data on mount
-useEffect(() => {
-  (async () => {
-    try {
-      const persisted = await loadViewData('main');
-      if (persisted && persisted.data) {
-        // Update your state with persisted data
-        setItems(persisted.data.items || []);
-        setExpenses(persisted.data.expenses || []);
-        // etc. for your specific data
-      }
-    } catch (error) {
-      console.warn('Failed to load persisted data:', error);
-    }
-  })();
-}, []);
+// MANDATORY: Use useEmbeddedData for ALL persistent data - it handles loading/saving automatically
+// The hook ensures race-condition-free data sharing across users and sessions
 
-// MANDATORY: Save when data changes
-useEffect(() => {
-  // Save all relevant state data
-  saveViewData('main', { 
-    items, 
-    expenses, 
-    // etc. for your specific data
-    lastUpdated: new Date().toISOString() 
-  });
-}, [items, expenses]); // Include all state variables that should persist
+// Example 1: Main application data
+const [appData, setAppData] = useEmbeddedData('main-data', { 
+  items: [],
+  settings: {},
+  lastUpdated: new Date().toISOString()
+});
+
+// Example 2: Chat messages
+const [chatData, setChatData] = useEmbeddedData('chat-messages', { 
+  messages: [],
+  lastMessageId: 0 
+});
+
+// Example 3: User preferences
+const [userPrefs, setUserPrefs] = useEmbeddedData('user-preferences', { 
+  theme: 'light',
+  viewMode: 'grid'
+});
+
+// NO NEED for manual loadViewData/saveViewData calls - useEmbeddedData handles it
+// NO NEED for separate useEffect hooks - prevents race conditions
+// Data is automatically embedded in component code and shared across all users
 ```
 
 COMPONENT STRUCTURE:
@@ -497,19 +623,84 @@ Remember: Focus on DATA DISPLAY (87% of space) with minimal input controls (13% 
     private function getReactComponentStructure(): string 
     {
         return "import React, { useState, useEffect } from 'react';
-import { csrfFetch } from '@/utils/csrf';
 
-export default function GeneratedMicroApp({ project, auth }) {
-    // State management
-    const [data, setData] = useState([]);
+export default function GeneratedMicroApp() {
+    // CRITICAL: Use useEmbeddedData for race-condition-free persistence
+    const [appData, setAppData] = useEmbeddedData('main-data', { 
+        items: [],
+        settings: {},
+        lastUpdated: new Date().toISOString()
+    });
+    
+    // Extract data for easy use
+    const items = appData?.items || [];
+    
+    // Available data from props (safely handle undefined)
+    const users = usersDataFromProps || __users || [];
+    const currentUser = authUser || { id: 1, name: 'Anonymous', email: 'user@example.com' };
+    const project = projectData || __project || { name: 'Untitled Project' };
+    const tasks = tasksDataFromProps || allTasksDataFromProps || __flatTasks || [];
+    
+    // State management for UI only
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     
-    // Data operations
-    const loadData = async () => { /* Implementation */ };
-    const createItem = async (item) => { /* Implementation */ };
-    const updateItem = async (id, updates) => { /* Implementation */ };
-    const deleteItem = async (id) => { /* Implementation */ };
+    // Data operations that automatically persist via useEmbeddedData
+    const createItem = (newItem) => {
+        const item = { 
+            id: Date.now(), 
+            ...newItem,
+            creator: currentUser,
+            created_at: new Date().toISOString(),
+            created_by: currentUser.id,
+            updated_at: new Date().toISOString(),
+            updated_by: currentUser.id
+        };
+        const updatedData = {
+            ...appData,
+            items: [...items, item],
+            lastUpdated: new Date().toISOString(),
+            lastUpdatedBy: currentUser
+        };
+        setAppData(updatedData);
+    };
+    
+    const updateItem = (id, updates) => {
+        const updatedData = {
+            ...appData,
+            items: items.map(item => item.id === id ? { 
+                ...item, 
+                ...updates, 
+                updated_at: new Date().toISOString(),
+                updated_by: currentUser.id,
+                last_editor: currentUser
+            } : item),
+            lastUpdated: new Date().toISOString(),
+            lastUpdatedBy: currentUser
+        };
+        setAppData(updatedData);
+    };
+    
+    const deleteItem = (id) => {
+        // Track who deleted the item in the metadata before removing
+        const itemToDelete = items.find(item => item.id === id);
+        const deletionRecord = {
+            id: itemToDelete?.id,
+            title: itemToDelete?.title || itemToDelete?.name || 'Unknown Item',
+            deleted_at: new Date().toISOString(),
+            deleted_by: currentUser.id,
+            deleted_by_user: currentUser
+        };
+        
+        const updatedData = {
+            ...appData,
+            items: items.filter(item => item.id !== id),
+            deletions: [...(appData.deletions || []), deletionRecord],
+            lastUpdated: new Date().toISOString(),
+            lastUpdatedBy: currentUser
+        };
+        setAppData(updatedData);
+    };
     
     // UI Component
     return (
@@ -546,7 +737,7 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
     /**
      * Enhance the generated React component with additional functionality
      */
-    private function enhanceReactComponent(string $componentCode, string $userRequest): string
+    private function enhanceReactComponent(string $componentCode, string $userRequest, ?\App\Models\User $authUser = null): string
     {
         // 0) Force usage of real data when available: Replace common fake arrays with props-based init
         // Remove patterns like: const SomethingData = [ ... ]; const [items, setItems] = useState(SomethingData);
@@ -859,7 +1050,8 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
             }
         }
         
-        // Update/add the new data key
+        // Store data directly under the dataKey (not nested)
+        // Frontend expects: __EMBEDDED_DATA__['chat'] not __EMBEDDED_DATA__['chat']['messages']
         $existingData[$dataKey] = $data;
         
         // Generate the complete embedded data block
