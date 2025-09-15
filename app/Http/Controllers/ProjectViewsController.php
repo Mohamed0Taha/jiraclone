@@ -302,6 +302,12 @@ class ProjectViewsController extends Controller
     public function saveComponentData(Request $request, Project $project): JsonResponse
     {
         try {
+            \Log::info('SaveComponentData API called', [
+                'project_id' => $project->id,
+                'user_id' => auth()->id(),
+                'request_data' => $request->all()
+            ]);
+
             $this->authorize('view', $project);
             
             $request->validate([
@@ -315,8 +321,20 @@ class ProjectViewsController extends Controller
             $data = $request->input('data');
             $userId = auth()->id();
 
+            \Log::info('Calling GenerativeUIService saveComponentData', [
+                'project_id' => $project->id,
+                'user_id' => $userId,
+                'view_name' => $viewName,
+                'data_key' => $dataKey
+            ]);
+
             $generativeUIService = app(\App\Services\GenerativeUIService::class);
             $result = $generativeUIService->saveComponentData($project, $userId, $viewName, $dataKey, $data);
+
+            \Log::info('GenerativeUIService result', [
+                'success' => $result['success'] ?? false,
+                'message' => $result['message'] ?? 'No message'
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -325,9 +343,11 @@ class ProjectViewsController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('[ProjectViewsController] Error saving component data', [
+            \Log::error('[ProjectViewsController] Error saving component data', [
                 'error' => $e->getMessage(),
                 'project_id' => $project->id,
+                'user_id' => auth()->id(),
+                'stack_trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([

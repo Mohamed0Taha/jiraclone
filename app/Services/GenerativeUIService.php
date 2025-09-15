@@ -745,19 +745,46 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
     public function saveComponentData(Project $project, int $userId, string $viewName, string $dataKey, $data): array
     {
         try {
+            \Log::info('SaveComponentData called', [
+                'project_id' => $project->id,
+                'user_id' => $userId,
+                'view_name' => $viewName,
+                'data_key' => $dataKey,
+                'data_type' => gettype($data),
+                'data_size' => is_array($data) ? count($data) : (is_string($data) ? strlen($data) : 'unknown')
+            ]);
+
             // Get or create the custom view
             $customView = CustomView::getActiveForProject($project->id, $userId, $viewName);
 
             if (!$customView) {
-                // Do NOT recreate deleted views implicitly. Respect explicit deletes.
+                \Log::warning('CustomView not found', [
+                    'project_id' => $project->id,
+                    'user_id' => $userId,
+                    'view_name' => $viewName
+                ]);
                 return [
                     'success' => false,
                     'message' => 'Custom view not found; data not saved',
                 ];
             }
 
+            \Log::info('CustomView found', [
+                'view_id' => $customView->id,
+                'view_name' => $customView->name,
+                'project_id' => $customView->project_id,
+                'updated_at' => $customView->updated_at
+            ]);
+
             // Get current component code
             $componentCode = $customView->html_content;
+            
+            \Log::info('Embedding data into component', [
+                'view_id' => $customView->id,
+                'data_key' => $dataKey,
+                'original_code_length' => strlen($componentCode),
+                'has_embedded_data' => strpos($componentCode, '__EMBEDDED_DATA__') !== false
+            ]);
             
             // Update the component code to embed the new data
             $updatedCode = $this->embedDataIntoComponent($componentCode, $dataKey, $data);
@@ -776,7 +803,18 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
             ];
             $customView->metadata = $metadata;
             
+            \Log::info('Saving updated view', [
+                'view_id' => $customView->id,
+                'updated_code_length' => strlen($updatedCode),
+                'metadata_keys' => array_keys($metadata['component_data'] ?? [])
+            ]);
+            
             $customView->save();
+
+            \Log::info('CustomView saved successfully', [
+                'view_id' => $customView->id,
+                'new_updated_at' => $customView->updated_at
+            ]);
 
             return [
                 'success' => true,
@@ -786,15 +824,20 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
             ];
 
         } catch (\Exception $e) {
-            Log::error('SaveComponentData error', [
+            \Log::error('SaveComponentData error', [
                 'project_id' => $project->id,
                 'user_id' => $userId,
                 'view_name' => $viewName,
                 'data_key' => $dataKey,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'stack_trace' => $e->getTraceAsString()
             ]);
 
-            throw $e;
+            return [
+                'success' => false,
+                'message' => 'Error saving data: ' . $e->getMessage(),
+                'error_type' => get_class($e)
+            ];
         }
     }
 
