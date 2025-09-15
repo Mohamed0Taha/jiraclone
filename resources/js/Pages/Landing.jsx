@@ -46,7 +46,8 @@ import {
     Lightbulb,
     Shield,
 } from '@mui/icons-material';
-import ThemeLanguageSwitcher from '@/Components/ThemeLanguageSwitcher';
+import ThemeToggle from '@/Components/ThemeToggle';
+import LanguageDropdown from '@/Components/LanguageDropdown';
 
 export default function Landing({ errors }) {
     const theme = useTheme();
@@ -268,9 +269,12 @@ export default function Landing({ errors }) {
                                     TaskPilot
                                 </Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', gap: 2 }}>
-                                {/* Theme and Language Switcher */}
-                                <ThemeLanguageSwitcher />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                {/* Use the same Theme + Language controls as the app header */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <ThemeToggle />
+                                    <LanguageDropdown />
+                                </Box>
 
                                 <Button
                                     variant="outlined"

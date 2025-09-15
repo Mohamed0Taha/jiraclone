@@ -32,6 +32,16 @@ const languages = [
     { code: 'sv', name: 'language.swedish', flag: '🇸🇪' },
     { code: 'nl', name: 'language.dutch', flag: '🇳🇱' },
     { code: 'fr', name: 'language.french', flag: '🇫🇷' },
+    { code: 'pt', name: 'language.portuguese', flag: '🇵🇹' },
+    { code: 'it', name: 'language.italian', flag: '🇮🇹' },
+    { code: 'hu', name: 'language.hungarian', flag: '🇭🇺' },
+    { code: 'ro', name: 'language.romanian', flag: '🇷🇴' },
+    { code: 'pl', name: 'language.polish', flag: '🇵🇱' },
+    { code: 'ru', name: 'language.russian', flag: '🇷🇺' },
+    { code: 'da', name: 'language.danish', flag: '🇩🇰' },
+    { code: 'no', name: 'language.norwegian', flag: '🇳🇴' },
+    { code: 'et', name: 'language.estonian', flag: '🇪🇪' },
+    { code: 'lv', name: 'language.latvian', flag: '🇱🇻' },
 ];
 
 export default function ThemeLanguageSwitcher() {

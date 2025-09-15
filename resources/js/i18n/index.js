@@ -11,6 +11,16 @@ import fiTranslations from './locales/fi.json';
 import svTranslations from './locales/sv.json';
 import nlTranslations from './locales/nl.json';
 import frTranslations from './locales/fr.json';
+import ptTranslations from './locales/pt.json';
+import itTranslations from './locales/it.json';
+import huTranslations from './locales/hu.json';
+import roTranslations from './locales/ro.json';
+import plTranslations from './locales/pl.json';
+import ruTranslations from './locales/ru.json';
+import daTranslations from './locales/da.json';
+import noTranslations from './locales/no.json';
+import etTranslations from './locales/et.json';
+import lvTranslations from './locales/lv.json';
 
 const resources = {
     en: { translation: enTranslations },
@@ -20,10 +30,20 @@ const resources = {
     sv: { translation: svTranslations },
     nl: { translation: nlTranslations },
     fr: { translation: frTranslations },
+    pt: { translation: ptTranslations },
+    it: { translation: itTranslations },
+    hu: { translation: huTranslations },
+    ro: { translation: roTranslations },
+    pl: { translation: plTranslations },
+    ru: { translation: ruTranslations },
+    da: { translation: daTranslations },
+    no: { translation: noTranslations },
+    et: { translation: etTranslations },
+    lv: { translation: lvTranslations },
 };
 
 // List of supported languages for validation
-export const supportedLanguages = ['en', 'es', 'de', 'fi', 'sv', 'nl', 'fr'];
+export const supportedLanguages = ['en', 'es', 'de', 'fi', 'sv', 'nl', 'fr', 'pt', 'it', 'hu', 'ro', 'pl', 'ru', 'da', 'no', 'et', 'lv'];
 
 i18n
     .use(LanguageDetector)

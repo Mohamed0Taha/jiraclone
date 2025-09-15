@@ -1,7 +1,7 @@
 {
   "common": {
     "welcome": "Tervetuloa",
-    "dashboard": "Kojelauta",
+    "dashboard": "Yleiskatsaus",
     "projects": "Projektit",
     "tasks": "Tehtävät",
     "timeline": "Aikajana",
@@ -38,9 +38,9 @@
     "lastName": "Sukunimi",
     "confirmPassword": "Vahvista salasana",
     "there": "siellä",
-    "or": "TA",
+    "or": "TAI",
     "back": "Takaisin",
-    "countMeter": "Lukumittari",
+    "countMeter": "Laskuri",
     "finish": "Valmis",
     "goToHomepage": "Siirry etusivulle",
     "next": "Seuraava",
@@ -52,9 +52,9 @@
     "skip": "Ohita",
     "title": "Otsikko",
     "unassigned": "Ei määritetty",
-    "increase": "Suurenna",
-    "decrease": "Pienennä",
-    "text": "Text"
+    "increase": "Lisää",
+    "decrease": "Vähennä",
+    "text": "Teksti"
   },
   "navigation": {
     "home": "Koti",
@@ -186,7 +186,7 @@
       }
     },
     "continueWithGoogle": "Jatka Googlella",
-    "signInDescription": "Kirjaudu tilillesi jatkaaksesi"
+    "signInDescription": "Kirjaudu sisään jatkaaksesi"
   },
   "project": {
     "title": "Projektin otsikko",
@@ -237,13 +237,23 @@
   },
   "language": {
     "english": "Englanti",
-    "spanish": "Español",
-    "german": "Deutsch",
+    "spanish": "Espanja",
+    "german": "Saksa",
     "finnish": "Suomi",
-    "swedish": "Svenska",
-    "dutch": "Nederlands",
-    "french": "rançais",
-    "select": "Valitse kieli"
+    "swedish": "Ruotsi",
+    "dutch": "Hollanti",
+    "french": "Ranska",
+    "select": "Valitse kieli",
+    "portuguese": "Portugali",
+    "italian": "Italia",
+    "hungarian": "Unkari",
+    "romanian": "Romania",
+    "polish": "Puola",
+    "russian": "Venäjä",
+    "danish": "Tanska",
+    "norwegian": "Norja",
+    "estonian": "Viro",
+    "latvian": "Latvia"
   },
   "messages": {
     "welcomeBack": "Tervetuloa takaisin!",
@@ -444,7 +454,7 @@
   },
   "board": {
     "taskBoard": "Tehtävätaulu",
-    "methodology": "Metodologia",
+    "methodology": "Menetelmä",
     "methodologyName": {
       "kanban": "Kanban",
       "scrum": "Scrum",
@@ -457,14 +467,14 @@
       "inprogress": "Käynnissä",
       "review": "Tarkistus",
       "done": "Valmis",
-      "backlog": "Työjono",
+      "backlog": "Taustalista",
       "testing": "Testaus"
     },
     "columns": {
-      "ideas": "deat",
-      "build": "Rakenna",
+      "ideas": "Ideat",
+      "build": "Rakentaa",
       "measure": "Mittaa",
-      "learn": "Opi",
+      "learn": "Oppia",
       "validated": "Vahvistettu"
     },
     "priority": {
@@ -481,8 +491,8 @@
     "taskDetails": "Tehtävän tiedot",
     "assignTask": "Määritä tehtävä",
     "unassignTask": "Poista määritys",
-    "setDueDate": "Aseta määräaika",
-    "removeDueDate": "Poista määräaika",
+    "setDueDate": "Aseta eräpäivä",
+    "removeDueDate": "Poista eräpäivä",
     "createSubtask": "Luo alitehtävä",
     "convertToSubtask": "Muunna alitehtäväksi",
     "attachFile": "Liitä tiedosto",
@@ -495,24 +505,24 @@
     "filterTasks": "Suodata tehtäviä",
     "sortTasks": "Lajittele tehtäviä",
     "noTasksFound": "Tehtäviä ei löytynyt",
-    "createFirstTask": "Luo ensimmäinen tehtäväsi aloittaaksesi",
+    "createFirstTask": "Luo ensimmäinen tehtävä aloittaaksesi",
     "startDate": "Aloituspäivä",
-    "dueDate": "Määräaika",
-    "executionDate": "Toteutuspäivä",
-    "milestone": "Välitavoite",
+    "dueDate": "Eräpäivä",
+    "executionDate": "Suorituspäivä",
+    "milestone": "Virstanpylväs",
     "regularTask": "Tavallinen tehtävä",
-    "duplicateOf": "Kopio tehtävästä",
-    "parentTask": "Päätehtävä",
+    "duplicateOf": "Kopio kohteesta",
+    "parentTask": "Ylätason tehtävä",
     "subtask": "Alitehtävä",
     "creatingSubtask": "Luodaan alitehtävää:",
     "taskTitle": "Tehtävän otsikko",
     "taskDescription": "Tehtävän kuvaus",
     "conciseTaskName": "Ytimekäs tehtävän nimi",
     "addOptionalContext": "Lisää valinnainen konteksti, hyväksymiskriteerit jne.",
-    "addMoreContext": "Lisää lisää kontekstia...",
-    "markAsMilestone": "Merkitse projektin välitavoitteeksi",
+    "addMoreContext": "Lisää taustatietoa",
+    "markAsMilestone": "Merkitse projektin virstanpylvääksi",
     "selectAssignee": "Valitse vastuuhenkilö",
-    "selectParent": "Valitse päätehtävä",
+    "selectParent": "Valitse ylätason tehtävä",
     "selectDuplicate": "Valitse alkuperäinen tehtävä",
     "optional": "Valinnainen",
     "team": "Tiimi",
@@ -528,7 +538,7 @@
     "details": "Tiedot",
     "priorityFilter": "Prioriteettisuodatin",
     "priorityLabel": "Prioriteetti",
-    "taskPriorityLevel": "Tehtävän prioriteettitaso",
+    "taskPriorityLevel": "Prioriteettitaso",
     "teamMember": "Tiimin jäsen",
     "timeline": "Aikajana",
     "unassigned": "Ei määritetty",
@@ -536,8 +546,8 @@
     "updating": "Päivitetään...",
     "viewDetails": "Näytä tiedot",
     "writeReplyPlaceholder": "Kirjoita vastaus...",
-    "actionCannotBeUndone": "Tätä toimintoa ei voi perua",
-    "noTasks": "Ei {{status}}-tehtäviä"
+    "actionCannotBeUndone": "Toimintoa ei voi perua.",
+    "noTasks": "Ei {{status}} tehtäviä"
   },
   "customViews": {
     "title": "Mukautetut näkymät",
@@ -616,7 +626,7 @@
     "saveSuccess": "Tallennus onnistui"
   },
   "admin": {
-    "dashboard": "Kojelauta",
+    "dashboard": "Yleiskatsaus",
     "users": "Käyttäjät",
     "projects": "Projektit",
     "tasks": "Tehtävät",
@@ -680,9 +690,9 @@
     "memberCount": "{{count}} jäsen",
     "memberCount_plural": "{{count}} jäsentä",
     "active": "Actif",
-    "canAction": "Peut {{action}}",
+    "canAction": "Peut {{toiminto}}",
     "cancelInvitation": "Annuler l'invitation",
-    "cannotAction": "Ne peut pas {{action}}",
+    "cannotAction": "Ne peut pas {{toiminto}}",
     "currentMembers": "Membres actuels",
     "editProject": "Modifier le projet",
     "editTasks": "Modifier les tâches",
@@ -716,7 +726,7 @@
     "role": "Rôle",
     "slotsLeft": "{{count}} place restante",
     "slotsLeft_plural": "{{count}} places restantes",
-    "switchToCompact": "Basculer vers le design compact",
+    "switchToCompact": "Basculer vers le design kompakti",
     "switchToEnhanced": "Basculer vers le design amélioré",
     "upgrade": "Mettre à niveau",
     "usage": "Utilisation",
@@ -742,13 +752,13 @@
     "stopRecording": "Lopeta nauhoitus",
     "countRequested": "{{count}}/10 pyydetty",
     "addContextHelp": "Add context to guide the A",
-    "generateAdvanced": "🚀 Generate Advanced Tasks",
-    "generatingAdvanced": "🧠 Generating {{count}} Advanced Tasks...",
+    "generateAdvanced": "🚀 Luo Advanced Tehtävät",
+    "generatingAdvanced": "🧠 Generating {{count}} Advanced Tehtävät...",
     "listening": "🎤 Listening... Speak now",
     "promptPlaceholder": "e.g.nclude tasks for safety checks specific to Khartoum site, local permitting, and budget tracking cadence…",
     "regenerateSuggestions": "Regenerate suggestions",
     "speechRecognition": "Speech Recognition:",
-    "stopListening": "Stop listening",
+    "stopListening": "Pysäytä listening",
     "suggestionsCount": "{{count}} suggestion",
     "suggestionsCount_plural": "{{count}} suggestions",
     "uploadedFiles": "Uploadediles:",
@@ -978,7 +988,7 @@
       },
       "tasks": {
         "description": "Tasksescription",
-        "title": "Tasks Title"
+        "title": "Tehtävät Otsikko"
       }
     },
     "startFailed": "Käynnistys epäonnistui",
@@ -1023,12 +1033,12 @@
       "inprogress": "Käynnissä",
       "review": "Tarkistus",
       "todo": "Tehtävä",
-      "backlog": "Backlog",
-      "testing": "Testing"
+      "backlog": "Taustalista",
+      "testing": "Testaus"
     },
     "tooltips": {
       "viewDetails": "Näytä tehtävän tiedot ja kommentit",
-      "taskId": "Tehtävä-D: {{id}}"
+      "taskId": "Tehtävän ID: {{id}}"
     },
     "imageAlt": "Tehtäväkuva",
     "imageTitle": "Tehtävä #{{id}}: {{title}}",
@@ -1037,26 +1047,26 @@
       "addImage": "Lisää kuva"
     },
     "commentsCount": "{{count}} {{label}}",
-    "comment": "kommentti",
-    "comments": "kommenttia",
-    "addCommentsHint": "Lisää kommentteja klikkaamalla",
+    "comment": "Kommentti",
+    "comments": "Kommentit",
+    "addCommentsHint": "Napsauta lisätäksesi kommentteja",
     "overdue": "Tehtävä on myöhässä",
-    "createdBy": "Luoja: {{name}}",
+    "createdBy": "Luonut {{name}}",
     "assignedTo": "Vastuuhenkilö: {{name}}",
     "schedule": {
       "completed": "Tehtävä valmis",
       "noData": "Ei aikataulutietoja",
-      "elapsedPercent": "{{percent}}% aikataulusta kulunut",
+      "elapsedPercent": "{{percent}}% suunnitellusta ajasta kulunut",
       "overdueSuffix": "(myöhässä)",
-      "fullyConsumed": "(aika käytetty kokonaan)"
+      "fullyConsumed": "(Aika käytetty)"
     },
     "priority": {
-      "high": "High",
-      "low": "Low",
-      "medium": "Medium",
-      "urgent": "Urgent"
+      "high": "Korkea",
+      "low": "Matala",
+      "medium": "Keskitaso",
+      "urgent": "Kiireellinen"
     },
-    "noTasksYet": "Ei tehtäviä vielä"
+    "noTasksYet": "Ei vielä tehtäviä"
   },
   "workflows": {
     "templates": {
@@ -1172,7 +1182,8 @@
       "switching_service": "Vaihdaan toiseen palveluun",
       "temporary_pause": "Tilapäinen tauko",
       "other": "Muu syy"
-    }
+    },
+    "invitationExpired": "Kutsu on vanhentunut"
   },
   "profile": {
     "title": "Profiiliasetukset",

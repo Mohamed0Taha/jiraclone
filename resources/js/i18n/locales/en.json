@@ -40,21 +40,21 @@
     "there": "there",
     "or": "OR",
     "text": "Text",
-    "back": "Zurück",
-    "countMeter": "Zähler",
-    "decrease": "Verringern",
-    "finish": "Fertig",
-    "goToHomepage": "Zur Startseite",
-    "increase": "Erhöhen",
-    "next": "Weiter",
-    "notNow": "Nicht jetzt",
-    "previous": "Zurück",
-    "priority": "Priorität",
-    "project": "Projekt",
-    "saved": "Gespeichert",
-    "skip": "Überspringen",
-    "title": "Titel",
-    "unassigned": "Nicht zugewiesen"
+    "back": "Back",
+    "countMeter": "Counter",
+    "decrease": "Decrease",
+    "finish": "Finish",
+    "goToHomepage": "Go to homepage",
+    "increase": "Increase",
+    "next": "Next",
+    "notNow": "Not now",
+    "previous": "Previous",
+    "priority": "Priority",
+    "project": "Project",
+    "saved": "Saved",
+    "skip": "Skip",
+    "title": "Title",
+    "unassigned": "Unassigned"
   },
   "tasks": {
     "status": {
@@ -71,30 +71,30 @@
       "high": "High",
       "urgent": "Urgent"
     },
-    "addCommentsHint": "Klicken, um Kommentare hinzuzufügen",
+    "addCommentsHint": "Click to add comments",
     "aria": {
-      "addImage": "Bild hinzufügen"
+      "addImage": "Add image"
     },
-    "assignedTo": "Zugewiesen an {{name}}",
-    "comment": "Kommentar",
-    "comments": "Kommentare",
+    "assignedTo": "Assigned to {{name}}",
+    "comment": "Comment",
+    "comments": "Comments",
     "commentsCount": "{{count}} {{label}}",
-    "createdBy": "Erstellt von {{name}}",
-    "imageAlt": "Aufgabenbild",
-    "imageTitle": "Aufgabe #{{id}}: {{title}}",
-    "overdue": "Aufgabe ist überfällig",
+    "createdBy": "Created by {{name}}",
+    "imageAlt": "Task image",
+    "imageTitle": "Task #{{id}}: {{title}}",
+    "overdue": "Task is overdue",
     "schedule": {
-      "completed": "Aufgabe abgeschlossen",
-      "elapsedPercent": "{{percent}}% der geplanten Zeit verstrichen",
-      "fullyConsumed": "(Zeit vollständig aufgebraucht)",
-      "noData": "Keine Zeitplandaten",
-      "overdueSuffix": "(überfällig)"
+      "completed": "Task completed",
+      "elapsedPercent": "{{percent}}% of scheduled time elapsed",
+      "fullyConsumed": "(Time fully consumed)",
+      "noData": "No schedule data",
+      "overdueSuffix": "(overdue)"
     },
     "tooltips": {
-      "taskId": "Aufgaben-ID: {{id}}",
-      "viewDetails": "Klicken Sie, um Aufgabendetails und Kommentare anzuzeigen"
+      "taskId": "Task ID: {{id}}",
+      "viewDetails": "Click to view task details and comments"
     },
-    "untitled": "(Unbenannt)",
+    "untitled": "(Untitled)",
     "noTasksYet": "No tasks yet"
   },
   "navigation": {
@@ -143,18 +143,18 @@
     "createAccountWithEmail": "Create Account with Email",
     "alreadyHaveAccount": "Already have an account?",
     "signIn": "Sign in",
-    "confirm": "Bestätigen",
-    "confirmPasswordDesc": "Dies ist ein sicherer Bereich der Anwendung. Bitte bestätigen Sie Ihr Passwort, bevor Sie fortfahren.",
-    "confirmPasswordTitle": "Passwort bestätigen",
-    "confirming": "Bestätigung...",
-    "emailPasswordReset": "E‑Mail‑Passwort zurücksetzen",
-    "logIn": "Anmelden",
-    "logout": "Abmelden",
-    "resetPasswordDesc": "Passwort vergessen? Kein Problem. Teilen Sie uns einfach IhreE-Mail-Adresse mit und wir senden Ihnen einen Link zum Zurücksetzen des Passworts.",
-    "resetPasswordTitle": "Passwort zurücksetzen",
-    "resettingPassword": "Passwort wird zurückgesetzt...",
-    "sending": "Wird gesendet...",
-    "signUpNow": "Jetzt registrieren"
+    "confirm": "Confirm",
+    "confirmPasswordDesc": "This is a secure area of the application. Please confirm your password before continuing.",
+    "confirmPasswordTitle": "Confirm Password",
+    "confirming": "Confirming...",
+    "emailPasswordReset": "Email Password Reset",
+    "logIn": "Log in",
+    "logout": "Logout",
+    "resetPasswordDesc": "Forgot your password? No problem. Just let us know your email address and we will email you a password reset link.",
+    "resetPasswordTitle": "Reset Password",
+    "resettingPassword": "Resetting password...",
+    "sending": "Sending...",
+    "signUpNow": "Sign up now"
   },
   "chat": {
     "projectAssistant": "Project Assistant",
@@ -226,8 +226,8 @@
         "description": "Organize your work, reminders, and calendar events all from your personalized Home."
       }
     },
-    "continueWithGoogle": "Mit Google fortfahren",
-    "signInDescription": "Melden Sie sich bei Ihrem Konto an, um fortzufahren"
+    "continueWithGoogle": "Continue with Google",
+    "signInDescription": "Sign in to your account to continue"
   },
   "head": {
     "landing": "TaskPilot - The AI workspace where all your work gets done",
@@ -305,11 +305,11 @@
   "contactUs": {
     "detailsPlaceholder": "Please describe your issue or question in detail... (minimum 10 characters)",
     "characters": "Characters",
-    "description": "escription",
-    "email": "mail",
+    "description": "Description",
+    "email": "Email",
     "error": {
-      "message": "rror Message",
-      "title": "rror Title"
+      "message": "Error Message",
+      "title": "Error Title"
     },
     "message": "Message",
     "messagePlaceholder": "Message Placeholder",
@@ -337,7 +337,7 @@
       "technical": "Technical"
     },
     "tryAgain": "Try Again",
-    "yourDetails": "Youretails"
+    "yourDetails": "Your Details"
   },
   "assistantChat": {
     "close": "Close assistant chat",
@@ -356,7 +356,7 @@
     "beginCertification": "Begin Certification",
     "complete": "Complete",
     "completeDesc": "Complete your certification",
-    "downloadCertificate": "ownload Certificate",
+    "downloadCertificate": "Download Certificate",
     "pmConcepts": "PM Concepts",
     "pmConceptsDesc": "Project Management Concepts",
     "practicalScenario": "Practical Scenario",
@@ -388,12 +388,12 @@
     "exampleCategoriesPlaceholder": "e.g. Governance, Analysis",
     "addTask": {
       "create": "Create",
-      "description": "escription",
-      "estimatedHours": "stimated Hours",
+      "description": "Description",
+      "estimatedHours": "Estimated Hours",
       "requiredSkills": "Required Skills",
       "requirements": "Requirements",
       "selectPriority": "Select Priority",
-      "title": "Titel"
+      "title": "Title"
     },
     "button": {
       "generating": "Generating...",
@@ -401,12 +401,12 @@
       "startNew": "Start New"
     },
     "conflict": {
-      "description": "escription",
-      "differentMembers": "ifferent Members",
+      "description": "Description",
+      "differentMembers": "Different Members",
       "mediate": "Mediate",
       "memberA": "Member A",
       "memberB": "Member B",
-      "title": "Titel"
+      "title": "Title"
     },
     "cta": {
       "certification": "Certification",
@@ -421,15 +421,15 @@
       "quality": "Quality",
       "scope": "Scope",
       "standup": "Standup",
-      "teamEvent": "Teamvent",
-      "techDebt": "Technicalebt",
+      "teamEvent": "Team Event",
+      "techDebt": "Technical Debt",
       "vendor": "Vendor"
     },
     "experience": {
       "adaptRequirements": "Adapt Requirements",
       "applyMethodologies": "Apply Methodologies",
       "buildConfidence": "Build Confidence",
-      "criticalDecisions": "Criticalecisions",
+      "criticalDecisions": "Critical Decisions",
       "handleConflicts": "Handle Conflicts",
       "learnConsequences": "Learn Consequences",
       "manageBudgets": "Manage Budgets",
@@ -437,37 +437,37 @@
     },
     "features": {
       "analytics": {
-        "description": "Analyticsescription",
+        "description": "Analytics Description",
         "title": "Analytics Title"
       },
       "instantFeedback": {
-        "description": "Instant Feedbackescription",
+        "description": "Instant Feedback Description",
         "title": "Instant Feedback Title"
       },
       "noRegistration": {
-        "description": "No Registrationescription",
+        "description": "No Registration Description",
         "title": "No Registration Title"
       }
     },
     "guide": {
       "events": {
-        "description": "ventsescription",
-        "title": "vents Title"
+        "description": "Events Description",
+        "title": "Events Title"
       },
       "guideTasks": {
-        "description": "Lisää ja priorisoi tehtävät tehokkaan etenemisen varmistamiseksi.",
-        "title": "Tehtävät"
+        "description": "Add and prioritize tasks to ensure effective progress.",
+        "title": "Tasks"
       },
       "navigateWeeks": {
-        "description": "Navigate Weeksescription",
+        "description": "Navigate Weeks Description",
         "title": "Navigate Weeks Title"
       },
       "tasks": {
-        "description": "Tasksescription",
+        "description": "Tasks Description",
         "title": "Tasks Title"
       },
       "team": {
-        "description": "Teamescription",
+        "description": "Team Description",
         "title": "Team Title"
       }
     },
@@ -478,8 +478,8 @@
       "highlighted": "Highlighted",
       "newTask": "New Task"
     },
-    "title": "Titel",
-    "whatYouExperience": "What Youxperience"
+    "title": "Title",
+    "whatYouExperience": "What You Experience"
   },
   "authPage": {
     "togglePasswordVisibility": "toggle password visibility",
@@ -512,9 +512,9 @@
     "notSet": "Not set",
     "untitledProject": "Untitled Project",
     "additionalInformation": "Additional Information",
-    "membersCount": "{{count}} Mitglied",
-    "membersCount_plural": "{{count}} Mitglieder",
-    "noKey": "Kein Schlüssel"
+    "membersCount": "{{count}} member",
+    "membersCount_plural": "{{count}} members",
+    "noKey": "No key"
   },
   "task": {
     "title": "Task Title",
@@ -543,6 +543,16 @@
     "swedish": "Svenska",
     "dutch": "Nederlands",
     "french": "Français",
+    "portuguese": "Português",
+    "italian": "Italiano",
+    "hungarian": "Magyar",
+    "romanian": "Română",
+    "polish": "Polski",
+    "russian": "Русский",
+    "danish": "Dansk",
+    "norwegian": "Norsk",
+    "estonian": "Eesti",
+    "latvian": "Latviešu",
     "select": "Select Language"
   },
   "messages": {
@@ -831,13 +841,13 @@
     "addCommentPlaceholder": "Add a comment...",
     "writeReplyPlaceholder": "Write a reply...",
     "columns": {
-      "build": "Bauen",
-      "ideas": "Ideen",
-      "learn": "Lernen",
-      "measure": "Messen",
-      "validated": "Validiert"
+      "build": "Build",
+      "ideas": "Ideas",
+      "learn": "Learn",
+      "measure": "Measure",
+      "validated": "Validated"
     },
-    "viewDetails": "Viewetails"
+    "viewDetails": "View details"
   },
   "customViews": {
     "title": "Custom Views",
@@ -1092,11 +1102,11 @@
       "teamMembersChip_plural": "{{count}} team members"
     },
     "validation": {
-      "endDateAfterStart": "Enddatum muss nach dem Startdatum liegen",
-      "keyFormat": "Schlüsselformat ungültig",
-      "keyMaxLength": "Maximale Schlüssellänge überschritten",
-      "keyRequired": "Schlüssel ist erforderlich",
-      "nameRequired": "Name ist erforderlich"
+      "endDateAfterStart": "End date must be after start date",
+      "keyFormat": "Invalid key format",
+      "keyMaxLength": "Maximum key length exceeded",
+      "keyRequired": "Key is required",
+      "nameRequired": "Name is required"
     }
   },
   "projectScope": {
@@ -1141,47 +1151,47 @@
     "memberCount_plural": "{{count}} Members",
     "active": "Actif",
     "canAction": "Peut {{action}}",
-    "cancelInvitation": "Annuler l'invitation",
+    "cancelInvitation": "Cancel invitation",
     "cannotAction": "Ne peut pas {{action}}",
-    "currentMembers": "Membres actuels",
+    "currentMembers": "Current Members",
     "editProject": "Modifier le projet",
-    "editTasks": "Modifier les tâches",
-    "failedToCancelInvitation": "Échec de l'annulation de l'invitation : {{error}}",
-    "failedToInviteMember": "Échec de l'invitation d'un membre : {{error}}",
-    "failedToLoadMembers": "Échec du chargement des membres : {{error}}",
-    "failedToRemoveMember": "Échec de la suppression du membre : {{error}}",
-    "failedToResendInvitation": "Échec du renvoi de l'invitation : {{error}}",
-    "fullAccessOwner": "(Accès complet - Propriétaire)",
-    "invitationCancelledSuccess": "Invitation annulée avec succès !",
-    "invitationResentSuccess": "Invitation renvoyée avec succès !",
+    "editTasks": "Edit Tasks",
+    "failedToCancelInvitation": "Failed to cancel invitation: {{error}}",
+    "failedToInviteMember": "Failed to invite member: {{error}}",
+    "failedToLoadMembers": "Failed to load members: {{error}}",
+    "failedToRemoveMember": "Failed to remove member: {{error}}",
+    "failedToResendInvitation": "Failed to resend invitation: {{error}}",
+    "fullAccessOwner": "(Full Access - Owner)",
+    "invitationCancelledSuccess": "Invitation cancelled successfully!",
+    "invitationResentSuccess": "Invitation resent successfully!",
     "invite": "Inviter",
     "inviteFirstCollaborator": "Invitez votre premier collaborateur via le formulaire ci-dessus.",
     "inviteNewMember": "Inviter un nouveau membre",
     "inviting": "Invitation en cours",
-    "joined": "A rejoint le {{date}}",
+    "joined": "Joined {{date}}",
     "limit": "Limite",
     "limitReached": "Limite atteinte pour le plan {{plan}}",
     "limitReachedLabel": "Limite atteinte",
-    "limitReachedTooltip": "Limite de membres atteinte – mettez à niveau pour en ajouter davantage",
-    "manageMembers": "Gérer les membres",
-    "memberAccess": "(Accès membre)",
-    "memberInvitedSuccess": "Membre invité avec succès !",
-    "memberLimitError": "Vous avez atteint votre limite de membres ({{used}}/{{limit}}). Mettez à niveau votre plan pour ajouter davantage de membres.",
-    "memberRemovedSuccess": "Membre supprimé avec succès !",
+    "limitReachedTooltip": "Member limit reached – upgrade to add more",
+    "manageMembers": "Manage Members",
+    "memberAccess": "(Member Access)",
+    "memberInvitedSuccess": "Member invited successfully!",
+    "memberLimitError": "You have reached your member limit ({{used}}/{{limit}}). Upgrade your plan to add more team members.",
+    "memberRemovedSuccess": "Member removed successfully!",
     "noMembersYet": "Aucun membre pour l'instant",
     "pending": "En attente",
     "permissions": "Autorisations",
-    "removeExistingOrUpgrade": "Supprimez un membre existant ou mettez à niveau pour augmenter votre limite.",
-    "resendInvitation": "Renvoyer l'invitation",
-    "role": "Rôle",
+    "removeExistingOrUpgrade": "Remove an existing member or upgrade to increase your limit.",
+    "resendInvitation": "Resend invitation",
+    "role": "Role",
     "slotsLeft": "{{count}} place restante",
     "slotsLeft_plural": "{{count}} places restantes",
     "switchToCompact": "Basculer vers le design compact",
-    "switchToEnhanced": "Basculer vers le design amélioré",
-    "upgrade": "Mettre à niveau",
+    "switchToEnhanced": "Switch to enhanced design",
+    "upgrade": "Upgrade",
     "usage": "Utilisation",
-    "viewProject": "Voir le projet",
-    "viewTasks": "Voir les tâches"
+    "viewProject": "View Project",
+    "viewTasks": "View Tasks"
   },
   "aiTask": {
     "generator": "AI Task Generator",
@@ -1307,44 +1317,45 @@
   },
   "billing": {
     "activeSubscriber": "Aktiivinen tilaaja",
-    "cancelConfirmation": "Haluatko varmasti peruuttaa {{planName}}-tilauksesi? Menetät premium-ominaisuudet nykyisen laskutuskauden lopussa.",
+    "cancelConfirmation": "Are you sure you want to cancel your {{planName}} subscription? You will lose premium features at the end of the current billing period.",
     "cancelSubscription": "Cancel Subscription",
     "cancelSubscriptionAction": "Cancel Subscription",
     "cancellationReasons": {
-      "missing_features": "Puuttuu tarvitsemani ominaisuuksia",
-      "not_using_enough": "En käytä tarpeeksi",
-      "other": "Muu syy",
-      "switching_service": "Vaihdaan toiseen palveluun",
-      "technical_issues": "Teknisiä ongelmia",
-      "temporary_pause": "Tilapäinen tauko",
-      "too_expensive": "Liian kallis"
+      "missing_features": "Missing features",
+      "not_using_enough": "Not using it enough",
+      "other": "Other",
+      "switching_service": "Switching service",
+      "technical_issues": "Technical issues",
+      "temporary_pause": "Temporary pause",
+      "too_expensive": "Too expensive"
     },
     "cancelsOn": "Peruutus astuu voimaan {{date}}",
     "currentPlan": "Current Plan",
-    "dayTrial": "{{days}}-tägige Testphase",
+    "dayTrial": "{{days}}-day trial",
     "freeTier": "Ilmainen taso",
-    "helpImprove": "Auta meitä kehittymään kertomalla miksi peruutat:",
+    "helpImprove": "Help us improve by telling us why you are cancelling:",
     "keepSubscription": "Keep Subscription",
     "mostPopular": "Most Popular",
     "onTrial": "On Trial",
     "priceLoading": "Hinta latautuu...",
     "resumeSubscription": "Jatka tilausta",
-    "startDayTrial": "Aloita {{days}} päivän kokeilu",
+    "startDayTrial": "Start {{days}}-day trial",
     "startPlan": "Aloita {{plan}}",
-    "stripeNotice": "Maksut käsittelee turvallisesti Stripe. Aloita ilmainen kokeilu millä tahansa voimassa olevalla luottokortilla.",
-    "subtitle": "Valitse paketti ja aloita ilmaisella kokeilulla. Saat käyttöösi premium-ominaisuudet kuten AI-tehtävien luonnin, tiimiyhteistyön ja kehittyneet raportit.",
+    "stripeNotice": "Payments are securely processed by Stripe. Start your free trial with any valid credit card.",
+    "subtitle": "Choose a plan and start a free trial. Get access to premium features like AI task generation, team collaboration, and advanced reports.",
     "title": "Laskutus ja tilaus",
-    "trialEndsOn": "Kokeilu päättyy {{date}}",
-    "upgradeToPlan": "Päivitä pakettiin {{plan}}",
+    "trialEndsOn": "Trial ends on {{date}}",
+    "upgradeToPlan": "Upgrade to {{plan}} plan",
     "whyCancel": "Why are you canceling?",
-    "yesContinue": "Yes, Continue"
+    "yesContinue": "Yes, Continue",
+    "invitationExpired": "Invitation Expired"
   },
   "errors": {
-    "emailMismatch": "mail Mismatch",
+    "emailMismatch": "Email Mismatch",
     "fileProcessing": "File Processing",
-    "invitationExpired": "Invitationxpired",
-    "invitationExpiredMessage": "Invitationxpired Message",
-    "speechRecognitionError": "Speech Recognitionrror",
+    "invitationExpired": "Invitation Expired",
+    "invitationExpiredMessage": "The invitation has expired.",
+    "speechRecognitionError": "Speech Recognition Error",
     "speechRecognitionFailed": "Speech Recognition Failed"
   },
   "legal": {
@@ -1389,7 +1400,7 @@
       "createCustomWorkflow": "Create Custom Workflow",
       "customWorkflow": "Custom Workflow",
       "customWorkflowDescription": "Custom Workflowescription",
-      "description": "escription",
+      "description": "Description",
       "noTemplatesFound": "No Templates Found",
       "noTemplatesMessage": "No Templates Message",
       "resetFilters": "Reset Filters",

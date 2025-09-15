@@ -9,6 +9,16 @@ export const languages = [
     { code: 'sv', name: 'language.swedish', flag: '🇸🇪', nativeName: 'Svenska' },
     { code: 'nl', name: 'language.dutch', flag: '🇳🇱', nativeName: 'Nederlands' },
     { code: 'fr', name: 'language.french', flag: '🇫🇷', nativeName: 'Français' },
+    { code: 'pt', name: 'language.portuguese', flag: '🇵🇹', nativeName: 'Português' },
+    { code: 'it', name: 'language.italian', flag: '🇮🇹', nativeName: 'Italiano' },
+    { code: 'hu', name: 'language.hungarian', flag: '🇭🇺', nativeName: 'Magyar' },
+    { code: 'ro', name: 'language.romanian', flag: '🇷🇴', nativeName: 'Română' },
+    { code: 'pl', name: 'language.polish', flag: '🇵🇱', nativeName: 'Polski' },
+    { code: 'ru', name: 'language.russian', flag: '🇷🇺', nativeName: 'Русский' },
+    { code: 'da', name: 'language.danish', flag: '🇩🇰', nativeName: 'Dansk' },
+    { code: 'no', name: 'language.norwegian', flag: '🇳🇴', nativeName: 'Norsk' },
+    { code: 'et', name: 'language.estonian', flag: '🇪🇪', nativeName: 'Eesti' },
+    { code: 'lv', name: 'language.latvian', flag: '🇱🇻', nativeName: 'Latviešu' },
 ];
 
 /**
