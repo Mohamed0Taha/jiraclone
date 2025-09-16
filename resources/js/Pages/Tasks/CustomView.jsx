@@ -671,7 +671,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             console.log('[CustomView] Received real-time update:', event);
 
             // Only update if this is from a different user (avoid echo from own saves)
-            if (event.userId !== currentAuth?.id) {
+            if (event.user?.id !== currentAuth?.id) {
                 console.log('[CustomView] Updating component from real-time data change');
 
                 // The component code needs to be updated with the new embedded data
@@ -683,7 +683,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
                         if (data.success && data.html && data.html.trim()) {
                             setComponentCode(data.html);
-                            showSnackbar(`Component updated by ${event.userName || 'another user'}`, 'info');
+                            showSnackbar(`Component updated by ${event.user?.name || 'another user'}`, 'info');
                         }
                     } catch (error) {
                         console.error('[CustomView] Error reloading component after real-time update:', error);

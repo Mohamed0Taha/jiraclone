@@ -1392,11 +1392,12 @@ const __EMBEDDED_DATA__ = $dataJson;
 
     /**
      * Load component data (for restoring state across component reloads)
+     * Note: Views are now shared across project members, so we don't filter by userId
      */
     public function loadComponentData(Project $project, int $userId, string $viewName, string $dataKey): array
     {
         try {
-            // Get the custom view
+            // Get the custom view (shared across all project members)
             $customView = CustomView::getActiveForProject($project->id, $userId, $viewName);
             
             if (!$customView) {

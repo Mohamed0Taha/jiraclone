@@ -96,9 +96,19 @@ class CustomViewsDataController extends Controller
 
         try {
             $result = $this->generativeUIService->loadComponentData($project, $userId, $viewName, $dataKey);
+            
+            // If result is successful and has data, return it directly for frontend compatibility
+            if ($result['success'] && isset($result['data'])) {
+                return response()->json([
+                    'success' => true,
+                    'data' => ['data' => $result['data']], // Wrap in expected structure
+                ]);
+            }
+            
+            // If no data found, return null
             return response()->json([
                 'success' => true,
-                'data' => $result,
+                'data' => null,
             ]);
         } catch (\Exception $e) {
             Log::error('[CustomViewsDataController] loadData error', [
