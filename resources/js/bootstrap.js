@@ -43,10 +43,8 @@ if (import.meta.env.VITE_PUSHER_APP_KEY && import.meta.env.VITE_PUSHER_APP_KEY !
                 key: import.meta.env.VITE_PUSHER_APP_KEY,
                 cluster,
                 forceTLS: true,
-                // Pusher v8 deprecates disableStats; use enableStats: false
+                // Pusher v8: use enableStats: false
                 enableStats: false,
-                // Allow both ws and wss; browser will use the right one
-                enabledTransports: ['ws', 'wss'],
                 authorizer: (channel, options) => {
                     return {
                         authorize: (socketId, callback) => {
@@ -85,8 +83,23 @@ if (import.meta.env.VITE_PUSHER_APP_KEY && import.meta.env.VITE_PUSHER_APP_KEY !
                     connection.bind('state_change', (states) => {
                         console.log('[Pusher] state change', states);
                     });
+                    let retriedWithoutWsHost = false;
                     connection.bind('unavailable', () => {
                         console.warn('[Pusher] connection unavailable (network or blocked websockets)');
+                        // Fallback: if we forced a wsHost override, retry without it to let Pusher auto-resolve
+                        try {
+                            if (!retriedWithoutWsHost && wsHost) {
+                                retriedWithoutWsHost = true;
+                                console.warn('[Pusher] Retrying connection without wsHost override to allow fallbacks');
+                                try { window.Echo.disconnect?.(); } catch (_) {}
+                                const retryOptions = { ...echoOptions };
+                                delete retryOptions.wsHost;
+                                delete retryOptions.wssPort;
+                                window.Echo = new Echo(retryOptions);
+                            }
+                        } catch (e) {
+                            console.warn('[Pusher] Retry without wsHost failed', e);
+                        }
                     });
                     connection.bind('failed', () => {
                         console.warn('[Pusher] connection failed (all strategies exhausted)');

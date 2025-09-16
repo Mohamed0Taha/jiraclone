@@ -1210,6 +1210,27 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
                 $customViewId
             );
 
+            // Broadcast that the component code was saved/updated so other viewers refresh
+            try {
+                $user = \App\Models\User::find($userId);
+                broadcast(new CustomViewDataUpdated(
+                    $project->id,
+                    $viewName,
+                    'component',
+                    [
+                        'custom_view_id' => $customView->id,
+                        'saved_at' => now()->toISOString(),
+                    ],
+                    $user
+                ));
+            } catch (\Throwable $e) {
+                Log::warning('Broadcast failed after saveCustomView', [
+                    'project_id' => $project->id,
+                    'view_name' => $viewName,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             return [
                 'success' => true,
                 'custom_view_id' => $customView->id,
@@ -1532,6 +1553,24 @@ const __EMBEDDED_DATA__ = $dataJson;
                 'view_name' => $viewName,
                 'deleted' => $deleted
             ]);
+
+            // Broadcast that the component was deleted so other viewers clear
+            try {
+                $user = \App\Models\User::find($userId);
+                broadcast(new CustomViewDataUpdated(
+                    $project->id,
+                    $viewName,
+                    'component',
+                    [ 'deleted' => true ],
+                    $user
+                ));
+            } catch (\Throwable $e) {
+                Log::warning('Broadcast failed after deleteCustomView', [
+                    'project_id' => $project->id,
+                    'view_name' => $viewName,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             return $deleted;
 

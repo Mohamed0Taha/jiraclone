@@ -684,6 +684,11 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         if (data.success && data.html && data.html.trim()) {
                             setComponentCode(data.html);
                             showSnackbar(`Component updated by ${event.user?.name || 'another user'}`, 'info');
+                        } else {
+                            // Handle deletion or missing component gracefully
+                            setComponentCode('');
+                            setIsPersisted(false);
+                            showSnackbar(`Component removed or unavailable${event.user?.name ? ' (by ' + event.user.name + ')' : ''}`, 'info');
                         }
                     } catch (error) {
                         console.error('[CustomView] Error reloading component after real-time update:', error);

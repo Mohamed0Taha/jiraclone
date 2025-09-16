@@ -43,9 +43,14 @@ VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
 VITE_PUSHER_WS_HOST=ws-eu.pusher.com
 
 BROADCAST_DRIVER=pusher
-```
 
 Notes
+
+- Do not set `PUSHER_HOST` to `api.pusherapp.com`. The app auto-derives the correct REST API host from your cluster (e.g. `api-eu.pusher.com`). If you override the host incorrectly, events won’t reach your cluster.
+- Either `BROADCAST_CONNECTION` or `BROADCAST_DRIVER` may be used. This repo supports both; set one to `pusher`.
+```
+
+Client Host
 
 - Do not set `VITE_PUSHER_HOST` to `api.pusherapp.com` on the client. That is the REST API host used by the server, not the WebSocket host. If you need to override the WS endpoint, use `VITE_PUSHER_WS_HOST` and point it to `ws-<cluster>.pusher.com`.
 

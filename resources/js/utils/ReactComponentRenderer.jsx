@@ -132,90 +132,98 @@ const StyledComponents = {
   BeautifulCard: (props) => React.createElement(MuiMaterial.Card, {
     ...props,
     sx: {
-      borderRadius: designTokens.borderRadius.xl,
-      boxShadow: designTokens.shadows.md,
-      border: '1px solid ' + designTokens.colors.neutral[200],
-      overflow: 'hidden',
-      transition: 'all 0.2s ease-in-out',
-      '&:hover': {
-        boxShadow: designTokens.shadows.lg,
-        transform: 'translateY(-2px)',
-      },
+      borderRadius: designTokens.borderRadius.lg,
+      boxShadow: 'none',
+      border: 'none',
+      overflow: 'visible',
+      transition: 'none',
       ...props.sx,
     },
   }),
   FormContainer: (props) => React.createElement(MuiMaterial.Box, {
     ...props,
     sx: {
-      padding: designTokens.spacing.xl,
-      backgroundColor: '#ffffff',
-      borderRadius: designTokens.borderRadius.xl,
-      boxShadow: designTokens.shadows.md,
-      border: '1px solid ' + designTokens.colors.neutral[200],
+      padding: designTokens.spacing.md,
+      backgroundColor: 'transparent',
+      borderRadius: designTokens.borderRadius.lg,
+      boxShadow: 'none',
+      border: 'none',
       '& .MuiTextField-root': {
-        marginBottom: designTokens.spacing.md,
+        marginBottom: designTokens.spacing.sm,
       },
       ...props.sx,
     },
   }),
   PrimaryButton: (props) => React.createElement(MuiMaterial.Button, {
     variant: 'contained',
+    size: 'small',
+    disableElevation: true,
     ...props,
     sx: {
-      borderRadius: designTokens.borderRadius.lg,
+      borderRadius: designTokens.borderRadius.md,
       textTransform: 'none',
       fontWeight: 600,
-      padding: designTokens.spacing.sm + ' ' + designTokens.spacing.lg,
-      boxShadow: designTokens.shadows.sm,
-      '&:hover': {
-        boxShadow: designTokens.shadows.md,
-        transform: 'translateY(-1px)',
-      },
+      fontSize: '0.85rem',
+      padding: '4px 10px',
+      minHeight: '32px',
+      boxShadow: 'none',
       ...props.sx,
     },
   }),
   SuccessButton: (props) => React.createElement(MuiMaterial.Button, {
     variant: 'contained',
     color: 'success',
+    size: 'small',
+    disableElevation: true,
     ...props,
     sx: {
-      borderRadius: designTokens.borderRadius.lg,
+      borderRadius: designTokens.borderRadius.md,
       textTransform: 'none',
       fontWeight: 600,
-      padding: designTokens.spacing.sm + ' ' + designTokens.spacing.lg,
-      boxShadow: designTokens.shadows.sm,
-      '&:hover': {
-        boxShadow: designTokens.shadows.md,
-        transform: 'translateY(-1px)',
-      },
+      fontSize: '0.85rem',
+      padding: '4px 10px',
+      minHeight: '32px',
+      boxShadow: 'none',
       ...props.sx,
     },
   }),
   DangerButton: (props) => React.createElement(MuiMaterial.Button, {
     variant: 'contained',
     color: 'error',
+    size: 'small',
+    disableElevation: true,
     ...props,
     sx: {
-      borderRadius: designTokens.borderRadius.lg,
+      borderRadius: designTokens.borderRadius.md,
       textTransform: 'none',
       fontWeight: 600,
-      padding: designTokens.spacing.sm + ' ' + designTokens.spacing.lg,
-      boxShadow: designTokens.shadows.sm,
-      '&:hover': {
-        boxShadow: designTokens.shadows.md,
-        transform: 'translateY(-1px)',
-      },
+      fontSize: '0.85rem',
+      padding: '4px 10px',
+      minHeight: '32px',
+      boxShadow: 'none',
+      ...props.sx,
+    },
+  }),
+  FloatingAction: (props) => React.createElement(MuiMaterial.Fab, {
+    color: 'primary',
+    size: 'small',
+    ...props,
+    sx: {
+      position: 'fixed',
+      right: 16,
+      bottom: 16,
+      boxShadow: 'none',
       ...props.sx,
     },
   }),
   ContentContainer: (props) => React.createElement(MuiMaterial.Box, {
     ...props,
     sx: {
-      padding: designTokens.spacing.xl,
-      backgroundColor: designTokens.colors.neutral[50],
-      minHeight: '100vh',
+      padding: designTokens.spacing.md,
+      backgroundColor: 'transparent',
+      minHeight: 'auto',
       '& > *:not(:last-child)': {
-        marginBottom: designTokens.spacing.lg,
+        marginBottom: designTokens.spacing.md,
       },
       ...props.sx,
     },
@@ -226,8 +234,8 @@ const StyledComponents = {
     sx: {
       fontWeight: 600,
       color: designTokens.colors.neutral[800],
-      marginBottom: designTokens.spacing.md,
-      borderBottom: '3px solid ' + designTokens.colors.primary[500],
+      marginBottom: designTokens.spacing.sm,
+      borderBottom: '2px solid ' + designTokens.colors.neutral[200],
       paddingBottom: designTokens.spacing.xs,
       display: 'inline-block',
       ...props.sx,
@@ -345,6 +353,35 @@ class ReactComponentRenderer extends React.Component {
     src = src.replace(/<(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)\s*\/>/g, '<$1Icon />');
     src = src.replace(/<(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)\s*>/g, '<$1Icon>');
     src = src.replace(/<\/(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)>/g, '</$1Icon>');
+
+    // Map string placeholders like startIcon="add icon" or startIcon="Add icn" to actual icon components
+    const mapStringIconToComponent = (label) => {
+      const v = String(label || '').toLowerCase().trim();
+      const has = (kw) => v.includes(kw);
+      if (has('add') || has('plus') || has('create') || v === '+') return 'AddIcon';
+      if (has('delete') || has('trash') || has('remove')) return 'DeleteIcon';
+      if (has('edit') || has('pencil')) return 'EditIcon';
+      if (has('save') || has('disk')) return 'SaveIcon';
+      if (has('close') || v === 'x') return 'CloseIcon';
+      if (has('search') || has('find') || has('magnify')) return 'SearchIcon';
+      if (has('refresh') || has('reload')) return 'RefreshIcon';
+      if (has('warning') || has('warn') || has('alert')) return 'WarningIcon';
+      if (has('error') || has('danger')) return 'ErrorIcon';
+      if (has('info') || has('information')) return 'InfoIcon';
+      if (has('check') || has('done') || has('ok') || has('success')) return 'CheckCircleIcon';
+      if (has('more') || has('kebab') || has('menu')) return 'MoreVertIcon';
+      if (has('settings') || has('gear') || has('preferences')) return 'SettingsIcon';
+      if (has('send') || has('submit')) return 'SendIcon';
+      if (has('filter')) return 'FilterListIcon';
+      if (has('back') || has('previous')) return 'ArrowBackIcon';
+      if (has('forward') || has('next')) return 'ArrowForwardIcon';
+      return null;
+    };
+
+    src = src.replace(/\b(startIcon|endIcon)\s*=\s*{?\s*(["'`])([^"'`]+)\2\s*}?/gi, (m, prop, q, val) => {
+      const comp = mapStringIconToComponent(val.replace(/\bicn\b/gi, 'icon'));
+      return comp ? `${prop}={<${comp} />}` : m;
+    });
 
     const hasExportDefault = /export\s+default\s+/.test(src);
     const looksLikeJSX = /<\w[\s\S]*>/.test(src) || /React\.createElement\(/.test(src);
@@ -597,6 +634,50 @@ const professionalTheme = createTheme({
   shape: {
     borderRadius: 8,
   },
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: { backgroundImage: 'none' },
+        '.MuiDataGrid-root .MuiDataGrid-columnHeaders': { minHeight: 40, maxHeight: 40 },
+        '.MuiDataGrid-root .MuiDataGrid-row': { minHeight: 36, maxHeight: 36 },
+        '.MuiDataGrid-root .MuiDataGrid-cell': { padding: '0 8px' },
+      },
+    },
+    MuiPaper: {
+      defaultProps: { elevation: 0 },
+      styleOverrides: { root: { boxShadow: 'none', backgroundImage: 'none' } },
+    },
+    MuiCard: {
+      defaultProps: { elevation: 0 },
+      styleOverrides: { root: { boxShadow: 'none', backgroundImage: 'none', border: 'none' } },
+    },
+    MuiButton: {
+      defaultProps: { size: 'small', disableElevation: true },
+      styleOverrides: {
+        root: { textTransform: 'none', borderRadius: 8, padding: '4px 10px', minHeight: 32 },
+        contained: { boxShadow: 'none' },
+      },
+    },
+    MuiTextField: {
+      defaultProps: { size: 'small', margin: 'dense' },
+    },
+    MuiFormControl: {
+      defaultProps: { size: 'small', margin: 'dense' },
+    },
+    MuiFab: {
+      defaultProps: { size: 'small', color: 'primary' },
+      styleOverrides: { root: { boxShadow: 'none' } },
+    },
+    MuiIconButton: {
+      defaultProps: { size: 'small' },
+    },
+    MuiChip: {
+      defaultProps: { size: 'small' },
+    },
+    MuiListItem: {
+      defaultProps: { dense: true },
+    },
+  },
 });
 
 async function saveViewData(dataKey, data) {
@@ -706,7 +787,14 @@ function useEmbeddedData(dataKey, defaultValue = null) {
 
 ${transformed}
 
-return ${componentName};
+const __Themed = (props) => (
+  React.createElement(ThemeProvider, { theme: professionalTheme },
+    React.createElement(CssBaseline, null),
+    React.createElement(${componentName}, props)
+  )
+);
+
+return __Themed;
 `;
 
     const factory = new Function(

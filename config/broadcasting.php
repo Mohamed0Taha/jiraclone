@@ -15,7 +15,8 @@ return [
     |
     */
 
-    'default' => env('BROADCAST_CONNECTION', 'pusher'),
+    // Support either BROADCAST_CONNECTION (used in this app) or BROADCAST_DRIVER (used in docs)
+    'default' => env('BROADCAST_CONNECTION', env('BROADCAST_DRIVER', 'pusher')),
 
     /*
     |--------------------------------------------------------------------------
@@ -51,14 +52,29 @@ return [
             'key' => env('PUSHER_APP_KEY'),
             'secret' => env('PUSHER_APP_SECRET'),
             'app_id' => env('PUSHER_APP_ID'),
-            'options' => [
-                'cluster' => env('PUSHER_APP_CLUSTER'),
-                'host' => env('PUSHER_HOST') ?: 'api-'.env('PUSHER_APP_CLUSTER', 'mt1').'.pusher.com',
-                'port' => env('PUSHER_PORT', 443),
-                'scheme' => env('PUSHER_SCHEME', 'https'),
-                'encrypted' => true,
-                'useTLS' => env('PUSHER_SCHEME', 'https') === 'https',
-            ],
+            'options' => (function () {
+                $cluster = env('PUSHER_APP_CLUSTER', 'mt1');
+                $scheme = env('PUSHER_SCHEME', 'https');
+                $port = env('PUSHER_PORT', 443);
+                $rawHost = env('PUSHER_HOST');
+
+                // Normalize an incorrectly configured REST host.
+                // If someone sets PUSHER_HOST=api.pusherapp.com, prefer the cluster-aware host.
+                if ($rawHost && preg_match('/^api\./i', $rawHost)) {
+                    $rawHost = null; // force fallback to cluster host
+                }
+
+                $host = $rawHost ?: ('api-' . $cluster . '.pusher.com');
+
+                return [
+                    'cluster' => $cluster,
+                    'host' => $host,
+                    'port' => $port,
+                    'scheme' => $scheme,
+                    'encrypted' => true,
+                    'useTLS' => $scheme === 'https',
+                ];
+            })(),
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
             ],
