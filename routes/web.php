@@ -27,6 +27,7 @@ use App\Notifications\CustomVerifyEmail;
 use Illuminate\Http\Request;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -434,6 +435,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
+    /* Broadcasting Authentication */
+    Broadcast::routes();
+
     /* Profile */
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
