@@ -22,12 +22,13 @@ if (import.meta.env.VITE_PUSHER_APP_KEY && import.meta.env.VITE_PUSHER_APP_KEY !
             window.Echo = new Echo({
                 broadcaster: 'pusher',
                 key: import.meta.env.VITE_PUSHER_APP_KEY,
-                cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER ?? 'mt1',
-                wsHost: import.meta.env.VITE_PUSHER_HOST ? import.meta.env.VITE_PUSHER_HOST : `ws-${import.meta.env.VITE_PUSHER_APP_CLUSTER}.pusherapp.com`,
-                wsPort: import.meta.env.VITE_PUSHER_PORT ?? 80,
-                wssPort: import.meta.env.VITE_PUSHER_PORT ?? 443,
-                forceTLS: (import.meta.env.VITE_PUSHER_SCHEME ?? 'https') === 'https',
+                cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER ?? 'eu',
+                wsHost: `ws-${import.meta.env.VITE_PUSHER_APP_CLUSTER ?? 'eu'}.pusherapp.com`,
+                wsPort: 80,
+                wssPort: 443,
+                forceTLS: true,
                 enabledTransports: ['ws', 'wss'],
+                disableStats: true,
                 authorizer: (channel, options) => {
                     return {
                         authorize: (socketId, callback) => {
