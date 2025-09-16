@@ -480,6 +480,7 @@ CRITICAL IMPORT REQUIREMENTS:
 3. **DO NOT import any external libraries - all components and icons are pre-loaded**
 4. **Icons are available as AddIcon, EditIcon, DeleteIcon (with 'Icon' suffix)**
 5. **All Material-UI components are available without imports**
+6. **NEVER use import paths like './StyledComponents' or '@mui/material' - everything is global**
 
 CRITICAL REQUIREMENTS:
 1. Generate a COMPLETE, FUNCTIONAL React component that can be directly used
@@ -972,10 +973,13 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
     private function enhanceReactComponent(string $componentCode, string $userRequest, ?\App\Models\User $authUser = null): string
     {
         // Remove any import statements for StyledComponents, MuiMaterial, or MuiIcons since they're globally available
+        $componentCode = preg_replace('/^import\s+.*from\s*[\'"].*StyledComponents.*[\'"];?\s*$/m', '', $componentCode);
+        $componentCode = preg_replace('/^import\s+.*from\s*[\'"].*MuiMaterial.*[\'"];?\s*$/m', '', $componentCode);
+        $componentCode = preg_replace('/^import\s+.*from\s*[\'"].*MuiIcons.*[\'"];?\s*$/m', '', $componentCode);
+        $componentCode = preg_replace('/^import\s+.*from\s*[\'"].*@mui.*[\'"];?\s*$/m', '', $componentCode);
+        
+        // Also remove imports where StyledComponents appears in the destructured list
         $componentCode = preg_replace('/^import\s+.*StyledComponents.*from.*[\'"].*[\'"];?\s*$/m', '', $componentCode);
-        $componentCode = preg_replace('/^import\s+.*MuiMaterial.*from.*[\'"].*[\'"];?\s*$/m', '', $componentCode);
-        $componentCode = preg_replace('/^import\s+.*MuiIcons.*from.*[\'"].*[\'"];?\s*$/m', '', $componentCode);
-        $componentCode = preg_replace('/^import\s+.*@mui.*from.*[\'"].*[\'"];?\s*$/m', '', $componentCode);
 
         // 0) Force usage of real data when available: Replace common fake arrays with props-based init
         // Remove patterns like: const SomethingData = [ ... ]; const [items, setItems] = useState(SomethingData);
