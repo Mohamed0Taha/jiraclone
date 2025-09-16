@@ -583,6 +583,15 @@ class ReactComponentRenderer extends React.Component {
       });
     } catch (_) { /* noop */ }
 
+    // Ensure StyledComponents destructuring exists when components are referenced
+    const styledNames = ['ContentContainer','BeautifulCard','SectionHeader','FormContainer','PrimaryButton','SuccessButton','DangerButton'];
+    const usesStyled = styledNames.some(n => new RegExp('(^|[^.\\w])' + n + '\\b').test(src));
+    const hasDestructure = /const\s*\{\s*ContentContainer\s*,/m.test(src) || /StyledComponents\./.test(src);
+    if (usesStyled && !hasDestructure) {
+      const destructureLine = 'const { ContentContainer, BeautifulCard, SectionHeader, FormContainer, PrimaryButton, SuccessButton, DangerButton } = StyledComponents;\n';
+      src = destructureLine + src;
+    }
+
     const hasExportDefault = /export\s+default\s+/.test(src);
     const looksLikeJSX = /<\w[\s\S]*>/.test(src) || /React\.createElement\(/.test(src);
     const hasNamedComponent = /(function\s+\w+\s*\(|const\s+\w+\s*=\s*(?:\([^)]*\)\s*=>|function\s*\()|class\s+\w+\s+extends\s+React\.Component)/.test(src);
