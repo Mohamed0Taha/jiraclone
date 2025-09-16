@@ -28,19 +28,26 @@ Update your `.env` file with the same credentials:
 PUSHER_APP_ID=your_actual_app_id
 PUSHER_APP_KEY=your_actual_app_key
 PUSHER_APP_SECRET=your_actual_app_secret
+PUSHER_APP_CLUSTER=your_cluster
 PUSHER_HOST=
 PUSHER_PORT=443
 PUSHER_SCHEME=https
-PUSHER_APP_CLUSTER=your_cluster
 
+# Client-side (Vite) vars
 VITE_PUSHER_APP_KEY="${PUSHER_APP_KEY}"
-VITE_PUSHER_HOST="${PUSHER_HOST}"
-VITE_PUSHER_PORT="${PUSHER_PORT}"
-VITE_PUSHER_SCHEME="${PUSHER_SCHEME}"
 VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
+
+# Optional: explicitly set the WebSocket host if needed
+# IMPORTANT: Use the websocket host, not the REST host.
+# For hosted Pusher, use: ws-<cluster>.pusher.com (e.g. ws-eu.pusher.com)
+VITE_PUSHER_WS_HOST=ws-eu.pusher.com
 
 BROADCAST_DRIVER=pusher
 ```
+
+Notes
+
+- Do not set `VITE_PUSHER_HOST` to `api.pusherapp.com` on the client. That is the REST API host used by the server, not the WebSocket host. If you need to override the WS endpoint, use `VITE_PUSHER_WS_HOST` and point it to `ws-<cluster>.pusher.com`.
 
 ## 4. Test Real-time Features
 

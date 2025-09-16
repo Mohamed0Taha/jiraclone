@@ -19,16 +19,34 @@ if (import.meta.env.VITE_PUSHER_APP_KEY && import.meta.env.VITE_PUSHER_APP_KEY !
         import('pusher-js').then(({ default: Pusher }) => {
             window.Pusher = Pusher;
 
-            window.Echo = new Echo({
+            // Optional: enable detailed Pusher logs during development
+            try {
+                if (import.meta.env.DEV) {
+                    // eslint-disable-next-line no-undef
+                    Pusher.logToConsole = true;
+                }
+            } catch (_) { }
+
+            const cluster = (import.meta.env.VITE_PUSHER_APP_CLUSTER || 'eu').trim();
+            // Prefer VITE_PUSHER_WS_HOST if provided; otherwise let Pusher choose based on cluster.
+            // If someone incorrectly passes the REST host (api.pusherapp.com), normalize it.
+            let wsHost = (import.meta.env.VITE_PUSHER_WS_HOST || '').trim();
+            if (wsHost) {
+                if (/^api\./.test(wsHost)) {
+                    wsHost = `ws-${cluster}.pusher.com`;
+                }
+                wsHost = wsHost.replace('pusherapp.com', 'pusher.com');
+            }
+
+            const echoOptions = {
                 broadcaster: 'pusher',
                 key: import.meta.env.VITE_PUSHER_APP_KEY,
-                cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER ?? 'eu',
-                wsHost: `ws-${import.meta.env.VITE_PUSHER_APP_CLUSTER ?? 'eu'}.pusherapp.com`,
-                wsPort: 80,
-                wssPort: 443,
+                cluster,
                 forceTLS: true,
+                // Pusher v8 deprecates disableStats; use enableStats: false
+                enableStats: false,
+                // Allow both ws and wss; browser will use the right one
                 enabledTransports: ['ws', 'wss'],
-                disableStats: true,
                 authorizer: (channel, options) => {
                     return {
                         authorize: (socketId, callback) => {
@@ -45,7 +63,39 @@ if (import.meta.env.VITE_PUSHER_APP_KEY && import.meta.env.VITE_PUSHER_APP_KEY !
                         }
                     };
                 },
-            });
+            };
+
+            if (wsHost) {
+                Object.assign(echoOptions, {
+                    wsHost,
+                    wssPort: 443,
+                });
+            }
+
+            window.Echo = new Echo(echoOptions);
+
+            // Extra diagnostics to surface connection errors/reasons
+            try {
+                const pusher = window.Echo.connector?.pusher;
+                const connection = pusher?.connection;
+                if (connection) {
+                    connection.bind('error', (err) => {
+                        console.warn('[Pusher] connection error', err);
+                    });
+                    connection.bind('state_change', (states) => {
+                        console.log('[Pusher] state change', states);
+                    });
+                    connection.bind('unavailable', () => {
+                        console.warn('[Pusher] connection unavailable (network or blocked websockets)');
+                    });
+                    connection.bind('failed', () => {
+                        console.warn('[Pusher] connection failed (all strategies exhausted)');
+                    });
+                    pusher?.bind('pusher:subscription_error', (status) => {
+                        console.warn('[Pusher] subscription_error', status);
+                    });
+                }
+            } catch (_) { }
         });
     });
 } else {

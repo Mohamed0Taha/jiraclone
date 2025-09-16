@@ -140,10 +140,11 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 const items = Array.isArray(data?.custom_views) ? data.custom_views : [];
                 const match = items.find((v) => createSlug(String(v.name || '')) === viewName);
                 if (!cancelled) {
-                    setOriginalViewName(match?.name || viewName.replace(/-/g, ' '));
+                    // If we can't resolve to a pretty name yet, use the slug to ensure consistency with server saves
+                    setOriginalViewName(match?.name || viewName);
                 }
             } catch (_e) {
-                if (!cancelled) setOriginalViewName(viewName.replace(/-/g, ' '));
+                if (!cancelled) setOriginalViewName(viewName);
             }
         };
         fetchList();
@@ -658,12 +659,15 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             return;
         }
 
-        const channelName = `custom-view.${project.id}.${originalViewName}`;
-        console.log('[CustomView] Listening for real-time updates on channel:', channelName);
+        const baseName = `custom-view.${project.id}.${originalViewName}`;
+        const channelName = `private-${baseName}`;
+        console.log('[CustomView] Listening for real-time updates on channel:', baseName);
 
-        const channel = window.Echo.channel(channelName);
+        // Use private channel to match server-side PrivateChannel
+        const channel = window.Echo.private(baseName);
 
-        channel.listen('.CustomViewDataUpdated', (event) => {
+        // Event name matches broadcastAs(): 'custom-view-data-updated'
+        channel.listen('.custom-view-data-updated', (event) => {
             console.log('[CustomView] Received real-time update:', event);
 
             // Only update if this is from a different user (avoid echo from own saves)
@@ -691,15 +695,19 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         });
 
         return () => {
-            console.log('[CustomView] Leaving real-time channel:', channelName);
-            window.Echo.leaveChannel(channelName);
+            console.log('[CustomView] Leaving real-time channel:', baseName);
+            // Ensure we leave the private- prefixed channel
+            window.Echo.leave(`private-${baseName}`);
         };
     }, [project?.id, originalViewName, currentAuth?.id]);
 
     // Enhanced generation handling (optimized with useCallback)
-    const handleSpaGenerated = useCallback((payload) => {
+    const handleSpaGenerated = useCallback((payload, meta) => {
+        // payload may be HTML string or an object; meta (if provided) contains ids
         if (typeof payload === 'string') {
             setComponentCode(payload);
+            setCustomViewId(meta?.custom_view_id || meta?.customViewId || null);
+            setIsPersisted(true);
             setGenerationProgress(null);
             showSnackbar('Micro-application generated successfully!', 'success');
             setIsLocked(false);
@@ -708,7 +716,8 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
         if (payload && payload.component_code) {
             setComponentCode(payload.component_code);
-            setCustomViewId(payload.customViewId || payload.custom_view_id);
+            setCustomViewId(payload.customViewId || payload.custom_view_id || meta?.custom_view_id || null);
+            setIsPersisted(true);
             setGenerationProgress(null);
             showSnackbar('Micro-application generated successfully!', 'success');
             setIsLocked(false);
@@ -717,7 +726,8 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
         if (payload && payload.html) {
             setComponentCode(payload.html);
-            setCustomViewId(payload.customViewId);
+            setCustomViewId(payload.customViewId || meta?.custom_view_id || null);
+            setIsPersisted(true);
             setGenerationProgress(null);
             showSnackbar('Micro-application generated successfully!', 'success');
             setIsLocked(false);

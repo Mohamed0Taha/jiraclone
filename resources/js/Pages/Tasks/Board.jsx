@@ -359,17 +359,20 @@ export default function Board({
     const [newViewName, setNewViewName] = useState('');
     const [customViews, setCustomViews] = useState([]);
 
-    // Load custom views from server (shared across team)
-    useEffect(() => {
-        if (!project?.id) return;
+    // Helper to load custom views from server (shared across team)
+    const loadCustomViews = useCallback(() => {
+        if (!project?.id) return () => {};
         const controller = new AbortController();
-        fetch(route('custom-views.list', project.id), {
+        const listUrl = typeof window !== 'undefined' && typeof route === 'function'
+            ? route('custom-views.list', project.id)
+            : `/projects/${project.id}/custom-views/list`;
+        fetch(listUrl, {
             method: 'GET',
             headers: { Accept: 'application/json' },
             credentials: 'same-origin',
             signal: controller.signal,
         })
-            .then((res) => res.ok ? res.json() : Promise.reject(res))
+            .then((res) => (res.ok ? res.json() : Promise.reject(res)))
             .then((data) => {
                 const items = Array.isArray(data?.custom_views) ? data.custom_views : [];
                 const normalized = items.map((v) => ({
@@ -384,8 +387,22 @@ export default function Board({
                 console.warn('Failed to load custom views list:', err);
             });
         return () => controller.abort();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [project?.id]);
+
+    // Initial load on mount / project change
+    useEffect(() => {
+        const abort = loadCustomViews();
+        return () => {
+            try { abort && abort(); } catch {}
+        };
+    }, [loadCustomViews]);
+
+    // Refresh list when drawer opens to show newly created views
+    useEffect(() => {
+        if (customViewsDrawerOpen) {
+            loadCustomViews();
+        }
+    }, [customViewsDrawerOpen, loadCustomViews]);
 
     const buildColumnsFromServer = (incomingTasksObj) => {
         const cols = {};
@@ -905,12 +922,38 @@ export default function Board({
     const requirePro = (openFn) => (isPro ? openFn(true) : setUpgradeOpen(true));
 
     // Custom Views handlers
-    const handleCreateView = () => {
+    const customViewsButtonRef = useRef(null);
+    const handleCreateView = async () => {
         if (!newViewName.trim()) return;
         const slug = createSlug(newViewName.trim());
-        setNewViewName('');
+        const nameForSave = slug; // Persist by slug so server + client align
         setCreateViewDialogOpen(false);
-        // Navigate to the new view; persistence happens when saved from the editor
+
+        try {
+            // Create a placeholder custom view immediately so it appears in the drawer
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const starter = `import React from 'react';\nexport default function GeneratedMicroApp(){\n  return (<div style={{padding:16}}><h3>New Custom View</h3><p>Generated view: ${nameForSave}</p></div>);\n}`;
+            const res = await fetch(`/projects/${project.id}/custom-views/save`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    view_name: nameForSave,
+                    component_code: starter,
+                }),
+            });
+            if (!res.ok) throw new Error('Failed to create view');
+        } catch (e) {
+            // Non-fatal: still navigate; editor can save later
+            console.warn('Create view placeholder failed:', e);
+        }
+
+        setNewViewName('');
+        // Navigate to the new view
         router.visit(`/projects/${project.id}/custom-views/${slug}`);
     };
 
@@ -935,7 +978,10 @@ export default function Board({
             });
             if (!res.ok) throw new Error('Delete failed');
             // Refresh list after deletion
-            const list = await fetch(route('custom-views.list', project.id), {
+            const listUrl = typeof window !== 'undefined' && typeof route === 'function'
+                ? route('custom-views.list', project.id)
+                : `/projects/${project.id}/custom-views/list`;
+            const list = await fetch(listUrl, {
                 headers: { Accept: 'application/json' },
                 credentials: 'same-origin',
             }).then((r) => (r.ok ? r.json() : { custom_views: [] }));
@@ -1544,6 +1590,7 @@ export default function Board({
                             methodStyles={methodStyles}
                             assistantOpen={assistantOpen}
                             projectId={project.id}
+                            customViewsButtonRef={customViewsButtonRef}
                         />
 
                         {/* Create/Edit */}
@@ -2038,7 +2085,17 @@ export default function Board({
                     <Drawer
                         anchor="right"
                         open={customViewsDrawerOpen}
-                        onClose={() => setCustomViewsDrawerOpen(false)}
+                        onClose={() => {
+                            // Move focus back to the trigger to avoid aria-hidden on focused content
+                            try {
+                                const active = document.activeElement;
+                                if (active && typeof active.blur === 'function') active.blur();
+                            } catch {}
+                            setCustomViewsDrawerOpen(false);
+                            // Restore focus to the custom views FAB
+                            setTimeout(() => customViewsButtonRef.current?.focus?.(), 0);
+                        }}
+                        ModalProps={{ keepMounted: false }}
                         PaperProps={{
                             sx: {
                                 width: 320,
@@ -2077,7 +2134,11 @@ export default function Board({
                                 variant="contained"
                                 fullWidth
                                 startIcon={<AddIcon />}
-                                onClick={() => setCreateViewDialogOpen(true)}
+                                onClick={() => {
+                                    // Avoid nested modals (Drawer + Dialog) to prevent aria-hidden focus warnings
+                                    setCustomViewsDrawerOpen(false);
+                                    setTimeout(() => setCreateViewDialogOpen(true), 0);
+                                }}
                                 sx={{
                                     mb: 2,
                                     background: methodStyles.accent,

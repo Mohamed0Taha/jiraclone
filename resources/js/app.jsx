@@ -39,7 +39,12 @@ createInertiaApp({
         resolvePageComponent(`./Pages/${name}.jsx`, import.meta.glob('./Pages/**/*.jsx')),
 
     setup({ el, App, props }) {
-        const root = createRoot(el);
+        // Prevent double-initialization warning by caching the root
+        let root = el.__inertiaReactRoot || null;
+        if (!root) {
+            root = createRoot(el);
+            el.__inertiaReactRoot = root;
+        }
 
         root.render(
             <ThemeProvider>

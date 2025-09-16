@@ -20,6 +20,7 @@ export default function FloatingActionGroup({
     assistantOpen,
     projectId,
     onOpenCustomViews,
+    customViewsButtonRef,
 }) {
     const [expanded, setExpanded] = useState(false);
     const { shouldShowOverlay, userPlan } = useSubscription();
@@ -63,6 +64,7 @@ export default function FloatingActionGroup({
                 >
                     <Tooltip title={t('floating.customViews', 'Custom Views')} placement="left">
                         <Fab
+                            ref={customViewsButtonRef}
                             size="medium"
                             onClick={() => {
                                 setExpanded(false);
