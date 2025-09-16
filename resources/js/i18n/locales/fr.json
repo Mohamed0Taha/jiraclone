@@ -358,7 +358,7 @@
     "createTask": "Créer une tâche (c)",
     "addTask": "Ajouter une tâche",
     "exportJira": "Exporter vers JIA",
-    "customViews": "Vues personnalisées",
+    "customApps": "Applications personnalisées",
     "list": "Liste",
     "grid": "Grille"
   },
@@ -548,6 +548,10 @@
     "writeReplyPlaceholder": "Écrire une réponse...",
     "actionCannotBeUndone": "Cette action est irréversible.",
     "noTasks": "Aucune tâche {{status}}"
+  },
+  "customApps": {
+    "title": "Applications",
+    "createNew": "Créer une nouvelle application"
   },
   "customViews": {
     "title": "Vues personnalisées",

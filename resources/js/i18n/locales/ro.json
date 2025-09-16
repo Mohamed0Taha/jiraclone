@@ -658,7 +658,7 @@
     "createTask": "Creează sarcină (c)",
     "addTask": "Adaugă Sarcină",
     "exportJira": "Exportă în JIRA",
-    "customViews": "Vederi Personalizate",
+    "customApps": "Aplicații personalizate",
     "list": "Listă",
     "grid": "Grilă"
   },
@@ -848,6 +848,10 @@
       "validated": "Validat"
     },
     "viewDetails": "Vezi detalii"
+  },
+  "customApps": {
+    "title": "Aplicații",
+    "createNew": "Creează aplicație nouă"
   },
   "customViews": {
     "title": "Vederi personalizate",

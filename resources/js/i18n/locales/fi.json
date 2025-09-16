@@ -358,7 +358,7 @@
     "createTask": "Luo tehtävä (c)",
     "addTask": "Lisää tehtävä",
     "exportJira": "Vie JRAan",
-    "customViews": "Mukautetut näkymät",
+    "customApps": "Mukautetut sovellukset",
     "list": "Lista",
     "grid": "Ruudukko"
   },
@@ -548,6 +548,10 @@
     "writeReplyPlaceholder": "Kirjoita vastaus...",
     "actionCannotBeUndone": "Toimintoa ei voi perua.",
     "noTasks": "Ei {{status}} tehtäviä"
+  },
+  "customApps": {
+    "title": "Sovellukset",
+    "createNew": "Luo uusi sovellus"
   },
   "customViews": {
     "title": "Mukautetut näkymät",

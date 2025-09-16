@@ -658,7 +658,7 @@
     "createTask": "Create task (c)",
     "addTask": "Add Task",
     "exportJira": "Export to JIRA",
-    "customViews": "Custom Views",
+    "customApps": "Custom Apps",
     "list": "List",
     "grid": "Grid"
   },
@@ -848,6 +848,10 @@
       "validated": "Validated"
     },
     "viewDetails": "View details"
+  },
+  "customApps": {
+    "title": "Apps",
+    "createNew": "Create New App"
   },
   "customViews": {
     "title": "Custom Views",

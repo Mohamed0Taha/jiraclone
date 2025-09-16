@@ -490,7 +490,7 @@
     "createTask": "Taak aanmaken (c)",
     "addTask": "Taak toevoegen",
     "exportJira": "Exporteren naar JIRA",
-    "customViews": "Aangepaste weergaven",
+    "customApps": "Aangepaste apps",
     "list": "ijst",
     "grid": "Raster"
   },
@@ -680,6 +680,10 @@
     "updating": "Bijwerken...",
     "viewDetails": "Details bekijken",
     "actionCannotBeUndone": "Deze actie kan niet ongedaan worden gemaakt."
+  },
+  "customApps": {
+    "title": "Apps",
+    "createNew": "Nieuwe app maken"
   },
   "customViews": {
     "title": "Aangepaste weergaven",

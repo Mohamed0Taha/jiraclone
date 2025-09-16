@@ -658,7 +658,7 @@
     "createTask": "Feladat létrehozása (c)",
     "addTask": "Feladat hozzáadása",
     "exportJira": "Exportálás JIRA-ba",
-    "customViews": "Egyedi nézetek",
+    "customApps": "Egyéni alkalmazások",
     "list": "Lista",
     "grid": "Rács"
   },
@@ -848,6 +848,10 @@
       "validated": "Érvényesítve"
     },
     "viewDetails": "Részletek megtekintése"
+  },
+  "customApps": {
+    "title": "Alkalmazások",
+    "createNew": "Új alkalmazás létrehozása"
   },
   "customViews": {
     "title": "Egyedi nézetek",

@@ -658,7 +658,7 @@
     "createTask": "Loo ülesanne (c)",
     "addTask": "Lisa ülesanne",
     "exportJira": "Ekspordi JIRA-sse",
-    "customViews": "Kohandatud vaated",
+    "customApps": "Kohandatud rakendused",
     "list": "Loend",
     "grid": "Ruut"
   },
@@ -848,6 +848,10 @@
       "validated": "Kinnitatud"
     },
     "viewDetails": "Vaata üksikasju"
+  },
+  "customApps": {
+    "title": "Rakendused",
+    "createNew": "Loo uus rakendus"
   },
   "customViews": {
     "title": "Kohandatud vaated",

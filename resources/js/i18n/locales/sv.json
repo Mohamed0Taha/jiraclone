@@ -358,7 +358,7 @@
     "createTask": "kapa uppgift (c)",
     "addTask": "Lägg till uppgift",
     "exportJira": "xportera till JIRA",
-    "customViews": "Anpassade vyer",
+    "customApps": "Anpassade appar",
     "list": "Lista",
     "grid": "Rutnät"
   },
@@ -548,6 +548,10 @@
     "writeReplyPlaceholder": "Skriv ett svar...",
     "actionCannotBeUndone": "Denna åtgärd kan inte ångras.",
     "noTasks": "Inga {{status}} uppgifter"
+  },
+  "customApps": {
+    "title": "Appar",
+    "createNew": "Skapa ny app"
   },
   "customViews": {
     "title": "Anpassade vyer",

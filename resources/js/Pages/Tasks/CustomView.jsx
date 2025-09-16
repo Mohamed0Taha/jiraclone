@@ -31,6 +31,7 @@ import ChatIcon from '@mui/icons-material/Chat';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
@@ -1317,7 +1318,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     }
                 }}
             >
-                <DialogTitle sx={{ pb: 1, borderBottom: 1, borderColor: 'divider' }}>
+                <DialogTitle sx={{ pb: 1, borderBottom: 1, borderColor: 'divider', position: 'relative' }}>
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <AutoAwesomeIcon color="primary" />
                         <Typography variant="h6" fontWeight="600">
@@ -1330,6 +1331,20 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             variant="outlined"
                         />
                     </Stack>
+                    <IconButton
+                        aria-label={t('common.close')}
+                        onClick={() => setAssistantOpen(false)}
+                        sx={{
+                            position: 'absolute',
+                            right: 8,
+                            top: 6,
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                        }}
+                    >
+                        <CloseRoundedIcon />
+                    </IconButton>
                 </DialogTitle>
 
                 <DialogContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: 0 }}>
@@ -1393,41 +1408,37 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     {/* Input Form */}
                     <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                         <form onSubmit={handleChatSubmit}>
-                            <Stack direction="row" spacing={1} alignItems="center">
+                            <Stack direction="row" spacing={1.25} alignItems="center">
                                 <TextField
                                     fullWidth
+                                    multiline
+                                    minRows={2}
+                                    maxRows={6}
                                     value={chatInput}
                                     onChange={handleChatInputChange}
                                     placeholder={t('customViews.generatePrompt')}
                                     disabled={isGenerating}
                                     variant="outlined"
-                                    size="small"
-                                    sx={{ flex: '1 1 70%', maxWidth: '70%' }}
+                                    size="medium"
+                                    sx={{
+                                        flex: '1 1 auto',
+                                        '& .MuiInputBase-root': { alignItems: 'flex-start', py: 1.25 },
+                                    }}
                                 />
-                                <Button
+                                <IconButton
                                     type="submit"
-                                    variant="contained"
+                                    color="primary"
                                     disabled={isGenerating || isManuallyGenerating || !chatInput?.trim()}
-                                    startIcon={(isGenerating || isManuallyGenerating) ? <CircularProgress size={16} /> : <SendRoundedIcon />}
-                                    sx={{ flex: '0 0 15%', maxWidth: '15%', minWidth: 0 }}
+                                    sx={{
+                                        width: 44,
+                                        height: 44,
+                                        borderRadius: '50%',
+                                    }}
                                 >
-                                    {(isGenerating || isManuallyGenerating) ? t('customViews.generating') : t('customViews.generate')}
-                                </Button>
-                                {(isGenerating || isManuallyGenerating) && (
-                                    <Button
-                                        variant="outlined"
-                                        color="error"
-                                        onClick={() => {
-                                            if (typeof stop === 'function') {
-                                                stop();
-                                            }
-                                            setIsManuallyGenerating(false);
-                                        }}
-                                        sx={{ flex: '0 0 15%', maxWidth: '15%', minWidth: 0 }}
-                                    >
-                                        {t('customViews.stop')}
-                                    </Button>
-                                )}
+                                    {(isGenerating || isManuallyGenerating)
+                                        ? <CircularProgress size={20} />
+                                        : <SendRoundedIcon />}
+                                </IconButton>
                             </Stack>
                         </form>
 
@@ -1438,18 +1449,6 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         )}
                     </Box>
                 </DialogContent>
-
-                <DialogActions sx={{ p: 2 }}>
-                    <Button onClick={() => {
-                        setMessages([]);
-                        setChatInput('');
-                    }}>
-                        {t('customViews.clearChat')}
-                    </Button>
-                    <Button onClick={() => setAssistantOpen(false)}>
-                        {t('common.close')}
-                    </Button>
-                </DialogActions>
             </Dialog>
 
             {/* Legacy Assistant Chat - keeping for backup */}

@@ -2119,7 +2119,7 @@ export default function Board({
                                 mb={2}
                             >
                                 <Typography variant="h6" fontWeight={700}>
-                                    Custom Views
+                                    {t('customApps.title', 'Apps')}
                                 </Typography>
                                 <IconButton
                                     size="small"
@@ -2152,7 +2152,7 @@ export default function Board({
                                     },
                                 }}
                             >
-                                Create View
+                                {t('customApps.createNew', 'Create New App')}
                             </Button>
 
                             <Divider sx={{ mb: 2 }} />
@@ -2252,7 +2252,7 @@ export default function Board({
                             },
                         }}
                     >
-                        <DialogTitle sx={{ fontWeight: 700 }}>{t('customViews.createNew')}</DialogTitle>
+                        <DialogTitle sx={{ fontWeight: 700 }}>{t('customApps.createNew', '+Create New App')}</DialogTitle>
                         <DialogContent>
                             <TextField
                                 autoFocus

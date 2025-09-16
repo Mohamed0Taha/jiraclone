@@ -188,6 +188,21 @@ const getComponentOverrides = (mode) => ({
                     boxShadow: '0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23)',
                 },
             },
+            containedPrimary: {
+                backgroundColor: mode === 'light' ? '#2563eb' : '#3b82f6',
+                '&:hover': { backgroundColor: mode === 'light' ? '#1d4ed8' : '#2563eb' },
+            },
+            containedSuccess: {
+                backgroundColor: mode === 'light' ? '#16a34a' : '#22c55e',
+                '&:hover': { backgroundColor: mode === 'light' ? '#15803d' : '#16a34a' },
+            },
+            containedError: {
+                backgroundColor: mode === 'light' ? '#dc2626' : '#ef4444',
+                '&:hover': { backgroundColor: mode === 'light' ? '#b91c1c' : '#dc2626' },
+            },
+            outlined: {
+                borderColor: mode === 'light' ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.22)'
+            }
         },
     },
     MuiTextField: {
@@ -242,25 +257,7 @@ const getComponentOverrides = (mode) => ({
             },
         },
     },
-    MuiButton: {
-        styleOverrides: {
-            containedPrimary: {
-                backgroundColor: mode === 'light' ? '#2563eb' : '#3b82f6',
-                '&:hover': { backgroundColor: mode === 'light' ? '#1d4ed8' : '#2563eb' },
-            },
-            containedSuccess: {
-                backgroundColor: mode === 'light' ? '#16a34a' : '#22c55e',
-                '&:hover': { backgroundColor: mode === 'light' ? '#15803d' : '#16a34a' },
-            },
-            containedError: {
-                backgroundColor: mode === 'light' ? '#dc2626' : '#ef4444',
-                '&:hover': { backgroundColor: mode === 'light' ? '#b91c1c' : '#dc2626' },
-            },
-            outlined: {
-                borderColor: mode === 'light' ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.22)'
-            }
-        }
-    },
+    // (MuiButton overrides merged above)
     MuiChip: {
         styleOverrides: {
             root: {

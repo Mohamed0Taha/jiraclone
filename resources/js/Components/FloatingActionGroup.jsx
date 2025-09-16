@@ -62,7 +62,7 @@ export default function FloatingActionGroup({
                     timeout={200}
                     style={{ transitionDelay: expanded ? '200ms' : '0ms' }}
                 >
-                    <Tooltip title={t('floating.customViews', 'Custom Views')} placement="left">
+                    <Tooltip title={t('floating.customApps', 'Custom Apps')} placement="left">
                         <Fab
                             ref={customViewsButtonRef}
                             size="medium"
