@@ -621,6 +621,16 @@ Route::middleware('auth')->group(function () {
             $openAIService = app(\App\Services\OpenAIService::class);
             $generativeUIService = new \App\Services\GenerativeUIService($openAIService);
             
+            Log::info('GenerativeUIService: Sending prompt to OpenAI', [
+                'project_id' => $project->id,
+                'user_message' => $userMessage,
+                'is_update_request' => !empty($currentComponentCode),
+                'current_component_length' => $currentComponentCode ? strlen($currentComponentCode) : 0,
+                'has_project_context' => !is_null($projectContext),
+                'project_context_keys' => $projectContext ? array_keys($projectContext) : [],
+                'conversation_length' => count($conversationHistory),
+            ]);
+            
             // Process the request
             $result = $generativeUIService->processCustomViewRequest(
                 $project,

@@ -169,6 +169,11 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     const [chatInput, setChatInput] = useState('');
     const [isManuallyGenerating, setIsManuallyGenerating] = useState(false);
 
+    // Memoize component code for useChat to prevent unnecessary re-renders
+    const memoizedComponentCode = useMemo(() => {
+        return componentCode && componentCode.trim() ? componentCode : null;
+    }, [componentCode]);
+
     // AI SDK useChat hook for streaming component generation
     const {
         messages,
@@ -185,7 +190,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         body: {
             projectId: project?.id,
             viewName,
-            currentCode: componentCode,
+            currentCode: memoizedComponentCode, // Use memoized component code
             projectContext: {
                 tasks,
                 users,
@@ -194,11 +199,15 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         },
         onResponse: (response) => {
             console.log('AI SDK Response:', response);
+            console.log('Current component code being sent:', memoizedComponentCode ? 'Component exists (' + memoizedComponentCode.length + ' chars)' : 'No existing component');
         },
         onFinish: (message) => {
             console.log('AI SDK Finished:', message);
             console.log('Message experimental_data:', message?.experimental_data);
             console.log('Message content:', message?.content);
+
+            // Check if this was an update or new component
+            const wasUpdate = memoizedComponentCode && memoizedComponentCode.trim();
 
             // Extract component code from the response
             if (message?.experimental_data?.component_code) {
@@ -208,7 +217,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 setCustomViewId(message.experimental_data.custom_view_id);
                 setIsLocked(false);
                 setIsPersisted(false); // generated code is a draft until explicitly saved or loaded from server
-                showSnackbar('Component generated successfully!', 'success');
+                showSnackbar(wasUpdate ? 'Component updated successfully!' : 'Component generated successfully!', 'success');
             } else if (message?.content) {
                 console.log('Checking message content for component code');
                 const codeMatch = message.content.match(/```(?:jsx?|tsx?|html)?\n?([\s\S]*?)```/);
@@ -218,7 +227,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     setComponentError(null); // Clear any previous errors
                     setIsLocked(false);
                     setIsPersisted(false);
-                    showSnackbar('Component generated successfully!', 'success');
+                    showSnackbar(wasUpdate ? 'Component updated successfully!' : 'Component generated successfully!', 'success');
                 } else if (message.content.trim() && !message.content.includes('Failed to generate')) {
                     console.log('Using entire message content as component code');
                     // If no code block found, try to use the entire content as code
@@ -226,14 +235,14 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     setComponentError(null); // Clear any previous errors
                     setIsLocked(false);
                     setIsPersisted(false);
-                    showSnackbar('Component generated successfully!', 'success');
+                    showSnackbar(wasUpdate ? 'Component updated successfully!' : 'Component generated successfully!', 'success');
                 } else {
                     console.warn('Message content appears to be an error or empty:', message.content);
-                    showSnackbar('Failed to generate component. Please try again.', 'error');
+                    showSnackbar(wasUpdate ? 'Failed to update component. Please try again.' : 'Failed to generate component. Please try again.', 'error');
                 }
             } else {
                 console.warn('No component code found in message');
-                showSnackbar('No component code received. Please try again.', 'error');
+                showSnackbar(wasUpdate ? 'No component updates received. Please try again.' : 'No component code received. Please try again.', 'error');
             }
         },
         onError: (error) => {
@@ -643,10 +652,49 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         loadCustomView();
     }, [project?.id, originalViewName]);
 
-    // Memoize component code for AssistantChat to prevent unnecessary re-renders
-    const memoizedComponentCode = useMemo(() => {
-        return componentCode && componentCode.trim() ? componentCode : null;
-    }, [componentCode]);
+    // Listen for real-time updates to component data
+    useEffect(() => {
+        if (!project?.id || !originalViewName || !window.Echo) {
+            return;
+        }
+
+        const channelName = `custom-view.${project.id}.${originalViewName}`;
+        console.log('[CustomView] Listening for real-time updates on channel:', channelName);
+
+        const channel = window.Echo.channel(channelName);
+
+        channel.listen('.CustomViewDataUpdated', (event) => {
+            console.log('[CustomView] Received real-time update:', event);
+
+            // Only update if this is from a different user (avoid echo from own saves)
+            if (event.userId !== currentAuth?.id) {
+                console.log('[CustomView] Updating component from real-time data change');
+
+                // The component code needs to be updated with the new embedded data
+                // Since the backend already embeds the data, we need to reload the component
+                const reloadComponent = async () => {
+                    try {
+                        const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${encodeURIComponent(originalViewName)}`);
+                        const data = await response.json();
+
+                        if (data.success && data.html && data.html.trim()) {
+                            setComponentCode(data.html);
+                            showSnackbar(`Component updated by ${event.userName || 'another user'}`, 'info');
+                        }
+                    } catch (error) {
+                        console.error('[CustomView] Error reloading component after real-time update:', error);
+                    }
+                };
+
+                reloadComponent();
+            }
+        });
+
+        return () => {
+            console.log('[CustomView] Leaving real-time channel:', channelName);
+            window.Echo.leaveChannel(channelName);
+        };
+    }, [project?.id, originalViewName, currentAuth?.id]);
 
     // Enhanced generation handling (optimized with useCallback)
     const handleSpaGenerated = useCallback((payload) => {

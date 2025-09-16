@@ -1,744 +1,875 @@
 import React from 'react';
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell,
-    LineChart,
-    Line,
-    AreaChart,
-    Area
-} from 'recharts';
 import * as Recharts from 'recharts';
+import * as MuiMaterial from '@mui/material';
+import * as MuiIcons from '@mui/icons-material';
+import * as MuiDataGrid from '@mui/x-data-grid';
 
-/**
- * ReactComponentRenderer (STRICT)
- * - Accepts only valid TSX/JSX that exports a React component.
- * - If the input contains markdown fences with code, we extract the first fence.
- * - If no component is detected, we THROW (so the host can show an error and ask to regenerate).
- * - Always passes { filename: 'file.tsx' } to Babel to satisfy TypeScript/React presets.
- * - Wrapped in an ErrorBoundary so user code errors don’t crash the app.
- */
-export class ReactComponentRenderer extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            Component: null,
-            error: null,
-            loading: true
-        };
-        this._lastNotifiedError = null;
+const DESIGN_TOKENS = {
+  colors: {
+    primary: {
+      50: '#f0f9ff',
+      100: '#e0f2fe',
+      200: '#bae6fd',
+      300: '#7dd3fc',
+      400: '#38bdf8',
+      500: '#0ea5e9',
+      600: '#0284c7',
+      700: '#0369a1',
+      800: '#075985',
+      900: '#0c4a6e'
+    },
+    success: {
+      50: '#f0fdf4',
+      100: '#dcfce7',
+      200: '#bbf7d0',
+      300: '#86efac',
+      400: '#4ade80',
+      500: '#22c55e',
+      600: '#16a34a',
+      700: '#15803d',
+      800: '#166534',
+      900: '#14532d'
+    },
+    warning: {
+      50: '#fffbeb',
+      100: '#fef3c7',
+      200: '#fde68a',
+      300: '#fcd34d',
+      400: '#fbbf24',
+      500: '#f59e0b',
+      600: '#d97706',
+      700: '#b45309',
+      800: '#92400e',
+      900: '#78350f'
+    },
+    danger: {
+      50: '#fef2f2',
+      100: '#fee2e2',
+      200: '#fecaca',
+      300: '#fca5a5',
+      400: '#f87171',
+      500: '#ef4444',
+      600: '#dc2626',
+      700: '#b91c1c',
+      800: '#991b1b',
+      900: '#7f1d1d'
+    },
+    neutral: {
+      50: '#fafafa',
+      100: '#f4f4f5',
+      200: '#e4e4e7',
+      300: '#d4d4d8',
+      400: '#a1a1aa',
+      500: '#71717a',
+      600: '#52525b',
+      700: '#3f3f46',
+      800: '#27272a',
+      900: '#18181b'
     }
+  },
+  spacing: {
+    xs: '0.25rem',
+    sm: '0.5rem',
+    md: '1rem',
+    lg: '1.5rem',
+    xl: '2rem',
+    '2xl': '3rem',
+    '3xl': '4rem'
+  },
+  shadows: {
+    sm: '0 1px 2px 0 rgba(15, 23, 42, 0.05)',
+    md: '0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.1)',
+    lg: '0 10px 15px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -4px rgba(15, 23, 42, 0.1)',
+    xl: '0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04)'
+  },
+  borderRadius: {
+    sm: '0.25rem',
+    md: '0.375rem',
+    lg: '0.5rem',
+    xl: '0.75rem',
+    '2xl': '1rem'
+  }
+};
 
-    componentDidMount() {
-        this.renderComponent();
-    }
-
-    componentDidUpdate(prevProps) {
-        if (prevProps.componentCode !== this.props.componentCode) {
-            this.renderComponent();
-        }
-    }
-
-    notifyErrorOnce = (msg) => {
-        const message = typeof msg === 'string' ? msg : (msg?.message || String(msg));
-        if (this._lastNotifiedError === message) return;
-        this._lastNotifiedError = message;
-        if (typeof this.props.onError === 'function') {
-            this.props.onError(message);
-        }
+const STYLE_UTILS_SNIPPET = String.raw`
+const styleUtils = {
+  spacing: (size) => ({
+    margin: designTokens.spacing[size] || size,
+    padding: designTokens.spacing[size] || size,
+  }),
+  elevation: (level) => ({
+    boxShadow: designTokens.shadows[level] || level,
+    borderRadius: designTokens.borderRadius.lg,
+  }),
+  colorVariant: (color, shade = 500) => {
+    const swatch = (designTokens.colors[color] || {})[shade];
+    return {
+      backgroundColor: swatch,
+      color: shade >= 500 ? '#ffffff' : designTokens.colors.neutral[800],
     };
+  },
+  flexCenter: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  flexBetween: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  gradients: {
+    primary: 'linear-gradient(135deg, ' + designTokens.colors.primary[400] + ' 0%, ' + designTokens.colors.primary[600] + ' 100%)',
+    success: 'linear-gradient(135deg, ' + designTokens.colors.success[400] + ' 0%, ' + designTokens.colors.success[600] + ' 100%)',
+    warm: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    cool: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+  },
+};
+`;
 
-    renderComponent = async () => {
-        const { componentCode, project, viewName } = this.props;
+const STYLED_COMPONENTS_SNIPPET = String.raw`
+const StyledComponents = {
+  BeautifulCard: (props) => React.createElement(MuiMaterial.Card, {
+    ...props,
+    sx: {
+      borderRadius: designTokens.borderRadius.xl,
+      boxShadow: designTokens.shadows.md,
+      border: '1px solid ' + designTokens.colors.neutral[200],
+      overflow: 'hidden',
+      transition: 'all 0.2s ease-in-out',
+      '&:hover': {
+        boxShadow: designTokens.shadows.lg,
+        transform: 'translateY(-2px)',
+      },
+      ...props.sx,
+    },
+  }),
+  FormContainer: (props) => React.createElement(MuiMaterial.Box, {
+    ...props,
+    sx: {
+      padding: designTokens.spacing.xl,
+      backgroundColor: '#ffffff',
+      borderRadius: designTokens.borderRadius.xl,
+      boxShadow: designTokens.shadows.md,
+      border: '1px solid ' + designTokens.colors.neutral[200],
+      '& .MuiTextField-root': {
+        marginBottom: designTokens.spacing.md,
+      },
+      ...props.sx,
+    },
+  }),
+  PrimaryButton: (props) => React.createElement(MuiMaterial.Button, {
+    variant: 'contained',
+    ...props,
+    sx: {
+      borderRadius: designTokens.borderRadius.lg,
+      textTransform: 'none',
+      fontWeight: 600,
+      padding: designTokens.spacing.sm + ' ' + designTokens.spacing.lg,
+      boxShadow: designTokens.shadows.sm,
+      '&:hover': {
+        boxShadow: designTokens.shadows.md,
+        transform: 'translateY(-1px)',
+      },
+      ...props.sx,
+    },
+  }),
+  SuccessButton: (props) => React.createElement(MuiMaterial.Button, {
+    variant: 'contained',
+    color: 'success',
+    ...props,
+    sx: {
+      borderRadius: designTokens.borderRadius.lg,
+      textTransform: 'none',
+      fontWeight: 600,
+      padding: designTokens.spacing.sm + ' ' + designTokens.spacing.lg,
+      boxShadow: designTokens.shadows.sm,
+      '&:hover': {
+        boxShadow: designTokens.shadows.md,
+        transform: 'translateY(-1px)',
+      },
+      ...props.sx,
+    },
+  }),
+  DangerButton: (props) => React.createElement(MuiMaterial.Button, {
+    variant: 'contained',
+    color: 'error',
+    ...props,
+    sx: {
+      borderRadius: designTokens.borderRadius.lg,
+      textTransform: 'none',
+      fontWeight: 600,
+      padding: designTokens.spacing.sm + ' ' + designTokens.spacing.lg,
+      boxShadow: designTokens.shadows.sm,
+      '&:hover': {
+        boxShadow: designTokens.shadows.md,
+        transform: 'translateY(-1px)',
+      },
+      ...props.sx,
+    },
+  }),
+  ContentContainer: (props) => React.createElement(MuiMaterial.Box, {
+    ...props,
+    sx: {
+      padding: designTokens.spacing.xl,
+      backgroundColor: designTokens.colors.neutral[50],
+      minHeight: '100vh',
+      '& > *:not(:last-child)': {
+        marginBottom: designTokens.spacing.lg,
+      },
+      ...props.sx,
+    },
+  }),
+  SectionHeader: (props) => React.createElement(MuiMaterial.Typography, {
+    variant: 'h5',
+    ...props,
+    sx: {
+      fontWeight: 600,
+      color: designTokens.colors.neutral[800],
+      marginBottom: designTokens.spacing.md,
+      borderBottom: '3px solid ' + designTokens.colors.primary[500],
+      paddingBottom: designTokens.spacing.xs,
+      display: 'inline-block',
+      ...props.sx,
+    },
+  }),
+};
+`;
 
-        if (!componentCode) {
-            this.setState({ Component: null, loading: false, error: null });
-            return;
-        }
+class ReactComponentRenderer extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      Component: null,
+      error: null,
+      loading: true,
+    };
+    this._lastNotifiedError = null;
+  }
 
+  componentDidMount() {
+    this.renderComponent();
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.componentCode !== this.props.componentCode) {
+      this.renderComponent();
+    }
+  }
+
+  notifyErrorOnce = (msg) => {
+    const message = typeof msg === 'string' ? msg : (msg?.message || String(msg));
+    if (this._lastNotifiedError === message) return;
+    this._lastNotifiedError = message;
+    if (typeof this.props.onError === 'function') {
+      this.props.onError(message);
+    }
+  };
+
+  extractFirstFence = (text) => {
+    const fence = /```(?:tsx|jsx|typescript|javascript|ts|js)?\s*([\s\S]*?)```/i.exec(text || '');
+    if (fence && fence[1]) {
+      return fence[1];
+    }
+    let cleaned = String(text || '').trim();
+    cleaned = cleaned.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
+    return cleaned;
+  };
+
+  looksLikeReactComponent = (src) => {
+    if (!src) return false;
+    const hasExportDefault = /export\s+default\s+/.test(src);
+    const looksLikeJSX = /<\w[\s\S]*>/.test(src) || /React\.createElement\(/.test(src);
+    const explicitComponent = /(function\s+\w+\s*\(|const\s+\w+\s*=\s*(?:\([^)]*\)\s*=>|function\s*\()|class\s+\w+\s+extends\s+React\.Component)/.test(src);
+    return hasExportDefault || explicitComponent || looksLikeJSX;
+  };
+
+  renderComponent = async () => {
+    const { componentCode, project, viewName } = this.props;
+
+    if (!componentCode || !componentCode.trim()) {
+      this.setState({ Component: null, error: null, loading: false });
+      return;
+    }
+
+    try {
+      this.setState({ loading: true, error: null });
+      const Component = await this.createComponentFromCode(componentCode, project?.id, viewName);
+      this.setState({ Component, error: null, loading: false });
+    } catch (error) {
+      const message = error?.message || String(error);
+      console.error('Error rendering AI-generated component:', error);
+      this.setState({ error: message, Component: null, loading: false }, () => {
+        this.notifyErrorOnce(message);
+      });
+    }
+  };
+
+  createComponentFromCode = async (raw, projectId, viewName) => {
+    let src = this.extractFirstFence(raw);
+    let extractedEmbeddedData = {};
+
+    // More robust regex to capture the complete embedded data object
+    const embeddedMatch = /\/\*\s*EMBEDDED_DATA_START\s*\*\/\s*const\s+__EMBEDDED_DATA__\s*=\s*(\{[\s\S]*?\});?\s*\/\*\s*EMBEDDED_DATA_END\s*\*\//.exec(src);
+    if (embeddedMatch) {
+      try {
+        extractedEmbeddedData = JSON.parse(embeddedMatch[1]);
+      } catch (error) {
+        console.warn('[ReactComponentRenderer] Failed to parse embedded data:', error);
+        console.warn('[ReactComponentRenderer] Embedded data content:', embeddedMatch[1].substring(0, 500) + '...');
+
+        // Try to fix common JSON issues
         try {
-            this.setState({ loading: true, error: null });
-            const Component = await this.createComponentFromCode(componentCode, project?.id, viewName);
-            this.setState({ Component, error: null, loading: false });
-        } catch (error) {
-            const message = error?.message || String(error);
-            console.error('Error rendering AI-generated component:', error);
-            this.setState({ error: message, Component: null, loading: false }, () => {
-                this.notifyErrorOnce(message);
-            });
+          let fixedJson = embeddedMatch[1]
+            .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+            .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":'); // Quote unquoted keys
+
+          extractedEmbeddedData = JSON.parse(fixedJson);
+          console.log('[ReactComponentRenderer] Successfully parsed fixed JSON');
+        } catch (fixError) {
+          console.error('[ReactComponentRenderer] Could not fix embedded data JSON:', fixError);
+          // Continue without embedded data
         }
+      }
+      // Always remove the embedded data block, even if parsing failed
+      src = src.replace(embeddedMatch[0], '');
+    }
+
+    src = src.replace(/(^|\n)\s*import[^;]+;?/g, '\n');
+    src = src.replace(/(^|\n)\s*export\s+(?!default)[^;]+;?/g, '\n');
+
+    // Fix common icon usage issues - replace bare icon names with proper icon names
+    src = src.replace(/\b(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)\b(?!\w)/g, '$1Icon');
+
+    // Fix JSX usage of icons without Icon suffix
+    src = src.replace(/<(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)\s*\/>/g, '<$1Icon />');
+    src = src.replace(/<(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)\s*>/g, '<$1Icon>');
+    src = src.replace(/<\/(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)>/g, '</$1Icon>');
+
+    const hasExportDefault = /export\s+default\s+/.test(src);
+    const looksLikeJSX = /<\w[\s\S]*>/.test(src) || /React\.createElement\(/.test(src);
+    const hasNamedComponent = /(function\s+\w+\s*\(|const\s+\w+\s*=\s*(?:\([^)]*\)\s*=>|function\s*\()|class\s+\w+\s+extends\s+React\.Component)/.test(src);
+
+    const sanitizeHtml = (html) => {
+      let safe = String(html);
+      safe = safe.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+      safe = safe.replace(/ on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+      safe = safe.replace(/javascript:/gi, '');
+      return safe;
     };
 
-    // Extract the first fenced code block if present; otherwise return as-is.
-    // Matches ```tsx ...```, ```jsx ...```, ```ts```, ```js```, ```typescript```, ```javascript```, or plain ```
-    extractFirstFence = (text) => {
-        const fence = /```(?:tsx|jsx|typescript|javascript|ts|js)?\s*([\s\S]*?)```/i.exec(text);
-        if (fence && fence[1]) return fence[1];
-        // Also handle the common case where the text starts and ends with a single fenced block
-        let cleaned = String(text || '').trim();
-        cleaned = cleaned.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
-        return cleaned;
-    };
+    if (!hasExportDefault && !hasNamedComponent && looksLikeJSX) {
+      const safe = sanitizeHtml(src);
+      src = `export default function GeneratedComponent(){\n  const __html = ${JSON.stringify(safe)};\n  return <div style={{ width: '100%' }} dangerouslySetInnerHTML={{ __html }} />;\n}`;
+    }
 
-    // A permissive detector: allows raw HTML or unnamed components (we'll normalize)
-    looksLikeReactComponent = (src) => {
-        if (!src) return false;
-        const hasExportDefault = /export\s+default\s+/.test(src);
-        const looksLikeJSX = /<\w[\s\S]*>/.test(src) || /React\.createElement\(/.test(src);
-        const explicitComponent =
-            /(function\s+\w+\s*\(|const\s+\w+\s*=\s*(?:\([^\)]*\)\s*=>|function\s*\()|class\s+\w+\s+extends\s+React\.Component)/.test(src);
-        return hasExportDefault || explicitComponent || looksLikeJSX;
-    };
+    if (!this.looksLikeReactComponent(src)) {
+      const safeText = String(src || '').slice(0, 20000);
+      src = `export default function GeneratedComponent(){\n  const __text = ${JSON.stringify(safeText)};\n  return <pre style={{whiteSpace:'pre-wrap', fontFamily:'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 12, lineHeight: 1.5, padding: 12, background: '#fafafa', border: '1px solid #eee', borderRadius: 8}}>{__text}</pre>;\n}`;
+    }
 
-    createComponentFromCode = async (raw, projectId, viewName) => {
-        // 1) Extract a fenced block if the assistant wrapped the code in markdown
-        let src = this.extractFirstFence(raw).trim();
+    let componentName = 'GeneratedComponent';
 
-        // Extract embedded data from the component code before processing
-        let extractedEmbeddedData = {};
-        const embeddedDataMatch = src.match(/const __EMBEDDED_DATA__ = (\{[\s\S]*?\});/);
-        if (embeddedDataMatch) {
-            try {
-                extractedEmbeddedData = JSON.parse(embeddedDataMatch[1]);
-                console.log('[ReactComponentRenderer] Extracted embedded data:', extractedEmbeddedData);
-            } catch (e) {
-                console.warn('[ReactComponentRenderer] Failed to parse embedded data:', e);
-            }
-        }
+    const defaultFnMatch = src.match(/export\s+default\s+function\s*(\w+)?/);
+    if (defaultFnMatch) {
+      componentName = defaultFnMatch[1] || 'GeneratedComponent';
+      src = src.replace(/export\s+default\s+function\s*(\w+)?/, (full, name) => {
+        return `function ${name || componentName}`;
+      });
+    }
 
-        // Helpers for fallback normalization
-        const hasExportDefault = /export\s+default\s+/.test(src);
-        const looksLikeJSX = /<\w[\s\S]*>/.test(src) || /React\.createElement\(/.test(src);
-        const hasNamedComponent =
-            /(function\s+\w+\s*\(|const\s+\w+\s*=\s*(?:\([^\)]*\)\s*=>|function\s*\()|class\s+\w+\s+extends\s+React\.Component)/.test(src);
+    const defaultClassMatch = src.match(/export\s+default\s+class\s*(\w+)?/);
+    if (defaultClassMatch) {
+      componentName = defaultClassMatch[1] || 'GeneratedComponent';
+      src = src.replace(/export\s+default\s+class\s*(\w+)?/, (full, name) => {
+        return `class ${name || componentName}`;
+      });
+    }
 
-        const sanitizeHtml = (html) => {
-            let s = String(html);
-            // Remove scripts and inline event handlers for safety
-            s = s.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
-            s = s.replace(/ on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-            s = s.replace(/javascript:/gi, '');
-            return s;
-        };
-        const escBackticks = (str) => String(str).replace(/`/g, '\\`');
+    const defaultExprMatch = src.match(/export\s+default\s+([A-Za-z_$][\w$]*)/);
+    if (defaultExprMatch) {
+      componentName = defaultExprMatch[1];
+      src = src.replace(/export\s+default\s+([A-Za-z_$][\w$]*)\s*;?/, '$1;');
+    }
 
-        // 2) If it looks like plain HTML (JSX-like without component structure), wrap it
-        if (!hasExportDefault && !hasNamedComponent && looksLikeJSX) {
-            const safe = sanitizeHtml(src);
-            // Use JSON.stringify to embed as a normal quoted string, avoiding nested template issues
-            src = `export default function GeneratedComponent(){\n  const __html = ${JSON.stringify(safe)};\n  return <div style={{width:'100%'}} dangerouslySetInnerHTML={{ __html }} />;\n}`;
-        }
+    if (/export\s+default\s*\(/.test(src) || /export\s+default\s+\(/.test(src)) {
+      src = src.replace(/export\s+default\s*\(/, `const ${componentName} = (`);
+      src += `\nexport default ${componentName};`;
+    }
 
-        // If after wrapping/normalizing it still doesn't look usable, fall back to rendering plaintext
-        if (!this.looksLikeReactComponent(src)) {
-            // Graceful fallback: show the provided text inside a <pre> so the user sees something
-            const safeText = String(src || '').slice(0, 20000); // cap size
-            src = `export default function GeneratedComponent(){\n  const __text = ${JSON.stringify(safeText)};\n  return <pre style={{whiteSpace:'pre-wrap', fontFamily:'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 12, lineHeight: 1.5, padding: 12, background: '#fafafa', border: '1px solid #eee', borderRadius: 8}}>{__text}</pre>;\n}`;
-        }
+    if (!/export\s+default\s+/.test(src)) {
+      const namedFn = src.match(/function\s+([A-Za-z_$][\w$]*)\s*\(/);
+      const constComp = src.match(/const\s+([A-Za-z_$][\w$]*)\s*=\s*(?:\([^)]*\)\s*=>|function\s*\()/);
+      const classComp = src.match(/class\s+([A-Za-z_$][\w$]*)\s+extends\s+React\.Component/);
+      componentName = (namedFn && namedFn[1]) || (constComp && constComp[1]) || (classComp && classComp[1]) || componentName;
+      src += `\nexport default ${componentName};`;
+    }
 
-        // 3) Remove import lines (we inject deps manually inside the factory scope)
-        src = src.replace(/(^|\n)\s*import[^;]+;?/g, '');
+    src = src.replace(/(^|\n)\s*export\s+default\s+/g, '\n');
 
-        // Also remove any other export statements that might remain
-        src = src.replace(/(^|\n)\s*export\s+(?!default)[^;]+;?/g, '');
+    const BabelStandalone = await import('@babel/standalone');
+    const babel = BabelStandalone?.default || BabelStandalone;
 
-        // 4) Normalize various default-export patterns into a named identifier we can return later
-        let componentName = 'GeneratedComponent';
+    const result = babel.transform(src, {
+      filename: 'file.tsx',
+      presets: [
+        ['react', { runtime: 'classic', development: false }],
+        'typescript',
+      ],
+      sourceType: 'module',
+      comments: false,
+      compact: false,
+    });
 
-        const defaultFnAny = src.match(/export\s+default\s+function(?:\s+(\w+))?\s*\(/);
-        if (defaultFnAny) {
-            const fnName = defaultFnAny[1] || 'GeneratedComponent';
-            componentName = fnName;
-            if (defaultFnAny[1]) {
-                src = src.replace(/export\s+default\s+function/, 'function');
-            } else {
-                src = src.replace(/export\s+default\s+function\s*\(/, 'function ' + componentName + '(');
-            }
-        }
+    let transformed = result.code || '';
+    transformed = transformed.replace(/(^|\n)\s*export\s+[^;\n]*;?/g, '');
 
-        if (!/\bclass\s+\w+/.test(src) || /export\s+default\s+class/.test(src)) {
-            const defaultClassAny = src.match(/export\s+default\s+class(?:\s+(\w+))?/);
-            if (defaultClassAny) {
-                const clsName = defaultClassAny[1] || 'GeneratedComponent';
-                componentName = clsName;
-                if (defaultClassAny[1]) {
-                    src = src.replace(/export\s+default\s+class/, 'class');
-                } else {
-                    src = src.replace(/export\s+default\s+class\s*/, 'class ' + componentName + ' ');
-                }
-            }
-        }
+    const designTokensLiteral = JSON.stringify(DESIGN_TOKENS, null, 2);
 
-        const defaultVarExport = src.match(/export\s+default\s+(\w+)\s*;?/);
-        if (defaultVarExport) {
-            componentName = defaultVarExport[1];
-            src = src.replace(/export\s+default\s+(\w+)\s*;?/, '$1;');
-        }
+    const factoryCode = `
+const { useState, useEffect, useMemo, useCallback, useRef, useReducer, useLayoutEffect } = React;
+const designTokens = ${designTokensLiteral};
+${STYLE_UTILS_SNIPPET}
+${STYLED_COMPONENTS_SNIPPET}
 
-        if (/export\s+default\s+/.test(src)) {
-            src = src.replace(/export\s+default\s+/, `const ${componentName} = `);
-        }
+const {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  TextField,
+  IconButton,
+  Chip,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+  Stack,
+  Alert,
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TableSortLabel,
+  Toolbar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Switch,
+  Checkbox,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  Tabs,
+  Tab,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  ListItemButton,
+  Avatar,
+  Badge,
+  Tooltip,
+  CircularProgress,
+  LinearProgress,
+  Container,
+  AppBar,
+  Fab,
+  Backdrop,
+  Modal,
+  Drawer,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  InputAdornment,
+  OutlinedInput,
+  FilledInput,
+  Input,
+  FormHelperText,
+  FormLabel,
+  FormGroup,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
+  Breadcrumbs,
+  Link,
+  Popover,
+  Menu,
+  Skeleton,
+  ThemeProvider,
+  createTheme,
+  styled,
+  alpha,
+  CssBaseline,
+} = MuiMaterial;
 
-        if (!componentName || componentName === 'GeneratedComponent') {
-            const normalFn = src.match(/function\s+(\w+)\s*\(/);
-            const constComp = src.match(/const\s+(\w+)\s*=\s*(?:\([^)]*\)\s*=>|function\s*\()/);
-            const classComp = src.match(/class\s+(\w+)\s+extends\s+React\.Component/);
-            componentName = (normalFn && normalFn[1]) || (constComp && constComp[1]) || (classComp && classComp[1]) || 'GeneratedComponent';
-        }
+const {
+  DataGrid,
+  GridToolbar,
+  GridActionsCellItem,
+} = MuiDataGrid;
 
-        // If there's no export default in source and we detected a component name, add a default export
-        if (!/export\s+default\s+/.test(src) && componentName) {
-            src += `\n\nexport default ${componentName};`;
-        }
-
-        try {
-            const BabelMod = await import('@babel/standalone');
-            const babel = BabelMod?.default || BabelMod;
-
-            const result = babel.transform(src, {
-                filename: 'file.tsx',
-                presets: [
-                    ['react', { runtime: 'classic', development: false }],
-                    'typescript',
-                ],
-                plugins: [],
-                sourceType: 'module',
-                retainLines: false,
-                comments: false,
-                compact: false,
-            });
-
-            let transformed = result.code;
-
-            // Remove any remaining export statements after Babel transformation (more comprehensive)
-            transformed = transformed.replace(/(^|\n)\s*export\s+[^;\n]*;?/g, '');
-            transformed = transformed.replace(/\bexport\s+default\s+/g, '');
-            transformed = transformed.replace(/\bexport\s+/g, '');
-
-            const hookCall = (name) => new RegExp(String.raw`\b${name}\s*\(`, 'g');
-            transformed = transformed
-                .replace(hookCall('useState'), 'React.useState(')
-                .replace(hookCall('useEffect'), 'React.useEffect(')
-                .replace(hookCall('useMemo'), 'React.useMemo(')
-                .replace(hookCall('useRef'), 'React.useRef(')
-                .replace(hookCall('useCallback'), 'React.useCallback(')
-                .replace(hookCall('useReducer'), 'React.useReducer(')
-                .replace(hookCall('useContext'), 'React.useContext(');
-
-            // Minimal helpers available to user code
-            const localCsrfFetch = async (url, options = {}) => {
-                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                let u;
-                try {
-                    u = new URL(url, window.location.origin);
-                } catch {
-                    return fetch(url, {
-                        ...options,
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, ...options.headers },
-                    });
-                }
-
-                const path = u.pathname;
-                const method = (options.method || 'GET').toUpperCase();
-                const isLocalApi = /^\/api\/(?!projects|auth|user|csrf)/.test(path);
-
-                if (isLocalApi) {
-                    const ns = `microapp-${projectId || 'unknown'}-${viewName || 'default'}-`;
-                    const resourceMatch = path.match(/^\/api\/([^\/]+)/);
-                    const resourceName = resourceMatch ? resourceMatch[1] : 'items';
-                    const storeKey = ns + resourceName;
-
-                    const readStore = () => {
-                        try { const raw = window.localStorage.getItem(storeKey); return raw ? JSON.parse(raw) : []; } catch { return []; }
-                    };
-                    const writeStore = (items) => { try { window.localStorage.setItem(storeKey, JSON.stringify(items)); } catch { } };
-                    const json = (body, init = {}) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' }, ...init });
-                    const notFound = () => new Response(JSON.stringify({ message: 'Not Found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
-                    const noContent = () => new Response(null, { status: 204 });
-
-                    let items = readStore();
-
-                    if (method === 'GET' && resourceMatch && !path.match(/\/\d+$/)) return json(items);
-                    if (method === 'POST' && resourceMatch && !path.match(/\/\d+$/)) {
-                        let body = {}; try { body = options.body ? JSON.parse(options.body) : {}; } catch { }
-                        const nextId = items.length ? Math.max(...items.map(i => i.id || 0)) + 1 : 1;
-                        const created = { id: nextId, ...body }; items.push(created); writeStore(items); return json(created, { status: 201 });
-                    }
-
-                    const itemMatch = path.match(/^\/api\/[^\/]+\/(\d+)$/);
-                    if (itemMatch) {
-                        const id = parseInt(itemMatch[1], 10);
-                        const idx = items.findIndex(i => (i.id || 0) === id);
-                        if (method === 'GET') return idx === -1 ? notFound() : json(items[idx]);
-                        if (method === 'PUT' || method === 'PATCH') {
-                            if (idx === -1) return notFound();
-                            let body = {}; try { body = options.body ? JSON.parse(options.body) : {}; } catch { }
-                            items[idx] = { ...items[idx], ...body, id }; writeStore(items); return json(items[idx]);
-                        }
-                        if (method === 'DELETE') {
-                            if (idx === -1) return notFound(); items.splice(idx, 1); writeStore(items); return noContent();
-                        }
-                    }
-                    return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
-                }
-
-                return fetch(u.toString(), {
-                    ...options,
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, ...options.headers },
-                    credentials: options.credentials || 'same-origin',
-                });
-            };
-
-            const ns = `microapp-${projectId || 'unknown'}-${viewName || 'default'}-`;
-            const localStorageProxy = {
-                getItem: (key) => window.localStorage.getItem(ns + key),
-                setItem: (key, value) => window.localStorage.setItem(ns + key, value),
-                removeItem: (key) => window.localStorage.removeItem(ns + key),
-                clear: () => {
-                    const toRemove = [];
-                    for (let i = 0; i < window.localStorage.length; i++) {
-                        const k = window.localStorage.key(i);
-                        if (k && k.startsWith(ns)) toRemove.push(k);
-                    }
-                    toRemove.forEach((k) => window.localStorage.removeItem(k));
-                },
-                key: (index) => {
-                    const keys = [];
-                    for (let i = 0; i < window.localStorage.length; i++) {
-                        const k = window.localStorage.key(i);
-                        if (k && k.startsWith(ns)) keys.push(k.substring(ns.length));
-                    }
-                    return keys[index] || null;
-                },
-                get length() {
-                    let count = 0;
-                    for (let i = 0; i < window.localStorage.length; i++) {
-                        const k = window.localStorage.key(i);
-                        if (k && k.startsWith(ns)) count++;
-                    }
-                    return count;
-                },
-            };
-
-            const factoryCode = `"use strict";
-const { useState, useEffect, useMemo, useRef, useCallback, useReducer, useContext } = React;
-
-// Chart libraries available for generated components
-const { 
-    BarChart, 
-    Bar, 
-    XAxis, 
-    YAxis, 
-    CartesianGrid, 
-    Tooltip, 
-    Legend, 
-    ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell,
-    LineChart,
-    Line,
-    AreaChart,
-    Area
+const {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip: RechartsTooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
 } = Recharts;
 
-const __project = project;
-const __tasks = tasks;
-const __allTasks = allTasks;
-const __users = users;
-const __methodology = methodology;
-const __auth = auth;
+const {
+  Add: AddIcon,
+  Edit: EditIcon,
+  Delete: DeleteIcon,
+  Save: SaveIcon,
+  Close: CloseIcon,
+  Search: SearchIcon,
+  Refresh: RefreshIcon,
+  ArrowBack: ArrowBackIcon,
+  ArrowForward: ArrowForwardIcon,
+  Warning: WarningIcon,
+  Error: ErrorIcon,
+  Info: InfoIcon,
+  CheckCircle: CheckCircleIcon,
+  MoreVert: MoreVertIcon,
+  Settings: SettingsIcon,
+  Send: SendIcon,
+  FilterList: FilterListIcon,
+} = MuiIcons;
 
-// Stable identifiers for persistence scoped to project + view
-const __projectId = ${JSON.stringify(String(projectId || ''))};
-const __viewName = ${JSON.stringify(String(viewName || 'default'))};
+const embeddedData = extractedEmbeddedData || {};
+const sharedProjectId = projectId || (project && project.id) || null;
+const sharedViewName = viewName || 'default';
 
-const __flatTasks = Array.isArray(__allTasks)
-  ? __allTasks
-  : (Array.isArray(__tasks)
-      ? __tasks
-      : (__tasks && typeof __tasks === 'object'
-          ? Object.values(__tasks).reduce((acc, arr) => acc.concat(arr || []), [])
-          : []));
+const flatTasks = Array.isArray(allTasks)
+  ? allTasks
+  : Array.isArray(tasks)
+    ? tasks
+    : (tasks && typeof tasks === 'object'
+        ? Object.values(tasks).reduce((acc, value) => {
+            if (Array.isArray(value)) acc.push(...value);
+            return acc;
+          }, [])
+        : []);
 
-// Always inject data variables for generated components to use
-const tasksDataFromProps = __flatTasks;
-const allTasksDataFromProps = __flatTasks;
-const usersDataFromProps = __users;
-const methodologyDataFromProps = __methodology;
-const projectData = __project;
+const authUser = auth;
+const projectData = project;
+const methodologyDataFromProps = methodology;
+const usersDataFromProps = users;
 
-// IMPORTANT: Always use the current user's auth data from props (dynamic per viewer)
-// Never use embedded auth data as that would be static to the component creator
-const authUser = __auth;
-
-// Debug data availability
-console.log('[ReactComponentRenderer] Data available to component:', {
-  tasksCount: tasksDataFromProps?.length || 0,
-  usersCount: usersDataFromProps?.length || 0,
-  projectName: projectData?.name || 'Unknown',
-  hasMethodology: !!methodologyDataFromProps,
-  authUser: authUser?.name || 'Not authenticated',
-  authUserId: authUser?.id || 'Unknown',
-  authSource: 'current_session_props'
+const professionalTheme = createTheme({
+  palette: {
+    primary: {
+      light: designTokens.colors.primary[400],
+      main: designTokens.colors.primary[600],
+      dark: designTokens.colors.primary[800],
+    },
+    success: {
+      main: designTokens.colors.success[600],
+    },
+    warning: {
+      main: designTokens.colors.warning[600],
+    },
+    error: {
+      main: designTokens.colors.danger[600],
+    },
+  },
+  shape: {
+    borderRadius: 8,
+  },
 });
 
-// Server-backed persistence helpers available to generated components
 async function saveViewData(dataKey, data) {
-  if (!__projectId) return { success: false };
-  
-  // Always save to localStorage as backup
-  const localKey = 'microapp-' + __projectId + '-' + __viewName + '-' + String(dataKey || 'default');
-  try {
-    localStorage.setItem(localKey, JSON.stringify(data));
-  } catch (e) {
-    console.warn('Failed to save to localStorage:', e);
+  if (!sharedProjectId) {
+    return { success: false, message: 'Missing project id' };
   }
-  
-  // Save to server (which will embed data into the component itself)
+
   try {
-    const url = '/projects/' + __projectId + '/custom-views/save-data';
-    const res = await csrfFetch(url, {
+    const response = await csrfFetch('/projects/' + sharedProjectId + '/custom-views/save-data', {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json' 
+        Accept: 'application/json',
       },
-      body: JSON.stringify({ view_name: __viewName, data_key: String(dataKey || 'default'), data })
+      body: JSON.stringify({
+        view_name: sharedViewName,
+        data_key: String(dataKey || 'default'),
+        data,
+      }),
     });
-    const result = await res.json();
-    
-    if (result.success) {
-      console.log('Data embedded into view successfully');
-      return { success: true, message: 'Data embedded into shared view', source: 'embedded', embedded: true };
-    } else {
-      console.warn('saveViewData server returned error:', result.message);
-      return { success: true, message: 'Data saved locally only', fallback: true };
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { success: false, status: response.status, ...payload };
     }
-  } catch (e) { 
-    console.error('saveViewData server error, using localStorage fallback:', e); 
-    return { success: true, message: 'Data saved locally only', fallback: true };
+
+    return payload || { success: true };
+  } catch (error) {
+    console.error('saveViewData error:', error);
+    return { success: false, error: error.message };
   }
 }
 
 async function loadViewData(dataKey) {
-  if (!__projectId) return null;
-  
-  // First check for extracted embedded data (universal approach)
-  if (typeof extractedEmbeddedData !== 'undefined' && extractedEmbeddedData[dataKey]) {
-    console.log('[loadViewData] Using extracted embedded data for key:', dataKey);
-    return extractedEmbeddedData[dataKey];
+  if (!sharedProjectId) {
+    return null;
   }
-  
-  const localKey = 'microapp-' + __projectId + '-' + __viewName + '-' + String(dataKey || 'default');
-  
-  // Then try to load from server (shared project data)
+
   try {
-    const url = '/projects/' + __projectId + '/custom-views/load-data?view_name=' + encodeURIComponent(__viewName) + '&data_key=' + encodeURIComponent(String(dataKey || 'default'));
-    const res = await csrfFetch(url, {
+    const response = await csrfFetch('/projects/' + sharedProjectId + '/custom-views/load-data?view_name=' + encodeURIComponent(sharedViewName) + '&data_key=' + encodeURIComponent(String(dataKey || 'default')), {
       method: 'GET',
-      headers: { Accept: 'application/json' }
+      headers: {
+        Accept: 'application/json',
+      },
     });
-    const result = await res.json();
-    
-    if (result.success && result.data?.data) {
-      return result.data.data;
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      return null;
     }
-  } catch (e) {
-    console.warn('loadViewData server error, falling back to localStorage:', e);
-  }
-  
-  // Fallback to localStorage if server fails
-  try {
-    const localData = localStorage.getItem(localKey);
-    if (localData) {
-      return JSON.parse(localData);
+
+    if (payload && payload.success && payload.data && Object.prototype.hasOwnProperty.call(payload.data, 'data')) {
+      return payload.data.data;
     }
-  } catch (e) {
-    console.warn('loadViewData localStorage error:', e);
+
+    if (payload && Object.prototype.hasOwnProperty.call(payload, 'data')) {
+      return payload.data;
+    }
+
+    return null;
+  } catch (error) {
+    console.warn('loadViewData error:', error);
+    return null;
   }
-  
-  return null;
 }
 
-// Load data directly from server (bypassing embedded data) for collaborative updates
-async function loadViewDataFromServer(dataKey) {
-  if (!__projectId) return null;
-  
-  // Always query server for latest data
-  try {
-    const url = '/projects/' + __projectId + '/custom-views/load-data?view_name=' + encodeURIComponent(__viewName) + '&data_key=' + encodeURIComponent(String(dataKey || 'default'));
-    const res = await csrfFetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' }
-    });
-    const result = await res.json();
-    
-    if (result.success && result.data?.data) {
-      console.log('[loadViewDataFromServer] Loaded latest data from server for:', dataKey);
-      return result.data.data;
-    }
-  } catch (e) {
-    console.warn('loadViewDataFromServer server error:', e);
-  }
-  
-  return null;
-}
-
-// Safe data initialization helper to prevent race conditions
 function useEmbeddedData(dataKey, defaultValue = null) {
-  const [data, setData] = useState(() => {
-    // Initialize with embedded data if available for fast initial render
-    if (typeof extractedEmbeddedData !== 'undefined' && extractedEmbeddedData[dataKey]) {
-      console.log('[useEmbeddedData] Initialized with embedded data for:', dataKey);
-      return extractedEmbeddedData[dataKey];
+  const [state, setState] = useState(() => {
+    if (embeddedData && Object.prototype.hasOwnProperty.call(embeddedData, dataKey)) {
+      return embeddedData[dataKey];
     }
     return defaultValue;
   });
-  
   const [isLoaded, setIsLoaded] = useState(false);
-  
-  // Always check server for latest collaborative data
+  const stateRef = useRef(state);
+
   useEffect(() => {
-    const loadLatestData = async () => {
-      // Load from server to get latest collaborative updates
-      const serverData = await loadViewDataFromServer(dataKey);
-      
-      if (serverData !== null) {
-        // Compare with current data to see if we need to update
-        const currentDataStr = JSON.stringify(data);
-        const serverDataStr = JSON.stringify(serverData);
-        
-        if (currentDataStr !== serverDataStr) {
-          console.log('[useEmbeddedData] Updating with latest server data for:', dataKey);
-          setData(serverData);
-        } else {
-          console.log('[useEmbeddedData] Server data matches current data for:', dataKey);
-        }
-      } else if (!data || (typeof extractedEmbeddedData === 'undefined' || !extractedEmbeddedData[dataKey])) {
-        // Only fall back to default if no embedded data and no server data
-        console.log('[useEmbeddedData] No server data, using default for:', dataKey);
-        setData(defaultValue);
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const latest = await loadViewData(dataKey);
+      if (!active) return;
+      if (latest !== null && latest !== undefined) {
+        stateRef.current = latest;
+        setState(latest);
       }
-      
       setIsLoaded(true);
+    })();
+    return () => {
+      active = false;
     };
-    
-    loadLatestData();
   }, [dataKey]);
-  
-  const saveData = useCallback((newData) => {
-    setData(newData);
-    saveViewData(dataKey, newData);
+
+  const persist = useCallback(async (value) => {
+    const next = typeof value === 'function' ? value(stateRef.current) : value;
+    stateRef.current = next;
+    setState(next);
+    await saveViewData(dataKey, next);
+    return next;
   }, [dataKey]);
-  
-  return [data, saveData, isLoaded];
+
+  return [state, persist, isLoaded];
 }
 
 ${transformed}
 
-return (${componentName});`;
+return ${componentName};
+`;
 
-            const factory = new Function(
-                'React',
-                'Recharts',
-                'csrfFetch',
-                'localStorage',
-                'project',
-                'tasks',
-                'allTasks',
-                'users',
-                'methodology',
-                'auth',
-                'extractedEmbeddedData',
-                factoryCode
-            );
+    const factory = new Function(
+      'React',
+      'Recharts',
+      'MuiDataGrid',
+      'MuiMaterial',
+      'MuiIcons',
+      'csrfFetch',
+      'project',
+      'tasks',
+      'allTasks',
+      'users',
+      'methodology',
+      'auth',
+      'viewName',
+      'projectId',
+      'extractedEmbeddedData',
+      factoryCode,
+    );
 
-            // Create Recharts object with all chart components
-            const RechartsObject = {
-                BarChart,
-                Bar,
-                XAxis,
-                YAxis,
-                CartesianGrid,
-                Tooltip,
-                Legend,
-                ResponsiveContainer,
-                PieChart,
-                Pie,
-                Cell,
-                LineChart,
-                Line,
-                AreaChart,
-                Area
-            };
-
-            // Debug: Log the final factory code
-            console.log('[ReactComponentRenderer] Final factory code:');
-            console.log(factoryCode.slice(0, 500) + '...');
-            console.log('[ReactComponentRenderer] Component name:', componentName);
-            console.log('[ReactComponentRenderer] Transformed code preview:', transformed.slice(0, 200) + '...');
-
-            return factory(
-                React,
-                RechartsObject,
-                localCsrfFetch,
-                localStorageProxy,
-                this.props.project,
-                this.props.tasks,
-                this.props.allTasks,
-                this.props.users,
-                this.props.methodology,
-                this.props.auth,
-                extractedEmbeddedData
-            );
+    const csrfFetch = async (input, init = {}) => {
+      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      const options = { ...init };
+      const headers = {
+        Accept: 'application/json',
+        ...(options.headers || {}),
+      };
+      if (!headers['X-CSRF-TOKEN']) {
+        headers['X-CSRF-TOKEN'] = token;
+      }
+      if (options.body && !(options.body instanceof FormData) && !headers['Content-Type']) {
+        headers['Content-Type'] = 'application/json';
+      }
+      options.headers = headers;
+      options.credentials = options.credentials || 'same-origin';
+      const url = (() => {
+        try {
+          return new URL(input, window.location.origin).toString();
         } catch (error) {
-            throw new Error(`Failed to create component: ${error.message}`);
+          return input;
         }
+      })();
+      return fetch(url, options);
     };
 
-    render() {
-        const { Component, error, loading } = this.state;
-        const { project, auth } = this.props;
+    return factory(
+      React,
+      Recharts,
+      MuiDataGrid,
+      MuiMaterial,
+      MuiIcons,
+      csrfFetch,
+      this.props.project,
+      this.props.tasks,
+      this.props.allTasks,
+      this.props.users,
+      this.props.methodology,
+      this.props.auth,
+      viewName,
+      projectId,
+      extractedEmbeddedData,
+    );
+  };
 
-        if (loading) {
-            return (
-                <div className="flex items-center justify-center p-8 text-gray-700 dark:text-gray-200">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                    <span className="ml-3">Loading micro-application...</span>
-                </div>
-            );
-        }
+  render() {
+    const { Component, error, loading } = this.state;
+    const { project, auth, tasks, allTasks, users, methodology } = this.props;
 
-        if (error) {
-            return (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 m-4">
-                    <div className="flex">
-                        <div className="flex-shrink-0">
-                            <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                        <div className="ml-3">
-                            <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error Loading Component</h3>
-                            <div className="mt-2 text-sm text-red-700 dark:text-red-300">
-                                <p>{error}</p>
-                                <p className="mt-2">Please regenerate your component. The renderer only accepts valid TSX/JSX with <code>export default</code>.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        if (!Component) {
-            return (
-                <div className="text-center p-8 text-gray-600 dark:text-gray-300">
-                    <p>No micro-application available.</p>
-                    <p className="text-sm mt-2">Use the assistant to create a custom application.</p>
-                </div>
-            );
-        }
-
-        return (
-            <ErrorBoundary onErrorOnce={this.notifyErrorOnce}>
-                <div className="micro-app-wrapper text-gray-900 dark:text-gray-100">
-                    <Component
-                        project={project}
-                        auth={auth}
-                        tasks={this.props.tasks}
-                        allTasks={this.props.allTasks}
-                        users={this.props.users}
-                        methodology={this.props.methodology}
-                    />
-                </div>
-            </ErrorBoundary>
-        );
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center p-8 text-gray-700 dark:text-gray-200">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+          <span className="ml-3">Loading micro-application...</span>
+        </div>
+      );
     }
+
+    if (error) {
+      return (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 m-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error Loading Component</h3>
+              <div className="mt-2 text-sm text-red-700 dark:text-red-300">
+                <p>{error}</p>
+                <p className="mt-2">
+                  Please regenerate your component. The renderer only accepts valid TSX/JSX with <code>export default</code>.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (!Component) {
+      return (
+        <div className="text-center p-8 text-gray-600 dark:text-gray-300">
+          <p>No micro-application available.</p>
+          <p className="text-sm mt-2">Use the assistant to create a custom application.</p>
+        </div>
+      );
+    }
+
+    return (
+      <ErrorBoundary onErrorOnce={this.notifyErrorOnce}>
+        <div className="micro-app-wrapper text-gray-900 dark:text-gray-100">
+          <Component
+            project={project}
+            auth={auth}
+            tasks={tasks}
+            allTasks={allTasks}
+            users={users}
+            methodology={methodology}
+          />
+        </div>
+      </ErrorBoundary>
+    );
+  }
 }
 
 class ErrorBoundary extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = { hasError: false, error: null };
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('AI Component Error:', error, errorInfo);
+    if (typeof this.props.onErrorOnce === 'function') {
+      this.props.onErrorOnce(error?.message || String(error));
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      const error = this.state.error;
+      const errorMessage = error?.message || String(error);
+
+      return (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 m-4">
+          <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Component crashed</h3>
+          <p className="mt-2 text-sm text-red-700 dark:text-red-300">{errorMessage}</p>
+        </div>
+      );
     }
 
-    static getDerivedStateFromError(error) {
-        return { hasError: true, error };
-    }
-
-    componentDidCatch(error, errorInfo) {
-        console.error('AI Component Error:', error, errorInfo);
-        if (typeof this.props.onErrorOnce === 'function') {
-            this.props.onErrorOnce(error?.message || String(error));
-        }
-    }
-
-    render() {
-        if (this.state.hasError) {
-            const error = this.state.error;
-            const errorMessage = error?.message || String(error);
-
-            // Provide specific guidance for common chart library issues
-            let helpText = "The micro-application encountered an error while running.";
-            let suggestions = [];
-
-            if (errorMessage.includes('Pie is not defined') || errorMessage.includes('BarChart is not defined')) {
-                helpText = "Chart component not found. This micro-app tried to use a chart library component that isn't available.";
-                suggestions = [
-                    "Available chart components: BarChart, PieChart, LineChart, AreaChart",
-                    "Use recharts library syntax: <BarChart data={data}>...",
-                    "Example: import { BarChart, Bar, XAxis, YAxis } from 'recharts' is not needed - components are already available"
-                ];
-            } else if (errorMessage.includes('react-chartjs-2')) {
-                helpText = "Unsupported chart library. This micro-app tried to use react-chartjs-2, which is not available.";
-                suggestions = [
-                    "Use recharts instead: BarChart, PieChart, LineChart, AreaChart",
-                    "No import needed - chart components are globally available",
-                    "Example: <PieChart width={400} height={300}><Pie data={data} /></PieChart>"
-                ];
-            }
-
-            return (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 m-4">
-                    <div className="flex">
-                        <div className="flex-shrink-0">
-                            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                        <div className="ml-3">
-                            <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Component Runtime Error</h3>
-                            <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                <p>{helpText}</p>
-                                <p className="mt-1 font-mono text-xs">{errorMessage}</p>
-                                {suggestions.length > 0 && (
-                                    <div className="mt-3">
-                                        <p className="font-medium">Suggestions:</p>
-                                        <ul className="list-disc list-inside mt-1 space-y-1">
-                                            {suggestions.map((suggestion, index) => (
-                                                <li key={index} className="text-xs">{suggestion}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        return this.props.children;
-    }
+    return this.props.children;
+  }
 }
 
 export default ReactComponentRenderer;

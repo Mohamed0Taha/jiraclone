@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Project;
 use App\Models\CustomView;
+use App\Events\CustomViewDataUpdated;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -107,6 +108,8 @@ class GenerativeUIService
             // Validate and enhance the generated component
             $enhancedComponent = $this->enhanceReactComponent($generatedComponent, $userMessage, $authUser);
 
+            $isUpdate = !empty($currentComponentCode) && !empty(trim($currentComponentCode));
+            
             // Save the generated component
             $customView = CustomView::createOrUpdate(
                 $project->id,
@@ -118,6 +121,8 @@ class GenerativeUIService
                     'user_request' => $userMessage,
                     'generated_at' => now()->toISOString(),
                     'conversation_history' => $conversationHistory,
+                    'is_update' => $isUpdate,
+                    'original_component_length' => $isUpdate ? strlen($currentComponentCode) : 0,
                 ]
             );
 
@@ -128,7 +133,9 @@ class GenerativeUIService
                 'html' => $enhancedComponent,
                 'component_code' => $enhancedComponent,
                 'custom_view_id' => $customView->id,
-                'message' => 'Custom micro-application generated successfully!'
+                'message' => $isUpdate 
+                    ? 'Custom micro-application updated successfully!' 
+                    : 'Custom micro-application generated successfully!'
             ];
 
         } catch (\Exception $e) {
@@ -150,66 +157,251 @@ class GenerativeUIService
     /**
      * Minimal fallback component to ensure UX continuity when AI generation is unavailable
      */
-        private function fallbackReactComponent(): string
-        {
-                return <<<'REACT'
-import React, { useState, useEffect } from 'react';
+    private function fallbackReactComponent(): string
+    {
+        return <<<'REACT'
+import React, { useMemo, useState } from 'react';
 
-export default function GeneratedMicroApp({ project, auth }) {
-    const [items, setItems] = useState(() => [{ id: 1, title: 'Welcome to your Micro App', status: 'todo' }]);
-    const [filter, setFilter] = useState('all');
+export default function GeneratedMicroApp({ project, auth, tasks = [], allTasks = [], users = [] }) {
+    const { ContentContainer, BeautifulCard, SectionHeader, FormContainer, PrimaryButton, SuccessButton, DangerButton } = StyledComponents;
 
-    useEffect(() => {
-        const saved = localStorage.getItem('microapp-data');
-        if (saved) {
-            try { setItems(JSON.parse(saved)); } catch (e) { console.error(e); }
+    const currentUser = auth?.user || auth || { id: 0, name: 'Guest User', email: 'guest@example.com' };
+    const safeProject = project || {};
+    const safeUsers = Array.isArray(users) ? users : [];
+    const initialTasks = Array.isArray(tasks) && tasks.length ? tasks : (Array.isArray(allTasks) ? allTasks : []);
+    const [dashboardData, setDashboardData] = useEmbeddedData('fallback-dashboard', {
+        tasks: initialTasks,
+        notes: [],
+        lastRefreshed: new Date().toISOString(),
+        lastUpdatedBy: currentUser
+    });
+    const [newNote, setNewNote] = useState('');
+    const effectiveTasks = dashboardData?.tasks?.length ? dashboardData.tasks : initialTasks;
+    const notes = dashboardData?.notes || [];
+
+    const statusSummary = useMemo(() => {
+        const statuses = ['todo', 'inprogress', 'review', 'done', 'backlog', 'testing'];
+        return statuses.map((status) => {
+            const label = status.charAt(0).toUpperCase() + status.slice(1);
+            const items = effectiveTasks.filter((task) => (task?.status || 'todo') === status);
+            return {
+                status,
+                label,
+                count: items.length,
+            };
+        });
+    }, [effectiveTasks]);
+
+    const completionRate = useMemo(() => {
+        if (!effectiveTasks.length) {
+            return 0;
         }
-    }, []);
-    useEffect(() => {
-        localStorage.setItem('microapp-data', JSON.stringify(items));
-    }, [items]);
+        const doneCount = effectiveTasks.filter((task) => (task?.status || '').toLowerCase() === 'done').length;
+        return Math.round((doneCount / effectiveTasks.length) * 100);
+    }, [effectiveTasks]);
 
-    const addItem = () => {
-        const id = items.length ? Math.max(...items.map(i => i.id)) + 1 : 1;
-        setItems([...items, { id, title: `Item #${id}`, status: 'todo' }]);
-    };
-    const toggle = (id) => {
-        setItems(items.map(i => i.id === id ? { ...i, status: i.status === 'done' ? 'todo' : 'done' } : i));
-    };
-    const remove = (id) => setItems(items.filter(i => i.id !== id));
+    const upcomingTasks = useMemo(() => {
+        return [...effectiveTasks]
+            .filter((task) => Boolean(task?.due_date))
+            .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+            .slice(0, 5);
+    }, [effectiveTasks]);
 
-    const visible = items.filter(i => filter === 'all' ? true : i.status === filter);
+    const handleRefresh = () => {
+        setDashboardData({
+            ...dashboardData,
+            lastRefreshed: new Date().toISOString(),
+            lastUpdatedBy: currentUser,
+        });
+    };
+
+    const handleAddNote = () => {
+        if (!newNote.trim()) return;
+        const note = {
+            id: Date.now(),
+            content: newNote.trim(),
+            created_at: new Date().toISOString(),
+            created_by: currentUser.id,
+            author: currentUser,
+        };
+        setDashboardData({
+            ...dashboardData,
+            notes: [...notes, note],
+            lastUpdated: new Date().toISOString(),
+            lastUpdatedBy: currentUser,
+        });
+        setNewNote('');
+    };
+
+    const handleClearNotes = () => {
+        if (!notes.length) return;
+        const deletionRecords = notes.map((note) => ({
+            id: note.id,
+            content: note.content,
+            deleted_at: new Date().toISOString(),
+            deleted_by: currentUser.id,
+            deleted_by_user: currentUser,
+        }));
+        setDashboardData({
+            ...dashboardData,
+            notes: [],
+            deletions: [...(dashboardData?.deletions || []), ...deletionRecords],
+            lastUpdated: new Date().toISOString(),
+            lastUpdatedBy: currentUser,
+        });
+    };
 
     return (
-        <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">{project?.name || 'Micro App'}</h2>
-                <div className="space-x-2">
-                    <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={addItem}>Add</button>
-                    <select className="px-2 py-1 border rounded" value={filter} onChange={e => setFilter(e.target.value)}>
-                        <option value="all">All</option>
-                        <option value="todo">Todo</option>
-                        <option value="done">Done</option>
-                    </select>
-                </div>
-            </div>
-            <div className="grid gap-2">
-                {visible.map(i => (
-                    <div key={i.id} className="p-3 border rounded flex items-center justify-between">
-                        <div>#{i.id} · {i.title} · <span className="italic">{i.status}</span></div>
-                        <div className="space-x-2">
-                            <button className="px-2 py-1 bg-green-600 text-white rounded" onClick={() => toggle(i.id)}>{i.status === 'done' ? 'Mark Todo' : 'Mark Done'}</button>
-                            <button className="px-2 py-1 bg-red-600 text-white rounded" onClick={() => remove(i.id)}>Delete</button>
+        <ContentContainer maxWidth="xl" sx={{ py: designTokens.spacing.xl, px: designTokens.spacing.xl }}>
+            <Stack spacing={designTokens.spacing.xl}>
+                <BeautifulCard sx={{ padding: designTokens.spacing.xl }}>
+                    <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }} justifyContent="space-between" spacing={designTokens.spacing.lg}>
+                        <div>
+                            <SectionHeader sx={{ borderBottomWidth: 0, marginBottom: designTokens.spacing.sm }}>
+                                {safeProject?.name || 'Project Experience'}
+                            </SectionHeader>
+                            <Typography variant="body1" color={designTokens.colors.neutral[600]}>
+                                Curated for {currentUser?.name || 'Guest'} with {safeUsers.length} collaborators.
+                            </Typography>
+                            <Typography variant="body2" color={designTokens.colors.neutral[500]} sx={{ marginTop: designTokens.spacing.xs }}>
+                                Last refreshed {dashboardData?.lastRefreshed ? new Date(dashboardData.lastRefreshed).toLocaleString() : 'recently'}.
+                            </Typography>
                         </div>
-                    </div>
-                ))}
-                {visible.length === 0 && <div className="text-gray-500 text-sm">No items found.</div>}
-            </div>
-        </div>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={designTokens.spacing.sm}>
+                            <PrimaryButton startIcon={<RefreshIcon />} onClick={handleRefresh}>
+                                Refresh Insights
+                            </PrimaryButton>
+                            <SuccessButton startIcon={<AddIcon />} onClick={handleAddNote} disabled={!newNote.trim()}>
+                                Save Highlight
+                            </SuccessButton>
+                            <DangerButton startIcon={<DeleteIcon />} onClick={handleClearNotes} disabled={!notes.length}>
+                                Clear Notes
+                            </DangerButton>
+                        </Stack>
+                    </Stack>
+                </BeautifulCard>
+
+                <Grid container spacing={designTokens.spacing.lg}>
+                    <Grid item xs={12} md={8}>
+                        <BeautifulCard sx={{ padding: designTokens.spacing.xl }}>
+                            <SectionHeader>Delivery Momentum</SectionHeader>
+                            <Stack spacing={designTokens.spacing.md}>
+                                <Stack direction="row" spacing={designTokens.spacing.sm} alignItems="center">
+                                    <Typography variant="h4" fontWeight={700}>
+                                        {completionRate}%
+                                    </Typography>
+                                    <Chip label="Done" color="success" variant="filled" />
+                                    <Chip label={`${effectiveTasks.length} tasks`} variant="outlined" />
+                                </Stack>
+                                <LinearProgress variant="determinate" value={completionRate} sx={{ height: 10, borderRadius: designTokens.borderRadius.lg }} />
+                            </Stack>
+                            <Divider sx={{ my: designTokens.spacing.md }} />
+                            <ResponsiveContainer width="100%" height={260}>
+                                <BarChart data={statusSummary}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="label" />
+                                    <YAxis allowDecimals={false} />
+                                    <RechartsTooltip cursor={{ fill: 'rgba(14,165,233,0.1)' }} />
+                                    <Bar dataKey="count" fill={designTokens.colors.primary[500]} radius={[12, 12, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </BeautifulCard>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                        <BeautifulCard sx={{ padding: designTokens.spacing.xl, height: '100%' }}>
+                            <SectionHeader>Upcoming Commitments</SectionHeader>
+                            <Stack spacing={designTokens.spacing.sm}>
+                                {upcomingTasks.length === 0 && (
+                                    <Typography variant="body2" color={designTokens.colors.neutral[500]}>
+                                        No upcoming deadlines detected.
+                                    </Typography>
+                                )}
+                                {upcomingTasks.map((task) => (
+                                    <Box
+                                        key={task.id}
+                                        sx={{
+                                            border: '1px solid ' + designTokens.colors.neutral[200],
+                                            borderRadius: designTokens.borderRadius.lg,
+                                            padding: designTokens.spacing.md,
+                                            background: '#fff',
+                                        }}
+                                    >
+                                        <Typography variant="subtitle1" fontWeight={600}>
+                                            {task.title}
+                                        </Typography>
+                                        <Stack direction="row" spacing={designTokens.spacing.xs} alignItems="center" sx={{ mt: designTokens.spacing.xs }}>
+                                            <Chip size="small" color="primary" label={(task.status || 'todo').toUpperCase()} />
+                                            {task.priority && <Chip size="small" color="warning" variant="outlined" label={`Priority: ${task.priority}`} />}
+                                        </Stack>
+                                        <Typography variant="body2" color={designTokens.colors.neutral[500]} sx={{ mt: designTokens.spacing.xs }}>
+                                            Due {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'TBD'}
+                                        </Typography>
+                                    </Box>
+                                ))}
+                            </Stack>
+                        </BeautifulCard>
+                    </Grid>
+                </Grid>
+
+                <BeautifulCard sx={{ padding: designTokens.spacing.xl }}>
+                    <SectionHeader>Collaboration Notes</SectionHeader>
+                    <FormContainer sx={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
+                        <Stack direction={{ xs: 'column', md: 'row' }} spacing={designTokens.spacing.sm}>
+                            <TextField
+                                fullWidth
+                                label="Celebrate a win or flag a risk"
+                                value={newNote}
+                                onChange={(event) => setNewNote(event.target.value)}
+                                placeholder="Example: Release candidate ready for QA hand-off"
+                            />
+                            <SuccessButton onClick={handleAddNote} disabled={!newNote.trim()} startIcon={<AddIcon />}>
+                                Append Note
+                            </SuccessButton>
+                        </Stack>
+                    </FormContainer>
+                    <Stack spacing={designTokens.spacing.sm} sx={{ mt: designTokens.spacing.md }}>
+                        {notes.length === 0 && (
+                            <Typography variant="body2" color={designTokens.colors.neutral[500]}>
+                                No notes captured yet. Share a highlight to get started.
+                            </Typography>
+                        )}
+                        {notes.map((note) => (
+                            <Box
+                                key={note.id}
+                                sx={{
+                                    padding: designTokens.spacing.md,
+                                    borderRadius: designTokens.borderRadius.lg,
+                                    background: designTokens.colors.neutral[50],
+                                    border: '1px solid ' + designTokens.colors.neutral[200],
+                                }}
+                            >
+                                <Stack direction="row" alignItems="center" spacing={designTokens.spacing.sm}>
+                                    <Avatar sx={{ width: 32, height: 32, background: designTokens.gradients.primary }}>
+                                        {(note.author?.name || currentUser.name || 'User').charAt(0).toUpperCase()}
+                                    </Avatar>
+                                    <div>
+                                        <Typography variant="subtitle2" fontWeight={600}>
+                                            {note.author?.name || currentUser.name}
+                                        </Typography>
+                                        <Typography variant="caption" color={designTokens.colors.neutral[500]}>
+                                            {new Date(note.created_at).toLocaleString()}
+                                        </Typography>
+                                    </div>
+                                    <Chip size="small" variant="outlined" label={note.author?.email || currentUser.email} />
+                                </Stack>
+                                <Typography variant="body1" sx={{ mt: designTokens.spacing.sm }}>
+                                    {note.content}
+                                </Typography>
+                            </Box>
+                        ))}
+                    </Stack>
+                </BeautifulCard>
+            </Stack>
+        </ContentContainer>
     );
 }
 REACT;
-        }
+    }
 
     /**
      * Build specialized prompt for React component generation
@@ -244,6 +436,16 @@ CRITICAL REQUIREMENTS FOR UPDATES:
 5. Only modify the specific aspects mentioned in the user's request
 6. Ensure backward compatibility with existing data flow
 7. Maintain responsive design and existing styling patterns
+8. Uphold the enterprise design system: keep using StyledComponents helpers (ContentContainer, BeautifulCard, SectionHeader, PrimaryButton/SuccessButton/DangerButton) or upgrade raw elements to them as part of the change
+9. Replace any plain HTML controls (button, input, select) introduced by the request with the polished Material UI or StyledComponents equivalents so the surface stays professional
+
+COMMON UPDATE SCENARIOS:
+- **Add Column to Table**: Add new column without breaking existing columns
+- **Change Colors/Styling**: Update CSS properties while preserving layout
+- **Add New Feature**: Integrate new functionality with existing state management
+- **Modify Layout**: Adjust positioning while keeping all existing elements
+- **Update Data Fields**: Add new data properties without losing existing ones
+- **Change Validation**: Modify form validation while keeping existing logic
 
 CURRENT COMPONENT CODE:
 ```jsx
@@ -272,6 +474,13 @@ Remember: This is an UPDATE, not a complete rewrite. Preserve what works, modify
         } else {
             $prompt = "You are an expert React developer specializing in creating data-focused micro-applications using modern React patterns.
 
+CRITICAL IMPORT REQUIREMENTS:
+1. **NEVER import StyledComponents, MuiMaterial, or MuiIcons - they are automatically available**
+2. **ONLY import React hooks: import React, { useState, useEffect } from 'react';**
+3. **DO NOT import any external libraries - all components and icons are pre-loaded**
+4. **Icons are available as AddIcon, EditIcon, DeleteIcon (with 'Icon' suffix)**
+5. **All Material-UI components are available without imports**
+
 CRITICAL REQUIREMENTS:
 1. Generate a COMPLETE, FUNCTIONAL React component that can be directly used
 2. **MANDATORY: Use useEmbeddedData hook for ALL persistent data - prevents race conditions**
@@ -282,19 +491,23 @@ CRITICAL REQUIREMENTS:
 7. **CRITICAL: authUser represents the CURRENT VIEWER/USER of the component, NOT the component creator - supports collaborative usage**
 8. **MANDATORY: Track user for ALL CRUD operations - CREATE (creator, created_by), UPDATE (updated_by, last_editor), DELETE (deleted_by, deleted_by_user)**
 9. **MANDATORY: Include timestamp tracking - created_at, updated_at, deleted_at for all operations**
-9. Initialize state with the ACTUAL project data provided in the context below AND via props injected by the host renderer
-10. **MANDATORY: Include FULL CRUD OPERATIONS (Create, Read, Update, Delete) for all data entities**
-11. Input controls must take LESS THAN 13% of the workspace - focus 87%+ on data display
-12. Use modern CSS-in-JS or Tailwind classes for styling
-13. Include proper TypeScript types if applicable
-14. Add loading states, error handling, and user feedback
-15. Ensure mobile-responsive design
-16. Export a default component: `export default function Name() { ... }`
-17. **CRITICAL: ALL React hooks (useState, useEmbeddedData, useEffect, etc.) MUST be at the TOP LEVEL - NEVER inside conditions, loops, or functions**
-18. **CRITICAL: Follow the Rules of Hooks - hooks must always be called in the same order on every render**
-19. **CRITICAL: Data persistence is handled by useEmbeddedData - ensures cross-user sharing and eliminates race conditions**
-20. **CRITICAL: Always check array length before accessing elements: users.length > 0 ? users[0] : defaultUser**
-21. **MANDATORY: Show who created/edited each item in the UI with timestamps for full collaboration transparency**
+10. Initialize state with the ACTUAL project data provided in the context below AND via props injected by the host renderer
+11. **MANDATORY: Include FULL CRUD OPERATIONS (Create, Read, Update, Delete) for all data entities**
+12. Input controls must take LESS THAN 13% of the workspace - focus 87%+ on data display
+13. **MANDATORY: Wrap the entire experience inside `<ContentContainer>` from StyledComponents and stage data inside BeautifulCard/Paper sections for an enterprise layout**
+14. **MANDATORY: Destructure StyledComponents at the top: `const { ContentContainer, BeautifulCard, SectionHeader, FormContainer, PrimaryButton, SuccessButton, DangerButton } = StyledComponents;` and use these helpers for structure and call-to-actions**
+15. **NEVER output raw HTML interactive elements (`<button>`, `<input>`, `<select>`, `<textarea>`). Replace them with StyledComponents helpers or equivalent MUI components (Button, TextField, Select) styled with design tokens**
+16. **Showcase premium styling: leverage designTokens/styleUtils for spacing, elevation, gradients, and pair actions with AddIcon, EditIcon, DeleteIcon for immediate visual affordances**
+17. **CRITICAL: Use icon names with 'Icon' suffix - AddIcon, EditIcon, DeleteIcon, SaveIcon, etc.**
+18. Include proper TypeScript types if applicable
+19. Add loading states, error handling, and user feedback using MUI Alert/Snackbar components when relevant
+20. Ensure mobile-responsive design using Stack/Grid breakpoints and responsive props
+21. Export a default component: `export default function Name() { ... }`
+22. **CRITICAL: ALL React hooks (useState, useEmbeddedData, useEffect, etc.) MUST be at the TOP LEVEL - NEVER inside conditions, loops, or functions**
+23. **CRITICAL: Follow the Rules of Hooks - hooks must always be called in the same order on every render**
+24. **CRITICAL: Data persistence is handled by useEmbeddedData - ensures cross-user sharing and eliminates race conditions**
+25. **CRITICAL: Always check array length before accessing elements: users.length > 0 ? users[0] : defaultUser**
+26. **MANDATORY: Show who created/edited each item in the UI with timestamps for full collaboration transparency**
 
 MANDATORY CRUD OPERATIONS:
 - **CREATE**: Always include forms/inputs to add new items (modals, inline forms, or dedicated sections)
@@ -587,9 +800,28 @@ const [userPrefs, setUserPrefs] = useEmbeddedData('user-preferences', {
 // Data is automatically embedded in component code and shared across all users
 ```
 
-COMPONENT STRUCTURE:
+COMPONENT STRUCTURE EXAMPLE:
 ```jsx
-{$componentStructure}
+import React, { useState, useEffect } from 'react';
+// NO OTHER IMPORTS NEEDED - StyledComponents, MuiMaterial, MuiIcons are auto-available
+
+export default function MyComponent() {
+    // Destructure StyledComponents at top
+    const { ContentContainer, BeautifulCard, SectionHeader, PrimaryButton, SuccessButton, DangerButton } = StyledComponents;
+    
+    // Use embedded data hook
+    const [appData, setAppData] = useEmbeddedData('main-data', { items: [] });
+    
+    // Icons are available as AddIcon, EditIcon, DeleteIcon, etc.
+    return (
+        <ContentContainer>
+            <BeautifulCard>
+                <SectionHeader>My App</SectionHeader>
+                <PrimaryButton startIcon={<AddIcon />}>Add Item</PrimaryButton>
+            </BeautifulCard>
+        </ContentContainer>
+    );
+}
 ```
 
 PROJECT CONTEXT:
@@ -769,6 +1001,63 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
             'useState(() => (typeof tasks !== "undefined" ? tasks : (typeof allTasks !== "undefined" ? allTasks : [])))',
             $componentCode
         );
+
+        // Ensure enterprise-grade StyledComponents helpers are readily available
+        $styledComponentDestructure = "const { ContentContainer, BeautifulCard, SectionHeader, FormContainer, PrimaryButton, SuccessButton, DangerButton } = StyledComponents;";
+        if (!str_contains($componentCode, 'ContentContainer, BeautifulCard')) {
+            $injected = false;
+            $patterns = [
+                '/(export\s+default\s+function\s+\w+\s*\([^)]*\)\s*{)/',
+                '/(function\s+\w+\s*\([^)]*\)\s*{)/',
+                '/(const\s+\w+\s*=\s*\([^)]*\)\s*=>\s*{)/'
+            ];
+            foreach ($patterns as $pattern) {
+                $componentCode = preg_replace($pattern, "$1\n    {$styledComponentDestructure}", $componentCode, 1, $count);
+                if ($count > 0) {
+                    $injected = true;
+                    break;
+                }
+            }
+            if (!$injected) {
+                $componentCode = $styledComponentDestructure . "\n" . $componentCode;
+            }
+        }
+
+        // Replace plain HTML buttons with polished StyledComponents buttons
+        $componentCode = preg_replace('/<button\b/', '<PrimaryButton', $componentCode);
+        $componentCode = str_replace('</button>', '</PrimaryButton>', $componentCode);
+
+        // Wrap root layout in enterprise ContentContainer if missing
+        if (!str_contains($componentCode, '<ContentContainer')) {
+            $originalComponentForWrap = $componentCode;
+            $wrapperCallback = function (array $matches) use ($originalComponentForWrap) {
+                $inner = ltrim($matches[1], "\n");
+                $innerNormalized = rtrim($inner);
+                $innerNormalized = preg_replace('/^\s*/', '', $innerNormalized);
+                $innerIndented = '            ' . preg_replace('/\n/', "\n            ", $innerNormalized);
+                $hasBeautifulCard = str_contains($originalComponentForWrap, '<BeautifulCard');
+                $cardOpen = $hasBeautifulCard ? '' : "            <BeautifulCard sx={{ padding: designTokens.spacing.xl, backgroundColor: designTokens.colors.neutral[50], boxShadow: designTokens.shadows.md }}\n            >\n";
+                $cardClose = $hasBeautifulCard ? '' : "\n            </BeautifulCard>";
+
+                return "return (\n        <ContentContainer maxWidth=\"xl\" sx={{ py: designTokens.spacing.xl, px: designTokens.spacing.xl }}>\n          <Stack spacing={designTokens.spacing.xl}>\n" .
+                    $cardOpen .
+                    $innerIndented .
+                    $cardClose .
+                    "\n          </Stack>\n        </ContentContainer>\n    );\n" . $matches[2];
+            };
+
+            $patterns = [
+                '/return\s*\(\s*(?!\s*<ContentContainer)([\s\S]*?)\);\s*\n(\})/m',
+                '/return\s*\(\s*(?!\s*<ContentContainer)([\s\S]*?)\);\s*\n(\};)/m'
+            ];
+            foreach ($patterns as $pattern) {
+                $updated = preg_replace_callback($pattern, $wrapperCallback, $componentCode, 1, $count);
+                if ($count > 0) {
+                    $componentCode = $updated;
+                    break;
+                }
+            }
+        }
 
         // Add data persistence utilities if not present
         if (!str_contains($componentCode, 'localStorage')) {
@@ -1002,6 +1291,15 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
             
             $customView->save();
 
+            // Broadcast the data update to other users viewing the same component
+            broadcast(new CustomViewDataUpdated(
+                $project->id,
+                $viewName,
+                $dataKey,
+                $data,
+                auth()->user()
+            ));
+
             \Log::info('CustomView saved successfully', [
                 'view_id' => $customView->id,
                 'new_updated_at' => $customView->updated_at
@@ -1055,16 +1353,25 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
         $existingData[$dataKey] = $data;
         
         // Generate the complete embedded data block
-        $dataJson = json_encode($existingData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $dataJson = json_encode($existingData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        
+        // Validate the JSON before embedding
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            \Log::error('Invalid JSON generated for embedded data', [
+                'error' => json_last_error_msg(),
+                'data' => $existingData
+            ]);
+            throw new \Exception('Failed to generate valid JSON for embedded data: ' . json_last_error_msg());
+        }
         
         $embeddedDataBlock = "/* EMBEDDED_DATA_START */
-const __EMBEDDED_DATA__ = {$dataJson};
+const __EMBEDDED_DATA__ = $dataJson;
 /* EMBEDDED_DATA_END */";
 
         // Remove any existing embedded data block
         $componentCode = preg_replace('/\/\*\s*EMBEDDED_DATA_START\s*\*\/.*?\/\*\s*EMBEDDED_DATA_END\s*\*\//s', '', $componentCode);
         
-        // Add the new/updated embedded data block
+        // Add the new/updated embedded data block after imports
         $importPattern = '/(import.*?;[\s\n]*)/s';
         if (preg_match($importPattern, $componentCode, $matches, PREG_OFFSET_CAPTURE)) {
             $insertPos = $matches[0][1] + strlen($matches[0][0]);

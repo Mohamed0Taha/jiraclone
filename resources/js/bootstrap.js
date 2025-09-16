@@ -13,7 +13,43 @@ if (token) {
     console.error('CSRF token not found: https://laravel.com/docs/csrf#csrf-x-csrf-token');
 }
 
-// Add request interceptor to check and warn about large cookie headers
+// Set up Laravel Echo for real-time broadcasting (only if Pusher is properly configured)
+if (import.meta.env.VITE_PUSHER_APP_KEY && import.meta.env.VITE_PUSHER_APP_KEY !== 'your_pusher_app_key') {
+    import('laravel-echo').then(({ default: Echo }) => {
+        import('pusher-js').then(({ default: Pusher }) => {
+            window.Pusher = Pusher;
+
+            window.Echo = new Echo({
+                broadcaster: 'pusher',
+                key: import.meta.env.VITE_PUSHER_APP_KEY,
+                cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER ?? 'mt1',
+                wsHost: import.meta.env.VITE_PUSHER_HOST ? import.meta.env.VITE_PUSHER_HOST : `ws-${import.meta.env.VITE_PUSHER_APP_CLUSTER}.pusherapp.com`,
+                wsPort: import.meta.env.VITE_PUSHER_PORT ?? 80,
+                wssPort: import.meta.env.VITE_PUSHER_PORT ?? 443,
+                forceTLS: (import.meta.env.VITE_PUSHER_SCHEME ?? 'https') === 'https',
+                enabledTransports: ['ws', 'wss'],
+                authorizer: (channel, options) => {
+                    return {
+                        authorize: (socketId, callback) => {
+                            window.axios.post('/broadcasting/auth', {
+                                socket_id: socketId,
+                                channel_name: channel.name
+                            })
+                                .then(response => {
+                                    callback(false, response.data);
+                                })
+                                .catch(error => {
+                                    callback(true, error);
+                                });
+                        }
+                    };
+                },
+            });
+        });
+    });
+} else {
+    console.log('Pusher not configured, skipping Echo setup');
+}// Add request interceptor to check and warn about large cookie headers
 window.axios.interceptors.request.use(
     (config) => {
         // Check if cookie header might be too large
