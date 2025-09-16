@@ -134,9 +134,11 @@ const StyledComponents = {
     sx: {
       borderRadius: designTokens.borderRadius.lg,
       boxShadow: 'none',
-      border: 'none',
-      overflow: 'visible',
-      transition: 'none',
+      border: '1px solid',
+      borderColor: 'divider',
+      overflow: 'hidden',
+      transition: 'border-color 120ms ease',
+      '&:hover': { borderColor: 'divider' },
       ...props.sx,
     },
   }),
@@ -164,8 +166,12 @@ const StyledComponents = {
       textTransform: 'none',
       fontWeight: 600,
       fontSize: '0.85rem',
-      padding: '4px 10px',
-      minHeight: '32px',
+      padding: '3px 8px',
+      minHeight: '22px',
+      minWidth: '40px',
+      lineHeight: 1.2,
+      whiteSpace: 'nowrap',
+      '& .MuiButton-startIcon': { marginRight: 6 },
       boxShadow: 'none',
       ...props.sx,
     },
@@ -181,8 +187,12 @@ const StyledComponents = {
       textTransform: 'none',
       fontWeight: 600,
       fontSize: '0.85rem',
-      padding: '4px 10px',
-      minHeight: '32px',
+      padding: '3px 8px',
+      minHeight: '22px',
+      minWidth: '40px',
+      lineHeight: 1.2,
+      whiteSpace: 'nowrap',
+      '& .MuiButton-startIcon': { marginRight: 6 },
       boxShadow: 'none',
       ...props.sx,
     },
@@ -198,8 +208,12 @@ const StyledComponents = {
       textTransform: 'none',
       fontWeight: 600,
       fontSize: '0.85rem',
-      padding: '4px 10px',
-      minHeight: '32px',
+      padding: '3px 8px',
+      minHeight: '22px',
+      minWidth: '40px',
+      lineHeight: 1.2,
+      whiteSpace: 'nowrap',
+      '& .MuiButton-startIcon': { marginRight: 6 },
       boxShadow: 'none',
       ...props.sx,
     },
@@ -229,18 +243,190 @@ const StyledComponents = {
     },
   }),
   SectionHeader: (props) => React.createElement(MuiMaterial.Typography, {
-    variant: 'h5',
+    variant: 'subtitle2',
     ...props,
     sx: {
-      fontWeight: 600,
-      color: designTokens.colors.neutral[800],
-      marginBottom: designTokens.spacing.sm,
-      borderBottom: '2px solid ' + designTokens.colors.neutral[200],
-      paddingBottom: designTokens.spacing.xs,
+      fontWeight: 500,
+      fontSize: '0.89rem',
+      letterSpacing: '0.04em',
+      textTransform: 'uppercase',
+      color: 'text.secondary',
+      marginBottom: designTokens.spacing.xs,
+      paddingBottom: '4px',
+      position: 'relative',
+      borderBottom: '1px solid',
+      borderBottomColor: 'divider',
       display: 'inline-block',
+      '&::after': {
+        content: '""',
+        position: 'absolute',
+        left: 0,
+        bottom: -1,
+        width: '40px',
+        height: '2px',
+        background: 'linear-gradient(90deg, ' + designTokens.colors.primary[400] + ', rgba(14,165,233,0))',
+        borderRadius: '1px',
+      },
       ...props.sx,
     },
   }),
+};
+`;
+
+const TEMPLATES_SNIPPET = String.raw`
+// Lightweight Templates exposed to generated components
+const Templates = {
+  Docs: (props) => {
+    const { pages = [], defaultPage = null, persistKey = 'docs' } = props || {};
+    const [state] = useEmbeddedData(persistKey, { pages, defaultPage });
+    const docs = Array.isArray(state?.pages) && state.pages.length ? state.pages : pages;
+    const [current, setCurrent] = React.useState(defaultPage || (docs[0]?.id ?? 0));
+    const active = docs.find(p => (p.id ?? p.title) === current) || docs[0] || { title: 'Untitled', body: '' };
+    return (
+      React.createElement(Box, null,
+        React.createElement(Stack, { direction: 'row', spacing: 2 },
+          React.createElement(Paper, { sx: { p: 1, width: 220, flexShrink: 0 } },
+            React.createElement(Stack, { spacing: 0.5 },
+              ...docs.map((p, i) => React.createElement(Button, {
+                key: i,
+                variant: (p.id ?? p.title) === current ? 'contained' : 'text',
+                color: (p.id ?? p.title) === current ? 'primary' : 'inherit',
+                onClick: () => setCurrent(p.id ?? p.title),
+                sx: { justifyContent: 'flex-start' }
+              }, p.title || ('Page ' + (i+1))))
+            )
+          ),
+          React.createElement(Paper, { sx: { p: 2, flex: 1 } },
+            React.createElement(Typography, { variant: 'h6' }, active.title || 'Untitled'),
+            React.createElement(Divider, null),
+            React.createElement(Typography, { variant: 'body2', sx: { whiteSpace: 'pre-wrap' } }, active.body || '')
+          )
+        )
+      )
+    );
+  },
+  WikiPage: (props) => {
+    const { title = 'Wiki', sections = [], persistKey = 'wiki-page' } = props || {};
+    const [state] = useEmbeddedData(persistKey, { sections });
+    const content = Array.isArray(state?.sections) && state.sections.length ? state.sections : sections;
+    return (
+      React.createElement(Paper, { sx: { p: 2 } },
+        React.createElement(Stack, { spacing: 2 },
+          React.createElement(Typography, { variant: 'h6', color: 'text.secondary' }, title),
+          React.createElement(Divider, null),
+          ...content.map((s, i) => React.createElement(Box, { key: i },
+            React.createElement(Typography, { variant: 'subtitle2', sx: { mb: 0.5, color: 'text.secondary' } }, s?.heading || ('Section ' + (i+1))),
+            React.createElement(Typography, { variant: 'body2', sx: { whiteSpace: 'pre-wrap' } }, s?.body || '')
+          ))
+        )
+      )
+    );
+  },
+
+  Slides: (props) => {
+    const { slides = [], persistKey = 'slides-deck' } = props || {};
+    const [idx, setIdx] = React.useState(0);
+    const [state] = useEmbeddedData(persistKey, { slides });
+    const deck = Array.isArray(state?.slides) && state.slides.length ? state.slides : slides;
+    const go = (d) => setIdx((p) => (p + d + (deck.length || 1)) % (deck.length || 1));
+    React.useEffect(() => {
+      const onKey = (e) => { if (e.key === 'ArrowRight') go(1); if (e.key === 'ArrowLeft') go(-1); };
+      window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
+    }, [deck.length]);
+    const s = deck[idx] || { title: 'Slide', content: '' };
+    return (
+      React.createElement(Paper, { sx: { p: 2 } },
+        React.createElement(Stack, { spacing: 1 },
+          React.createElement(Stack, { direction: 'row', alignItems: 'center', justifyContent: 'space-between' },
+            React.createElement(Typography, { variant: 'subtitle2', color: 'text.secondary' }, 'Slide ' + (idx+1) + '/' + (deck.length || 1)),
+            React.createElement(Stack, { direction: 'row', spacing: 1 },
+              React.createElement(Button, { variant: 'outlined', onClick: () => go(-1), startIcon: React.createElement(ArrowBackIcon, null) }, 'Prev'),
+              React.createElement(Button, { variant: 'outlined', onClick: () => go(1), endIcon: React.createElement(ArrowForwardIcon, null) }, 'Next')
+            )
+          ),
+          React.createElement(Typography, { variant: 'h6' }, s.title || 'Untitled'),
+          React.createElement(Divider, null),
+          React.createElement(Typography, { variant: 'body2', sx: { whiteSpace: 'pre-wrap' } }, s.content || '')
+        )
+      )
+    );
+  },
+
+  Spreadsheet: (props) => {
+    const { columns = [], rows = [], persistKey = 'sheet' } = props || {};
+    const [data] = useEmbeddedData(persistKey, { rows, columns });
+    const safeCols = (data?.columns?.length ? data.columns : columns).map((c, i) => ({ flex: 1, minWidth: 120, ...c, field: c.field || c.key || ('c' + i) }));
+    const safeRows = (data?.rows?.length ? data.rows : rows).map((r, i) => ({ id: r.id ?? i+1, ...r }));
+    return (
+      React.createElement(Paper, { sx: { p: 1 } },
+        React.createElement(DataGrid, { autoHeight: true, density: 'compact', rows: safeRows, columns: safeCols, disableRowSelectionOnClick: true })
+      )
+    );
+  },
+
+  CRMBoard: (props) => {
+    const { stages = ['Todo','In Progress','Done'], items = [], persistKey = 'crm-board' } = props || {};
+    const [data] = useEmbeddedData(persistKey, { stages, items });
+    const s = Array.isArray(data?.stages) && data.stages.length ? data.stages : stages;
+    const its = Array.isArray(data?.items) && data.items.length ? data.items : items;
+    return (
+      React.createElement(Stack, { direction: 'row', spacing: 2 },
+        ...s.map((stage, i) => (
+          React.createElement(Paper, { key: i, sx: { p: 1, flex: 1 } },
+            React.createElement(Typography, { variant: 'subtitle2', color: 'text.secondary' }, stage),
+            ...its.filter(it => (it.status || s[0]) === stage).map((it, k) => (
+              React.createElement(Card, { key: k, sx: { mb: 1 } },
+                React.createElement(CardContent, null,
+                  React.createElement(Typography, { variant: 'body2', fontWeight: 600 }, it.title || it.name || ('Item ' + (k+1))),
+                  React.createElement(Typography, { variant: 'caption', color: 'text.secondary' }, it.description || it.summary || '')
+                )
+              )
+            ))
+          )
+        ))
+      )
+    );
+  },
+
+  // Alias for project management kanban
+  PMBoard: (props) => Templates.CRMBoard(props),
+
+  // Executive OKR tracker (objectives and key results)
+  OKRTracker: (props) => {
+    const { objectives = [], persistKey = 'okr-tracker' } = props || {};
+    const [data] = useEmbeddedData(persistKey, { objectives });
+    const rows = (Array.isArray(data?.objectives) && data.objectives.length ? data.objectives : objectives).map((r, i) => ({ id: r.id ?? i+1, ...r }));
+    const columns = [
+      { field: 'objective', headerName: 'Objective', flex: 2, minWidth: 160 },
+      { field: 'key_result', headerName: 'Key Result', flex: 2, minWidth: 160 },
+      { field: 'owner', headerName: 'Owner', flex: 1, minWidth: 120 },
+      { field: 'progress', headerName: 'Progress %', flex: 1, minWidth: 120, type: 'number' },
+    ];
+    return (
+      React.createElement(Paper, { sx: { p: 1 } },
+        React.createElement(DataGrid, { autoHeight: true, density: 'compact', rows, columns, disableRowSelectionOnClick: true })
+      )
+    );
+  },
+
+  // HR leave requests manager
+  HRLeave: (props) => {
+    const { requests = [], persistKey = 'hr-leave' } = props || {};
+    const [data] = useEmbeddedData(persistKey, { requests });
+    const rows = (Array.isArray(data?.requests) && data.requests.length ? data.requests : requests).map((r, i) => ({ id: r.id ?? i+1, ...r }));
+    const columns = [
+      { field: 'employee', headerName: 'Employee', flex: 1.2, minWidth: 140 },
+      { field: 'type', headerName: 'Type', flex: 1, minWidth: 120 },
+      { field: 'start', headerName: 'Start', flex: 1, minWidth: 120 },
+      { field: 'end', headerName: 'End', flex: 1, minWidth: 120 },
+      { field: 'status', headerName: 'Status', flex: 1, minWidth: 120 },
+    ];
+    return (
+      React.createElement(Paper, { sx: { p: 1 } },
+        React.createElement(DataGrid, { autoHeight: true, density: 'compact', rows, columns, disableRowSelectionOnClick: true })
+      )
+    );
+  },
 };
 `;
 
@@ -354,6 +540,10 @@ class ReactComponentRenderer extends React.Component {
     src = src.replace(/<(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)\s*>/g, '<$1Icon>');
     src = src.replace(/<\/(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)>/g, '</$1Icon>');
 
+    // Remove raw icon-name text used as labels (e.g., >SaveIcon< → >Save<)
+    // This avoids buttons rendering literal strings like "SaveIcon" while keeping readable labels.
+    src = src.replace(/>(\s*)(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)Icon(\s*)</g, '>$1$2$3<');
+
     // Map string placeholders like startIcon="add icon" or startIcon="Add icn" to actual icon components
     const mapStringIconToComponent = (label) => {
       const v = String(label || '').toLowerCase().trim();
@@ -382,6 +572,16 @@ class ReactComponentRenderer extends React.Component {
       const comp = mapStringIconToComponent(val.replace(/\bicn\b/gi, 'icon'));
       return comp ? `${prop}={<${comp} />}` : m;
     });
+
+    // Final safety: if icon names leaked into text content (e.g., "AddIcon Task"), collapse "Icon" suffix in text nodes only
+    try {
+      const ICON_WORDS = ['Add','Edit','Delete','Save','Close','Search','Refresh','Warning','Error','Info','CheckCircle','MoreVert','Settings','Send','FilterList'];
+      const iconWordRegex = new RegExp('\\b(' + ICON_WORDS.join('|') + ')Icon\\b', 'g');
+      src = src.replace(/>([^<]+)</g, (match, inner) => {
+        const replaced = inner.replace(iconWordRegex, (w) => w.replace('Icon',''));
+        return '>' + replaced + '<';
+      });
+    } catch (_) { /* noop */ }
 
     const hasExportDefault = /export\s+default\s+/.test(src);
     const looksLikeJSX = /<\w[\s\S]*>/.test(src) || /React\.createElement\(/.test(src);
@@ -468,6 +668,7 @@ const { useState, useEffect, useMemo, useCallback, useRef, useReducer, useLayout
 const designTokens = ${designTokensLiteral};
 ${STYLE_UTILS_SNIPPET}
 ${STYLED_COMPONENTS_SNIPPET}
+${TEMPLATES_SNIPPET}
 
 const {
   Box,
@@ -548,6 +749,7 @@ const {
   styled,
   alpha,
   CssBaseline,
+  useTheme,
 } = MuiMaterial;
 
 const {
@@ -598,6 +800,7 @@ const embeddedData = extractedEmbeddedData || {};
 const sharedProjectId = projectId || (project && project.id) || null;
 const sharedViewName = viewName || 'default';
 
+// Provide stable task arrays usable by AI-generated code
 const flatTasks = Array.isArray(allTasks)
   ? allTasks
   : Array.isArray(tasks)
@@ -609,76 +812,97 @@ const flatTasks = Array.isArray(allTasks)
           }, [])
         : []);
 
+// Synonyms and safe aliases expected by generated components
 const authUser = auth;
 const projectData = project;
 const methodologyDataFromProps = methodology;
 const usersDataFromProps = users;
+// Always provide array-based task lists to match prompt examples
+const __flatTasks = flatTasks;
+const tasksDataFromProps = Array.isArray(tasks)
+  ? tasks
+  : (Array.isArray(allTasks) ? allTasks : __flatTasks);
+const allTasksDataFromProps = Array.isArray(allTasks) ? allTasks : __flatTasks;
+const __users = users;
+const __project = project;
 
-const professionalTheme = createTheme({
-  palette: {
-    primary: {
-      light: designTokens.colors.primary[400],
-      main: designTokens.colors.primary[600],
-      dark: designTokens.colors.primary[800],
-    },
-    success: {
-      main: designTokens.colors.success[600],
-    },
-    warning: {
-      main: designTokens.colors.warning[600],
-    },
-    error: {
-      main: designTokens.colors.danger[600],
-    },
-  },
-  shape: {
-    borderRadius: 8,
-  },
-  components: {
-    MuiCssBaseline: {
-      styleOverrides: {
-        body: { backgroundImage: 'none' },
-        '.MuiDataGrid-root .MuiDataGrid-columnHeaders': { minHeight: 40, maxHeight: 40 },
-        '.MuiDataGrid-root .MuiDataGrid-row': { minHeight: 36, maxHeight: 36 },
-        '.MuiDataGrid-root .MuiDataGrid-cell': { padding: '0 8px' },
+const ProfessionalThemeWrapper = ({ children }) => {
+  const outer = (typeof useTheme === 'function') ? useTheme() : null;
+  const [mode, setMode] = React.useState(outer?.palette?.mode || (typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'));
+
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    const update = () => setMode(root.classList.contains('dark') ? 'dark' : 'light');
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
+
+  const isDarkMode = mode === 'dark';
+  const surface = { default: isDarkMode ? '#0f172a' : '#ffffff', paper: isDarkMode ? '#111827' : '#ffffff' };
+  const textColors = { primary: isDarkMode ? '#e5e7eb' : '#111827', secondary: isDarkMode ? 'rgba(229,231,235,0.7)' : '#4b5563' };
+
+  const theme = React.useMemo(() => createTheme({
+    palette: {
+      mode,
+      background: { default: surface.default, paper: surface.paper },
+      text: { primary: textColors.primary, secondary: textColors.secondary },
+      primary: {
+        light: outer?.palette?.primary?.light || designTokens.colors.primary[400],
+        main: outer?.palette?.primary?.main || designTokens.colors.primary[600],
+        dark: outer?.palette?.primary?.dark || designTokens.colors.primary[800],
       },
+      success: { main: outer?.palette?.success?.main || designTokens.colors.success[600] },
+      warning: { main: outer?.palette?.warning?.main || designTokens.colors.warning[600] },
+      error: { main: outer?.palette?.error?.main || designTokens.colors.danger[600] },
     },
-    MuiPaper: {
-      defaultProps: { elevation: 0 },
-      styleOverrides: { root: { boxShadow: 'none', backgroundImage: 'none' } },
-    },
-    MuiCard: {
-      defaultProps: { elevation: 0 },
-      styleOverrides: { root: { boxShadow: 'none', backgroundImage: 'none', border: 'none' } },
-    },
-    MuiButton: {
-      defaultProps: { size: 'small', disableElevation: true },
-      styleOverrides: {
-        root: { textTransform: 'none', borderRadius: 8, padding: '4px 10px', minHeight: 32 },
-        contained: { boxShadow: 'none' },
+    shape: { borderRadius: 10 },
+    components: {
+      MuiCssBaseline: {
+        styleOverrides: {
+          body: { backgroundImage: 'none', backgroundColor: surface.default, color: textColors.primary },
+          '.MuiDataGrid-root .MuiDataGrid-columnHeaders': { minHeight: 40, maxHeight: 40 },
+          '.MuiDataGrid-root .MuiDataGrid-row': { minHeight: 36, maxHeight: 36 },
+          '.MuiDataGrid-root .MuiDataGrid-cell': { padding: '0 8px' },
+        },
       },
+      MuiPaper: {
+        defaultProps: { elevation: 0 },
+        styleOverrides: { root: { boxShadow: 'none', backgroundImage: 'none', backgroundColor: surface.paper, color: textColors.primary, border: '1px solid ' + (isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)') } },
+      },
+      MuiCard: {
+        defaultProps: { elevation: 0 },
+        styleOverrides: { root: { boxShadow: 'none', backgroundImage: 'none', backgroundColor: surface.paper, color: textColors.primary, border: '1px solid ' + (isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)') } },
+      },
+      MuiButton: {
+        defaultProps: { size: 'small', disableElevation: true },
+        styleOverrides: {
+          root: { textTransform: 'none', borderRadius: 8, padding: '3px 8px', minHeight: 22, minWidth: 40, fontSize: '0.85rem', lineHeight: 1.2, '& .MuiButton-startIcon': { marginRight: 6 } },
+          contained: { boxShadow: 'none' },
+          // Let MUI use palette colors so generator matches app theme
+          containedPrimary: {},
+          containedSuccess: {},
+          containedError: {},
+          outlined: { borderColor: isDarkMode ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.22)' },
+        },
+      },
+      MuiTextField: {
+        defaultProps: { size: 'small', margin: 'dense' },
+        styleOverrides: { root: { '& .MuiOutlinedInput-root': { minHeight: 28, '& input.MuiInputBase-input': { padding: '6px 8px', fontSize: '0.9rem' } } } },
+      },
+      MuiFormControl: { defaultProps: { size: 'small', margin: 'dense' } },
+      MuiFab: { defaultProps: { size: 'small', color: 'primary' }, styleOverrides: { root: { boxShadow: 'none' } } },
+      MuiIconButton: { defaultProps: { size: 'small' } },
+      MuiChip: { defaultProps: { size: 'small' } },
+      MuiListItem: { defaultProps: { dense: true } },
+      MuiDivider: { styleOverrides: { root: { borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } } },
     },
-    MuiTextField: {
-      defaultProps: { size: 'small', margin: 'dense' },
-    },
-    MuiFormControl: {
-      defaultProps: { size: 'small', margin: 'dense' },
-    },
-    MuiFab: {
-      defaultProps: { size: 'small', color: 'primary' },
-      styleOverrides: { root: { boxShadow: 'none' } },
-    },
-    MuiIconButton: {
-      defaultProps: { size: 'small' },
-    },
-    MuiChip: {
-      defaultProps: { size: 'small' },
-    },
-    MuiListItem: {
-      defaultProps: { dense: true },
-    },
-  },
-});
+  }), [mode]);
+
+  return React.createElement(ThemeProvider, { theme }, React.createElement(CssBaseline, null), children);
+};
 
 async function saveViewData(dataKey, data) {
   if (!sharedProjectId) {
@@ -787,10 +1011,19 @@ function useEmbeddedData(dataKey, defaultValue = null) {
 
 ${transformed}
 
+// Allow EMBEDDED_DATA to request a Template render without requiring the model to write boilerplate
+let FinalComponent = ${componentName};
+try {
+  const tplName = (embeddedData && (embeddedData.template || embeddedData.Template || embeddedData.template_name)) || null;
+  if (tplName && Templates && typeof Templates[tplName] === 'function') {
+    const cfg = embeddedData.config || embeddedData.templateConfig || {};
+    FinalComponent = (props) => React.createElement(Templates[tplName], { ...cfg, ...props });
+  }
+} catch (e) { /* ignore template wiring errors */ }
+
 const __Themed = (props) => (
-  React.createElement(ThemeProvider, { theme: professionalTheme },
-    React.createElement(CssBaseline, null),
-    React.createElement(${componentName}, props)
+  React.createElement(ProfessionalThemeWrapper, null,
+    React.createElement(FinalComponent, props)
   )
 );
 

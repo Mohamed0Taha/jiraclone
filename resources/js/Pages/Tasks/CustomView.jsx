@@ -193,7 +193,9 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             viewName,
             currentCode: memoizedComponentCode, // Use memoized component code
             projectContext: {
+                project, // ensure project meta available to server prompt
                 tasks,
+                allTasks,
                 users,
                 methodology,
             },
@@ -1092,7 +1094,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     sx={{
                         mt: 2,
                         mr: 10, // Space for floating controls
-                        p: '5%', // 5% padding for working area
+                        p: 0, // Remove padding for working area per request
                         borderRadius: 3,
                         overflow: 'hidden',
                         background: (theme) => alpha(theme.palette.background.paper, 0.8),
@@ -1391,7 +1393,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     {/* Input Form */}
                     <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                         <form onSubmit={handleChatSubmit}>
-                            <Stack direction="row" spacing={1}>
+                            <Stack direction="row" spacing={1} alignItems="center">
                                 <TextField
                                     fullWidth
                                     value={chatInput}
@@ -1400,12 +1402,14 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                     disabled={isGenerating}
                                     variant="outlined"
                                     size="small"
+                                    sx={{ flex: '1 1 70%', maxWidth: '70%' }}
                                 />
                                 <Button
                                     type="submit"
                                     variant="contained"
                                     disabled={isGenerating || isManuallyGenerating || !chatInput?.trim()}
                                     startIcon={(isGenerating || isManuallyGenerating) ? <CircularProgress size={16} /> : <SendRoundedIcon />}
+                                    sx={{ flex: '0 0 15%', maxWidth: '15%', minWidth: 0 }}
                                 >
                                     {(isGenerating || isManuallyGenerating) ? t('customViews.generating') : t('customViews.generate')}
                                 </Button>
@@ -1419,6 +1423,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                             }
                                             setIsManuallyGenerating(false);
                                         }}
+                                        sx={{ flex: '0 0 15%', maxWidth: '15%', minWidth: 0 }}
                                     >
                                         {t('customViews.stop')}
                                     </Button>

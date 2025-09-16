@@ -125,6 +125,65 @@
     @apply border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400;
     @apply focus:ring-blue-400;
   }
+
+  /* Micro-app wrapper: ensure inline row alignment and compact controls */
+  .micro-app-wrapper .MuiStack-root.MuiStack-directionRow {
+    align-items: center;
+  }
+  /* Micro‑app fits exactly in working area (no outer margin/padding) */
+  .micro-app-wrapper { padding: 0; margin: 0 !important; }
+  .micro-app-wrapper > * { margin: 0 !important; }
+  /* Containers inside micro‑app should have inner padding */
+  .micro-app-wrapper .MuiPaper-root,
+  .micro-app-wrapper .MuiCard-root,
+  .micro-app-wrapper .MuiBox-root { margin: 0; padding: 8px; }
+  .micro-app-wrapper .MuiCardContent-root { padding: 8px; }
+  .micro-app-wrapper .MuiStack-root { gap: 8px; }
+  .micro-app-wrapper .MuiButton-root {
+    min-height: 22px;
+    min-width: 40px;
+    padding: 3px 8px;
+    font-size: 0.85rem;
+    line-height: 1.2;
+  }
+  .micro-app-wrapper .MuiButton-root .MuiButton-startIcon { margin-right: 6px; }
+  .micro-app-wrapper .MuiButton-root + .MuiButton-root,
+  .micro-app-wrapper .MuiIconButton-root + .MuiIconButton-root {
+    margin-left: 0.5rem;
+  }
+  .micro-app-wrapper .MuiCard-root,
+  .micro-app-wrapper .MuiPaper-root {
+    border-radius: 10px;
+  }
+  .dark .micro-app-wrapper .MuiCard-root,
+  .dark .micro-app-wrapper .MuiPaper-root {
+    background-color: var(--tp-card-dark) !important;
+    color: var(--tp-text-dark) !important;
+    border-color: var(--tp-border-dark) !important;
+  }
+
+  /* Compact heading style inside micro‑apps */
+  .micro-app-wrapper h1,
+  .micro-app-wrapper h2,
+  .micro-app-wrapper h3,
+  .micro-app-wrapper h4,
+  .micro-app-wrapper h5,
+  .micro-app-wrapper h6 {
+    font-size: 0.89rem; /* ~6% smaller than 0.95 */
+    font-weight: 500; /* soften heavy bold */
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+    color: rgba(17, 24, 39, 0.72); /* slate-900 at ~72% for softer tone */
+  }
+  .dark .micro-app-wrapper h1,
+  .dark .micro-app-wrapper h2,
+  .dark .micro-app-wrapper h3,
+  .dark .micro-app-wrapper h4,
+  .dark .micro-app-wrapper h5,
+  .dark .micro-app-wrapper h6 {
+    color: rgba(229, 231, 235, 0.85);
+  }
 }
 
 @layer utilities {

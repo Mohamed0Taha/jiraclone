@@ -163,12 +163,20 @@ const getComponentOverrides = (mode) => ({
         },
     },
     MuiButton: {
+        defaultProps: {
+            size: 'small',
+            disableElevation: true,
+        },
         styleOverrides: {
             root: {
                 borderRadius: 8,
                 textTransform: 'none',
                 fontWeight: 600,
-                minHeight: 44, // Better touch target for accessibility
+                // Shrink buttons to be less massive and align with inputs
+                minHeight: 22,
+                minWidth: 40,
+                padding: '3px 8px',
+                fontSize: '0.85rem',
                 '&:focus-visible': {
                     outline: `3px solid ${mode === 'light' ? '#3182CE' : '#63B3ED'}`,
                     outlineOffset: 2,
@@ -183,10 +191,19 @@ const getComponentOverrides = (mode) => ({
         },
     },
     MuiTextField: {
+        defaultProps: {
+            size: 'small',
+            margin: 'dense',
+        },
         styleOverrides: {
             root: {
                 '& .MuiOutlinedInput-root': {
                     borderRadius: 8,
+                    minHeight: 28,
+                    '& input.MuiInputBase-input': {
+                        padding: '6px 8px',
+                        fontSize: '0.9rem',
+                    },
                     '&:focus-within': {
                         outline: `2px solid ${mode === 'light' ? '#3182CE' : '#63B3ED'}`,
                         outlineOffset: 2,
@@ -199,11 +216,12 @@ const getComponentOverrides = (mode) => ({
         styleOverrides: {
             root: {
                 borderRadius: 12,
-                backgroundColor: mode === 'light' ? '#FFFFFF' : '#1f2937',
+                backgroundColor: mode === 'light' ? '#FFFFFF' : '#111827',
                 backgroundImage: 'none',
                 boxShadow: mode === 'light' 
                     ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)'
                     : '0 4px 6px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.5)',
+                border: `1px solid ${mode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`,
             },
         },
     },
@@ -212,8 +230,9 @@ const getComponentOverrides = (mode) => ({
             root: {
                 borderRadius: 12,
                 transition: 'box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out',
-                backgroundColor: mode === 'light' ? '#FFFFFF' : '#1f2937',
+                backgroundColor: mode === 'light' ? '#FFFFFF' : '#111827',
                 backgroundImage: 'none',
+                border: `1px solid ${mode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'}`,
                 '&:hover': {
                     boxShadow: mode === 'light'
                         ? '0 4px 8px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)'
@@ -222,6 +241,25 @@ const getComponentOverrides = (mode) => ({
                 },
             },
         },
+    },
+    MuiButton: {
+        styleOverrides: {
+            containedPrimary: {
+                backgroundColor: mode === 'light' ? '#2563eb' : '#3b82f6',
+                '&:hover': { backgroundColor: mode === 'light' ? '#1d4ed8' : '#2563eb' },
+            },
+            containedSuccess: {
+                backgroundColor: mode === 'light' ? '#16a34a' : '#22c55e',
+                '&:hover': { backgroundColor: mode === 'light' ? '#15803d' : '#16a34a' },
+            },
+            containedError: {
+                backgroundColor: mode === 'light' ? '#dc2626' : '#ef4444',
+                '&:hover': { backgroundColor: mode === 'light' ? '#b91c1c' : '#dc2626' },
+            },
+            outlined: {
+                borderColor: mode === 'light' ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.22)'
+            }
+        }
     },
     MuiChip: {
         styleOverrides: {
@@ -250,6 +288,13 @@ const getComponentOverrides = (mode) => ({
                 },
             },
         },
+    },
+    MuiDivider: {
+        styleOverrides: {
+            root: {
+                borderColor: mode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'
+            }
+        }
     },
 });
 

@@ -470,7 +470,29 @@ Provide ONLY the UPDATED complete React component code (TSX/JSX) that:
 - Persists user data changes using the provided helpers: `saveViewData(key, data)` and `loadViewData(key)`
 - No explanations, no markdown - just the working JSX component ready for immediate use
 
-Remember: This is an UPDATE, not a complete rewrite. Preserve what works, modify only what's requested.";
+Remember: This is an UPDATE, not a complete rewrite. Preserve what works, modify only what's requested.
+
+TEMPLATES TOOLBOX (available globally, do not import):
+- Templates.WikiPage({ title, sections:[{heading, body}], persistKey })
+- Templates.Docs({ pages:[{id, title, body}], sidebarItems:[], defaultPage, persistKey })
+- Templates.Slides({ slides:[{title, content}], persistKey })
+- Templates.Spreadsheet({ columns:[{field, headerName}], rows:[{id,...}], persistKey })
+- Templates.CRMBoard({ stages:['Todo','In Progress','Done'], items:[{title, description, status}], persistKey })
+
+ - Templates.PMBoard(alias of CRMBoard)
+ - Templates.OKRTracker({ objectives:[{ objective, key_result, owner, progress }], persistKey })
+ - Templates.HRLeave({ requests:[{ employee, type, start, end, status }], persistKey })
+ - Templates.PMBoard(alias of CRMBoard)
+ - Templates.OKRTracker({ objectives:[{ objective, key_result, owner, progress }], persistKey })
+ - Templates.HRLeave({ requests:[{ employee, type, start, end, status }], persistKey })
+- Templates.PMBoard(alias of CRMBoard)
+- Templates.OKRTracker({ objectives:[{ objective, key_result, owner, progress }], persistKey })
+- Templates.HRLeave({ requests:[{ employee, type, start, end, status }], persistKey })
+
+Usage (keep streaming unchanged):
+1) Instantiate directly in JSX: `return (<Templates.WikiPage title=\"Runbook\" sections={[...]} />)`
+2) Or emit only an embedded config and the runtime will auto-render the template:
+   /* EMBEDDED_DATA_START */ const __EMBEDDED_DATA__ = { template: 'Slides', config: { slides: [{ title: 'Q1 Review', content: '...' }] } } /* EMBEDDED_DATA_END */";
         } else {
             $prompt = "You are an expert React developer specializing in creating data-focused micro-applications using modern React patterns.
 
@@ -517,6 +539,18 @@ MANDATORY CRUD OPERATIONS:
 - **DELETE**: Provide delete functionality with confirmation dialogs
 - **VALIDATION**: Add input validation and error handling for all operations
 - **PERSISTENCE**: Use saveViewData() to persist all changes immediately
+
+TEMPLATES TOOLBOX (available globally, do not import):
+- Templates.WikiPage({ title, sections:[{heading, body}], persistKey })
+- Templates.Docs({ pages:[{id, title, body}], sidebarItems:[], defaultPage, persistKey })
+- Templates.Slides({ slides:[{title, content}], persistKey })
+- Templates.Spreadsheet({ columns:[{field, headerName}], rows:[{id,...}], persistKey })
+ - Templates.CRMBoard({ stages:['Todo','In Progress','Done'], items:[{title, description, status}], persistKey })
+
+Usage (keep streaming unchanged):
+1) Instantiate directly in JSX: `return (<Templates.WikiPage title=\"Runbook\" sections={[...]} />)`
+2) Or emit only an embedded config and the runtime will auto-render the template:
+   /* EMBEDDED_DATA_START */ const __EMBEDDED_DATA__ = { template: 'Slides', config: { slides: [{ title: 'Q1 Review', content: '...' }] } } /* EMBEDDED_DATA_END */
 
 AVAILABLE CHART LIBRARIES:
 For data visualization, you have access to Recharts components (NO IMPORT NEEDED):
