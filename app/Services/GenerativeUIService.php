@@ -971,6 +971,12 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
      */
     private function enhanceReactComponent(string $componentCode, string $userRequest, ?\App\Models\User $authUser = null): string
     {
+        // Remove any import statements for StyledComponents, MuiMaterial, or MuiIcons since they're globally available
+        $componentCode = preg_replace('/^import\s+.*StyledComponents.*from.*[\'"].*[\'"];?\s*$/m', '', $componentCode);
+        $componentCode = preg_replace('/^import\s+.*MuiMaterial.*from.*[\'"].*[\'"];?\s*$/m', '', $componentCode);
+        $componentCode = preg_replace('/^import\s+.*MuiIcons.*from.*[\'"].*[\'"];?\s*$/m', '', $componentCode);
+        $componentCode = preg_replace('/^import\s+.*@mui.*from.*[\'"].*[\'"];?\s*$/m', '', $componentCode);
+
         // 0) Force usage of real data when available: Replace common fake arrays with props-based init
         // Remove patterns like: const SomethingData = [ ... ]; const [items, setItems] = useState(SomethingData);
         $componentCode = preg_replace('/const\s+(\w+)Data\s*=\s*\[[\s\S]*?\];/m', '', $componentCode);
