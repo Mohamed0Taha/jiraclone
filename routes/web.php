@@ -623,7 +623,8 @@ Route::middleware('auth')->group(function () {
             
             // Initialize services
             $openAIService = app(\App\Services\OpenAIService::class);
-            $generativeUIService = new \App\Services\GenerativeUIService($openAIService);
+            $componentDesignValidationService = app(\App\Services\ComponentDesignValidationService::class);
+            $generativeUIService = new \App\Services\GenerativeUIService($openAIService, $componentDesignValidationService);
             
             Log::info('GenerativeUIService: Sending prompt to OpenAI', [
                 'project_id' => $project->id,

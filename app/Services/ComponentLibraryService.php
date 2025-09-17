@@ -847,62 +847,154 @@ renderTable();
     private function getCalculatorTemplate(): string
     {
         return '
-<div class="calculator-container">
-    <h3>{{ CALCULATOR_TITLE }}</h3>
-    <div class="calculator">
-        <div class="display">
-            <input type="text" id="calcDisplay" readonly>
-        </div>
-        <div class="buttons">
-            <button onclick="clearCalc()" class="btn-calc btn-clear">C</button>
-            <button onclick="appendToCalc(\'/\')" class="btn-calc">÷</button>
-            <button onclick="appendToCalc(\'*\')" class="btn-calc">×</button>
-            <button onclick="backspace()" class="btn-calc">⌫</button>
-            
-            <button onclick="appendToCalc(\'7\')" class="btn-calc">7</button>
-            <button onclick="appendToCalc(\'8\')" class="btn-calc">8</button>
-            <button onclick="appendToCalc(\'9\')" class="btn-calc">9</button>
-            <button onclick="appendToCalc(\'-\')" class="btn-calc">-</button>
-            
-            <button onclick="appendToCalc(\'4\')" class="btn-calc">4</button>
-            <button onclick="appendToCalc(\'5\')" class="btn-calc">5</button>
-            <button onclick="appendToCalc(\'6\')" class="btn-calc">6</button>
-            <button onclick="appendToCalc(\'+\')" class="btn-calc">+</button>
-            
-            <button onclick="appendToCalc(\'1\')" class="btn-calc">1</button>
-            <button onclick="appendToCalc(\'2\')" class="btn-calc">2</button>
-            <button onclick="appendToCalc(\'3\')" class="btn-calc">3</button>
-            <button onclick="calculate()" class="btn-calc btn-equals" rowspan="2">=</button>
-            
-            <button onclick="appendToCalc(\'0\')" class="btn-calc btn-zero">0</button>
-            <button onclick="appendToCalc(\'.\')" class="btn-calc">.</button>
-        </div>
-    </div>
-</div>
+import React, { useState } from \'react\';
 
-<script>
-function appendToCalc(value) {
-    document.getElementById("calcDisplay").value += value;
-}
+export default function StandardCalculator() {
+    const { ContentContainer, BeautifulCard, SectionHeader } = StyledComponents;
+    const [display, setDisplay] = useState("0");
+    const [previousValue, setPreviousValue] = useState(null);
+    const [operation, setOperation] = useState(null);
+    const [waitingForOperand, setWaitingForOperand] = useState(false);
 
-function clearCalc() {
-    document.getElementById("calcDisplay").value = "";
-}
+    const inputNumber = (num) => {
+        if (waitingForOperand) {
+            setDisplay(String(num));
+            setWaitingForOperand(false);
+        } else {
+            setDisplay(display === "0" ? String(num) : display + num);
+        }
+    };
 
-function backspace() {
-    const display = document.getElementById("calcDisplay");
-    display.value = display.value.slice(0, -1);
-}
+    const inputDecimal = () => {
+        if (waitingForOperand) {
+            setDisplay("0.");
+            setWaitingForOperand(false);
+        } else if (display.indexOf(".") === -1) {
+            setDisplay(display + ".");
+        }
+    };
 
-function calculate() {
-    try {
-        const result = eval(document.getElementById("calcDisplay").value);
-        document.getElementById("calcDisplay").value = result;
-    } catch (error) {
-        document.getElementById("calcDisplay").value = "Error";
-    }
-}
-</script>';
+    const clear = () => {
+        setDisplay("0");
+        setPreviousValue(null);
+        setOperation(null);
+        setWaitingForOperand(false);
+    };
+
+    const performOperation = (nextOperation) => {
+        const inputValue = parseFloat(display);
+
+        if (previousValue === null) {
+            setPreviousValue(inputValue);
+        } else if (operation) {
+            const currentValue = previousValue || 0;
+            const result = calculate(currentValue, inputValue, operation);
+
+            setDisplay(String(result));
+            setPreviousValue(result);
+        }
+
+        setWaitingForOperand(true);
+        setOperation(nextOperation);
+    };
+
+    const calculate = (firstValue, secondValue, operation) => {
+        switch (operation) {
+            case "+": return firstValue + secondValue;
+            case "-": return firstValue - secondValue;
+            case "×": return firstValue * secondValue;
+            case "÷": return firstValue / secondValue;
+            case "=": return secondValue;
+            default: return secondValue;
+        }
+    };
+
+    return (
+        <ContentContainer maxWidth="sm" sx={{ py: designTokens.spacing.xl }}>
+            <BeautifulCard sx={{ padding: designTokens.spacing.xl }}>
+                <SectionHeader>Calculator</SectionHeader>
+                
+                {/* Calculator Display */}
+                <Box sx={{ 
+                    mb: designTokens.spacing.lg,
+                    p: designTokens.spacing.md,
+                    background: designTokens.colors.neutral[900],
+                    borderRadius: designTokens.borderRadius.md,
+                    border: `2px solid ${designTokens.colors.neutral[300]}`
+                }}>
+                    <Typography 
+                        variant="h4" 
+                        sx={{ 
+                            color: designTokens.colors.neutral[50],
+                            textAlign: "right",
+                            fontFamily: "monospace",
+                            minHeight: "40px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                            wordBreak: "break-all"
+                        }}
+                    >
+                        {display}
+                    </Typography>
+                </Box>
+
+                {/* Calculator Button Grid */}
+                <Box sx={{ 
+                    display: "grid", 
+                    gridTemplateColumns: "repeat(4, 1fr)", 
+                    gap: designTokens.spacing.sm,
+                    "& button": {
+                        height: "60px",
+                        fontSize: "1.2rem",
+                        fontWeight: 600,
+                        borderRadius: designTokens.borderRadius.md,
+                        border: `1px solid ${designTokens.colors.neutral[300]}`,
+                        transition: "all 0.2s ease",
+                        "&:hover": {
+                            transform: "translateY(-1px)",
+                            boxShadow: designTokens.shadows.md
+                        }
+                    }
+                }}>
+                    {/* Row 1 */}
+                    <Button variant="contained" color="error" onClick={clear} sx={{ gridColumn: "span 2" }}>Clear</Button>
+                    <Button variant="outlined" onClick={() => {
+                        if (display.length > 1) {
+                            setDisplay(display.slice(0, -1));
+                        } else {
+                            setDisplay("0");
+                        }
+                    }}>⌫</Button>
+                    <Button variant="contained" color="primary" onClick={() => performOperation("÷")}>÷</Button>
+
+                    {/* Row 2 */}
+                    <Button variant="outlined" onClick={() => inputNumber(7)}>7</Button>
+                    <Button variant="outlined" onClick={() => inputNumber(8)}>8</Button>
+                    <Button variant="outlined" onClick={() => inputNumber(9)}>9</Button>
+                    <Button variant="contained" color="primary" onClick={() => performOperation("×")}>×</Button>
+
+                    {/* Row 3 */}
+                    <Button variant="outlined" onClick={() => inputNumber(4)}>4</Button>
+                    <Button variant="outlined" onClick={() => inputNumber(5)}>5</Button>
+                    <Button variant="outlined" onClick={() => inputNumber(6)}>6</Button>
+                    <Button variant="contained" color="primary" onClick={() => performOperation("-")}>-</Button>
+
+                    {/* Row 4 */}
+                    <Button variant="outlined" onClick={() => inputNumber(1)}>1</Button>
+                    <Button variant="outlined" onClick={() => inputNumber(2)}>2</Button>
+                    <Button variant="outlined" onClick={() => inputNumber(3)}>3</Button>
+                    <Button variant="contained" color="primary" onClick={() => performOperation("+")} sx={{ gridRow: "span 2" }}>+</Button>
+
+                    {/* Row 5 */}
+                    <Button variant="outlined" onClick={() => inputNumber(0)} sx={{ gridColumn: "span 2" }}>0</Button>
+                    <Button variant="outlined" onClick={inputDecimal}>.</Button>
+                    <Button variant="contained" color="success" onClick={() => performOperation("=")} sx={{ gridColumn: "4", gridRow: "6" }}>=</Button>
+                </Box>
+            </BeautifulCard>
+        </ContentContainer>
+    );
+}';
     }
 
     private function getCounterTemplate(): string

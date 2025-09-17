@@ -30,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Bind ComponentLibraryService for dependency injection
         $this->app->singleton(\App\Services\ComponentLibraryService::class);
+        
+        // Bind ComponentDesignValidationService for dependency injection
+        $this->app->singleton(\App\Services\ComponentDesignValidationService::class);
     }
 
     public function boot(): void

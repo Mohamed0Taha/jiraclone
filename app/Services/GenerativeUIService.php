@@ -14,10 +14,14 @@ use Illuminate\Support\Facades\Log;
 class GenerativeUIService
 {
     private OpenAIService $openAIService;
+    private ComponentDesignValidationService $designValidationService;
 
-    public function __construct(OpenAIService $openAIService)
-    {
+    public function __construct(
+        OpenAIService $openAIService,
+        ComponentDesignValidationService $designValidationService
+    ) {
         $this->openAIService = $openAIService;
+        $this->designValidationService = $designValidationService;
     }
 
     /**
@@ -34,6 +38,16 @@ class GenerativeUIService
         ?string $currentComponentCode = null
     ): array {
         try {
+            // Step 1: Validate user request against standard component designs
+            $designValidation = $this->designValidationService->validateComponentRequest($userMessage);
+            
+            Log::info('GenerativeUIService: Design validation completed', [
+                'project_id' => $project->id,
+                'has_standard_components' => $designValidation['has_standard_components'],
+                'detected_components' => $designValidation['detected_components'],
+                'should_validate_output' => $designValidation['should_validate_output']
+            ]);
+
             // Get the authenticated user object for embedding in component
             $authUser = \App\Models\User::find($userId);
             if (!$authUser) {
@@ -43,7 +57,7 @@ class GenerativeUIService
             // Get existing view for context
             $existingView = CustomView::getActiveForProject($project->id, $userId, $viewName);
             
-            // Build enhanced prompt for React component generation
+            // Step 2: Build enhanced prompt that includes standard design requirements
             $prompt = $this->buildReactComponentPrompt(
                 $userMessage, 
                 $project, 
@@ -51,7 +65,8 @@ class GenerativeUIService
                 $conversationHistory,
                 $projectContext,
                 $currentComponentCode,
-                $authUser
+                $authUser,
+                $designValidation // Pass validation results to inform prompt
             );
 
             // Generate React component using OpenAI
@@ -85,7 +100,8 @@ class GenerativeUIService
                     }
                     return $summary;
                 })($projectContext) : null,
-                'prompt_preview' => substr($prompt, 0, 500) . '...'
+                'prompt_preview' => substr($prompt, 0, 500) . '...',
+                'detected_standard_components' => $designValidation['detected_components']
             ]);
             
             $generatedComponent = $this->openAIService->chatText([
@@ -103,6 +119,34 @@ class GenerativeUIService
             if (!is_string($generatedComponent) || trim($generatedComponent) === '') {
                 Log::warning('OpenAI returned empty component. Using fallback component.');
                 $generatedComponent = $this->fallbackReactComponent();
+            }
+
+            // Step 3: Validate generated component against standard designs (if applicable)
+            $componentValidation = null;
+            if ($designValidation['should_validate_output']) {
+                $componentValidation = $this->designValidationService->validateGeneratedComponent(
+                    $generatedComponent, 
+                    $designValidation['detected_components']
+                );
+                
+                Log::info('GenerativeUIService: Component validation completed', [
+                    'validation_passed' => $componentValidation['validation_passed'],
+                    'overall_score' => $componentValidation['overall_score'],
+                    'issues_count' => count($componentValidation['issues']),
+                    'suggestions_count' => count($componentValidation['suggestions']),
+                    'validation_summary' => $componentValidation['summary']
+                ]);
+
+                // If validation failed significantly, try to improve the component
+                if (!$componentValidation['validation_passed'] && $componentValidation['overall_score'] < 50) {
+                    Log::info('GenerativeUIService: Attempting to improve component based on validation feedback');
+                    $generatedComponent = $this->improveComponentWithValidationFeedback(
+                        $generatedComponent,
+                        $componentValidation,
+                        $designValidation,
+                        $userMessage
+                    );
+                }
             }
 
             // Validate and enhance the generated component
@@ -123,8 +167,26 @@ class GenerativeUIService
                     'conversation_history' => $conversationHistory,
                     'is_update' => $isUpdate,
                     'original_component_length' => $isUpdate ? strlen($currentComponentCode) : 0,
+                    'design_validation' => $componentValidation ? [
+                        'validation_passed' => $componentValidation['validation_passed'],
+                        'overall_score' => $componentValidation['overall_score'],
+                        'detected_components' => $designValidation['detected_components'],
+                        'summary' => $componentValidation['summary']
+                    ] : null
                 ]
             );
+
+            // Prepare success message including validation info
+            $successMessage = $isUpdate 
+                ? 'Custom micro-application updated successfully!' 
+                : 'Custom micro-application generated successfully!';
+                
+            if ($componentValidation && !empty($designValidation['detected_components'])) {
+                $successMessage .= ' Standard design patterns detected and validated.';
+                if (!$componentValidation['validation_passed']) {
+                    $successMessage .= ' Some design improvements may be needed.';
+                }
+            }
 
             return [
                 'type' => 'spa_generated',
@@ -133,9 +195,14 @@ class GenerativeUIService
                 'html' => $enhancedComponent,
                 'component_code' => $enhancedComponent,
                 'custom_view_id' => $customView->id,
-                'message' => $isUpdate 
-                    ? 'Custom micro-application updated successfully!' 
-                    : 'Custom micro-application generated successfully!'
+                'message' => $successMessage,
+                'design_validation' => $componentValidation ? [
+                    'validation_passed' => $componentValidation['validation_passed'],
+                    'overall_score' => $componentValidation['overall_score'],
+                    'detected_components' => $designValidation['detected_components'],
+                    'summary' => $componentValidation['summary'],
+                    'suggestions' => array_slice($componentValidation['suggestions'], 0, 3) // Limit suggestions
+                ] : null
             ];
 
         } catch (\Exception $e) {
@@ -413,7 +480,8 @@ REACT;
         array $conversationHistory = [],
         ?array $projectContext = null,
         ?string $currentComponentCode = null,
-        ?\App\Models\User $authUser = null
+        ?\App\Models\User $authUser = null,
+        ?array $designValidation = null
     ): string {
         // Use enhanced project context if provided, otherwise fall back to basic context
         $contextData = $projectContext ? $this->buildEnhancedProjectContext($project, $projectContext) : $this->buildProjectContext($project);
@@ -421,6 +489,12 @@ REACT;
         
         // Determine if this is an update request
         $isUpdateRequest = !empty($currentComponentCode) && !empty(trim($currentComponentCode));
+        
+        // Add standard design requirements if applicable
+        $standardDesignInstructions = '';
+        if ($designValidation && $designValidation['has_standard_components']) {
+            $standardDesignInstructions = $this->buildStandardDesignInstructions($designValidation);
+        }
         
         if ($isUpdateRequest) {
             $prompt = "You are an expert React developer specializing in updating and modifying existing data-focused micro-applications.
@@ -456,6 +530,8 @@ PROJECT CONTEXT (for reference):
 {$contextData}
 
 USER MODIFICATION REQUEST: \"{$userRequest}\"
+
+{$standardDesignInstructions}
 
 CONVERSATION HISTORY:
 " . (!empty($conversationHistory) ? json_encode(array_slice($conversationHistory, -3), JSON_PRETTY_PRINT) : "No previous conversation") . "
@@ -867,6 +943,8 @@ EXISTING COMPONENT CONTEXT:
 
 USER REQUEST: \"{$userRequest}\"
 
+{$standardDesignInstructions}
+
 CONVERSATION HISTORY:
 " . (!empty($conversationHistory) ? json_encode(array_slice($conversationHistory, -3), JSON_PRETTY_PRINT) : "No previous conversation") . "
 
@@ -882,6 +960,116 @@ Remember: Focus on DATA DISPLAY (87% of space) with minimal input controls (13% 
         }
 
         return $prompt;
+    }
+
+    /**
+     * Build standard design instructions for the prompt
+     */
+    private function buildStandardDesignInstructions(array $designValidation): string
+    {
+        if (!$designValidation['has_standard_components']) {
+            return '';
+        }
+
+        $instructions = "\n**IMPORTANT - STANDARD COMPONENT DESIGN REQUIREMENTS:**\n";
+        $instructions .= "Your request includes standard components that must follow established design patterns.\n\n";
+
+        foreach ($designValidation['recommendations'] as $recommendation) {
+            $componentType = $recommendation['component_type'];
+            $standardDesign = $recommendation['standard_design'];
+            
+            $instructions .= "**{$standardDesign['name']} Requirements:**\n";
+            $instructions .= "- {$standardDesign['description']}\n";
+            
+            if (!empty($standardDesign['requirements'])) {
+                $instructions .= "- Essential features:\n";
+                foreach ($standardDesign['requirements'] as $requirement => $description) {
+                    $instructions .= "  • {$description}\n";
+                }
+            }
+
+            if (!empty($standardDesign['expected_features'])) {
+                $instructions .= "- Must include: " . implode(', ', $standardDesign['expected_features']) . "\n";
+            }
+
+            $instructions .= "\n";
+        }
+
+        // Add reference to standard template if available
+        if (count($designValidation['detected_components']) === 1) {
+            $componentType = $designValidation['detected_components'][0];
+            $standardTemplate = $this->designValidationService->getStandardComponentTemplate($componentType);
+            if ($standardTemplate) {
+                $instructions .= "**REFERENCE IMPLEMENTATION:**\n";
+                $instructions .= "Use this as a reference for proper design patterns:\n\n";
+                // Include first 500 characters of template as reference
+                $instructions .= "```jsx\n" . substr($standardTemplate, 0, 1000) . "...\n```\n\n";
+            }
+        }
+
+        $instructions .= "**CRITICAL: Follow these standard patterns to ensure the component meets user expectations.**\n\n";
+
+        return $instructions;
+    }
+
+    /**
+     * Improve component based on validation feedback
+     */
+    private function improveComponentWithValidationFeedback(
+        string $originalComponent,
+        array $validationResults,
+        array $designValidation,
+        string $userRequest
+    ): string {
+        Log::info('GenerativeUIService: Attempting to improve component with validation feedback');
+
+        // Build improvement prompt
+        $issues = implode('\n- ', $validationResults['issues']);
+        $suggestions = implode('\n- ', array_slice($validationResults['suggestions'], 0, 5));
+        
+        $improvementPrompt = "The following React component has design issues that need to be fixed to meet standard component design patterns:
+
+**CURRENT COMPONENT:**
+```jsx
+{$originalComponent}
+```
+
+**DETECTED ISSUES:**
+- {$issues}
+
+**IMPROVEMENT SUGGESTIONS:**
+- {$suggestions}
+
+**REQUIREMENTS:**
+Please fix the component to address these issues while maintaining all existing functionality. Focus on making it follow standard design patterns for " . implode(', ', $designValidation['detected_components']) . " components.
+
+Return ONLY the improved React component code with NO explanations or markdown formatting.";
+
+        try {
+            $improvedComponent = $this->openAIService->chatText([
+                [
+                    'role' => 'system',
+                    'content' => 'You are an expert React developer specializing in standard UI component design patterns. Fix the provided component to meet standard design requirements.'
+                ],
+                [
+                    'role' => 'user',
+                    'content' => $improvementPrompt
+                ]
+            ], 0.3, false);
+
+            if (is_string($improvedComponent) && !empty(trim($improvedComponent))) {
+                Log::info('GenerativeUIService: Component improvement successful');
+                return $improvedComponent;
+            }
+        } catch (\Exception $e) {
+            Log::warning('GenerativeUIService: Component improvement failed', [
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // Return original if improvement fails
+        return $originalComponent;
+    }
     }
 
     /**
