@@ -14,10 +14,12 @@ use Illuminate\Support\Facades\Log;
 class GenerativeUIService
 {
     private OpenAIService $openAIService;
+    private GoogleImageService $googleImageService;
 
-    public function __construct(OpenAIService $openAIService)
+    public function __construct(OpenAIService $openAIService, GoogleImageService $googleImageService)
     {
         $this->openAIService = $openAIService;
+        $this->googleImageService = $googleImageService;
     }
 
     /**
@@ -43,61 +45,78 @@ class GenerativeUIService
             // Get existing view for context
             $existingView = CustomView::getActiveForProject($project->id, $userId, $viewName);
             
-            // Build enhanced prompt for React component generation
-            $prompt = $this->buildReactComponentPrompt(
-                $userMessage, 
-                $project, 
-                $existingView,
-                $conversationHistory,
-                $projectContext,
-                $currentComponentCode,
-                $authUser
-            );
-
-            // Generate React component using OpenAI
-            Log::info('GenerativeUIService: Sending prompt to OpenAI', [
-                'project_id' => $project->id,
-                'user_message' => $userMessage,
-                'is_update_request' => !empty($currentComponentCode),
-                'current_component_length' => $currentComponentCode ? strlen($currentComponentCode) : 0,
-                'has_project_context' => !is_null($projectContext),
-                'project_context_keys' => $projectContext ? array_keys($projectContext) : [],
-                'project_context_summary' => $projectContext ? (function($ctx) {
-                    $summary = [
-                        'has_tasks' => isset($ctx['tasks']),
-                        'has_all_tasks' => isset($ctx['all_tasks']),
-                        'all_tasks_count' => isset($ctx['all_tasks']) && is_array($ctx['all_tasks']) ? count($ctx['all_tasks']) : 0,
-                        'has_users' => isset($ctx['users']),
-                        'users_count' => isset($ctx['users']) && is_array($ctx['users']) ? count($ctx['users']) : 0,
-                    ];
-                    if (isset($ctx['tasks']) && is_array($ctx['tasks'])) {
-                        $t = $ctx['tasks'];
-                        $statuses = ['todo','inprogress','review','done','backlog','testing'];
-                        $total = isset($t['total_count']) ? (int)$t['total_count'] : 0;
-                        if ($total === 0) {
-                            foreach ($statuses as $s) {
-                                $total += isset($t[$s]) && is_array($t[$s]) ? count($t[$s]) : 0;
-                            }
-                        }
-                        $summary['task_count'] = $total;
-                    } else {
-                        $summary['task_count'] = 0;
-                    }
-                    return $summary;
-                })($projectContext) : null,
-                'prompt_preview' => substr($prompt, 0, 500) . '...'
-            ]);
+            // Enhanced workflow: Check if this is a new SPA request that could benefit from enhanced generation
+            $isNewSpaRequest = empty($currentComponentCode) && $this->detectsSpaRequest($userMessage);
             
-            $generatedComponent = $this->openAIService->chatText([
-                [
-                    'role' => 'system',
-                    'content' => 'You are an expert React developer. You create ONLY React/JSX components. Return ONLY valid React component code with NO explanations, NO markdown formatting, NO code blocks. The code should start with imports and end with the export default statement.'
-                ],
-                [
-                    'role' => 'user', 
-                    'content' => $prompt
-                ]
-            ], 0.2, false);
+            $generatedComponent = '';
+            
+            if ($isNewSpaRequest) {
+                // Use enhanced 3-step workflow for better UI components
+                $generatedComponent = $this->generateEnhancedComponent(
+                    $userMessage,
+                    $project,
+                    $existingView,
+                    $conversationHistory,
+                    $projectContext,
+                    $authUser
+                );
+            } else {
+                // Use standard workflow for updates or non-SPA requests
+                $prompt = $this->buildReactComponentPrompt(
+                    $userMessage, 
+                    $project, 
+                    $existingView,
+                    $conversationHistory,
+                    $projectContext,
+                    $currentComponentCode,
+                    $authUser
+                );
+
+                // Generate React component using OpenAI
+                Log::info('GenerativeUIService: Sending prompt to OpenAI', [
+                    'project_id' => $project->id,
+                    'user_message' => $userMessage,
+                    'is_update_request' => !empty($currentComponentCode),
+                    'current_component_length' => $currentComponentCode ? strlen($currentComponentCode) : 0,
+                    'has_project_context' => !is_null($projectContext),
+                    'project_context_keys' => $projectContext ? array_keys($projectContext) : [],
+                    'project_context_summary' => $projectContext ? (function($ctx) {
+                        $summary = [
+                            'has_tasks' => isset($ctx['tasks']),
+                            'has_all_tasks' => isset($ctx['all_tasks']),
+                            'all_tasks_count' => isset($ctx['all_tasks']) && is_array($ctx['all_tasks']) ? count($ctx['all_tasks']) : 0,
+                            'has_users' => isset($ctx['users']),
+                            'users_count' => isset($ctx['users']) && is_array($ctx['users']) ? count($ctx['users']) : 0,
+                        ];
+                        if (isset($ctx['tasks']) && is_array($ctx['tasks'])) {
+                            $t = $ctx['tasks'];
+                            $statuses = ['todo','inprogress','review','done','backlog','testing'];
+                            $total = isset($t['total_count']) ? (int)$t['total_count'] : 0;
+                            if ($total === 0) {
+                                foreach ($statuses as $s) {
+                                    $total += isset($t[$s]) && is_array($t[$s]) ? count($t[$s]) : 0;
+                                }
+                            }
+                            $summary['task_count'] = $total;
+                        } else {
+                            $summary['task_count'] = 0;
+                        }
+                        return $summary;
+                    })($projectContext) : null,
+                    'prompt_preview' => substr($prompt, 0, 500) . '...'
+                ]);
+                
+                $generatedComponent = $this->openAIService->chatText([
+                    [
+                        'role' => 'system',
+                        'content' => 'You are an expert React developer. You create ONLY React/JSX components. Return ONLY valid React component code with NO explanations, NO markdown formatting, NO code blocks. The code should start with imports and end with the export default statement.'
+                    ],
+                    [
+                        'role' => 'user', 
+                        'content' => $prompt
+                    ]
+                ], 0.2, false);
+            }
 
             // Defensive fallback: if generation is empty, provide a minimal working component for dev
             if (!is_string($generatedComponent) || trim($generatedComponent) === '') {
@@ -152,6 +171,233 @@ class GenerativeUIService
                 'message' => 'Failed to generate custom application. Please try again.'
             ];
         }
+    }
+
+    /**
+     * Detect if the user message is requesting a new SPA/widget/calculator-type application
+     */
+    private function detectsSpaRequest(string $userMessage): bool
+    {
+        $spaKeywords = [
+            'calculator', 'spa', 'widget', 'app', 'application', 'tool',
+            'dashboard', 'component', 'interface', 'form', 'chart',
+            'editor', 'viewer', 'manager', 'tracker', 'monitor'
+        ];
+        
+        $lowerMessage = strtolower($userMessage);
+        
+        foreach ($spaKeywords as $keyword) {
+            if (str_contains($lowerMessage, $keyword)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Generate enhanced component using 3-step workflow
+     */
+    private function generateEnhancedComponent(
+        string $userMessage,
+        Project $project,
+        ?CustomView $existingView,
+        array $conversationHistory,
+        ?array $projectContext,
+        \App\Models\User $authUser
+    ): string {
+        Log::info('GenerativeUIService: Using enhanced 3-step workflow', [
+            'user_message' => $userMessage,
+            'project_id' => $project->id
+        ]);
+
+        try {
+            // Step 1: Ask OpenAI for standard UI elements and Google image keywords
+            $uiAnalysis = $this->getUIElementsAndKeywords($userMessage);
+            
+            // Step 2: Use keywords to fetch design images from Google
+            $designImages = [];
+            if (!empty($uiAnalysis['keywords'])) {
+                foreach ($uiAnalysis['keywords'] as $keyword) {
+                    $images = $this->googleImageService->searchImages($keyword, 2);
+                    $designImages = array_merge($designImages, $images);
+                    if (count($designImages) >= 3) break; // Limit total images
+                }
+            }
+            
+            // Step 3: Generate enhanced SPA component using UI elements and design inspiration
+            return $this->generateComponentWithDesignInspiration(
+                $userMessage,
+                $uiAnalysis,
+                $designImages,
+                $project,
+                $existingView,
+                $conversationHistory,
+                $projectContext,
+                $authUser
+            );
+            
+        } catch (\Exception $e) {
+            Log::warning('Enhanced workflow failed, falling back to standard generation', [
+                'error' => $e->getMessage(),
+                'user_message' => $userMessage
+            ]);
+            
+            // Fallback to standard prompt generation
+            $prompt = $this->buildReactComponentPrompt(
+                $userMessage, 
+                $project, 
+                $existingView,
+                $conversationHistory,
+                $projectContext,
+                null,
+                $authUser
+            );
+
+            return $this->openAIService->chatText([
+                [
+                    'role' => 'system',
+                    'content' => 'You are an expert React developer. You create ONLY React/JSX components. Return ONLY valid React component code with NO explanations, NO markdown formatting, NO code blocks. The code should start with imports and end with the export default statement.'
+                ],
+                [
+                    'role' => 'user', 
+                    'content' => $prompt
+                ]
+            ], 0.2, false);
+        }
+    }
+
+    /**
+     * Step 1: Get UI elements and keywords from OpenAI
+     */
+    private function getUIElementsAndKeywords(string $userRequest): array
+    {
+        $prompt = "What are the most standard UI elements needed for {$userRequest} and what are the main keywords I can use to fetch designs from Google Images?
+
+Analyze the user request and provide:
+1. Essential UI elements (buttons, inputs, displays, etc.)
+2. Layout structure recommendations
+3. Keywords for finding relevant design inspiration images
+
+Return as JSON with this structure:
+{
+  \"ui_elements\": [\"list of essential UI components\"],
+  \"layout_suggestions\": [\"layout recommendations\"],
+  \"keywords\": [\"keyword1\", \"keyword2\", \"keyword3\"],
+  \"design_style\": \"recommended design style\"
+}
+
+Focus on practical, implementable UI elements and search terms that will find good design examples.";
+
+        $response = $this->openAIService->chatJson([
+            [
+                'role' => 'system',
+                'content' => 'You are a UI/UX expert who analyzes application requirements and provides structured recommendations for UI elements and design research keywords.'
+            ],
+            [
+                'role' => 'user',
+                'content' => $prompt
+            ]
+        ], 0.3);
+
+        Log::info('UI Analysis completed', [
+            'user_request' => $userRequest,
+            'ui_elements_count' => count($response['ui_elements'] ?? []),
+            'keywords_count' => count($response['keywords'] ?? [])
+        ]);
+
+        // Ensure we have fallback values
+        return [
+            'ui_elements' => $response['ui_elements'] ?? ['input', 'button', 'display'],
+            'layout_suggestions' => $response['layout_suggestions'] ?? ['grid layout'],
+            'keywords' => $response['keywords'] ?? [str_replace(' ', '+', $userRequest)],
+            'design_style' => $response['design_style'] ?? 'modern'
+        ];
+    }
+
+    /**
+     * Step 3: Generate component with design inspiration
+     */
+    private function generateComponentWithDesignInspiration(
+        string $userMessage,
+        array $uiAnalysis,
+        array $designImages,
+        Project $project,
+        ?CustomView $existingView,
+        array $conversationHistory,
+        ?array $projectContext,
+        \App\Models\User $authUser
+    ): string {
+        $contextData = $projectContext ? $this->buildEnhancedProjectContext($project, $projectContext) : $this->buildProjectContext($project);
+        
+        // Get the best design image for inspiration
+        $bestImage = $this->googleImageService->getBestImage($designImages);
+        
+        $designInspiration = $bestImage ? 
+            "DESIGN INSPIRATION IMAGE: {$bestImage['url']} - {$bestImage['title']}" : 
+            "No specific design inspiration image available - use modern Material-UI principles";
+
+        $prompt = "You are an expert React developer creating a high-quality {$userMessage} component.
+
+ENHANCED DESIGN REQUIREMENTS:
+Use this analysis to create a professional, well-designed component:
+
+UI ELEMENTS TO INCLUDE:
+" . implode("\n- ", $uiAnalysis['ui_elements']) . "
+
+LAYOUT SUGGESTIONS:
+" . implode("\n- ", $uiAnalysis['layout_suggestions']) . "
+
+DESIGN STYLE: {$uiAnalysis['design_style']}
+
+{$designInspiration}
+
+CRITICAL REQUIREMENTS:
+1. **NEVER import StyledComponents, MuiMaterial, or MuiIcons - they are automatically available**
+2. **ONLY import React hooks: import React, { useState, useEffect } from 'react';**
+3. **Use Material-UI components for professional appearance**
+4. **Include ALL UI elements from the analysis above**
+5. **Create a polished, production-ready interface**
+6. **Use useEmbeddedData hook for ALL persistent data**
+7. **Include full CRUD operations (Create, Read, Update, Delete)**
+8. **Focus 87% on data display, 13% on input controls**
+9. **Use ContentContainer, BeautifulCard, SectionHeader from StyledComponents**
+10. **Track current user for all operations**
+
+AVAILABLE COMPONENTS (no imports needed):
+- Material-UI: Button, TextField, Select, Card, Typography, Grid, Stack, etc.
+- Icons: AddIcon, EditIcon, DeleteIcon, SaveIcon, etc.
+- StyledComponents: ContentContainer, BeautifulCard, SectionHeader, PrimaryButton, etc.
+- Charts: BarChart, LineChart, PieChart from Recharts
+
+PROJECT CONTEXT:
+{$contextData}
+
+USER REQUEST: \"{$userMessage}\"
+
+Create a complete, functional React component that implements the requested functionality with professional design and all the UI elements identified in the analysis. Make it look like a production-ready application, not a minimal demo.
+
+Return ONLY the complete React component code - no explanations, no markdown formatting.";
+
+        $component = $this->openAIService->chatText([
+            [
+                'role' => 'system',
+                'content' => 'You are an expert React developer creating professional, production-ready components. You create ONLY React/JSX components with sophisticated UI design. Return ONLY valid React component code with NO explanations, NO markdown formatting, NO code blocks.'
+            ],
+            [
+                'role' => 'user',
+                'content' => $prompt
+            ]
+        ], 0.4, false);
+
+        Log::info('Enhanced component generated', [
+            'user_message' => $userMessage,
+            'design_images_used' => count($designImages),
+            'ui_elements_count' => count($uiAnalysis['ui_elements']),
+            'component_length' => strlen($component)
+        ]);
+
+        return $component;
     }
 
     /**
