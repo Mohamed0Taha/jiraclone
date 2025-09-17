@@ -61,7 +61,8 @@ Route::middleware('auth:sanctum')->post('/chat', function (Request $request) {
         
         // Initialize services
         $openAIService = app(OpenAIService::class);
-        $generativeUIService = new GenerativeUIService($openAIService);
+        $googleImageService = app(\App\Services\GoogleImageService::class);
+        $generativeUIService = new GenerativeUIService($openAIService, $googleImageService);
         
         // Process the request
         $result = $generativeUIService->processCustomViewRequest(
