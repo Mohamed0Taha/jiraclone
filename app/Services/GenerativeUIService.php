@@ -223,7 +223,7 @@ class GenerativeUIService
                 'Use soft shadow (Material elevation 2) and 12px rounded corners on notes; apply slight rotation/offset for lively feel.',
                 'Include filters for labels/colors as horizontal chips similar to Google Keep’s toolbar.',
                 'Ensure drag handles or visual affordances exist for rearranging notes and display a recent activity feed along the right edge.',
-                'Use useExternalFactory(\'@franciscoquero/react-sticky-notes\') to render the sticky board via the AI SDK factory instead of importing react-stickies directly.',
+                'Use useExternalFactory(\'@react-latest-ui/react-sticky-notes\') to render the sticky board via the AI SDK factory instead of importing react-stickies directly.',
                 'Populate sample notes using Google Keep-style pastel palette (#F28B82, #FBBC04, #FFF475, #CCFF90, #A7FFEB, #CBF0F8).' 
             ],
             'design_style' => 'playful yet organized collaboration board',
@@ -950,7 +950,7 @@ class GenerativeUIService
         } elseif ($bp === 'calendar') {
             $canonicalContract = "\n\nCANONICAL LAYOUT CONTRACT (CALENDAR):\n- Use Templates.Calendar (AI SDK) so react-big-calendar is loaded via useExternalFactory('react-big-calendar'); never build a manual grid.\n- Month view 7x6 grid, Monday start; segmented Day/Week/Month; Today button; right-hand agenda.";
         } elseif ($bp === 'sticky_notes') {
-            $canonicalContract = "\n\nCANONICAL LAYOUT CONTRACT (STICKY NOTES):\n- Use Templates.StickyNotes component powered by @franciscoquero/react-sticky-notes package via useExternalFactory('@franciscoquero/react-sticky-notes').\n- Never manually build sticky note grids - use the specialized template.\n- Support drag-and-drop, color variations, resizing, and pinning functionality.\n- Include masonry-style responsive layout with varied note heights.";
+            $canonicalContract = "\n\nCANONICAL LAYOUT CONTRACT (STICKY NOTES):\n- Use Templates.StickyNotes component powered by @react-latest-ui/react-sticky-notes package via useExternalFactory('@react-latest-ui/react-sticky-notes').\n- Never manually build sticky note grids - use the specialized template.\n- Support drag-and-drop, color variations, resizing, and pinning functionality.\n- Include masonry-style responsive layout with varied note heights.";
         }
 
         $prompt = "You are an expert React developer creating a high-quality {$userMessage} component.
@@ -1014,19 +1014,18 @@ Templates.Calendar supports these props for full customization:
 - showUpcoming: boolean - Show upcoming events panel (default: true)
 
 TEMPLATES.STICKYNOTES API:
-Templates.StickyNotes supports these props (powered by @franciscoquero/react-sticky-notes):
-- notes: Array of notes to display - { id, text, color, position: {x, y}, size: {width, height} }
-- onUpdate: (noteId, updates) => void - Called when note is updated
-- onDelete: (noteId) => void - Called when note is deleted
-- onCreate: (note) => void - Called when new note is created
-- onMove: (noteId, position) => void - Called when note is moved via drag
-- onResize: (noteId, size) => void - Called when note is resized
-- colors: Array of available colors (default: ['yellow', 'pink', 'blue', 'green', 'orange'])
-- allowResize: boolean - Enable note resizing (default: true)
-- allowDrag: boolean - Enable drag and drop (default: true)
-- gridSize: number - Snap to grid size in pixels (default: 20)
-- className: string - Additional CSS classes
-- style: object - Additional styling
+Templates.StickyNotes supports these props (powered by @react-latest-ui/react-sticky-notes):
+- notes: Array of notes to display - { color, text }
+- colors: Array of available colors (default: ['#ffeb3b', '#ff9800', '#f44336', '#e91e63', '#9c27b0', '#673ab7'])
+- sessionKey: String - Session identifier for persistence (default: 'default-session')
+- containerWidth: String - Container width (default: '100%')
+- containerHeight: String - Container height (default: '500px')
+- noteWidth: Number - Default note width (default: 200)
+- noteHeight: Number - Default note height (default: 150)
+- footer: Boolean - Show footer controls (default: true)
+- onBeforeChange: (type, payload, notes) => payload - Called before changes
+- onChange: (type, payload, notes) => void - Called after changes (type: 'add'|'delete'|'edit'|'move')
+- persistKey: String - Key for data persistence (default: 'sticky-notes')
 
 Example usage:
 ```jsx
@@ -1044,26 +1043,27 @@ Example usage:
 
 <Templates.StickyNotes
     notes={notes}
-    onUpdate={(id, updates) => updateNote(id, updates)}
-    onDelete={(id) => deleteNote(id)}
-    onCreate={(note) => createNote(note)}
-    onMove={(id, position) => moveNote(id, position)}
-    colors={['yellow', 'pink', 'blue', 'green', 'orange', 'purple']}
-    allowResize={true}
-    allowDrag={true}
-    gridSize={20}
+    colors={['#ffeb3b', '#ff9800', '#f44336', '#e91e63', '#9c27b0', '#673ab7']}
+    containerHeight=\"400px\"
+    onChange={(type, payload, allNotes) => {
+        if (type === 'add') createNote(payload);
+        if (type === 'delete') deleteNote(payload.id);
+        if (type === 'edit') updateNote(payload.id, payload);
+    }}
+    sessionKey=\"project-notes\"
+    footer={true}
 />
 ```
 
 IMPORTANT USAGE RULES:
 - Icons must use exact names: AddIcon, EditIcon, DeleteIcon (with 'Icon' suffix)
 - For calendars, use Templates.Calendar component, never import react-big-calendar
-- For sticky notes, use Templates.StickyNotes component, never import @franciscoquero/react-sticky-notes
+- For sticky notes, use Templates.StickyNotes component, never import @react-latest-ui/react-sticky-notes
 - All Material-UI components available directly: <Button>, <TextField>, <Grid>, etc.
 - StyledComponents available directly: <ContentContainer>, <BeautifulCard>, etc.
 - Never use undefined components like <Templates.SomeComponent> unless specified above
-- Use useExternalFactory('@franciscoquero/react-sticky-notes') when building custom sticky note implementations
-- Templates.StickyNotes automatically handles @franciscoquero/react-sticky-notes loading via useExternalFactory
+- Use useExternalFactory('@react-latest-ui/react-sticky-notes') when building custom sticky note implementations
+- Templates.StickyNotes automatically handles @react-latest-ui/react-sticky-notes loading via useExternalFactory
 
 PROJECT CONTEXT:
 {$contextData}
@@ -1419,7 +1419,7 @@ REACT;
         } elseif ($bpSlug === 'calendar') {
             $canonicalContract = "\n\nSTRICT LAYOUT CONTRACT (CALENDAR):\n- Use Templates.Calendar (AI SDK) so react-big-calendar loads via useExternalFactory('react-big-calendar').\n- Month view 7x6 grid with weekday headers, Monday start; include Today button, Day/Week/Month segmented control, right-hand agenda panel.";
         } elseif ($bpSlug === 'sticky_notes') {
-            $canonicalContract = "\n\nSTRICT LAYOUT CONTRACT (STICKY NOTES):\n- Use Templates.StickyNotes component powered by @franciscoquero/react-sticky-notes package via useExternalFactory('@franciscoquero/react-sticky-notes').\n- Never manually build sticky note grids - use the specialized template.\n- Support drag-and-drop, color variations, resizing, and pinning functionality.\n- Include masonry-style responsive layout with varied note heights.";
+            $canonicalContract = "\n\nSTRICT LAYOUT CONTRACT (STICKY NOTES):\n- Use Templates.StickyNotes component powered by @react-latest-ui/react-sticky-notes package via useExternalFactory('@react-latest-ui/react-sticky-notes').\n- Never manually build sticky note grids - use the specialized template.\n- Support drag-and-drop, color variations, resizing, and pinning functionality.\n- Include masonry-style responsive layout with varied note heights.";
         }
         $designGuidance .= $canonicalContract;
 
@@ -1440,7 +1440,7 @@ CRITICAL REQUIREMENTS FOR UPDATES:
 8. Uphold the enterprise design system: keep using StyledComponents helpers (ContentContainer, BeautifulCard, SectionHeader, PrimaryButton/SuccessButton/DangerButton) or upgrade raw elements to them as part of the change
 9. Replace any plain HTML controls (button, input, select) introduced by the request with the polished Material UI or StyledComponents equivalents so the surface stays professional
 10. Use useExternalFactory('<name>') when introducing calendar, sticky notes, or other advanced libraries so the AI SDK factory handles loading — never import npm packages directly
-11. **CRITICAL: For sticky notes, prefer Templates.StickyNotes component which automatically uses @franciscoquero/react-sticky-notes via useExternalFactory('@franciscoquero/react-sticky-notes')**
+11. **CRITICAL: For sticky notes, prefer Templates.StickyNotes component which automatically uses @react-latest-ui/react-sticky-notes via useExternalFactory('@react-latest-ui/react-sticky-notes')**
 12. **Templates.StickyNotes provides full drag-and-drop, resizing, and color management - no manual implementation needed**
 
 {$designGuidance}
@@ -1484,7 +1484,7 @@ TEMPLATES TOOLBOX (available globally, do not import):
 - Templates.Slides({ slides:[{title, content}], persistKey })
 - Templates.Spreadsheet({ columns:[{field, headerName}], rows:[{id,...}], persistKey })
 - Templates.CRMBoard({ stages:['Todo','In Progress','Done'], items:[{title, description, status}], persistKey })
-- Templates.StickyNotes({ notes:[{id, text, color, position}], persistKey, onUpdate, onDelete, onCreate })
+- Templates.StickyNotes({ notes:[{color, text}], colors, sessionKey, containerHeight, onChange, persistKey })
 
  - Templates.PMBoard(alias of CRMBoard)
  - Templates.OKRTracker({ objectives:[{ objective, key_result, owner, progress }], persistKey })
@@ -1498,7 +1498,7 @@ TEMPLATES TOOLBOX (available globally, do not import):
 
 Usage (keep streaming unchanged):
 1) Instantiate directly in JSX: `return (<Templates.WikiPage title=\"Runbook\" sections={[...]} />)`
-2) For sticky notes: `return (<Templates.StickyNotes notes={notesArray} onUpdate={updateNote} />)`
+2) For sticky notes: `return (<Templates.StickyNotes notes={notesArray} onChange={handleChange} />)`
 3) Or emit only an embedded config and the runtime will auto-render the template:
    /* EMBEDDED_DATA_START */ const __EMBEDDED_DATA__ = { template: 'Slides', config: { slides: [{ title: 'Q1 Review', content: '...' }] } } /* EMBEDDED_DATA_END */";
         } else {
@@ -1557,11 +1557,11 @@ TEMPLATES TOOLBOX (available globally, do not import):
 - Templates.Slides({ slides:[{title, content}], persistKey })
 - Templates.Spreadsheet({ columns:[{field, headerName}], rows:[{id,...}], persistKey })
  - Templates.CRMBoard({ stages:['Todo','In Progress','Done'], items:[{title, description, status}], persistKey })
-- Templates.StickyNotes({ notes:[{id, text, color, position}], persistKey, onUpdate, onDelete, onCreate })
+- Templates.StickyNotes({ notes:[{color, text}], colors, sessionKey, containerHeight, onChange, persistKey })
 
 Usage (keep streaming unchanged):
 1) Instantiate directly in JSX: `return (<Templates.WikiPage title=\"Runbook\" sections={[...]} />)`
-2) For sticky notes: `return (<Templates.StickyNotes notes={notesArray} onUpdate={updateNote} />)`
+2) For sticky notes: `return (<Templates.StickyNotes notes={notesArray} onChange={handleChange} />)`
 3) Or emit only an embedded config and the runtime will auto-render the template:
    /* EMBEDDED_DATA_START */ const __EMBEDDED_DATA__ = { template: 'Slides', config: { slides: [{ title: 'Q1 Review', content: '...' }] } } /* EMBEDDED_DATA_END */
 

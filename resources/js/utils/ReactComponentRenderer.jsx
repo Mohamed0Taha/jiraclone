@@ -1152,176 +1152,150 @@ const Templates = {
 
   StickyNotes: (props) => {
     const {
-      persistKey = 'sticky-notes-board',
-      title = 'Sticky Notes',
-      initialNotes = [],
-    } = props || {};
-    const theme = useTheme();
-    const isDark = theme.palette.mode === 'dark';
-    const factory = useExternalFactory('react-stickies', [persistKey]);
-    const StickiesBoard = factory?.Stickies;
-    const palette = props.colors || ['#F28B82', '#FBBC04', '#FFF475', '#CCFF90', '#AECBFA', '#FDCFE8', '#CF93FF'];
+      notes = [],
+      onUpdate,
+      onDelete,
+      onCreate,
+      onMove,
+      colors = ['#ffeb3b', '#ff9800', '#f44336', '#e91e63', '#9c27b0', '#673ab7'],
+      allowResize = true,
+      allowDrag = true,
+      persistKey = 'sticky-notes',
+      sessionKey = 'default-session',
+      containerWidth = '100%',
+      containerHeight = '500px',
+      noteWidth = 200,
+      noteHeight = 150,
+      footer = true,
+      ...otherProps
+    } = props;
 
-    const nowStamp = React.useCallback(() => new Date().toLocaleString(), []);
-
-    const defaultNotes = React.useMemo(() => {
-      if (Array.isArray(initialNotes) && initialNotes.length) return initialNotes;
-      return [
-        {
-          id: 'note-1',
-          title: 'Daily Stand-up',
-          text: 'Sync with team at 9:30 AM. Highlight blockers early.',
-          color: palette[0],
-          degree: '1deg',
-          timeStamp: nowStamp(),
-          contentEditable: true,
-          grid: { i: 'note-1', x: 0, y: 0, w: 3, h: 3 },
-        },
-        {
-          id: 'note-2',
-          title: 'Research Ideas',
-          text: 'Collect inspiration references for dashboard redesign.',
-          color: palette[1],
-          degree: '-2deg',
-          timeStamp: nowStamp(),
-          contentEditable: true,
-          grid: { i: 'note-2', x: 3, y: 0, w: 3, h: 3 },
-        },
-        {
-          id: 'note-3',
-          title: 'Launch Checklist',
-          text: 'QA ✅  Marketing ✅  Docs ☐',
-          color: palette[2],
-          degree: '0deg',
-          timeStamp: nowStamp(),
-          contentEditable: true,
-          grid: { i: 'note-3', x: 6, y: 0, w: 3, h: 3 },
-        },
-      ];
-    }, [initialNotes, palette, nowStamp]);
-
-    const [state, setState] = useEmbeddedData(persistKey, { notes: defaultNotes });
-    const notes = Array.isArray(state?.notes) && state.notes.length ? state.notes : defaultNotes;
-
-    const sanitizeNotes = React.useCallback((items) => {
-      if (!Array.isArray(items)) {
-        return [];
-      }
-
-      return items.map((note, index) => {
-        const noteData = note || {};
-        const noteDefault = noteData.default || {};
-        const rest = { ...noteData };
-        delete rest.editorState;
-        delete rest.default;
-
-        const gridSource = rest.grid && typeof rest.grid === 'object' ? rest.grid : {};
-        const id = rest.id || gridSource.i || 'note-' + index;
-
-        const grid = {
-          i: id,
-          x: gridSource.x !== undefined ? gridSource.x : (index % 4) * 2,
-          y: gridSource.y !== undefined ? gridSource.y : Infinity,
-          w: gridSource.w !== undefined ? gridSource.w : 2,
-          h: gridSource.h !== undefined ? gridSource.h : 2,
-          ...gridSource,
-        };
-
-        return {
-          id,
-          title: rest.title || noteDefault.title || 'Untitled',
-          text: rest.text || noteDefault.text || '',
-          color: rest.color || palette[index % palette.length],
-          degree: rest.degree || ((index % 5) - 2) + 'deg',
-          timeStamp: rest.timeStamp || nowStamp(),
-          contentEditable: rest.contentEditable !== false,
-          grid,
-        };
-      });
-    }, [palette, nowStamp]);
-
-    const normalizedNotes = React.useMemo(() => sanitizeNotes(notes), [notes, sanitizeNotes]);
-
-    const commitNotes = React.useCallback((items) => {
-      const cleaned = sanitizeNotes(items).map((note) => {
-        const cloned = { ...note };
-        delete cloned.editorState;
-        return cloned;
-      });
-      setState((prev) => ({ ...prev, notes: cleaned }));
-    }, [sanitizeNotes, setState]);
-
-    const handleChange = React.useCallback((items) => {
-      commitNotes(items);
-    }, [commitNotes]);
-
-    const handleAdd = React.useCallback((note) => {
-      commitNotes([...normalizedNotes, note]);
-    }, [commitNotes, normalizedNotes]);
-
-    const handleDelete = React.useCallback((note) => {
-      const remaining = normalizedNotes.filter((item) => (item.id || item.grid?.i) !== note.id);
-      commitNotes(remaining);
-    }, [commitNotes, normalizedNotes]);
-
-    const addNoteManually = React.useCallback(() => {
-      const id = 'note-' + Date.now();
-      const next = {
-        id,
-        title: 'New Idea',
-        text: 'Capture action items here…',
-        color: palette[normalizedNotes.length % palette.length],
-        degree: (Math.floor(Math.random() * 5) - 2) + 'deg',
-        timeStamp: nowStamp(),
-        contentEditable: true,
-        grid: { i: id, x: (normalizedNotes.length * 2) % 12, y: Infinity, w: 2, h: 2 },
-      };
-      commitNotes([...normalizedNotes, next]);
-    }, [commitNotes, normalizedNotes, palette]);
-
-    if (!StickiesBoard) {
-      return React.createElement(Paper, { sx: { p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 } },
-        React.createElement(CircularProgress, { size: 20 }),
-        React.createElement(Typography, { variant: 'body2' }, 'Loading sticky notes board...')
-      );
+    // Load the external sticky notes component
+    const stickyNotesFactory = useExternalFactory('@react-latest-ui/react-sticky-notes');
+    
+    if (!stickyNotesFactory?.ReactStickyNotes) {
+      return React.createElement(Box, {
+        sx: { 
+          p: 3, 
+          textAlign: 'center',
+          border: '2px dashed #ccc',
+          borderRadius: '8px',
+          backgroundColor: '#f9f9f9'
+        }
+      }, [
+        React.createElement(Typography, { key: 'loading', variant: 'body1' }, 'Loading Sticky Notes...'),
+        React.createElement(Typography, { key: 'subtitle', variant: 'body2', color: 'text.secondary' }, 
+          'Please wait while the sticky notes component loads.')
+      ]);
     }
 
-    return (
-      React.createElement(Paper, { sx: { p: 3, borderRadius: 4, background: isDark ? '#111827' : '#ffffff' } },
-        React.createElement(Stack, { spacing: 2.5 },
-          React.createElement(Stack, { direction: { xs: 'column', sm: 'row' }, spacing: 2, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' } },
-            React.createElement(Box, null,
-              React.createElement(Typography, { variant: 'h6', fontWeight: 600 }, title),
-              React.createElement(Typography, { variant: 'body2', color: 'text.secondary' }, 'Drag, resize, and collaborate on shared sticky notes.')
-            ),
-            React.createElement(Stack, { direction: 'row', spacing: 1 },
-              React.createElement(Button, { variant: 'contained', startIcon: React.createElement(AddIcon, null), onClick: addNoteManually }, 'Add Note')
-            )
-          ),
-          React.createElement(Box, {
-            sx: {
-              background: isDark ? '#0f172a' : '#fdfaf4',
-              borderRadius: 4,
-              p: { xs: 2, md: 3 },
-              minHeight: 420,
-            }
+    const ReactStickyNotes = stickyNotesFactory.ReactStickyNotes;
+    
+    // Default notes if none provided
+    const defaultNotes = React.useMemo(() => {
+      if (Array.isArray(notes) && notes.length) {
+        return notes.map(note => ({
+          color: note.color || colors[0],
+          text: note.text || note.content || 'New Note'
+        }));
+      }
+      return [
+        {
+          color: colors[0],
+          text: 'Welcome to Sticky Notes!\n\nDouble-click to edit this note.'
+        },
+        {
+          color: colors[1] || colors[0],
+          text: 'You can drag and resize notes!\n\nTry it out.'
+        }
+      ];
+    }, [notes, colors]);
+
+    const [notesData, setNotesData] = useEmbeddedData(persistKey, { notes: defaultNotes });
+    const currentNotes = notesData?.notes || defaultNotes;
+
+    // Handle note changes
+    const handleBeforeChange = React.useCallback((type, payload, allNotes) => {
+      // This fires before any change happens
+      return payload;
+    }, []);
+
+    const handleChange = React.useCallback((type, payload, allNotes) => {
+      // Update our embedded data
+      setNotesData({ ...notesData, notes: allNotes });
+      
+      // Call appropriate callback based on action type
+      if (type === 'add' && onCreate) {
+        onCreate(payload);
+      } else if (type === 'delete' && onDelete) {
+        onDelete(payload.id);
+      } else if (type === 'edit' && onUpdate) {
+        onUpdate(payload.id, payload);
+      } else if (type === 'move' && onMove) {
+        onMove(payload.id, { x: payload.x, y: payload.y });
+      }
+    }, [notesData, setNotesData, onCreate, onDelete, onUpdate, onMove]);
+
+    return React.createElement(Box, {
+      sx: { 
+        width: '100%',
+        minHeight: '500px',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '12px',
+        padding: '20px',
+        '& .react-sticky-notes': {
+          width: '100%',
+          height: '100%'
+        }
+      },
+      ...otherProps
+    }, [
+      React.createElement(ReactStickyNotes, {
+        key: 'sticky-notes',
+        sessionKey,
+        colors,
+        notes: currentNotes,
+        containerWidth,
+        containerHeight,
+        noteWidth,
+        noteHeight,
+        footer,
+        onBeforeChange: handleBeforeChange,
+        onChange: handleChange
+      })
+    ]);
+  },
+            sx: { py: 1, px: 2, height: 'calc(100% - 64px)', overflow: 'hidden' }
           },
-            React.createElement(StickiesBoard, {
-              notes: normalizedNotes,
-              colors: palette,
-              footer: true,
-              tape: true,
-              title: true,
-              wrapperStyle: { height: '100%' },
-              grid: { w: 2, h: 2, rowHeight: 140, cols: { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 } },
-              onChange: handleChange,
-              onAdd: handleAdd,
-              onDelete: handleDelete,
+            React.createElement('textarea', {
+              value: note.text || '',
+              onChange: (e) => {
+                e.stopPropagation();
+                handleNoteUpdate(note.id, { text: e.target.value });
+              },
+              onFocus: (e) => {
+                e.stopPropagation();
+                setSelectedNote(note.id);
+              },
+              onClick: (e) => e.stopPropagation(),
+              placeholder: 'Type your note here...',
+              style: {
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                outline: 'none',
+                backgroundColor: 'transparent',
+                resize: 'none',
+                fontFamily: 'inherit',
+                fontSize: '14px',
+                color: '#333',
+                padding: 0
+              }
             })
           )
-        )
-      )
-    );
+        ])
+      ))
+    ]);
   },
 
   CRMBoard: (props) => {
@@ -1649,6 +1623,7 @@ const {
   IconButton,
   Chip,
   Card,
+  CardHeader,
   CardContent,
   CardActions,
   Grid,
@@ -1821,14 +1796,17 @@ const externalFactoryLoaders = {
     }
     return externalFactoryCache['react-big-calendar'];
   },
-  'react-stickies': async () => {
-    if (externalFactoryCache['react-stickies']) return externalFactoryCache['react-stickies'];
-    const module = await import('https://esm.sh/react-stickies@0.0.16?bundle&external=react&external=react-dom');
-    ensureExternalStylesheet('https://unpkg.com/react-grid-layout@0.14.0/css/styles.css');
-    ensureExternalStylesheet('https://unpkg.com/react-resizable@3.0.4/css/styles.css');
-    const StickiesComponent = module.default || module.Stickies || module.ReactStickies || module;
-    const factory = { Stickies: StickiesComponent, module };
-    externalFactoryCache['react-stickies'] = factory;
+  '@react-latest-ui/react-sticky-notes': async () => {
+    if (externalFactoryCache['@react-latest-ui/react-sticky-notes']) return externalFactoryCache['@react-latest-ui/react-sticky-notes'];
+    
+    // Import the @react-latest-ui/react-sticky-notes package
+    const module = await import('@react-latest-ui/react-sticky-notes');
+    
+    // This package is self-contained and doesn't require external stylesheets
+    
+    const ReactStickyNotesComponent = module.default || module.ReactStickyNotes || module;
+    const factory = { ReactStickyNotes: ReactStickyNotesComponent, StickyNotes: ReactStickyNotesComponent, module };
+    externalFactoryCache['@react-latest-ui/react-sticky-notes'] = factory;
     return factory;
   },
 };
