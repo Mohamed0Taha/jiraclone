@@ -18,6 +18,15 @@ export default defineConfig({
         }),
         react(),
     ],
+    resolve: {
+        // Ensure a single React instance across all deps (prevents invalid hook calls)
+        dedupe: ['react', 'react-dom'],
+    },
+    // Avoid pre-optimizing optional heavy libs; they are lazy-loaded on demand.
+    optimizeDeps: {
+        // Avoid prebundling browser-only libs; they are lazy-loaded on demand
+        exclude: ['@babel/standalone'],
+    },
     // Use Vite/Rollup defaults for code splitting to keep memory usage reasonable
     // during production builds. Forcing a single chunk can lead to OOM (137) on
     // constrained environments.

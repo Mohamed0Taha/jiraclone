@@ -42,6 +42,11 @@ import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
+import ChecklistRtlIcon from '@mui/icons-material/ChecklistRtl';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import AssistantChat from './AssistantChat';
 import ReactComponentRenderer from '@/utils/ReactComponentRenderer';
 import { csrfFetch } from '@/utils/csrf';
@@ -172,6 +177,16 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     const [isSaving, setIsSaving] = useState(false);
     const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
     const [generationProgress, setGenerationProgress] = useState(null);
+    // Treat server scaffolds like "New Custom View" as non-existent component
+    const isScaffoldHTML = useCallback((html) => {
+        const s = String(html || '');
+        if (!s.trim()) return false;
+        // Common placeholder patterns returned by the server when a view doesn't exist
+        if (/New\s+Custom\s+View/i.test(s)) return true;
+        if (/Generated\s*view\s*:/i.test(s)) return true;
+        if (/function\s+GeneratedMicroApp/i.test(s)) return true;
+        return false;
+    }, []);
     const [isPersisted, setIsPersisted] = useState(false); // track if current component exists in DB
 
     // Local input state for chat
@@ -680,7 +695,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 console.log('[CustomView] HTML content:', data.html);
                 console.log('[CustomView] HTML length:', data.html ? data.html.length : 0);
 
-                if (data.success && data.html && data.html.trim()) {
+                if (data.success && data.html && data.html.trim() && !isScaffoldHTML(data.html)) {
                     console.log('[CustomView] Valid component found, setting component code');
                     setComponentCode(data.html);
                     setCustomViewId(data.customViewId || data.custom_view_id || null);
@@ -697,11 +712,11 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     const backupKey = `microapp-backup-${project.id}-${originalViewName}`;
                     localStorage.removeItem(backupKey); // ensure we don't resurrect deleted views
 
-                    if (!data.success) {
+                    if (!data.success || isScaffoldHTML(data.html)) {
                         const msg = (data.message || '').toLowerCase();
                         const isNotFound = msg.includes('no custom view') || msg.includes('not found');
                         showSnackbar(isNotFound
-                            ? 'No saved micro-app exists yet. Click Start Creating to generate one.'
+                            ? 'No saved micro-app exists yet. Click Create with AI to generate one.'
                             : (data.message || 'Could not load micro-application.'), 'info');
                     }
                     // Do NOT load backups or inject defaults when the server says it doesn't exist.
@@ -758,6 +773,11 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             console.log('[CustomView] Received real-time update:', event);
 
             if (event.data_key === 'workflow_step') {
+                // Ignore progress events not initiated by the current user
+                // to prevent the progress dialog from hijacking the view
+                if (event.user?.id && event.user.id !== currentAuth?.id) {
+                    return;
+                }
                 const payload = event.data || {};
                 const total = Number(payload.total) || 5;
                 const sequence = Number(payload.sequence) || 1;
@@ -807,7 +827,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${encodeURIComponent(originalViewName)}`);
                         const data = await response.json();
 
-                        if (data.success && data.html && data.html.trim()) {
+                        if (data.success && data.html && data.html.trim() && !isScaffoldHTML(data.html)) {
                             setComponentCode(data.html);
                             showSnackbar(`Component updated by ${event.user?.name || 'another user'}`, 'info');
                         } else {
@@ -935,6 +955,28 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         } catch (_) { }
     };
 
+    // Ready‑Made apps generator
+    const buildTemplateCode = useCallback((templateKey) => {
+        const tpl = String(templateKey || '').trim();
+        if (!tpl) return null;
+        // Minimal wrapper using Templates.* provided by renderer runtime
+        return `export default function ReadyMade(){\n  return (\n    <div style={{padding:16}}>{React.createElement(Templates.${tpl}, null)}</div>\n  );\n}`;
+    }, []);
+
+    const handleCreateReadyMade = useCallback((key) => {
+        try { console.log('[CustomView] Creating ready-made:', key); } catch(_) {}
+        const code = buildTemplateCode(key);
+        if (!code) return;
+        setComponentCode(code);
+        setIsLocked(false);
+        setIsPersisted(false);
+        showSnackbar(`${key} created. You can customize and save.`, 'success');
+    }, [buildTemplateCode]);
+
+    const handlePreviewReadyMade = useCallback((key) => {
+        handleCreateReadyMade(key);
+    }, [handleCreateReadyMade]);
+
     // Emergency recovery function to clear problematic component
     const handleEmergencyReset = useCallback(() => {
         console.warn('[CustomView] Emergency reset triggered');
@@ -998,7 +1040,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
             {/* Enhanced Generation Progress Dialog */}
             <Dialog
-                open={!!generationProgress}
+                open={Boolean(generationProgress && (isGenerating || isManuallyGenerating))}
                 disableEscapeKeyDown
                 PaperProps={{
                     sx: {
@@ -1008,6 +1050,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         boxShadow: designTokens.shadows.floating,
                     }
                 }}
+                hideBackdrop
             >
                 <DialogContent sx={{ p: 4, textAlign: 'center' }}>
                     <Stack spacing={3} alignItems="center">
@@ -1283,62 +1326,88 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            height: 'calc(100vh - 200px)',
-                            p: 4,
+                            justifyContent: 'flex-start',
+                            height: 'auto',
+                            p: { xs: 2, md: 3 },
+                            pt: { xs: 3, md: 4 },
                             textAlign: 'center',
+                            overflow: 'visible',
                         }}>
-                            <Box sx={{
-                                width: 120,
-                                height: 120,
-                                borderRadius: designTokens.radii.xl,
-                                background: designTokens.gradients.accent,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                mb: 4,
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease',
-                                '&:hover': {
-                                    transform: 'scale(1.05)',
-                                    boxShadow: designTokens.shadows.floating,
-                                }
-                            }}
-                                onClick={() => setAssistantOpen(true)}
-                            >
-                                <AutoAwesomeIcon sx={{ fontSize: 48 }} />
+                            {/* Ready‑Made Apps tiles (icon grid) */}
+                            <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto', mb: 2 }}>
+                                {/* Title removed per request */}
+                                <Box sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: {
+                                        xs: 'repeat(auto-fill, minmax(80px, 1fr))',
+                                        sm: 'repeat(auto-fill, minmax(90px, 1fr))',
+                                        md: 'repeat(auto-fill, minmax(100px, 1fr))',
+                                    },
+                                    gap: { xs: 10, sm: 12, md: 14 },
+                                    width: '100%',
+                                    mt: 2,
+                                }}>
+                                    {[
+                                        { key: 'Calendar', title: 'Calendar', color: '#2563EB', Icon: CalendarMonthIcon },
+                                        { key: 'Spreadsheet', title: 'Spreadsheet', color: '#059669', Icon: TableChartIcon },
+                                        { key: 'CRMBoard', title: 'CRM Board', color: '#F59E0B', Icon: ViewKanbanIcon },
+                                        { key: 'OKRTracker', title: 'OKR Tracker', color: '#EC4899', Icon: ChecklistRtlIcon },
+                                        { key: 'WikiPage', title: 'Wiki Page', color: '#14B8A6', Icon: MenuBookIcon },
+                                        // more to fill two rows on widescreen
+                                        { key: 'PMBoard', title: 'PM Board', color: '#9333EA', Icon: ViewKanbanIcon },
+                                        { key: 'HRLeave', title: 'HR Leave', color: '#0EA5E9', Icon: ChecklistRtlIcon },
+                                        { key: 'Slides', title: 'Slides', color: '#F43F5E', Icon: MenuBookIcon },
+                                        { key: 'Docs', title: 'Docs', color: '#22C55E', Icon: MenuBookIcon },
+                                        { key: 'Calculator', title: 'Calculator', color: '#E11D48', Icon: ChecklistRtlIcon },
+                                    ].map(({ key, title, color, Icon }) => (
+                                        <Box
+                                            key={key}
+                                            onClick={() => handleCreateReadyMade(key)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCreateReadyMade(key); }}
+                                            role="button"
+                                            sx={{
+                                                cursor: 'pointer',
+                                                userSelect: 'none',
+                                                borderRadius: 2,
+                                                minWidth: 72,
+                                                width: '100%',
+                                                height: 84,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                overflow: 'hidden',
+                                                backgroundColor: color, // keep vivid in dark mode
+                                                color: '#fff',
+                                                boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
+                                                transition: 'transform .18s ease, box-shadow .18s ease',
+                                                '&:hover': {
+                                                    transform: 'translateY(-4px)',
+                                                    boxShadow: '0 12px 28px rgba(0,0,0,0.35)'
+                                                },
+                                                outline: 'none',
+                                                position: 'relative',
+                                            }}
+                                        >
+                                            <Box sx={{
+                                                width: 28,
+                                                height: 28,
+                                                borderRadius: 2,
+                                                backgroundColor: 'rgba(0,0,0,0.12)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                mb: 0.75,
+                                            }}>
+                                                <Icon sx={{ fontSize: 18, color: '#fff' }} />
+                                            </Box>
+                                            <Typography variant="caption" fontWeight={700} sx={{ lineHeight: 1.1 }}>
+                                                {title}
+                                            </Typography>
+                                        </Box>
+                                    ))}
+                                </Box>
                             </Box>
-
-                            <Typography variant="h4" fontWeight="600" color="text.primary" mb={2}>
-                                {t('customViews.readyToCreate')}
-                            </Typography>
-                            <Typography variant="body1" color="text.secondary" mb={4} maxWidth={600}>
-                                {t('customViews.welcomeStudio')}
-                            </Typography>
-
-                            <Stack direction="row" spacing={2} flexWrap="wrap" justifyContent="center">
-                                <Chip
-                                    label={t('customViews.examples.dataDashboard')}
-                                    variant="outlined"
-                                    sx={{ borderRadius: designTokens.radii.lg }}
-                                />
-                                <Chip
-                                    label={t('customViews.examples.taskManager')}
-                                    variant="outlined"
-                                    sx={{ borderRadius: designTokens.radii.lg }}
-                                />
-                                <Chip
-                                    label={t('customViews.examples.analyticsView')}
-                                    variant="outlined"
-                                    sx={{ borderRadius: designTokens.radii.lg }}
-                                />
-                                <Chip
-                                    label={t('customViews.examples.customTool')}
-                                    variant="outlined"
-                                    sx={{ borderRadius: designTokens.radii.lg }}
-                                />
-                            </Stack>
 
                             <Button
                                 variant="contained"
@@ -1361,7 +1430,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                     transition: 'all 0.3s ease',
                                 }}
                             >
-                                {t('customViews.startCreating')}
+                                Create with AI
                             </Button>
                         </Box>
                     )}

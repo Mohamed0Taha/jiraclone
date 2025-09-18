@@ -7,275 +7,11 @@ import * as Recharts from 'recharts';
 import * as MuiMaterial from '@mui/material';
 import * as MuiIcons from '@mui/icons-material';
 import * as MuiDataGrid from '@mui/x-data-grid';
+import { DESIGN_TOKENS } from './react-renderer/constants';
+import { STYLE_UTILS_SNIPPET } from './react-renderer/snippets/styleUtils';
+import { STYLED_COMPONENTS_SNIPPET } from './react-renderer/snippets/styledComponents';
 
-const DESIGN_TOKENS = {
-  colors: {
-    primary: {
-      50: '#f0f9ff',
-      100: '#e0f2fe',
-      200: '#bae6fd',
-      300: '#7dd3fc',
-      400: '#38bdf8',
-      500: '#0ea5e9',
-      600: '#0284c7',
-      700: '#0369a1',
-      800: '#075985',
-      900: '#0c4a6e'
-    },
-    success: {
-      50: '#f0fdf4',
-      100: '#dcfce7',
-      200: '#bbf7d0',
-      300: '#86efac',
-      400: '#4ade80',
-      500: '#22c55e',
-      600: '#16a34a',
-      700: '#15803d',
-      800: '#166534',
-      900: '#14532d'
-    },
-    warning: {
-      50: '#fffbeb',
-      100: '#fef3c7',
-      200: '#fde68a',
-      300: '#fcd34d',
-      400: '#fbbf24',
-      500: '#f59e0b',
-      600: '#d97706',
-      700: '#b45309',
-      800: '#92400e',
-      900: '#78350f'
-    },
-    danger: {
-      50: '#fef2f2',
-      100: '#fee2e2',
-      200: '#fecaca',
-      300: '#fca5a5',
-      400: '#f87171',
-      500: '#ef4444',
-      600: '#dc2626',
-      700: '#b91c1c',
-      800: '#991b1b',
-      900: '#7f1d1d'
-    },
-    neutral: {
-      50: '#fafafa',
-      100: '#f4f4f5',
-      200: '#e4e4e7',
-      300: '#d4d4d8',
-      400: '#a1a1aa',
-      500: '#71717a',
-      600: '#52525b',
-      700: '#3f3f46',
-      800: '#27272a',
-      900: '#18181b'
-    }
-  },
-  spacing: {
-    xs: '0.25rem',
-    sm: '0.5rem',
-    md: '1rem',
-    lg: '1.5rem',
-    xl: '2rem',
-    '2xl': '3rem',
-    '3xl': '4rem'
-  },
-  shadows: {
-    sm: '0 1px 2px 0 rgba(15, 23, 42, 0.05)',
-    md: '0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.1)',
-    lg: '0 10px 15px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -4px rgba(15, 23, 42, 0.1)',
-    xl: '0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04)'
-  },
-  borderRadius: {
-    sm: '0.25rem',
-    md: '0.375rem',
-    lg: '0.5rem',
-    xl: '0.75rem',
-    '2xl': '1rem'
-  }
-};
-
-const STYLE_UTILS_SNIPPET = String.raw`
-const styleUtils = {
-  spacing: (size) => ({
-    margin: designTokens.spacing[size] || size,
-    padding: designTokens.spacing[size] || size,
-  }),
-  elevation: (level) => ({
-    boxShadow: designTokens.shadows[level] || level,
-    borderRadius: designTokens.borderRadius.lg,
-  }),
-  colorVariant: (color, shade = 500) => {
-    const swatch = (designTokens.colors[color] || {})[shade];
-    return {
-      backgroundColor: swatch,
-      color: shade >= 500 ? '#ffffff' : designTokens.colors.neutral[800],
-    };
-  },
-  flexCenter: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  flexBetween: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  gradients: {
-    primary: 'linear-gradient(135deg, ' + designTokens.colors.primary[400] + ' 0%, ' + designTokens.colors.primary[600] + ' 100%)',
-    success: 'linear-gradient(135deg, ' + designTokens.colors.success[400] + ' 0%, ' + designTokens.colors.success[600] + ' 100%)',
-    warm: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    cool: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-  },
-};
-`;
-
-const STYLED_COMPONENTS_SNIPPET = String.raw`
-const StyledComponents = {
-  BeautifulCard: (props) => React.createElement(MuiMaterial.Card, {
-    ...props,
-    sx: {
-      borderRadius: designTokens.borderRadius.lg,
-      boxShadow: 'none',
-      border: '1px solid',
-      borderColor: 'divider',
-      overflow: 'hidden',
-      transition: 'border-color 120ms ease',
-      '&:hover': { borderColor: 'divider' },
-      ...props.sx,
-    },
-  }),
-  FormContainer: (props) => React.createElement(MuiMaterial.Box, {
-    ...props,
-    sx: {
-      padding: designTokens.spacing.md,
-      backgroundColor: 'transparent',
-      borderRadius: designTokens.borderRadius.lg,
-      boxShadow: 'none',
-      border: 'none',
-      '& .MuiTextField-root': {
-        marginBottom: designTokens.spacing.sm,
-      },
-      ...props.sx,
-    },
-  }),
-  PrimaryButton: (props) => React.createElement(MuiMaterial.Button, {
-    variant: 'contained',
-    size: 'small',
-    disableElevation: true,
-    ...props,
-    sx: {
-      borderRadius: designTokens.borderRadius.md,
-      textTransform: 'none',
-      fontWeight: 600,
-      fontSize: '0.85rem',
-      padding: '3px 8px',
-      minHeight: '22px',
-      minWidth: '40px',
-      lineHeight: 1.2,
-      whiteSpace: 'nowrap',
-      '& .MuiButton-startIcon': { marginRight: 6 },
-      boxShadow: 'none',
-      ...props.sx,
-    },
-  }),
-  SuccessButton: (props) => React.createElement(MuiMaterial.Button, {
-    variant: 'contained',
-    color: 'success',
-    size: 'small',
-    disableElevation: true,
-    ...props,
-    sx: {
-      borderRadius: designTokens.borderRadius.md,
-      textTransform: 'none',
-      fontWeight: 600,
-      fontSize: '0.85rem',
-      padding: '3px 8px',
-      minHeight: '22px',
-      minWidth: '40px',
-      lineHeight: 1.2,
-      whiteSpace: 'nowrap',
-      '& .MuiButton-startIcon': { marginRight: 6 },
-      boxShadow: 'none',
-      ...props.sx,
-    },
-  }),
-  DangerButton: (props) => React.createElement(MuiMaterial.Button, {
-    variant: 'contained',
-    color: 'error',
-    size: 'small',
-    disableElevation: true,
-    ...props,
-    sx: {
-      borderRadius: designTokens.borderRadius.md,
-      textTransform: 'none',
-      fontWeight: 600,
-      fontSize: '0.85rem',
-      padding: '3px 8px',
-      minHeight: '22px',
-      minWidth: '40px',
-      lineHeight: 1.2,
-      whiteSpace: 'nowrap',
-      '& .MuiButton-startIcon': { marginRight: 6 },
-      boxShadow: 'none',
-      ...props.sx,
-    },
-  }),
-  FloatingAction: (props) => React.createElement(MuiMaterial.Fab, {
-    color: 'primary',
-    size: 'small',
-    ...props,
-    sx: {
-      position: 'fixed',
-      right: 16,
-      bottom: 16,
-      boxShadow: 'none',
-      ...props.sx,
-    },
-  }),
-  ContentContainer: (props) => React.createElement(MuiMaterial.Box, {
-    ...props,
-    sx: {
-      padding: designTokens.spacing.md,
-      backgroundColor: 'transparent',
-      minHeight: 'auto',
-      '& > *:not(:last-child)': {
-        marginBottom: designTokens.spacing.md,
-      },
-      ...props.sx,
-    },
-  }),
-  SectionHeader: (props) => React.createElement(MuiMaterial.Typography, {
-    variant: 'subtitle2',
-    ...props,
-    sx: {
-      fontWeight: 500,
-      fontSize: '0.89rem',
-      letterSpacing: '0.04em',
-      textTransform: 'uppercase',
-      color: 'text.secondary',
-      marginBottom: designTokens.spacing.xs,
-      paddingBottom: '4px',
-      position: 'relative',
-      borderBottom: '1px solid',
-      borderBottomColor: 'divider',
-      display: 'inline-block',
-      '&::after': {
-        content: '""',
-        position: 'absolute',
-        left: 0,
-        bottom: -1,
-        width: '40px',
-        height: '2px',
-        background: 'linear-gradient(90deg, ' + designTokens.colors.primary[400] + ', rgba(14,165,233,0))',
-        borderRadius: '1px',
-      },
-      ...props.sx,
-    },
-  }),
-};
-`;
+// DESIGN_TOKENS, STYLE_UTILS_SNIPPET and STYLED_COMPONENTS_SNIPPET are imported above
 
 const TEMPLATES_SNIPPET = String.raw`
 // Lightweight Templates exposed to generated components
@@ -358,12 +94,28 @@ const Templates = {
 
   Spreadsheet: (props) => {
     const { columns = [], rows = [], persistKey = 'sheet' } = props || {};
-    const [data] = useEmbeddedData(persistKey, { rows, columns });
-    const safeCols = (data?.columns?.length ? data.columns : columns).map((c, i) => ({ flex: 1, minWidth: 120, ...c, field: c.field || c.key || ('c' + i) }));
-    const safeRows = (data?.rows?.length ? data.rows : rows).map((r, i) => ({ id: r.id ?? i+1, ...r }));
+    const [data, setData] = useEmbeddedData(persistKey, { rows, columns });
+    const sourceCols = (Array.isArray(data?.columns) && data.columns.length ? data.columns : columns);
+    const safeCols = sourceCols.map((c, i) => ({ flex: 1, minWidth: 120, ...c, field: c.field || c.key || ('c' + i) }));
+    const sourceRows = (Array.isArray(data?.rows) && data.rows.length ? data.rows : rows);
+    const safeRows = sourceRows.map((r, i) => ({ id: r.id ?? 'row-' + (i + 1), ...r }));
+
+    const addRow = () => {
+      const nextId = 'row-' + Date.now();
+      const empty = safeCols.reduce((acc, c) => { acc[c.field] = rDefault(acc[c.field]); return acc; }, {});
+      function rDefault(v){ return typeof v === 'number' ? 0 : '' }
+      const nextRows = [...sourceRows, { id: nextId, ...empty }];
+      setData({ ...(data || {}), rows: nextRows, columns: sourceCols });
+    };
+
     return (
       React.createElement(Paper, { sx: { p: 1 } },
-        React.createElement(DataGrid, { autoHeight: true, density: 'compact', rows: safeRows, columns: safeCols, disableRowSelectionOnClick: true })
+        React.createElement(Stack, { spacing: 1 },
+          React.createElement(Stack, { direction: 'row', justifyContent: 'flex-end' },
+            React.createElement(Button, { variant: 'contained', size: 'small', startIcon: React.createElement(AddIcon, null), onClick: addRow }, 'Add Row')
+          ),
+          React.createElement(DataGrid, { autoHeight: true, density: 'compact', rows: safeRows, columns: safeCols, disableRowSelectionOnClick: true })
+        )
       )
     );
   },
@@ -1153,148 +905,281 @@ const Templates = {
   StickyNotes: (props) => {
     const {
       notes = [],
-      onUpdate,
-      onDelete,
-      onCreate,
-      onMove,
-      colors = ['#ffeb3b', '#ff9800', '#f44336', '#e91e63', '#9c27b0', '#673ab7'],
-      allowResize = true,
-      allowDrag = true,
+      onChange,
+      sessionKey = 'sticky-notes-session',
       persistKey = 'sticky-notes',
-      sessionKey = 'default-session',
-      containerWidth = '100%',
       containerHeight = '500px',
-      noteWidth = 200,
-      noteHeight = 150,
-      footer = true,
       ...otherProps
-    } = props;
+    } = props || {};
 
-    // Load the external sticky notes component
-    const stickyNotesFactory = useExternalFactory('@react-latest-ui/react-sticky-notes');
-    
-    if (!stickyNotesFactory?.ReactStickyNotes) {
-      return React.createElement(Box, {
-        sx: { 
-          p: 3, 
-          textAlign: 'center',
-          border: '2px dashed #ccc',
-          borderRadius: '8px',
-          backgroundColor: '#f9f9f9'
-        }
-      }, [
-        React.createElement(Typography, { key: 'loading', variant: 'body1' }, 'Loading Sticky Notes...'),
-        React.createElement(Typography, { key: 'subtitle', variant: 'body2', color: 'text.secondary' }, 
-          'Please wait while the sticky notes component loads.')
-      ]);
-    }
+    // Predefined colors that work well in both light and dark mode
+    const colorPalette = [
+      { bg: '#FFE066', text: '#2A2A2A' }, // Yellow
+      { bg: '#B4E7CE', text: '#2A2A2A' }, // Green
+      { bg: '#B794F6', text: '#2A2A2A' }, // Purple
+      { bg: '#FBB6CE', text: '#2A2A2A' }, // Pink
+      { bg: '#93C5FD', text: '#2A2A2A' }, // Blue
+      { bg: '#FED7AA', text: '#2A2A2A' }, // Orange
+      { bg: '#F87171', text: '#FFFFFF' }, // Red
+      { bg: '#34D399', text: '#2A2A2A' }, // Emerald
+    ];
 
-    const ReactStickyNotes = stickyNotesFactory.ReactStickyNotes;
-    
-    // Default notes if none provided
-    const defaultNotes = React.useMemo(() => {
-      if (Array.isArray(notes) && notes.length) {
-        return notes.map(note => ({
-          color: note.color || colors[0],
-          text: note.text || note.content || 'New Note'
+    // Get theme for responsive design
+    const theme = (typeof useTheme === 'function') ? useTheme() : { palette: { mode: 'light' } };
+    const isDark = theme?.palette?.mode === 'dark';
+
+    // Initialize notes with default positions
+    const [stickyNotes, setStickyNotes] = useState(() => {
+      if (notes && notes.length > 0) {
+        return notes.map((note, index) => ({
+          id: note.id || `note-${Date.now()}-${index}`,
+          text: note.text || note.content || 'Add your notes...',
+          color: note.color || colorPalette[index % colorPalette.length],
+          x: note.x || 20 + (index % 4) * 220,
+          y: note.y || 20 + Math.floor(index / 4) * 180,
+          width: note.width || 200,
+          height: note.height || 160,
         }));
       }
-      return [
-        {
-          color: colors[0],
-          text: 'Welcome to Sticky Notes!\n\nDouble-click to edit this note.'
-        },
-        {
-          color: colors[1] || colors[0],
-          text: 'You can drag and resize notes!\n\nTry it out.'
-        }
-      ];
-    }, [notes, colors]);
+      return [];
+    });
 
-    const [notesData, setNotesData] = useEmbeddedData(persistKey, { notes: defaultNotes });
-    const currentNotes = notesData?.notes || defaultNotes;
+    // Track dragging state
+    const [dragging, setDragging] = useState(null);
+    const dragRef = useRef(null);
 
-    // Handle note changes
-    const handleBeforeChange = React.useCallback((type, payload, allNotes) => {
-      // This fires before any change happens
-      return payload;
+    // Persist changes
+    const persistChanges = useCallback((newNotes) => {
+      setStickyNotes(newNotes);
+      if (onChange) {
+        onChange(newNotes);
+      }
+    }, [onChange]);
+
+    // Add new note
+    const addNote = useCallback(() => {
+      const colorIndex = stickyNotes.length % colorPalette.length;
+      const newNote = {
+        id: `note-${Date.now()}`,
+        text: 'Add your notes...',
+        color: colorPalette[colorIndex],
+        x: 20 + (stickyNotes.length % 4) * 220,
+        y: 20 + Math.floor(stickyNotes.length / 4) * 180,
+        width: 200,
+        height: 160,
+      };
+      const updatedNotes = [...stickyNotes, newNote];
+      persistChanges(updatedNotes);
+    }, [stickyNotes, persistChanges]);
+
+    // Delete note
+    const deleteNote = useCallback((noteId) => {
+      const updatedNotes = stickyNotes.filter(note => note.id !== noteId);
+      persistChanges(updatedNotes);
+    }, [stickyNotes, persistChanges]);
+
+    // Update note text
+    const updateNoteText = useCallback((noteId, newText) => {
+      const updatedNotes = stickyNotes.map(note =>
+        note.id === noteId ? { ...note, text: newText } : note
+      );
+      persistChanges(updatedNotes);
+    }, [stickyNotes, persistChanges]);
+
+    // Handle drag start
+    const handleMouseDown = useCallback((e, note) => {
+      e.preventDefault();
+      const rect = e.currentTarget.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+      
+      setDragging({
+        id: note.id,
+        offsetX,
+        offsetY,
+        startX: e.clientX,
+        startY: e.clientY,
+      });
     }, []);
 
-    const handleChange = React.useCallback((type, payload, allNotes) => {
-      // Update our embedded data
-      setNotesData({ ...notesData, notes: allNotes });
-      
-      // Call appropriate callback based on action type
-      if (type === 'add' && onCreate) {
-        onCreate(payload);
-      } else if (type === 'delete' && onDelete) {
-        onDelete(payload.id);
-      } else if (type === 'edit' && onUpdate) {
-        onUpdate(payload.id, payload);
-      } else if (type === 'move' && onMove) {
-        onMove(payload.id, { x: payload.x, y: payload.y });
+    // Handle drag
+    const handleMouseMove = useCallback((e) => {
+      if (!dragging) return;
+
+      const deltaX = e.clientX - dragging.startX;
+      const deltaY = e.clientY - dragging.startY;
+
+      const updatedNotes = stickyNotes.map(note =>
+        note.id === dragging.id
+          ? {
+              ...note,
+              x: Math.max(0, note.x + deltaX),
+              y: Math.max(0, note.y + deltaY),
+            }
+          : note
+      );
+
+      setStickyNotes(updatedNotes);
+      setDragging(prev => ({
+        ...prev,
+        startX: e.clientX,
+        startY: e.clientY,
+      }));
+    }, [dragging, stickyNotes]);
+
+    // Handle drag end
+    const handleMouseUp = useCallback(() => {
+      if (dragging) {
+        setDragging(null);
+        // Persist final position
+        if (onChange) {
+          onChange(stickyNotes);
+        }
       }
-    }, [notesData, setNotesData, onCreate, onDelete, onUpdate, onMove]);
+    }, [dragging, stickyNotes, onChange]);
+
+    // Add event listeners for drag
+    useEffect(() => {
+      if (dragging) {
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        return () => {
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+        };
+      }
+    }, [dragging, handleMouseMove, handleMouseUp]);
 
     return React.createElement(Box, {
-      sx: { 
+      sx: {
+        position: 'relative',
         width: '100%',
-        minHeight: '500px',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '12px',
-        padding: '20px',
-        '& .react-sticky-notes': {
-          width: '100%',
-          height: '100%'
-        }
+        height: containerHeight,
+        backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
+        borderRadius: 2,
+        overflow: 'hidden',
+        userSelect: 'none',
       },
       ...otherProps
     }, [
-      React.createElement(ReactStickyNotes, {
-        key: 'sticky-notes',
-        sessionKey,
-        colors,
-        notes: currentNotes,
-        containerWidth,
-        containerHeight,
-        noteWidth,
-        noteHeight,
-        footer,
-        onBeforeChange: handleBeforeChange,
-        onChange: handleChange
-      })
+      // Add button in top right
+      React.createElement(IconButton, {
+        key: 'add-btn',
+        onClick: addNote,
+        sx: {
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          zIndex: 1000,
+          backgroundColor: isDark ? '#333' : '#fff',
+          color: isDark ? '#fff' : '#333',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          '&:hover': {
+            backgroundColor: isDark ? '#444' : '#f0f0f0',
+          },
+        }
+      }, React.createElement(AddIcon)),
+
+      // Render all sticky notes
+      ...stickyNotes.map((note) => React.createElement(Paper, {
+        key: note.id,
+        sx: {
+          position: 'absolute',
+          left: note.x,
+          top: note.y,
+          width: note.width,
+          height: note.height,
+          backgroundColor: note.color.bg,
+          cursor: dragging?.id === note.id ? 'grabbing' : 'grab',
+          userSelect: 'none',
+          borderRadius: 2,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          overflow: 'hidden',
+          border: '1px solid rgba(0,0,0,0.1)',
+          transition: dragging?.id === note.id ? 'none' : 'box-shadow 0.2s',
+          '&:hover': {
+            boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+          },
+        },
+        elevation: 0,
+        onMouseDown: (e) => handleMouseDown(e, note)
+      }, [
+        // Delete button in top right of note
+        React.createElement(IconButton, {
+          key: 'delete-btn',
+          onClick: (e) => {
+            e.stopPropagation();
+            deleteNote(note.id);
+          },
+          sx: {
+            position: 'absolute',
+            top: 4,
+            right: 4,
+            zIndex: 10,
+            width: 24,
+            height: 24,
+            backgroundColor: 'rgba(0,0,0,0.1)',
+            color: note.color.text,
+            '&:hover': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+            },
+          }
+        }, React.createElement(CloseIcon, { sx: { fontSize: 16 } })),
+
+        // Note content textarea
+        React.createElement('textarea', {
+          key: 'content',
+          value: note.text,
+          onChange: (e) => updateNoteText(note.id, e.target.value),
+          onClick: (e) => e.stopPropagation(),
+          onMouseDown: (e) => e.stopPropagation(),
+          style: {
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            outline: 'none',
+            resize: 'none',
+            backgroundColor: 'transparent',
+            color: note.color.text,
+            padding: '12px',
+            fontSize: '14px',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            lineHeight: '1.4',
+          },
+          placeholder: 'Add your notes...'
+        })
+      ]))
     ]);
   },
-            sx: { py: 1, px: 2, height: 'calc(100% - 64px)', overflow: 'hidden' }
-          },
-            React.createElement('textarea', {
-              value: note.text || '',
-              onChange: (e) => {
-                e.stopPropagation();
-                handleNoteUpdate(note.id, { text: e.target.value });
-              },
-              onFocus: (e) => {
-                e.stopPropagation();
-                setSelectedNote(note.id);
-              },
-              onClick: (e) => e.stopPropagation(),
-              placeholder: 'Type your note here...',
-              style: {
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                outline: 'none',
-                backgroundColor: 'transparent',
-                resize: 'none',
-                fontFamily: 'inherit',
-                fontSize: '14px',
-                color: '#333',
-                padding: 0
-              }
-            })
-          )
-        ])
-      ))
+            cursor: 'move',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 1,
+            height: 28,
+            bgcolor: 'rgba(0,0,0,0.06)',
+          }
+        }, [
+          React.createElement(Typography, { key: 't', variant: 'caption', sx: { fontWeight: 600 } }, 'Sticky'),
+          React.createElement(IconButton, { key: 'x', size: 'small', onClick: () => deleteNote(note.id) }, React.createElement(CloseIcon, null))
+        ]),
+        React.createElement(Box, { key: 'body', sx: { flex: 1, p: 1 } },
+          React.createElement('textarea', {
+            value: note.text || '',
+            onChange: (e) => updateNote(note.id, { text: e.target.value }),
+            style: {
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              outline: 'none',
+              resize: 'none',
+              background: 'transparent',
+              font: '14px/1.4 ui-sans-serif, system-ui, -apple-system',
+              color: '#111',
+            }
+          })
+        )
+      ])),
     ]);
   },
 
@@ -1328,17 +1213,27 @@ const Templates = {
   // Executive OKR tracker (objectives and key results)
   OKRTracker: (props) => {
     const { objectives = [], persistKey = 'okr-tracker' } = props || {};
-    const [data] = useEmbeddedData(persistKey, { objectives });
-    const rows = (Array.isArray(data?.objectives) && data.objectives.length ? data.objectives : objectives).map((r, i) => ({ id: r.id ?? i+1, ...r }));
+    const [data, setData] = useEmbeddedData(persistKey, { objectives });
+    const source = Array.isArray(data?.objectives) && data.objectives.length ? data.objectives : objectives;
+    const rows = source.map((r, i) => ({ id: r.id ?? 'okr-' + (i+1), ...r }));
     const columns = [
       { field: 'objective', headerName: 'Objective', flex: 2, minWidth: 160 },
       { field: 'key_result', headerName: 'Key Result', flex: 2, minWidth: 160 },
       { field: 'owner', headerName: 'Owner', flex: 1, minWidth: 120 },
       { field: 'progress', headerName: 'Progress %', flex: 1, minWidth: 120, type: 'number' },
     ];
+    const addRow = () => {
+      const next = [...source, { id: 'okr-' + Date.now(), objective: '', key_result: '', owner: '', progress: 0 }];
+      setData({ ...(data || {}), objectives: next });
+    };
     return (
       React.createElement(Paper, { sx: { p: 1 } },
-        React.createElement(DataGrid, { autoHeight: true, density: 'compact', rows, columns, disableRowSelectionOnClick: true })
+        React.createElement(Stack, { spacing: 1 },
+          React.createElement(Stack, { direction: 'row', justifyContent: 'flex-end' },
+            React.createElement(Button, { variant: 'contained', size: 'small', startIcon: React.createElement(AddIcon, null), onClick: addRow }, 'Add Row')
+          ),
+          React.createElement(DataGrid, { autoHeight: true, density: 'compact', rows, columns, disableRowSelectionOnClick: true })
+        )
       )
     );
   },
@@ -1346,8 +1241,9 @@ const Templates = {
   // HR leave requests manager
   HRLeave: (props) => {
     const { requests = [], persistKey = 'hr-leave' } = props || {};
-    const [data] = useEmbeddedData(persistKey, { requests });
-    const rows = (Array.isArray(data?.requests) && data.requests.length ? data.requests : requests).map((r, i) => ({ id: r.id ?? i+1, ...r }));
+    const [data, setData] = useEmbeddedData(persistKey, { requests });
+    const source = Array.isArray(data?.requests) && data.requests.length ? data.requests : requests;
+    const rows = source.map((r, i) => ({ id: r.id ?? 'leave-' + (i+1), ...r }));
     const columns = [
       { field: 'employee', headerName: 'Employee', flex: 1.2, minWidth: 140 },
       { field: 'type', headerName: 'Type', flex: 1, minWidth: 120 },
@@ -1355,14 +1251,25 @@ const Templates = {
       { field: 'end', headerName: 'End', flex: 1, minWidth: 120 },
       { field: 'status', headerName: 'Status', flex: 1, minWidth: 120 },
     ];
+    const addRow = () => {
+      const next = [...source, { id: 'leave-' + Date.now(), employee: '', type: '', start: '', end: '', status: '' }];
+      setData({ ...(data || {}), requests: next });
+    };
     return (
       React.createElement(Paper, { sx: { p: 1 } },
-        React.createElement(DataGrid, { autoHeight: true, density: 'compact', rows, columns, disableRowSelectionOnClick: true })
+        React.createElement(Stack, { spacing: 1 },
+          React.createElement(Stack, { direction: 'row', justifyContent: 'flex-end' },
+            React.createElement(Button, { variant: 'contained', size: 'small', startIcon: React.createElement(AddIcon, null), onClick: addRow }, 'Add Row')
+          ),
+          React.createElement(DataGrid, { autoHeight: true, density: 'compact', rows, columns, disableRowSelectionOnClick: true })
+        )
       )
     );
   },
 };
 `;
+
+import { extractFirstFence, looksLikeReactComponent, cleanupReactDeclarations } from './react-renderer/utils';
 
 class ReactComponentRenderer extends React.Component {
   constructor(props) {
@@ -1394,23 +1301,7 @@ class ReactComponentRenderer extends React.Component {
     }
   };
 
-  extractFirstFence = (text) => {
-    const fence = /```(?:tsx|jsx|typescript|javascript|ts|js)?\s*([\s\S]*?)```/i.exec(text || '');
-    if (fence && fence[1]) {
-      return fence[1];
-    }
-    let cleaned = String(text || '').trim();
-    cleaned = cleaned.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
-    return cleaned;
-  };
-
-  looksLikeReactComponent = (src) => {
-    if (!src) return false;
-    const hasExportDefault = /export\s+default\s+/.test(src);
-    const looksLikeJSX = /<\w[\s\S]*>/.test(src) || /React\.createElement\(/.test(src);
-    const explicitComponent = /(function\s+\w+\s*\(|const\s+\w+\s*=\s*(?:\([^)]*\)\s*=>|function\s*\()|class\s+\w+\s+extends\s+React\.Component)/.test(src);
-    return hasExportDefault || explicitComponent || looksLikeJSX;
-  };
+  // helpers imported from ./react-renderer/utils
 
   renderComponent = async () => {
     const { componentCode, project, viewName } = this.props;
@@ -1434,7 +1325,16 @@ class ReactComponentRenderer extends React.Component {
   };
 
   createComponentFromCode = async (raw, projectId, viewName) => {
-    let src = this.extractFirstFence(raw);
+    let src = extractFirstFence(raw);
+
+    // Simple cache to avoid re-transforming the same code repeatedly (prevents OOM)
+    const globalCache = (typeof window !== 'undefined')
+      ? (window.__aiMicroAppCache || (window.__aiMicroAppCache = new Map()))
+      : null;
+    const cacheKey = 'v3:' + (src || '');
+    if (globalCache && globalCache.has(cacheKey)) {
+      return globalCache.get(cacheKey);
+    }
     let extractedEmbeddedData = {};
 
     // More robust regex to capture the complete embedded data object
@@ -1463,6 +1363,9 @@ class ReactComponentRenderer extends React.Component {
       src = src.replace(embeddedMatch[0], '');
     }
 
+    // FIX: Clean up React declarations BEFORE Babel and other processing
+    src = cleanupReactDeclarations(src);
+
     src = src.replace(/(^|\n)\s*import[^;]+;?/g, '\n');
     src = src.replace(/(^|\n)\s*export\s+(?!default)[^;]+;?/g, '\n');
 
@@ -1475,7 +1378,6 @@ class ReactComponentRenderer extends React.Component {
     src = src.replace(/<\/(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)>/g, '</$1Icon>');
 
     // Remove raw icon-name text used as labels (e.g., >SaveIcon< → >Save<)
-    // This avoids buttons rendering literal strings like "SaveIcon" while keeping readable labels.
     src = src.replace(/>(\s*)(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)Icon(\s*)</g, '>$1$2$3<');
 
     // Map string placeholders like startIcon="add icon" or startIcon="Add icn" to actual icon components
@@ -1543,9 +1445,9 @@ class ReactComponentRenderer extends React.Component {
       src = `export default function GeneratedComponent(){\n  const __html = ${JSON.stringify(safe)};\n  return <div style={{ width: '100%' }} dangerouslySetInnerHTML={{ __html }} />;\n}`;
     }
 
-    if (!this.looksLikeReactComponent(src)) {
+    if (!looksLikeReactComponent(src)) {
       const safeText = String(src || '').slice(0, 20000);
-      src = `export default function GeneratedComponent(){\n  const __text = ${JSON.stringify(safeText)};\n  return <pre style={{whiteSpace:'pre-wrap', fontFamily:'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 12, lineHeight: 1.5, padding: 12, background: '#fafafa', border: '1px solid #eee', borderRadius: 8}}>{__text}</pre>;\n}`;
+      src = `export default function GeneratedComponent(){\n  const __text = ${JSON.stringify(safeText)};\n  return <pre style={{whiteSpace:'pre-wrap', fontFamily:'ui-monospace, SFMono-Regular, Menlo, monospace'}}>{__text}</pre>;\n}`;
     }
 
     let componentName = 'GeneratedComponent';
@@ -1585,63 +1487,85 @@ class ReactComponentRenderer extends React.Component {
       src += `\nexport default ${componentName};`;
     }
 
-    // Remove React imports BEFORE Babel transformation since React is provided by factory function
-    console.log('[ReactComponentRenderer] Original source before React import removal:', src.substring(0, 300));
-    src = src.replace(/import\s+React[^;]*;?\s*/gi, '');
-    src = src.replace(/import\s*{[^}]*}\s*from\s*['"]react['"];?\s*/gi, '');
-    console.log('[ReactComponentRenderer] Source after React import removal:', src.substring(0, 300));
+    // console.log('[ReactComponentRenderer] Original source before React import removal:', src.substring(0, 300));
+    src = cleanupReactDeclarations(src);
+    // console.log('[ReactComponentRenderer] Source after React import removal:', src.substring(0, 300));
 
     src = src.replace(/(^|\n)\s*export\s+default\s+/g, '\n');
 
-    const BabelStandalone = await import('@babel/standalone');
-    const babel = BabelStandalone?.default || BabelStandalone;
-
-    const result = babel.transform(src, {
-      filename: 'file.tsx',
-      presets: [
-        ['react', { runtime: 'classic', development: false }],
-        'typescript',
-      ],
-      sourceType: 'module',
-      comments: false,
-      compact: false,
-    });
-
-    let transformed = result.code || '';
-
-    // Debug log to see transformed code after Babel
-    console.log('[ReactComponentRenderer] Code after Babel transformation:', transformed.substring(0, 300));
-
-    // Remove ALL React imports/declarations that Babel might have added
-    // Remove import statements for React
-    transformed = transformed.replace(/import\s+React[^;]*;?\s*/gi, '');
-    transformed = transformed.replace(/import\s*{[^}]*}\s*from\s*['"]react['"];?\s*/gi, '');
-    
-    // Remove React variable declarations (const React = ...)
-    transformed = transformed.replace(/(^|\n)\s*(?:const|let|var)\s+React\s*=\s*[^\n;]+;?\s*/g, '\n');
-    
-    // Remove React function declarations (function React())
-    transformed = transformed.replace(/(^|\n)\s*function\s+React\s*\([^)]*\)\s*\{[^}]*\}\s*/g, '\n');
-    
-    // Debug log after React cleanup
-    console.log('[ReactComponentRenderer] Code after React cleanup:', transformed.substring(0, 300));
-    
-    // Final check for any remaining React declarations
-    if (/\bReact\s*=/.test(transformed)) {
-      console.error('[ReactComponentRenderer] WARNING: React assignment still found in transformed code!');
-      console.log('[ReactComponentRenderer] Problematic code section:', transformed.match(/.*React\s*=.*/g));
+    // Load Babel in a way that works across bundlers (UMD/ESM)
+    // Use a singleton so we don't re-import / re-inject Babel repeatedly
+    let babel = (typeof window !== 'undefined' ? (window.__BabelSingleton || window.Babel) : null);
+    if (!babel || typeof babel.transform !== 'function') {
+      try {
+        if (typeof window !== 'undefined' && window.__BabelPromise) {
+          await window.__BabelPromise;
+        } else {
+          const p = import('@babel/standalone').then((B) => {
+            const inst = B?.default || B?.Babel || B || (typeof window !== 'undefined' ? window.Babel : null);
+            if (typeof window !== 'undefined') window.__BabelSingleton = inst;
+            return inst;
+          }).catch(() => (typeof window !== 'undefined' ? window.Babel : null));
+          if (typeof window !== 'undefined') window.__BabelPromise = p;
+          babel = await p;
+        }
+      } catch (_) {
+        babel = (typeof window !== 'undefined' ? window.Babel : null);
+      }
     }
-    if (/\bconst\s+React\b|\blet\s+React\b|\bvar\s+React\b/.test(transformed)) {
-      console.error('[ReactComponentRenderer] WARNING: React declaration still found in transformed code!');
-      console.log('[ReactComponentRenderer] Problematic code section:', transformed.match(/.*(?:const|let|var)\s+React.*/g));
+
+    if (!babel || typeof babel.transform !== 'function') {
+      // As a last resort, inject from CDN so JSX can be compiled client-side
+      if (typeof document !== 'undefined') {
+        await (window.__BabelCdnPromise ||= new Promise((resolve) => {
+          if (window.Babel && typeof window.Babel.transform === 'function') return resolve();
+          const existing = document.querySelector('script[data-babel-standalone]');
+          if (existing) { existing.addEventListener('load', () => resolve()); return; }
+          const s = document.createElement('script');
+          s.src = 'https://unpkg.com/@babel/standalone/babel.min.js';
+          s.async = true; s.dataset.babelStandalone = '1';
+          s.onload = resolve; s.onerror = resolve; document.head.appendChild(s);
+        }));
+        babel = window.Babel; if (typeof window !== 'undefined') window.__BabelSingleton = babel;
+      }
     }
+
+    let transformed = '';
+    const needsJSXTransform = /<\w|react\.createelement\(/i.test(src);
+    if (babel && typeof babel.transform === 'function') {
+      const result = babel.transform(src, {
+        filename: 'file.tsx',
+        presets: [
+          ['react', { runtime: 'classic', development: false }],
+          'typescript',
+        ],
+        sourceType: 'module',
+        comments: false,
+        compact: false,
+      });
+      transformed = (result && result.code) || src;
+    } else {
+      // If Babel couldn't be loaded, only proceed without transform for code that doesn't use JSX
+      transformed = needsJSXTransform ? '' : src;
+      if (!transformed) {
+        throw new Error('Babel unavailable to transform JSX');
+      }
+    }
+
+    // console.log('[ReactComponentRenderer] Code after Babel transformation:', transformed.substring(0, 300));
+
+    // FIX: CRITICAL - Clean up React declarations AFTER Babel transformation
+    transformed = cleanupReactDeclarations(transformed);
+
+    // console.log('[ReactComponentRenderer] Code after final React cleanup:', transformed.substring(0, 300));
 
     transformed = transformed.replace(/(^|\n)\s*export\s+[^;\n]*;?/g, '');
 
     const designTokensLiteral = JSON.stringify(DESIGN_TOKENS, null, 2);
 
     let factoryCode = `
-console.log('[Factory] React provided:', typeof React, React?.version);
+// Bind React from the injected argument without polluting globals
+const React = __React || (typeof window !== 'undefined' ? window.React : undefined);
 const { useState, useEffect, useMemo, useCallback, useRef, useReducer, useLayoutEffect } = React;
 const designTokens = ${designTokensLiteral};
 ${STYLE_UTILS_SNIPPET}
@@ -1820,6 +1744,20 @@ const ensureExternalStylesheet = (href) => {
 const calendarLocalizerInstance = calendarLocalizer;
 
 const externalFactoryCache = window.__externalFactoryCache || (window.__externalFactoryCache = {});
+// Provide a host-managed dynamic import helper so evaluated code can load
+// heavy optional libs (Vite will rewrite this import correctly).
+// Removed external sticky-notes package loader; we use local implementation instead
+// Loader for react-rnd (drag + resize)
+if (typeof window !== 'undefined' && typeof window.__loadReactRnd !== 'function') {
+  window.__loadReactRnd = async () => {
+    try {
+      return await import('react-rnd');
+    } catch (e) {
+      return null;
+    }
+  };
+}
+
 const externalFactoryLoaders = {
   'react-big-calendar': async () => {
     if (!externalFactoryCache['react-big-calendar']) {
@@ -1831,17 +1769,30 @@ const externalFactoryLoaders = {
     }
     return externalFactoryCache['react-big-calendar'];
   },
-  '@react-latest-ui/react-sticky-notes': async () => {
-    if (externalFactoryCache['@react-latest-ui/react-sticky-notes']) return externalFactoryCache['@react-latest-ui/react-sticky-notes'];
-    
-    // Import the @react-latest-ui/react-sticky-notes package
-    const module = await import('@react-latest-ui/react-sticky-notes');
-    
-    // This package is self-contained and doesn't require external stylesheets
-    
-    const ReactStickyNotesComponent = module.default || module.ReactStickyNotes || module;
-    const factory = { ReactStickyNotes: ReactStickyNotesComponent, StickyNotes: ReactStickyNotesComponent, module };
-    externalFactoryCache['@react-latest-ui/react-sticky-notes'] = factory;
+  'react-rnd': async () => {
+    if (externalFactoryCache['react-rnd']) return externalFactoryCache['react-rnd'];
+    let module = null;
+    if (typeof window !== 'undefined' && typeof window.__loadReactRnd === 'function') {
+      module = await window.__loadReactRnd();
+    }
+    if (module) {
+      const Rnd = module.Rnd || module.default || null;
+      const factory = { Rnd, module };
+      externalFactoryCache['react-rnd'] = factory;
+      return factory;
+    }
+    externalFactoryCache['react-rnd'] = { Rnd: null };
+    return externalFactoryCache['react-rnd'];
+  },
+  'local-sticky-notes': async () => {
+    if (externalFactoryCache['local-sticky-notes']) return externalFactoryCache['local-sticky-notes'];
+    let module = null;
+    if (typeof window !== 'undefined' && typeof window.__loadLocalStickyNotes === 'function') {
+      module = await window.__loadLocalStickyNotes();
+    }
+    const StickyNotesBoard = module?.default || null;
+    const factory = { StickyNotesBoard };
+    externalFactoryCache['local-sticky-notes'] = factory;
     return factory;
   },
 };
@@ -1855,19 +1806,37 @@ const useExternalFactory = (name, deps = []) => {
       setFactory(externalFactoryCache[name]);
       return () => { active = false; };
     }
-    const loader = externalFactoryLoaders[name];
+    let key = name;
+    const loader = externalFactoryLoaders[key];
     if (!loader) {
-      console.warn('No external factory loader registered for', name);
+      // Graceful fallback for any unknown sticky packages
+      if (/sticky/i.test(key)) {
+        const ReactStickyNotes = (props) => React.createElement(Templates.StickyNotes, props);
+        const shim = { ReactStickyNotes, StickyNotes: ReactStickyNotes };
+        externalFactoryCache[key] = shim;
+        setFactory(shim);
+      } else {
+        console.warn('No external factory loader registered for', key);
+      }
       return () => { active = false; };
     }
     loader()
       .then((mod) => {
         if (!active) return;
-        externalFactoryCache[name] = mod;
+        externalFactoryCache[key] = mod;
         setFactory(mod);
       })
       .catch((error) => {
-        console.error('Failed to load external factory', name, error);
+        // On failure, downgrade sticky packages to the built-in implementation
+        if (/sticky/i.test(key)) {
+          const ReactStickyNotes = (props) => React.createElement(Templates.StickyNotes, props);
+          const shim = { ReactStickyNotes, StickyNotes: ReactStickyNotes };
+          externalFactoryCache[key] = shim;
+          setFactory(shim);
+          console.warn('Using built-in StickyNotes shim for', key, 'due to load error.');
+        } else {
+          console.error('Failed to load external factory', key, error);
+        }
       });
     return () => { active = false; };
   }, [name, ...deps]);
@@ -1924,11 +1893,11 @@ const ProfessionalThemeWrapper = ({ children }) => {
       },
       MuiPaper: {
         defaultProps: { elevation: 0 },
-        styleOverrides: { root: { boxShadow: 'none', backgroundImage: 'none', backgroundColor: surface.paper, color: textColors.primary, border: '1px solid ' + (isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)') } },
+        styleOverrides: { root: { boxShadow: 'none', backgroundImage: 'none', backgroundColor: surface.paper, color: textColors.primary, border: '1px solid ' + (isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.12)') } },
       },
       MuiCard: {
         defaultProps: { elevation: 0 },
-        styleOverrides: { root: { boxShadow: 'none', backgroundImage: 'none', backgroundColor: surface.paper, color: textColors.primary, border: '1px solid ' + (isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)') } },
+        styleOverrides: { root: { boxShadow: 'none', backgroundImage: 'none', backgroundColor: surface.paper, color: textColors.primary, border: '1px solid ' + (isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.12)') } },
       },
       MuiButton: {
         defaultProps: { size: 'small', disableElevation: true },
@@ -2067,13 +2036,13 @@ ${transformed}
 
 // Allow EMBEDDED_DATA to request a Template render without requiring the model to write boilerplate
 let FinalComponent = ${componentName};
-try {
-  const tplName = (embeddedData && (embeddedData.template || embeddedData.Template || embeddedData.template_name)) || null;
-  if (tplName && Templates && typeof Templates[tplName] === 'function') {
-    const cfg = embeddedData.config || embeddedData.templateConfig || {};
-    FinalComponent = (props) => React.createElement(Templates[tplName], { ...cfg, ...props });
-  }
-} catch (e) { /* ignore template wiring errors */ }
+    try {
+      const tplName = (embeddedData && (embeddedData.template || embeddedData.Template || embeddedData.template_name)) || null;
+      if (tplName && Templates && typeof Templates[tplName] === 'function') {
+        const cfg = embeddedData.config || embeddedData.templateConfig || {};
+        FinalComponent = (props) => React.createElement(Templates[tplName], { ...cfg, ...props });
+      }
+    } catch (e) { /* ignore template wiring errors */ }
 
 const __Themed = (props) => (
   React.createElement(ProfessionalThemeWrapper, null,
@@ -2081,23 +2050,18 @@ const __Themed = (props) => (
   )
 );
 
-return __Themed;
+    return __Themed;
 `;
 
-    const reactDeclarationPattern = /(^|\n)\s*(?:const|let|var)\s+React\s*=\s*[^\n;]+;?/g;
-    if (reactDeclarationPattern.test(factoryCode)) {
-      factoryCode = factoryCode.replace(reactDeclarationPattern, '\n');
-      console.warn('[ReactComponentRenderer] Removed React redeclaration inside factoryCode');
-    }
-
-    const reactAssignmentPattern = /(^|\n)\s*React\s*=\s*[^\n;]+;?/g;
-    if (reactAssignmentPattern.test(factoryCode)) {
-      factoryCode = factoryCode.replace(reactAssignmentPattern, '\n');
-      console.warn('[ReactComponentRenderer] Removed React reassignment inside factoryCode');
-    }
+    try {
+      const occurrences = (factoryCode.match(/\bconst\s+React\s*=/g) || []).length + (factoryCode.match(/\bvar\s+React\s*=/g) || []).length + (factoryCode.match(/\blet\s+React\s*=/g) || []).length;
+      // Log only a small head to avoid console noise
+      console.log('[ReactComponentRenderer] factoryCode React decl count:', occurrences);
+      console.log('[ReactComponentRenderer] factoryCode head:', factoryCode.substring(0, 240));
+    } catch (_) { /* noop */ }
 
     const factory = new Function(
-      'React',
+      '__React',
       'RBCalendar',
       'RBViews',
       'calendarLocalizer',
@@ -2152,7 +2116,7 @@ return __Themed;
       locales: { 'en-US': enUSLocale }
     });
 
-    return factory(
+    const __ThemedFromFactory = factory(
       React,
       RBCalendar,
       RBViews,
@@ -2172,6 +2136,10 @@ return __Themed;
       projectId,
       extractedEmbeddedData,
     );
+    if (globalCache && !globalCache.has(cacheKey)) {
+      try { globalCache.set(cacheKey, __ThemedFromFactory); } catch (_) {}
+    }
+    return __ThemedFromFactory;
   };
 
   render() {
