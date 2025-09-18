@@ -1334,6 +1334,7 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
                 <>
                     <Tooltip title={t('buttons.edit')} arrow>
                         <IconButton
+                            component="span"
                             size="small"
                             onClick={handleEdit}
                             aria-label="Edit project"
@@ -1351,6 +1352,7 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
                     </Tooltip>
                     <Tooltip title={t('buttons.delete')} arrow>
                         <IconButton
+                            component="span"
                             size="small"
                             onClick={handleDelete}
                             aria-label="Delete project"
@@ -1371,6 +1373,7 @@ const ProjectActionButtons = memo(({ project, onDelete }) => {
             ) : (
                 <Tooltip title={t('dashboard.leaveProject', 'Leave project')} arrow>
                     <Button
+                        component="span"
                         size="small"
                         variant="outlined"
                         onClick={handleLeave}

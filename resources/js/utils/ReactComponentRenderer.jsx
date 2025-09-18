@@ -1608,15 +1608,29 @@ class ReactComponentRenderer extends React.Component {
     });
 
     let transformed = result.code || '';
-    
+
     // Debug log to see transformed code after Babel
     console.log('[ReactComponentRenderer] Code after Babel transformation:', transformed.substring(0, 300));
+
+    // Remove ALL React imports/declarations that Babel might have added
+    // Remove import statements for React
+    transformed = transformed.replace(/import\s+React[^;]*;?\s*/gi, '');
+    transformed = transformed.replace(/import\s*{[^}]*}\s*from\s*['"]react['"];?\s*/gi, '');
     
+    // Remove React variable declarations (const React = ...)
+    transformed = transformed.replace(/(^|\n)\s*(?:const|let|var)\s+React\s*=\s*[^\n;]+;?\s*/g, '\n');
+    
+    // Remove React function declarations (function React())
+    transformed = transformed.replace(/(^|\n)\s*function\s+React\s*\([^)]*\)\s*\{[^}]*\}\s*/g, '\n');
+    
+    // Debug log after React cleanup
+    console.log('[ReactComponentRenderer] Code after React cleanup:', transformed.substring(0, 300));
+
     transformed = transformed.replace(/(^|\n)\s*export\s+[^;\n]*;?/g, '');
 
     const designTokensLiteral = JSON.stringify(DESIGN_TOKENS, null, 2);
 
-    const factoryCode = `
+    let factoryCode = `
 const { useState, useEffect, useMemo, useCallback, useRef, useReducer, useLayoutEffect } = React;
 const designTokens = ${designTokensLiteral};
 ${STYLE_UTILS_SNIPPET}
@@ -2058,6 +2072,18 @@ const __Themed = (props) => (
 
 return __Themed;
 `;
+
+    const reactDeclarationPattern = /(^|\n)\s*(?:const|let|var)\s+React\s*=\s*[^\n;]+;?/g;
+    if (reactDeclarationPattern.test(factoryCode)) {
+      factoryCode = factoryCode.replace(reactDeclarationPattern, '\n');
+      console.warn('[ReactComponentRenderer] Removed React redeclaration inside factoryCode');
+    }
+
+    const reactAssignmentPattern = /(^|\n)\s*React\s*=\s*[^\n;]+;?/g;
+    if (reactAssignmentPattern.test(factoryCode)) {
+      factoryCode = factoryCode.replace(reactAssignmentPattern, '\n');
+      console.warn('[ReactComponentRenderer] Removed React reassignment inside factoryCode');
+    }
 
     const factory = new Function(
       'React',
