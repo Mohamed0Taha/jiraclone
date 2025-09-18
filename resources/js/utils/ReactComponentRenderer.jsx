@@ -960,7 +960,7 @@ const Templates = {
     const addNote = useCallback(() => {
       const colorIndex = stickyNotes.length % colorPalette.length;
       const newNote = {
-        id: `note-${Date.now()}`,
+        id: 'note-' + Date.now(),
         text: 'Add your notes...',
         color: colorPalette[colorIndex],
         x: 20 + (stickyNotes.length % 4) * 220,
