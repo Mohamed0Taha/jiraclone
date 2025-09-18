@@ -1625,12 +1625,23 @@ class ReactComponentRenderer extends React.Component {
     
     // Debug log after React cleanup
     console.log('[ReactComponentRenderer] Code after React cleanup:', transformed.substring(0, 300));
+    
+    // Final check for any remaining React declarations
+    if (/\bReact\s*=/.test(transformed)) {
+      console.error('[ReactComponentRenderer] WARNING: React assignment still found in transformed code!');
+      console.log('[ReactComponentRenderer] Problematic code section:', transformed.match(/.*React\s*=.*/g));
+    }
+    if (/\bconst\s+React\b|\blet\s+React\b|\bvar\s+React\b/.test(transformed)) {
+      console.error('[ReactComponentRenderer] WARNING: React declaration still found in transformed code!');
+      console.log('[ReactComponentRenderer] Problematic code section:', transformed.match(/.*(?:const|let|var)\s+React.*/g));
+    }
 
     transformed = transformed.replace(/(^|\n)\s*export\s+[^;\n]*;?/g, '');
 
     const designTokensLiteral = JSON.stringify(DESIGN_TOKENS, null, 2);
 
     let factoryCode = `
+console.log('[Factory] React provided:', typeof React, React?.version);
 const { useState, useEffect, useMemo, useCallback, useRef, useReducer, useLayoutEffect } = React;
 const designTokens = ${designTokensLiteral};
 ${STYLE_UTILS_SNIPPET}
