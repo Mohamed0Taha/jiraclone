@@ -932,7 +932,7 @@ const Templates = {
     const [stickyNotes, setStickyNotes] = useState(() => {
       if (notes && notes.length > 0) {
         return notes.map((note, index) => ({
-          id: note.id || `note-${Date.now()}-${index}`,
+          id: note.id || ('note-' + Date.now() + '-' + index),
           text: note.text || note.content || 'Add your notes...',
           color: note.color || colorPalette[index % colorPalette.length],
           x: note.x || 20 + (index % 4) * 220,
@@ -2056,8 +2056,7 @@ const __Themed = (props) => (
     try {
       const occurrences = (factoryCode.match(/\bconst\s+React\s*=/g) || []).length + (factoryCode.match(/\bvar\s+React\s*=/g) || []).length + (factoryCode.match(/\blet\s+React\s*=/g) || []).length;
       // Log only a small head to avoid console noise
-      console.log('[ReactComponentRenderer] factoryCode React decl count:', occurrences);
-      console.log('[ReactComponentRenderer] factoryCode head:', factoryCode.substring(0, 240));
+      // Clean factory code of any React redeclarations
     } catch (_) { /* noop */ }
 
     const factory = new Function(
