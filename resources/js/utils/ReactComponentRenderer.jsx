@@ -1585,6 +1585,12 @@ class ReactComponentRenderer extends React.Component {
       src += `\nexport default ${componentName};`;
     }
 
+    // Remove React imports BEFORE Babel transformation since React is provided by factory function
+    console.log('[ReactComponentRenderer] Original source before React import removal:', src.substring(0, 300));
+    src = src.replace(/import\s+React[^;]*;?\s*/gi, '');
+    src = src.replace(/import\s*{[^}]*}\s*from\s*['"]react['"];?\s*/gi, '');
+    console.log('[ReactComponentRenderer] Source after React import removal:', src.substring(0, 300));
+
     src = src.replace(/(^|\n)\s*export\s+default\s+/g, '\n');
 
     const BabelStandalone = await import('@babel/standalone');
@@ -1602,14 +1608,11 @@ class ReactComponentRenderer extends React.Component {
     });
 
     let transformed = result.code || '';
+    
+    // Debug log to see transformed code after Babel
+    console.log('[ReactComponentRenderer] Code after Babel transformation:', transformed.substring(0, 300));
+    
     transformed = transformed.replace(/(^|\n)\s*export\s+[^;\n]*;?/g, '');
-    // Remove React imports since React is provided by the factory function
-    // Handle: import React from 'react';
-    transformed = transformed.replace(/import\s+React\s*from\s*['"][^'"]*['"];?\s*/g, '');
-    // Handle: import React, { ... } from 'react';
-    transformed = transformed.replace(/import\s+React\s*,\s*\{[^}]*\}\s*from\s*['"]react['"];?\s*/g, '');
-    // Handle: import { ... } from 'react';
-    transformed = transformed.replace(/import\s*\{\s*[^}]*\}\s*from\s*['"]react['"];?\s*/g, '');
 
     const designTokensLiteral = JSON.stringify(DESIGN_TOKENS, null, 2);
 
