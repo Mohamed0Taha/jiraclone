@@ -1,0 +1,150 @@
+/* Custom styles for react-calendar-timeline */
+
+/* Override default styles to match the application theme */
+.react-calendar-timeline .rct-item {
+    border-radius: 8px !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    color: white !important;
+}
+
+/* Hover effects for timeline items */
+.react-calendar-timeline .rct-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.2s ease;
+}
+
+/* Sidebar styling */
+.react-calendar-timeline .rct-sidebar {
+    border-right: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.react-calendar-timeline .rct-sidebar-row {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* Header styling */
+.react-calendar-timeline .rct-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Timeline grid lines */
+.react-calendar-timeline .rct-vertical-lines .rct-vl {
+    border-left: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.react-calendar-timeline .rct-horizontal-lines .rct-hl {
+    border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Current time marker */
+.react-calendar-timeline .rct-cursor-line {
+    background-color: #dc2626 !important;
+    width: 2px !important;
+}
+
+/* Selection and resize handles */
+.react-calendar-timeline .rct-item.rct-item-selected {
+    box-shadow: 0 0 0 2px #2563eb !important;
+}
+
+.react-calendar-timeline .rct-item .rct-item-handler {
+    background: rgba(255, 255, 255, 0.8) !important;
+    border: 1px solid rgba(0, 0, 0, 0.2) !important;
+    border-radius: 3px !important;
+}
+
+.react-calendar-timeline .rct-item .rct-item-handler:hover {
+    background: rgba(255, 255, 255, 1) !important;
+}
+
+/* Scrollbar styling */
+.react-calendar-timeline .rct-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.react-calendar-timeline .rct-scroll::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+}
+
+.react-calendar-timeline .rct-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.react-calendar-timeline .rct-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .react-calendar-timeline .rct-sidebar {
+    background-color: #0f172a !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .react-calendar-timeline .rct-sidebar-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme="dark"] .react-calendar-timeline .rct-header {
+    background-color: #1e293b !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme="dark"] .react-calendar-timeline .rct-vertical-lines .rct-vl {
+    border-left: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="dark"] .react-calendar-timeline .rct-horizontal-lines .rct-hl {
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Custom status color overrides for timeline items */
+.timeline-item-todo {
+    background: linear-gradient(90deg, #64748b, #52616d) !important;
+}
+
+.timeline-item-inprogress {
+    background: linear-gradient(90deg, #0ea5e9, #0284c7) !important;
+}
+
+.timeline-item-review {
+    background: linear-gradient(90deg, #8b5cf6, #7c3aed) !important;
+}
+
+.timeline-item-done {
+    background: linear-gradient(90deg, #10b981, #059669) !important;
+}
+
+/* Animation for item movements */
+.react-calendar-timeline .rct-item.rct-item-moving {
+    transition: all 0.2s ease !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .react-calendar-timeline .rct-sidebar {
+        width: 150px !important;
+    }
+
+    .react-calendar-timeline .rct-sidebar-row {
+        font-size: 11px !important;
+        padding: 6px 8px !important;
+    }
+
+    .react-calendar-timeline .rct-item {
+        font-size: 10px !important;
+    }
+}

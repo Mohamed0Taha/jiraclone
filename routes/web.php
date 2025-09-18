@@ -640,8 +640,8 @@ Route::middleware('auth')->group(function () {
             $result = $generativeUIService->processCustomViewRequest(
                 $project,
                 $userMessage,
+                $request->user()->id, // userId
                 null, // sessionId
-                $request->user()->id,
                 $viewName,
                 $conversationHistory,
                 $projectContext,

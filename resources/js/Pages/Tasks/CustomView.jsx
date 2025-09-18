@@ -38,6 +38,9 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CodeIcon from '@mui/icons-material/Code';
 import BuildIcon from '@mui/icons-material/Build';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import ManageSearchIcon from '@mui/icons-material/ManageSearch';
+import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
 import AssistantChat from './AssistantChat';
 import ReactComponentRenderer from '@/utils/ReactComponentRenderer';
@@ -98,6 +101,10 @@ const shimmer = keyframes`
     background-position: calc(200px + 100%) 0;
   }
 `;
+
+const WORKFLOW_BASE_SEQUENCE = ['analysis', 'design_research', 'generation', 'post_processing'];
+const WORKFLOW_OPTIONAL_STEPS = ['fallback_generation', 'fallback_component'];
+const DEFAULT_WORKFLOW_TOTAL = WORKFLOW_BASE_SEQUENCE.length;
 
 export default function CustomView({ auth, project, tasks, allTasks, users, methodology, viewName }) {
     const { t } = useTranslation();
@@ -252,6 +259,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         onError: (error) => {
             console.error('AI SDK Error:', error);
             showSnackbar('Failed to generate component. Please try again.', 'error');
+            setGenerationProgress(null);
         },
     });
 
@@ -278,6 +286,15 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         if (!chatInput?.trim() || isGenerating || isManuallyGenerating) return;
 
         try {
+            const hasExistingComponent = Boolean(memoizedComponentCode && memoizedComponentCode.trim());
+            setGenerationProgress({
+                step: 1,
+                stage: hasExistingComponent ? 'prompt_preparation' : 'analysis',
+                status: 'in_progress',
+                total: hasExistingComponent ? 4 : 5,
+                details: hasExistingComponent ? 'Preparing update prompt...' : 'Analyzing your request...'
+            });
+
             const userMessage = {
                 role: 'user',
                 content: chatInput.trim(),
@@ -403,12 +420,14 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     console.error('Manual API call error:', error);
                     showSnackbar('Failed to generate component. Please try again.', 'error');
                     setIsManuallyGenerating(false);
+                    setGenerationProgress(null);
                 }
             }
         } catch (error) {
             console.error('Chat submit error:', error);
             showSnackbar('Failed to send message. Please try again.', 'error');
             setIsManuallyGenerating(false);
+            setGenerationProgress(null);
         }
     }
 
@@ -538,24 +557,89 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     };
 
     // Enhanced generation progress with detailed stages
-    const getProgressIcon = (stage) => {
-        switch (stage) {
-            case 1: return <CodeIcon sx={{ color: designTokens.colors.primary }} />;
-            case 2: return <AutoAwesomeIcon sx={{ color: designTokens.colors.accent }} />;
-            case 3: return <BuildIcon sx={{ color: designTokens.colors.warning }} />;
-            case 4: return <RocketLaunchIcon sx={{ color: designTokens.colors.success }} />;
-            default: return <CircularProgress size={20} />;
-        }
+    const progressStageConfig = {
+        analysis: {
+            label: 'Analyzing your requirements...',
+            icon: ManageSearchIcon,
+            color: designTokens.colors.primary,
+        },
+        design_research: {
+            label: 'Reviewing reference designs...',
+            icon: CollectionsBookmarkIcon,
+            color: designTokens.colors.accent,
+        },
+        generation: {
+            label: 'Generating the React experience...',
+            icon: CodeIcon,
+            color: designTokens.colors.warning,
+        },
+        fallback_generation: {
+            label: 'Running guarded fallback generation...',
+            icon: ReportProblemIcon,
+            color: designTokens.colors.warning,
+        },
+        post_processing: {
+            label: 'Polishing with enterprise styling...',
+            icon: BuildIcon,
+            color: designTokens.colors.success,
+        },
+        prompt_preparation: {
+            label: 'Preparing update prompt...',
+            icon: ManageSearchIcon,
+            color: designTokens.colors.primary,
+        },
+        default: {
+            label: 'Processing request...',
+            icon: RocketLaunchIcon,
+            color: designTokens.colors.primary,
+        },
     };
 
-    const getProgressMessage = (stage) => {
-        switch (stage) {
-            case 1: return 'Analyzing your requirements...';
-            case 2: return 'Generating intelligent code...';
-            case 3: return 'Building your application...';
-            case 4: return 'Finalizing and deploying...';
-            default: return 'Processing...';
+    const resolveProgressMeta = (progress) => {
+        if (!progress) {
+            return progressStageConfig.default;
         }
+
+        const stageKey = (progress.stage || progress.step || progress.step_key || progress.status || 'default')
+            .toString()
+            .toLowerCase();
+
+        return progressStageConfig[stageKey] || progressStageConfig.default;
+    };
+
+    const getProgressIcon = (progress) => {
+        const meta = resolveProgressMeta(progress);
+        const IconComponent = meta.icon || RocketLaunchIcon;
+
+        let color = meta.color || designTokens.colors.primary;
+        if (progress?.status === 'failed') {
+            color = designTokens.colors.error;
+        } else if (progress?.status === 'warning') {
+            color = designTokens.colors.warning;
+        } else if (progress?.status === 'completed') {
+            color = designTokens.colors.success;
+        }
+
+        return <IconComponent sx={{ color }} />;
+    };
+
+    const getProgressMessage = (progress) => {
+        if (progress?.details) {
+            return progress.details;
+        }
+        return resolveProgressMeta(progress).label;
+    };
+
+    const getProgressStatusLine = (progress) => {
+        const stageKey = (progress?.stage || progress?.step || 'processing')
+            .toString()
+            .replace(/_/g, ' ')
+            .toLowerCase();
+        const statusLabel = (progress?.status || 'in progress')
+            .toString()
+            .replace(/_/g, ' ')
+            .toLowerCase();
+        return `${stageKey} • ${statusLabel}`;
     };
 
     // Auto-save component code to prevent data loss (optimized)
@@ -673,12 +757,51 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         channel.listen('.custom-view-data-updated', (event) => {
             console.log('[CustomView] Received real-time update:', event);
 
-            // Only update if this is from a different user (avoid echo from own saves)
-            if (event.user?.id !== currentAuth?.id) {
-                console.log('[CustomView] Updating component from real-time data change');
+            if (event.data_key === 'workflow_step') {
+                const payload = event.data || {};
+                const total = Number(payload.total) || 5;
+                const sequence = Number(payload.sequence) || 1;
+                const stageKey = payload.step || payload.stage || payload.step_key || 'analysis';
+                const status = payload.status || 'in_progress';
 
-                // The component code needs to be updated with the new embedded data
-                // Since the backend already embeds the data, we need to reload the component
+                setGenerationProgress((prev) => {
+                    const base = prev || {};
+                    const nextStage = stageKey || base.stage || 'analysis';
+                    const nextStatus = status || base.status || 'in_progress';
+                    const nextDetails = payload.details || base.details || resolveProgressMeta({ stage: nextStage }).label;
+
+                    return {
+                        ...base,
+                        step: sequence,
+                        stage: nextStage,
+                        status: nextStatus,
+                        total,
+                        details: nextDetails,
+                        timestamp: event.timestamp,
+                        step_key: nextStage,
+                    };
+                });
+
+                if (status === 'failed') {
+                    showSnackbar(payload.details || 'Generation encountered an error.', 'error');
+                } else if (status === 'warning' && payload.details) {
+                    showSnackbar(payload.details, 'warning');
+                }
+
+                const completedFinalStage =
+                    (stageKey === 'post_processing' && status === 'completed') ||
+                    (status === 'failed') ||
+                    (sequence >= total && status === 'completed');
+
+                if (completedFinalStage) {
+                    setTimeout(() => setGenerationProgress(null), 1500);
+                }
+
+                return;
+            }
+
+            // Only reload generated component when updates come from collaborators
+            if (event.user?.id !== currentAuth?.id) {
                 const reloadComponent = async () => {
                     try {
                         const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${encodeURIComponent(originalViewName)}`);
@@ -688,7 +811,6 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             setComponentCode(data.html);
                             showSnackbar(`Component updated by ${event.user?.name || 'another user'}`, 'info');
                         } else {
-                            // Handle deletion or missing component gracefully
                             setComponentCode('');
                             setIsPersisted(false);
                             showSnackbar(`Component removed or unavailable${event.user?.name ? ' (by ' + event.user.name + ')' : ''}`, 'info');
@@ -911,19 +1033,22 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                 opacity: 0.5,
                             }
                         }}>
-                            {getProgressIcon(generationProgress?.step)}
+                            {getProgressIcon(generationProgress)}
                         </Box>
 
                         <Box sx={{ width: '100%' }}>
                             <Typography variant="h6" fontWeight="600" color="text.primary" mb={1}>
-                                {getProgressMessage(generationProgress?.step)}
+                                {getProgressMessage(generationProgress)}
                             </Typography>
-                            <Typography variant="body2" color="text.secondary" mb={2}>
-                                Step {generationProgress?.step || 1} of {generationProgress?.total || 4}
+                            <Typography variant="body2" color="text.secondary">
+                                {getProgressStatusLine(generationProgress)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" mb={2} display="block">
+                                Step {generationProgress?.step || 1} of {generationProgress?.total || 5}
                             </Typography>
                             <LinearProgress
                                 variant="determinate"
-                                value={((generationProgress?.step || 1) / (generationProgress?.total || 4)) * 100}
+                                value={((generationProgress?.step || 1) / (generationProgress?.total || 5)) * 100}
                                 sx={{
                                     height: 8,
                                     borderRadius: 4,
@@ -1395,7 +1520,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                             <Stack direction="row" spacing={1} alignItems="center">
                                                 <CircularProgress size={16} />
                                                 <Typography variant="body2" color="text.secondary">
-                                                    {t('customViews.generatingComponent')}
+                                                    {getProgressMessage(generationProgress)}
                                                 </Typography>
                                             </Stack>
                                         </Paper>

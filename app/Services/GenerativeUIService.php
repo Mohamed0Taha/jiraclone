@@ -6,6 +6,11 @@ use App\Models\Project;
 use App\Models\CustomView;
 use App\Events\CustomViewDataUpdated;
 use Illuminate\Support\Facades\Log;
+use App\Services\Generative\BlueprintRegistry;
+use App\Services\Generative\DesignAnalysisService;
+use App\Services\Generative\ImageResearchService;
+use App\Services\Generative\PromptBuilderService;
+use App\Services\Generative\WorkflowNotifier;
 
 /**
  * GenerativeUIService - Uses AI-SDK for creating React-based micro applications
@@ -15,11 +20,251 @@ class GenerativeUIService
 {
     private OpenAIService $openAIService;
     private GoogleImageService $googleImageService;
+    // Refactored helpers (specialized services)
+    private BlueprintRegistry $blueprints;
+    private DesignAnalysisService $designAnalysis;
+    private ImageResearchService $imageResearch;
+    private PromptBuilderService $promptBuilder;
+    private WorkflowNotifier $workflowNotifier;
+    // Smoothing configuration for progress UI
+    private int $minStepDurationMs = 550; // minimum visible duration per step
+    private int $betweenStepPauseMs = 350; // pause after marking a step completed
+    /**
+     * Library of reference design patterns for common micro-app requests.
+     * Each blueprint captures UI, layout, and functional expectations that should
+     * be enforced before code generation begins.
+     */
+    private array $componentBlueprints = [
+        'calculator' => [
+            'labels' => ['calculator', 'loan calculator', 'scientific calculator', 'tip calculator'],
+            'ui_elements' => [
+                'primary result display with high-contrast typography',
+                'secondary expression/history display area',
+                'numeric keypad with digits 0-9 laid out in a 3x4 grid',
+                'operation buttons for add, subtract, multiply, divide, equals',
+                'controls for clear entry, clear all, and backspace operations',
+                'optional advanced functions section (percent, square root, sign toggle)'
+            ],
+            'layout_suggestions' => [
+                'two-zone layout with displays stacked above control grid',
+                'use BeautifulCard for the overall shell with subtle elevation',
+                'justify keypad buttons evenly using Grid or Stack with consistent spacing',
+                'group primary operations with accent styling for quick identification'
+            ],
+            'functional_requirements' => [
+                'support consecutive calculations without forcing clear between operations',
+                'persist history of recent calculations with timestamps and user attribution',
+                'allow both click/tap and keyboard input for digits and operators',
+                'handle divide-by-zero gracefully with user-friendly messaging',
+                'track which authenticated user performed each calculation for collaboration history'
+            ],
+            'design_checklist' => [
+                'display area must feel like a premium calculator (large digits, right-aligned)',
+                'numeric keypad arranged in industry-standard order (7-8-9 on the top row)',
+                'operators styled distinctly using PrimaryButton/SuccessButton variants',
+                'clear controls visually separated from numeric keypad',
+                'history panel or card showing at least the last 5 operations with metadata'
+            ],
+            'structure_outline' => [
+                'Center the experience inside BeautifulCard with ContentContainer background echoing Google Calculator.',
+                'Header strip with calculator label and mode toggles on the left/right.',
+                'Primary display stack containing secondary expression line and bold result line right-aligned.',
+                'Keypad grid using 4 columns x 5 rows: digits 7-9 top row, 4-6 middle, 1-3 bottom, 0 spanning bottom center cells, operators at far right.',
+                'Utility row containing AC, C, backspace, percent, +/- controls styled as secondary buttons.',
+                'Top scientific toggle row (Rad/Deg, Inv, sin, cos, tan, etc.) mirroring the Google scientific calculator layout.',
+                'History panel or collapsible drawer beneath keypad showing recent calculations with timestamps and user attribution.'
+            ],
+            'keywords' => [
+                'modern calculator ui',
+                'material design calculator layout',
+                'financial app keypad interface'
+            ],
+            'preferred_queries' => [
+                'google calculator ui',
+                'google calculator interface'
+            ],
+            'canonical_reference' => 'Google Calculator (current web UI)',
+            'replication_instructions' => [
+                'Adopt the Google Calculator layout: a white elevated card with a soft shadow centered on a neutral background.',
+                'Place the main calculation display across the top with right-aligned digits and a secondary expression line beneath it.',
+                'Arrange digits 7-9, 4-6, 1-3 in three rows with 0 spanning the bottom row; keep operators in a dedicated right column.',
+                'Use rounded rectangular buttons with clear hierarchy: action keys in light grey, primary operators in Google blue (#1A73E8) or orange accents.',
+                'Include dedicated controls for AC/C, backspace, percent, +/- toggles, and ensure keyboard input mirrors button layout.',
+                'Space buttons evenly with 12px gaps and apply subtle hover/active states that mimic Google Material styling.',
+                'Populate the history list with realistic sample calculations including creator name and timestamp metadata.'
+            ],
+            'design_style' => 'sleek financial tool with material-inspired surfaces',
+            'accessibility_notes' => [
+                'ensure buttons have aria-labels for screen readers',
+                'provide focus outlines for keyboard navigation',
+                'announce calculation results via polite live region'
+            ]
+        ],
+        'calendar' => [
+            'labels' => ['calendar', 'event calendar', 'schedule', 'planner', 'agenda'],
+            'ui_elements' => [
+                'monthly grid with weekday headers',
+                'mini month switcher with previous and next controls',
+                'side panel listing upcoming events with times and owners',
+                'event creation modal with title, date range, and participants',
+                'color-coded indicators for event categories or status',
+                'current day highlight and today shortcut button'
+            ],
+            'layout_suggestions' => [
+                'two-column design with calendar grid on left and details panel on right',
+                'sticky header for month navigation and quick actions',
+                'use BeautifulCard framing with subtle dividers between weeks',
+                'maintain consistent cell sizing for all days with responsive wrapping'
+            ],
+            'functional_requirements' => [
+                'support event creation, update, and deletion with proper auditing',
+                'allow dragging or quick actions to move events between days',
+                'display overlapping events without visual collisions',
+                'handle multi-day events spanning across week boundaries',
+                'surface upcoming events in agenda list with relative timings'
+            ],
+            'design_checklist' => [
+                'calendar grid aligns weekdays (Mon-Sun or Sun-Sat) with clear headers',
+                'today is clearly emphasized with accent background and badge',
+                'events use chips or cards with readable contrast and truncated text',
+                'navigation arrows and month label mimic common calendar UIs',
+                'agenda list mirrors Outlook/Google Calendar styling for quick scanning'
+            ],
+            'structure_outline' => [
+                'Top AppBar-style header with navigation chevrons, Today button, centered month/year, and right-aligned search/help/avatar controls.',
+                'Secondary toolbar containing Day/Week/Month segmented buttons, color legend chips, and a New Event action.',
+                'Main grid occupying 8/12 width rendering 7 columns x 6 rows month grid with date badges and event chips stacked.',
+                'Right-hand agenda panel (4/12 width) listing upcoming events grouped by day with icons and participant avatars.',
+                'Floating action button styled like Google Calendar “+” in the lower-right for quick event creation.',
+                'Footer band summarizing total events, last sync timestamp, and calendar sharing status.'
+            ],
+            'keywords' => [
+                'modern calendar app ui',
+                'material design schedule planner',
+                'team calendar dashboard design'
+            ],
+            'preferred_queries' => [
+                'google calendar web ui',
+                'google calendar month view',
+                'google calendar desktop design'
+            ],
+            'canonical_reference' => 'Google Calendar (current desktop experience)',
+            'replication_instructions' => [
+                'Match Google Calendar’s bright surface: white cards on a subtle grey (#F1F3F4) backdrop with gentle elevation.',
+                'Recreate the top header: left chevrons and Today button, centered month name, right-side search/help/settings icons and user avatar.',
+                'Render Day/Week/Month segmented controls with pill buttons and blue active state identical to Google Calendar.',
+                'Construct a full 7-column by 6-row month grid with weekday headers, date numbers in the upper-right of each cell, and light grid lines.',
+                'Populate realistic sample events as colored chips that stretch across cells, using Google palette colors (#1A73E8, #34A853, #FBBC04, #EA4335).',
+                'Add a right-hand agenda column (Upcoming events) listing the next few events with icons and secondary text.',
+                'Use Material Design typography (e.g., fontWeight 600 for headers) and layout spacing (8 / 16 / 24 px rhythm).',
+                'Use useExternalFactory(\'react-big-calendar\') to access Calendar/Views/localizer via the AI SDK factory; never import react-big-calendar directly.',
+                'Include legend chips for calendars and maintain Monday-start week to align with Google Calendar default web layout.'
+            ],
+            'design_style' => 'clean productivity suite aesthetic with strong grid alignment',
+            'accessibility_notes' => [
+                'ensure keyboard navigation for moving between days',
+                'aria-live announcements when events are created or moved',
+                'use sufficient color contrast for category indicators'
+            ]
+        ],
+        'sticky_notes' => [
+            'labels' => ['sticky note', 'stickies', 'notes board', 'kanban notes', 'post-it'],
+            'ui_elements' => [
+                'masonry-style grid of notes with varied heights',
+                'note cards with title, body, color tag, and owner avatar',
+                'quick add note input aligned to top of board',
+                'drag-and-drop reordering with subtle elevation feedback',
+                'filters for color/tag/owner and search bar',
+                'activity feed noting recent edits and deletions'
+            ],
+            'layout_suggestions' => [
+                'board-style canvas with responsive columns',
+                'use BeautifulCard wrapper with soft shadow to mimic corkboard',
+                'apply rotating color palette for notes with subtle tilt',
+                'include right-side drawer for note details and audit trail'
+            ],
+            'functional_requirements' => [
+                'create, update, delete notes with user tracking',
+                'change note colors and tags inline',
+                'drag notes between sections or reorder positions',
+                'sync note edits instantly across collaborators',
+                'support pinning important notes to top'
+            ],
+            'design_checklist' => [
+                'notes look like premium sticky notes with varied but coordinated colors',
+                'hover states lift the card with shadow similar to physical stickies',
+                'note text is legible with adequate padding and font sizing',
+                'board background uses subtle texture or neutral tone',
+                'includes quick actions icons (edit/delete/pin) on each note'
+            ],
+            'structure_outline' => [
+                'Header row mirroring Google Keep with board title, search input, filter chips, and Add Note button.',
+                'Quick-add composer card across top allowing title/body inputs, color picker chips, reminder and collaborator icons.',
+                'Pinned notes row displayed above general notes with slightly larger emphasis.',
+                'Responsive masonry grid (CSS columns) for general notes with varied heights and pastel backgrounds.',
+                'Each note card includes title, body, color indicator, collaborator avatar stack, and inline actions (pin, archive, delete).',
+                'Right sidebar drawer summarizing activity feed, labels, and recently edited notes.',
+                'Footer or status bar showing sync status, last updated timestamp, and share controls.'
+            ],
+            'keywords' => [
+                'digital sticky notes ui',
+                'modern notes board app design',
+                'kanban sticky notes interface'
+            ],
+            'preferred_queries' => [
+                'google keep notes board',
+                'google keep sticky notes ui'
+            ],
+            'canonical_reference' => 'Google Keep sticky notes board',
+            'replication_instructions' => [
+                'Mirror Google Keep’s grid: staggered masonry of note cards with varied heights and pastel backgrounds on a warm grey canvas.',
+                'Each note card should have prominent title, body text, color dot tag, collaborator avatars, and inline action icons (pin, archive, delete).',
+                'Provide a top add-note composer with text inputs and color picker chips matching Google Keep styling.',
+                'Use soft shadow (Material elevation 2) and 12px rounded corners on notes; apply slight rotation/offset for lively feel.',
+                'Include filters for labels/colors as horizontal chips similar to Google Keep’s toolbar.',
+                'Ensure drag handles or visual affordances exist for rearranging notes and display a recent activity feed along the right edge.',
+                'Use useExternalFactory(\'react-stickies\') to render the sticky board via the AI SDK factory instead of importing react-stickies directly.',
+                'Populate sample notes using Google Keep-style pastel palette (#F28B82, #FBBC04, #FFF475, #CCFF90, #A7FFEB, #CBF0F8).' 
+            ],
+            'design_style' => 'playful yet organized collaboration board',
+            'accessibility_notes' => [
+                'drag-and-drop must have keyboard alternatives',
+                'note colors require accessible contrast for text',
+                'announce note operations in activity feed for screen readers'
+            ]
+        ],
+    ];
 
     public function __construct(OpenAIService $openAIService, GoogleImageService $googleImageService)
     {
         $this->openAIService = $openAIService;
         $this->googleImageService = $googleImageService;
+        // Initialize refactored collaborators
+        $this->blueprints = new BlueprintRegistry();
+        // Keep existing in-file library as source of truth (if present)
+        if (property_exists($this, 'componentBlueprints') && is_array($this->componentBlueprints)) {
+            $this->blueprints->setBlueprints($this->componentBlueprints);
+        }
+        $this->designAnalysis = new DesignAnalysisService($this->openAIService, $this->blueprints);
+        $this->imageResearch = new ImageResearchService($this->googleImageService);
+        $this->promptBuilder = new PromptBuilderService();
+        $this->workflowNotifier = new WorkflowNotifier();
+    }
+
+    private function msleep(int $ms): void
+    {
+        if ($ms > 0) {
+            usleep($ms * 1000);
+        }
+    }
+
+    private function ensureMinDuration(float $startedAt): void
+    {
+        $elapsedMs = (int) ((microtime(true) - $startedAt) * 1000);
+        $remaining = $this->minStepDurationMs - $elapsedMs;
+        if ($remaining > 0) {
+            $this->msleep($remaining);
+        }
     }
 
     /**
@@ -28,14 +273,15 @@ class GenerativeUIService
     public function processCustomViewRequest(
         Project $project, 
         string $userMessage, 
+        int $userId,
         ?string $sessionId = null, 
-        int $userId, 
         string $viewName = 'default',
         array $conversationHistory = [],
         ?array $projectContext = null,
         ?string $currentComponentCode = null
     ): array {
         try {
+            $workflowSteps = [];
             // Get the authenticated user object for embedding in component
             $authUser = \App\Models\User::find($userId);
             if (!$authUser) {
@@ -50,6 +296,10 @@ class GenerativeUIService
             
             $generatedComponent = '';
             
+            $totalStepCount = $isNewSpaRequest ? 5 : 4;
+            $fallbackSequence = $isNewSpaRequest ? 4 : 3;
+            $postSequence = $isNewSpaRequest ? 5 : 4;
+
             if ($isNewSpaRequest) {
                 // Use enhanced 3-step workflow for better UI components
                 $generatedComponent = $this->generateEnhancedComponent(
@@ -58,10 +308,23 @@ class GenerativeUIService
                     $existingView,
                     $conversationHistory,
                     $projectContext,
-                    $authUser
+                    $authUser,
+                    $workflowSteps,
+                    $viewName
                 );
             } else {
                 // Use standard workflow for updates or non-SPA requests
+                $this->workflowNotifier->broadcast(
+                    $project,
+                    $viewName,
+                    'prompt_preparation',
+                    'in_progress',
+                    'Preparing update prompt using existing component context.',
+                    1,
+                    $authUser,
+                    4
+                );
+
                 $prompt = $this->buildReactComponentPrompt(
                     $userMessage, 
                     $project, 
@@ -72,7 +335,37 @@ class GenerativeUIService
                     $authUser
                 );
 
+                $workflowSteps[] = [
+                    'step' => 'prompt_preparation',
+                    'status' => 'completed',
+                    'sequence' => 1,
+                    'details' => 'Constructed update prompt leveraging existing component context and design blueprint guidance.'
+                ];
+
+                $this->workflowNotifier->broadcast(
+                    $project,
+                    $viewName,
+                    'prompt_preparation',
+                    'completed',
+                    'Constructed update prompt leveraging existing component context and design blueprint guidance.',
+                    1,
+                    $authUser,
+                    4
+                );
+                $this->msleep($this->betweenStepPauseMs);
+
                 // Generate React component using OpenAI
+                $this->workflowNotifier->broadcast(
+                    $project,
+                    $viewName,
+                    'generation',
+                    'in_progress',
+                    'Generating updated component via standard workflow.',
+                    2,
+                    $authUser,
+                    4
+                );
+
                 Log::info('GenerativeUIService: Sending prompt to OpenAI', [
                     'project_id' => $project->id,
                     'user_message' => $userMessage,
@@ -116,16 +409,72 @@ class GenerativeUIService
                         'content' => $prompt
                     ]
                 ], 0.2, false);
+
+                $workflowSteps[] = [
+                    'step' => 'generation',
+                    'status' => 'completed',
+                    'sequence' => 2,
+                    'details' => 'Updated component generated via standard workflow (' . strlen($generatedComponent) . ' chars).'
+                ];
+
+                $this->workflowNotifier->broadcast(
+                    $project,
+                    $viewName,
+                    'generation',
+                    'completed',
+                    'Updated component generated via standard workflow.',
+                    2,
+                    $authUser,
+                    $totalStepCount
+                );
+                $this->msleep($this->betweenStepPauseMs);
             }
 
             // Defensive fallback: if generation is empty, provide a minimal working component for dev
             if (!is_string($generatedComponent) || trim($generatedComponent) === '') {
                 Log::warning('OpenAI returned empty component. Using fallback component.');
                 $generatedComponent = $this->fallbackReactComponent();
+                $workflowSteps[] = [
+                    'step' => 'fallback_generation',
+                    'status' => 'warning',
+                    'sequence' => $fallbackSequence,
+                    'details' => 'Primary generation returned empty response; injected guarded fallback component.'
+                ];
+
+                $this->workflowNotifier->broadcast(
+                    $project,
+                    $viewName,
+                    'fallback_generation',
+                    'warning',
+                    'Primary generation empty; using safeguarded fallback component.',
+                    $fallbackSequence,
+                    $authUser,
+                    $totalStepCount
+                );
+                $this->msleep($this->betweenStepPauseMs);
             }
 
             // Validate and enhance the generated component
             $enhancedComponent = $this->enhanceReactComponent($generatedComponent, $userMessage, $authUser);
+
+            $workflowSteps[] = [
+                'step' => 'post_processing',
+                'status' => 'completed',
+                'sequence' => $postSequence,
+                'details' => 'Enhanced generated component to align with enterprise design helpers and persistence rules.'
+            ];
+
+            $this->workflowNotifier->broadcast(
+                $project,
+                $viewName,
+                'post_processing',
+                'completed',
+                'Post-processed component with enterprise styling and persistence rules.',
+                $postSequence,
+                $authUser,
+                $totalStepCount
+            );
+            $this->msleep($this->betweenStepPauseMs);
 
             $isUpdate = !empty($currentComponentCode) && !empty(trim($currentComponentCode));
             
@@ -145,6 +494,19 @@ class GenerativeUIService
                 ]
             );
 
+            // Notify UI to gracefully close/minimize the generator chat when done
+            try {
+                broadcast(new CustomViewDataUpdated(
+                    $project->id,
+                    $viewName,
+                    'ux_action',
+                    [ 'action' => 'close_generator', 'reason' => 'generation_complete' ],
+                    $authUser
+                ));
+            } catch (\Throwable $e) {
+                Log::debug('UX close_generator broadcast failed', ['error' => $e->getMessage()]);
+            }
+
             return [
                 'type' => 'spa_generated',
                 'success' => true,
@@ -152,9 +514,11 @@ class GenerativeUIService
                 'html' => $enhancedComponent,
                 'component_code' => $enhancedComponent,
                 'custom_view_id' => $customView->id,
+                'should_close_generator' => true,
                 'message' => $isUpdate 
-                    ? 'Custom micro-application updated successfully!' 
-                    : 'Custom micro-application generated successfully!'
+                    ? 'Custom micro-application updated successfully! Steps: ' . $this->summarizeWorkflowSteps($workflowSteps)
+                    : 'Custom micro-application generated successfully! Steps: ' . $this->summarizeWorkflowSteps($workflowSteps),
+                'workflow_steps' => $workflowSteps
             ];
 
         } catch (\Exception $e) {
@@ -168,7 +532,8 @@ class GenerativeUIService
             return [
                 'type' => 'error',
                 'success' => false,
-                'message' => 'Failed to generate custom application. Please try again.'
+                'message' => 'Failed to generate custom application. Steps: ' . $this->summarizeWorkflowSteps($workflowSteps ?? []),
+                'workflow_steps' => $workflowSteps ?? []
             ];
         }
     }
@@ -204,7 +569,9 @@ class GenerativeUIService
         ?CustomView $existingView,
         array $conversationHistory,
         ?array $projectContext,
-        \App\Models\User $authUser
+        \App\Models\User $authUser,
+        array &$workflowSteps,
+        string $viewName
     ): string {
         Log::info('GenerativeUIService: Using enhanced 3-step workflow', [
             'user_message' => $userMessage,
@@ -212,21 +579,126 @@ class GenerativeUIService
         ]);
 
         try {
-            // Step 1: Ask OpenAI for standard UI elements and Google image keywords
-            $uiAnalysis = $this->getUIElementsAndKeywords($userMessage);
-            
-            // Step 2: Use keywords to fetch design images from Google
-            $designImages = [];
-            if (!empty($uiAnalysis['keywords'])) {
-                foreach ($uiAnalysis['keywords'] as $keyword) {
-                    $images = $this->googleImageService->searchImages($keyword, 2);
-                    $designImages = array_merge($designImages, $images);
-                    if (count($designImages) >= 3) break; // Limit total images
-                }
+            $t0 = microtime(true);
+            $this->workflowNotifier->broadcast(
+                $project,
+                $viewName,
+                'analysis',
+                'in_progress',
+                'Analyzing requested experience to map required UI components and patterns.',
+                1,
+                $authUser
+            );
+
+            // Step 1: Analyze the requested experience to understand required UI components
+            $uiAnalysis = $this->designAnalysis->getUIElementsAndKeywords($userMessage);
+
+            // Cross-check against curated blueprints so we don't drift from standard implementations
+            $blueprint = $this->blueprints->match($userMessage);
+            if ($blueprint) {
+                $uiAnalysis = $this->designAnalysis->mergeWithBlueprint($uiAnalysis, $blueprint);
             }
-            
-            // Step 3: Generate enhanced SPA component using UI elements and design inspiration
-            return $this->generateComponentWithDesignInspiration(
+
+            // Guarantee checklist coverage even when the AI skips details
+            $uiAnalysis = $this->designAnalysis->ensureChecklistCompleteness($uiAnalysis, $blueprint ?? null);
+            $this->designAnalysis->log($userMessage, $uiAnalysis, $blueprint ?? null);
+
+            $analysisDetails = sprintf(
+                'Identified %d UI elements and %d layout cues',
+                count($uiAnalysis['ui_elements'] ?? []),
+                count($uiAnalysis['layout_suggestions'] ?? [])
+            );
+            if ($blueprint) {
+                $analysisDetails .= " using '{$blueprint['slug']}' blueprint";
+            }
+            $analysisDetails .= '.';
+
+            $workflowSteps[] = [
+                'step' => 'analysis',
+                'status' => 'completed',
+                'sequence' => 1,
+                'details' => $analysisDetails
+            ];
+
+            $this->workflowNotifier->broadcast(
+                $project,
+                $viewName,
+                'analysis',
+                'completed',
+                $analysisDetails,
+                1,
+                $authUser
+            );
+            $this->ensureMinDuration($t0);
+            $this->msleep($this->betweenStepPauseMs);
+
+            // Step 2: Verify visual patterns by fetching representative designs from Google Images
+            $t1 = microtime(true);
+            $this->workflowNotifier->broadcast(
+                $project,
+                $viewName,
+                'design_research',
+                'in_progress',
+                'Collecting high-fidelity reference visuals from Google Image Search.',
+                2,
+                $authUser
+            );
+
+            $requiredImageCount = 10;
+            $designImages = $this->imageResearch->collect($uiAnalysis['keywords'] ?? [], $requiredImageCount, $userMessage);
+
+            if (empty($designImages)) {
+                Log::warning('GenerativeUIService: No design references found for request', [
+                    'user_message' => $userMessage,
+                    'keywords' => $uiAnalysis['keywords'] ?? []
+                ]);
+            } else {
+                Log::info('GenerativeUIService: Design references collected', [
+                    'count' => count($designImages),
+                    'user_message' => $userMessage,
+                ]);
+            }
+
+            $keywordList = implode(', ', array_slice($uiAnalysis['keywords'] ?? [], 0, 5));
+
+            $workflowSteps[] = [
+                'step' => 'design_research',
+                'status' => empty($designImages) ? 'warning' : 'completed',
+                'sequence' => 2,
+                'details' => empty($designImages)
+                    ? 'Unable to retrieve design references; defaulting to Material UI baselines.'
+                    : sprintf(
+                        'Collected %d design references %s.',
+                        count($designImages),
+                        $keywordList ? 'using keywords: ' . $keywordList : 'using fallback search terms'
+                    )
+            ];
+
+            $this->workflowNotifier->broadcast(
+                $project,
+                $viewName,
+                'design_research',
+                empty($designImages) ? 'warning' : 'completed',
+                $workflowSteps[array_key_last($workflowSteps)]['details'] ?? 'Design research completed.',
+                2,
+                $authUser
+            );
+            $this->ensureMinDuration($t1);
+            $this->msleep($this->betweenStepPauseMs);
+
+            // Step 3: Generate the SPA using the curated prompt (UI analysis + design references)
+            $t2 = microtime(true);
+            $this->workflowNotifier->broadcast(
+                $project,
+                $viewName,
+                'generation',
+                'in_progress',
+                'Generating the React SPA to mirror canonical products and references.',
+                3,
+                $authUser
+            );
+
+            $component = $this->generateComponentWithDesignInspiration(
                 $userMessage,
                 $uiAnalysis,
                 $designImages,
@@ -234,14 +706,40 @@ class GenerativeUIService
                 $existingView,
                 $conversationHistory,
                 $projectContext,
-                $authUser
+                $authUser,
+                $viewName,
+                $blueprint ?? null,
+                $workflowSteps
             );
+
+            // ensure generation step shows for a minimum duration too
+            $this->ensureMinDuration($t2);
+            $this->msleep($this->betweenStepPauseMs);
+
+            return $component;
             
         } catch (\Exception $e) {
             Log::warning('Enhanced workflow failed, falling back to standard generation', [
                 'error' => $e->getMessage(),
                 'user_message' => $userMessage
             ]);
+
+            $workflowSteps[] = [
+                'step' => 'generation',
+                'status' => 'failed',
+                'sequence' => 3,
+                'details' => 'Enhanced workflow error: ' . $e->getMessage()
+            ];
+
+            $this->workflowNotifier->broadcast(
+                $project,
+                $viewName,
+                'generation',
+                'failed',
+                'Enhanced workflow failed: ' . $e->getMessage(),
+                3,
+                $authUser
+            );
             
             // Fallback to standard prompt generation
             $prompt = $this->buildReactComponentPrompt(
@@ -254,7 +752,7 @@ class GenerativeUIService
                 $authUser
             );
 
-            return $this->openAIService->chatText([
+            $component = $this->openAIService->chatText([
                 [
                     'role' => 'system',
                     'content' => 'You are an expert React developer. You create ONLY React/JSX components. Return ONLY valid React component code with NO explanations, NO markdown formatting, NO code blocks. The code should start with imports and end with the export default statement.'
@@ -264,6 +762,26 @@ class GenerativeUIService
                     'content' => $prompt
                 ]
             ], 0.2, false);
+
+            $workflowSteps[] = [
+                'step' => 'fallback_generation',
+                'status' => 'completed',
+                'sequence' => 4,
+                'details' => 'Fallback prompt executed after enhanced path failed (' . strlen($component) . ' chars).'
+            ];
+
+            $this->workflowNotifier->broadcast(
+                $project,
+                $viewName,
+                'fallback_generation',
+                'completed',
+                'Fallback prompt executed after enhanced workflow failure.',
+                4,
+                $authUser
+            );
+            $this->msleep($this->betweenStepPauseMs);
+
+            return $component;
         }
     }
 
@@ -272,47 +790,128 @@ class GenerativeUIService
      */
     private function getUIElementsAndKeywords(string $userRequest): array
     {
-        $prompt = "What are the most standard UI elements needed for {$userRequest} and what are the main keywords I can use to fetch designs from Google Images?
+        return $this->designAnalysis->getUIElementsAndKeywords($userRequest);
+    }
 
-Analyze the user request and provide:
-1. Essential UI elements (buttons, inputs, displays, etc.)
-2. Layout structure recommendations
-3. Keywords for finding relevant design inspiration images
+    /**
+     * Retrieve a blueprint of expected patterns for well-known component types
+     */
+    private function getStandardDesignBlueprint(string $userRequest): ?array
+    {
+        return $this->blueprints->match($userRequest);
+    }
 
-Return as JSON with this structure:
-{
-  \"ui_elements\": [\"list of essential UI components\"],
-  \"layout_suggestions\": [\"layout recommendations\"],
-  \"keywords\": [\"keyword1\", \"keyword2\", \"keyword3\"],
-  \"design_style\": \"recommended design style\"
-}
+    /**
+     * Combine AI-provided analysis with curated blueprints so required patterns aren't missed
+     */
+    private function mergeAnalysisWithBlueprint(array $analysis, ?array $blueprint): array
+    {
+        return $this->designAnalysis->mergeWithBlueprint($analysis, $blueprint);
+    }
 
-Focus on practical, implementable UI elements and search terms that will find good design examples.";
+    /**
+     * Guarantee that the analysis contains a meaningful checklist before generation begins
+     */
+    private function ensureDesignChecklistCompleteness(array $analysis, ?array $blueprint = null): array
+    {
+        return $this->designAnalysis->ensureChecklistCompleteness($analysis, $blueprint);
+    }
 
-        $response = $this->openAIService->chatJson([
-            [
-                'role' => 'system',
-                'content' => 'You are a UI/UX expert who analyzes application requirements and provides structured recommendations for UI elements and design research keywords.'
-            ],
-            [
-                'role' => 'user',
-                'content' => $prompt
-            ]
-        ], 0.3);
+    /**
+     * Build a reusable design guidance section for prompts that need explicit verification steps
+     */
+    private function buildDesignGuidanceSection(string $userRequest, array $analysis, ?array $blueprint = null): string
+    {
+        return $this->designAnalysis->buildDesignGuidanceSection($userRequest, $analysis, $blueprint);
+    }
 
-        Log::info('UI Analysis completed', [
-            'user_request' => $userRequest,
-            'ui_elements_count' => count($response['ui_elements'] ?? []),
-            'keywords_count' => count($response['keywords'] ?? [])
-        ]);
+    /**
+     * Helper to merge two string arrays while keeping entries distinct
+     */
+    private function mergeDistinct(array $primary, array $secondary): array
+    {
+        // Kept for backward compatibility; prefer DesignAnalysisService::mergeWithBlueprint
+        $merged = array_filter(array_map('trim', array_merge($primary, $secondary)));
+        return array_values(array_unique($merged));
+    }
 
-        // Ensure we have fallback values
-        return [
-            'ui_elements' => $response['ui_elements'] ?? ['input', 'button', 'display'],
-            'layout_suggestions' => $response['layout_suggestions'] ?? ['grid layout'],
-            'keywords' => $response['keywords'] ?? [str_replace(' ', '+', $userRequest)],
-            'design_style' => $response['design_style'] ?? 'modern'
+    /**
+     * Centralised logging for design analysis so we can audit blueprint enforcement
+     */
+    private function logDesignAnalysis(string $userRequest, array $analysis, ?array $blueprint = null): void
+    {
+        $this->designAnalysis->log($userRequest, $analysis, $blueprint);
+    }
+
+    /**
+     * Present the fetched design references in a format suitable for the model prompt
+     */
+    private function formatDesignImageReferences(array $designImages): string
+    {
+        return $this->imageResearch->formatReferences($designImages);
+    }
+
+    /**
+     * Summaries workflow steps into a compact string for user messaging
+     */
+    private function summarizeWorkflowSteps(array $workflowSteps): string
+    {
+        if (empty($workflowSteps)) {
+            return 'no workflow details available';
+        }
+
+        $symbols = [
+            'completed' => '✔',
+            'warning' => '⚠',
+            'failed' => '✖',
+            'in_progress' => '…'
         ];
+
+        $parts = [];
+        usort($workflowSteps, function ($a, $b) {
+            $aSeq = $a['sequence'] ?? PHP_INT_MAX;
+            $bSeq = $b['sequence'] ?? PHP_INT_MAX;
+            if ($aSeq === $bSeq) {
+                return 0;
+            }
+            return $aSeq <=> $bSeq;
+        });
+
+        foreach ($workflowSteps as $index => $step) {
+            $name = str_replace('_', ' ', $step['step'] ?? 'step');
+            $status = $step['status'] ?? 'unknown';
+            $symbol = $symbols[$status] ?? '•';
+            $sequence = $step['sequence'] ?? ($index + 1);
+            $parts[] = sprintf('Step %d %s %s', $sequence, ucwords($name), $symbol);
+        }
+
+        return implode(', ', $parts);
+    }
+
+    /**
+     * Broadcast real-time workflow step updates to the frontend channel.
+     */
+    private function broadcastWorkflowUpdate(
+        Project $project,
+        string $viewName,
+        string $step,
+        string $status,
+        string $details,
+        int $sequence,
+        ?\App\Models\User $authUser = null,
+        int $totalSteps = 5
+    ): void {
+        // Backward-compatible wrapper; prefer using WorkflowNotifier directly
+        $this->workflowNotifier->broadcast(
+            $project,
+            $viewName,
+            $step,
+            $status,
+            $details,
+            $sequence,
+            $authUser,
+            $totalSteps
+        );
     }
 
     /**
@@ -326,16 +925,31 @@ Focus on practical, implementable UI elements and search terms that will find go
         ?CustomView $existingView,
         array $conversationHistory,
         ?array $projectContext,
-        \App\Models\User $authUser
+        \App\Models\User $authUser,
+        string $viewName,
+        ?array $blueprint = null,
+        array &$workflowSteps = []
     ): string {
         $contextData = $projectContext ? $this->buildEnhancedProjectContext($project, $projectContext) : $this->buildProjectContext($project);
         
         // Get the best design image for inspiration
-        $bestImage = $this->googleImageService->getBestImage($designImages);
+        $bestImage = $this->imageResearch->getBest($designImages);
         
         $designInspiration = $bestImage ? 
             "DESIGN INSPIRATION IMAGE: {$bestImage['url']} - {$bestImage['title']}" : 
             "No specific design inspiration image available - use modern Material-UI principles";
+
+        $designGuidance = $this->designAnalysis->buildDesignGuidanceSection($userMessage, $uiAnalysis, $blueprint);
+        $designReferences = $this->imageResearch->formatReferences($designImages);
+        
+        // Strengthen canonical replication for common blueprints
+        $canonicalContract = '';
+        $bp = strtolower((string)($uiAnalysis['blueprint_source'] ?? ''));
+        if ($bp === 'calculator') {
+            $canonicalContract = "\n\nCANONICAL LAYOUT CONTRACT (CALCULATOR):\n- Use a 4x5 keypad grid with operators on the right.\n- Display: expression line + right-aligned result line.\n- 0 spans two cells on bottom-left; include AC, C, backspace, %, +/-.\n- DO NOT render keys in a single row.";
+        } elseif ($bp === 'calendar') {
+            $canonicalContract = "\n\nCANONICAL LAYOUT CONTRACT (CALENDAR):\n- Use Templates.Calendar (AI SDK) so react-big-calendar is loaded via useExternalFactory('react-big-calendar'); never build a manual grid.\n- Month view 7x6 grid, Monday start; segmented Day/Week/Month; Today button; right-hand agenda.";
+        }
 
         $prompt = "You are an expert React developer creating a high-quality {$userMessage} component.
 
@@ -352,6 +966,14 @@ DESIGN STYLE: {$uiAnalysis['design_style']}
 
 {$designInspiration}
 
+{$designGuidance}
+
+DESIGN VERIFICATION REFERENCES:
+{$designReferences}
+
+REPLICATE THE REFERENCES:
+Recreate the layout, component hierarchy, and interaction affordances demonstrated in these references. Align button arrangements, grid structures, and supporting panels to match common industry implementations for {$userMessage} experiences.
+
 CRITICAL REQUIREMENTS:
 1. **NEVER import StyledComponents, MuiMaterial, or MuiIcons - they are automatically available**
 2. **ONLY import React hooks: import React, { useState, useEffect } from 'react';**
@@ -365,10 +987,51 @@ CRITICAL REQUIREMENTS:
 10. **Track current user for all operations**
 
 AVAILABLE COMPONENTS (no imports needed):
-- Material-UI: Button, TextField, Select, Card, Typography, Grid, Stack, etc.
-- Icons: AddIcon, EditIcon, DeleteIcon, SaveIcon, etc.
-- StyledComponents: ContentContainer, BeautifulCard, SectionHeader, PrimaryButton, etc.
-- Charts: BarChart, LineChart, PieChart from Recharts
+- Material-UI: Button, TextField, Select, Card, Typography, Grid, Stack, Box, Paper, Chip, Avatar, etc.
+- Icons: AddIcon, EditIcon, DeleteIcon, SaveIcon, CloseIcon, SearchIcon, RefreshIcon, etc.
+- StyledComponents: ContentContainer, BeautifulCard, SectionHeader, PrimaryButton, SuccessButton, DangerButton
+- Charts: BarChart, LineChart, PieChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend from Recharts
+- Calendar: Use Templates.Calendar for interactive calendar with full API (NOT react-big-calendar directly)
+- Advanced: Use useExternalFactory() for specialized components
+
+TEMPLATES.CALENDAR API:
+Templates.Calendar supports these props for full customization:
+- events: Array of events to display
+- onEventUpdate: (eventId, updates) => void - Called when event is updated
+- onEventDelete: (eventId) => void - Called when event is deleted  
+- onEventCreate: (event) => void - Called when new event is created
+- onDateClick: (slotInfo) => void - Called when date is clicked
+- onEventSelect: (event) => void - Called when event is selected
+- onApiReady: (api) => void - Provides full calendar API object
+- title: Calendar title (default: 'Team Calendar')
+- defaultView: 'month'|'week'|'day' (default: 'month')
+- selectable: boolean - Allow date selection (default: true)
+- editable: boolean - Allow event editing (default: true)
+- showCreateDialog: boolean - Show create event dialog (default: true)
+- showEventDetails: boolean - Show event details panel (default: true)
+- showUpcoming: boolean - Show upcoming events panel (default: true)
+
+Example usage:
+```jsx
+<Templates.Calendar
+    events={events}
+    onEventUpdate={(id, updates) => updateEvent(id, updates)}
+    onEventDelete={(id) => deleteEvent(id)}
+    onApiReady={(api) => {
+        // Access full calendar API: api.createEvent(), api.navigate(), etc.
+        setCalendarAPI(api);
+    }}
+    title=\"Project Calendar\"
+    defaultView=\"week\"
+/>
+```
+
+IMPORTANT USAGE RULES:
+- Icons must use exact names: AddIcon, EditIcon, DeleteIcon (with 'Icon' suffix)
+- For calendars, use Templates.Calendar component, never import react-big-calendar
+- All Material-UI components available directly: <Button>, <TextField>, <Grid>, etc.
+- StyledComponents available directly: <ContentContainer>, <BeautifulCard>, etc.
+- Never use undefined components like <Templates.SomeComponent> unless specified above
 
 PROJECT CONTEXT:
 {$contextData}
@@ -377,7 +1040,19 @@ USER REQUEST: \"{$userMessage}\"
 
 Create a complete, functional React component that implements the requested functionality with professional design and all the UI elements identified in the analysis. Make it look like a production-ready application, not a minimal demo.
 
+Before writing JSX, mentally validate the layout against the checklist above. If a required element is missing, adjust the plan so the final UI reflects common real-world implementations.
+
 Return ONLY the complete React component code - no explanations, no markdown formatting.";
+
+        // Build final prompt using specialized PromptBuilder
+        $prompt = $this->promptBuilder->buildCreatePrompt(
+            $userMessage,
+            $contextData,
+            $uiAnalysis,
+            $designInspiration,
+            $designGuidance . $canonicalContract,
+            $designReferences
+        );
 
         $component = $this->openAIService->chatText([
             [
@@ -396,6 +1071,29 @@ Return ONLY the complete React component code - no explanations, no markdown for
             'ui_elements_count' => count($uiAnalysis['ui_elements']),
             'component_length' => strlen($component)
         ]);
+
+        $workflowSteps[] = [
+            'step' => 'generation',
+            'status' => 'completed',
+            'sequence' => 3,
+            'details' => sprintf(
+                'Generated component with %d UI elements and %d design references (%d chars).',
+                count($uiAnalysis['ui_elements'] ?? []),
+                count($designImages),
+                strlen($component)
+            )
+        ];
+
+        $this->workflowNotifier->broadcast(
+            $project,
+            $viewName,
+            'generation',
+            'completed',
+            $workflowSteps[array_key_last($workflowSteps)]['details'],
+            3,
+            $authUser
+        );
+        $this->msleep($this->betweenStepPauseMs);
 
         return $component;
     }
@@ -664,10 +1362,33 @@ REACT;
         // Use enhanced project context if provided, otherwise fall back to basic context
         $contextData = $projectContext ? $this->buildEnhancedProjectContext($project, $projectContext) : $this->buildProjectContext($project);
         $componentStructure = $this->getReactComponentStructure();
-        
+
         // Determine if this is an update request
         $isUpdateRequest = !empty($currentComponentCode) && !empty(trim($currentComponentCode));
-        
+
+        $blueprint = $this->getStandardDesignBlueprint($userRequest);
+        $promptAnalysis = [
+            'ui_elements' => $blueprint['ui_elements'] ?? [],
+            'layout_suggestions' => $blueprint['layout_suggestions'] ?? [],
+            'functional_requirements' => $blueprint['functional_requirements'] ?? [],
+            'design_checklist' => $blueprint['design_checklist'] ?? [],
+            'accessibility_notes' => $blueprint['accessibility_notes'] ?? [],
+        ];
+        $promptAnalysis = $this->ensureDesignChecklistCompleteness($promptAnalysis, $blueprint ?? null);
+        if ($blueprint) {
+            $this->logDesignAnalysis($userRequest, $promptAnalysis, $blueprint);
+        }
+        $designGuidance = $this->buildDesignGuidanceSection($userRequest, $promptAnalysis, $blueprint ?? null);
+        // Add a strict canonical contract for well-known blueprints to avoid off-spec layouts
+        $canonicalContract = '';
+        $bpSlug = strtolower((string)($blueprint['slug'] ?? ''));
+        if ($bpSlug === 'calculator') {
+            $canonicalContract = "\n\nSTRICT LAYOUT CONTRACT (CALCULATOR):\n- 4x5 keypad grid with operators in the right column.\n- Two-line display (expression above, right-aligned result below).\n- 0 spans two cells in the bottom row; include AC, C, backspace, %, +/-.\n- Do NOT render digits in a single row — must be a grid.";
+        } elseif ($bpSlug === 'calendar') {
+            $canonicalContract = "\n\nSTRICT LAYOUT CONTRACT (CALENDAR):\n- Use Templates.Calendar (AI SDK) so react-big-calendar loads via useExternalFactory('react-big-calendar').\n- Month view 7x6 grid with weekday headers, Monday start; include Today button, Day/Week/Month segmented control, right-hand agenda panel.";
+        }
+        $designGuidance .= $canonicalContract;
+
         if ($isUpdateRequest) {
             $prompt = "You are an expert React developer specializing in updating and modifying existing data-focused micro-applications.
 
@@ -684,6 +1405,9 @@ CRITICAL REQUIREMENTS FOR UPDATES:
 7. Maintain responsive design and existing styling patterns
 8. Uphold the enterprise design system: keep using StyledComponents helpers (ContentContainer, BeautifulCard, SectionHeader, PrimaryButton/SuccessButton/DangerButton) or upgrade raw elements to them as part of the change
 9. Replace any plain HTML controls (button, input, select) introduced by the request with the polished Material UI or StyledComponents equivalents so the surface stays professional
+10. Use useExternalFactory('<name>') when introducing calendar, sticky notes, or other advanced libraries so the AI SDK factory handles loading — never import npm packages directly
+
+{$designGuidance}
 
 COMMON UPDATE SCENARIOS:
 - **Add Column to Table**: Add new column without breaking existing columns
@@ -777,6 +1501,9 @@ CRITICAL REQUIREMENTS:
 24. **CRITICAL: Data persistence is handled by useEmbeddedData - ensures cross-user sharing and eliminates race conditions**
 25. **CRITICAL: Always check array length before accessing elements: users.length > 0 ? users[0] : defaultUser**
 26. **MANDATORY: Show who created/edited each item in the UI with timestamps for full collaboration transparency**
+27. **MANDATORY: When leveraging advanced UI packages (calendar, sticky notes, etc.), load them via useExternalFactory('<name>') provided by the runtime — never import npm packages or use require().**
+
+{$designGuidance}
 
 MANDATORY CRUD OPERATIONS:
 - **CREATE**: Always include forms/inputs to add new items (modals, inline forms, or dedicated sections)
@@ -1252,6 +1979,8 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
      */
     private function enhanceReactComponent(string $componentCode, string $userRequest, ?\App\Models\User $authUser = null): string
     {
+        $componentCode = $this->applyTemplateOverride($componentCode, $userRequest);
+
         // Remove any import statements for StyledComponents, MuiMaterial, or MuiIcons since they're globally available
         $componentCode = preg_replace('/^import\s+.*from\s*[\'"].*StyledComponents.*[\'"];?\s*$/m', '', $componentCode);
         $componentCode = preg_replace('/^import\s+.*from\s*[\'"].*MuiMaterial.*[\'"];?\s*$/m', '', $componentCode);
@@ -1402,6 +2131,86 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
         return $componentCode;
     }
 
+    private function applyTemplateOverride(string $componentCode, string $userRequest): string
+    {
+        $blueprint = $this->getStandardDesignBlueprint($userRequest);
+        if (!$blueprint || empty($blueprint['slug'])) {
+            return $componentCode;
+        }
+
+        $slug = strtolower((string) $blueprint['slug']);
+
+        if ($slug === 'calendar') {
+            if (!str_contains($componentCode, 'Templates.Calendar') && !str_contains($componentCode, "useExternalFactory('react-big-calendar')")) {
+                return $this->buildCalendarTemplateComponent();
+            }
+        }
+
+        return $componentCode;
+    }
+
+    private function buildCalendarTemplateComponent(): string
+    {
+        return <<<'REACT'
+import React, { useMemo } from 'react';
+
+export default function GeneratedCalendarTemplate({
+    title = 'Team Events Calendar',
+    initialEvents = [],
+    persistKey = 'team-calendar',
+    ...rest
+}) {
+    const { ContentContainer, BeautifulCard, SectionHeader } = StyledComponents;
+
+    const seedEvents = useMemo(() => {
+        if (Array.isArray(initialEvents) && initialEvents.length) {
+            return initialEvents;
+        }
+
+        const now = new Date();
+        const createEvent = (offsetDays, startHour, durationHours, details = {}) => {
+            const start = new Date(now);
+            start.setDate(start.getDate() + offsetDays);
+            start.setHours(startHour, 0, 0, 0);
+            const end = new Date(start);
+            end.setHours(startHour + durationHours, 0, 0, 0);
+
+            return {
+                id: details.id ?? `event-${offsetDays}-${startHour}`,
+                title: details.title ?? 'Scheduled Session',
+                description: details.description ?? '',
+                location: details.location ?? '',
+                color: details.color ?? '#1A73E8',
+                start: start.toISOString(),
+                end: end.toISOString(),
+            };
+        };
+
+        return [
+            createEvent(0, 9, 1, { title: 'Daily Stand-up', color: '#1A73E8' }),
+            createEvent(1, 13, 1, { title: 'Design Sync', color: '#34A853' }),
+            createEvent(2, 15, 1, { title: 'Client Demo', color: '#F9AB00' }),
+            createEvent(4, 10, 2, { title: 'Sprint Planning', color: '#A142F4' }),
+        ];
+    }, [initialEvents]);
+
+    return (
+        <ContentContainer maxWidth="xl" sx={{ py: designTokens.spacing.xl }}>
+            <BeautifulCard sx={{ p: designTokens.spacing.lg }}>
+                <SectionHeader sx={{ mb: designTokens.spacing.md }}>{title}</SectionHeader>
+                <Templates.Calendar
+                    title={title}
+                    persistKey={persistKey}
+                    initialEvents={seedEvents}
+                    {...rest}
+                />
+            </BeautifulCard>
+        </ContentContainer>
+    );
+}
+REACT;
+    }
+
     /**
      * Build enhanced project context with live tasks and user data
      */
@@ -1501,6 +2310,14 @@ Task Status Distribution: " . json_encode($tasks->groupBy('status')->map->count(
                         'custom_view_id' => $customView->id,
                         'saved_at' => now()->toISOString(),
                     ],
+                    $user
+                ));
+                // Also request the UI to close/minimize the generator if it is open
+                broadcast(new CustomViewDataUpdated(
+                    $project->id,
+                    $viewName,
+                    'ux_action',
+                    [ 'action' => 'close_generator', 'reason' => 'save_completed' ],
                     $user
                 ));
             } catch (\Throwable $e) {

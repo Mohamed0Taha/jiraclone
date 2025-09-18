@@ -1,4 +1,8 @@
 import React from 'react';
+import { Calendar as RBCalendar, Views as RBViews, dateFnsLocalizer as rbDateFnsLocalizer } from 'react-big-calendar';
+import { format as dfFormat, parse as dfParse, startOfWeek as dfStartOfWeek, getDay as dfGetDay } from 'date-fns';
+import enUSLocale from 'date-fns/locale/en-US';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import * as Recharts from 'recharts';
 import * as MuiMaterial from '@mui/material';
 import * as MuiIcons from '@mui/icons-material';
@@ -364,6 +368,962 @@ const Templates = {
     );
   },
 
+  Calculator: (props) => {
+    const {
+      persistKey = 'scientific-calculator',
+      title = 'Scientific Calculator',
+      maxHistory = 6,
+    } = props || {};
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
+    const [state, setState] = useEmbeddedData(persistKey, {
+      expression: '',
+      display: '',
+      angleMode: 'Rad',
+      lastAnswer: 0,
+      history: [],
+      justEvaluated: false,
+      error: null,
+    });
+
+    const formatValue = React.useCallback((value) => {
+      if (!Number.isFinite(value)) return 'Error';
+      if (Math.abs(value) >= 1e9 || (Math.abs(value) > 0 && Math.abs(value) < 1e-6)) {
+        return Number(value).toExponential(6);
+      }
+      const rounded = Number.parseFloat(Number(value).toFixed(8));
+      return String(rounded);
+    }, []);
+
+    const evaluateExpression = React.useCallback((expr) => {
+      const source = (expr || '').trim();
+      if (!source) return 0;
+      const sanitized = source.replace(/[^0-9+\-*/().\s]/g, '');
+      if (!sanitized.trim()) return 0;
+      try {
+        const result = Function('"use strict";return (' + sanitized + ')')();
+        return Number(result);
+      } catch (error) {
+        return NaN;
+      }
+    }, []);
+
+    const pushHistory = React.useCallback((prev, expressionLabel, numericValue) => {
+      const entry = {
+        expression: expressionLabel,
+        result: formatValue(numericValue),
+        timestamp: new Date().toISOString(),
+      };
+      return [entry, ...(Array.isArray(prev.history) ? prev.history : [])].slice(0, maxHistory);
+    }, [formatValue, maxHistory]);
+
+    const appendToken = React.useCallback((token, displayToken, options = {}) => {
+      setState((prev) => {
+        const preserve = options.preserve === true;
+        const isOperator = options.type === 'operator';
+        let expression = prev.expression || '';
+        let display = prev.display || '';
+        if (prev.justEvaluated && !isOperator && !preserve) {
+          expression = '';
+          display = '';
+        }
+        return {
+          ...prev,
+          expression: expression + token,
+          display: display + (displayToken ?? token),
+          justEvaluated: false,
+          error: null,
+        };
+      });
+    }, [setState]);
+
+    const appendOperator = React.useCallback((symbol, actual) => {
+      setState((prev) => {
+        let expression = prev.expression || '';
+        let display = prev.display || '';
+        if (!expression.trim()) {
+          const seed = prev.lastAnswer ?? 0;
+          expression = String(seed);
+          display = formatValue(seed);
+        }
+        if (prev.justEvaluated) {
+          expression = prev.expression || String(prev.lastAnswer ?? 0);
+          display = prev.display || formatValue(prev.lastAnswer ?? 0);
+        }
+        return {
+          ...prev,
+          expression: expression + (actual ?? symbol),
+          display: display + symbol,
+          justEvaluated: false,
+          error: null,
+        };
+      });
+    }, [setState, formatValue]);
+
+    const resetAll = React.useCallback(() => {
+      setState((prev) => ({
+        ...prev,
+        expression: '',
+        display: '',
+        error: null,
+        justEvaluated: false,
+      }));
+    }, [setState]);
+
+    const handleEquals = React.useCallback(() => {
+      setState((prev) => {
+        const baseExpr = prev.expression && prev.expression.trim().length
+          ? prev.expression
+          : String(prev.lastAnswer ?? 0);
+        const expressionLabel = prev.display && prev.display.trim().length
+          ? prev.display
+          : formatValue(prev.lastAnswer ?? 0);
+        const value = evaluateExpression(baseExpr);
+        if (!Number.isFinite(value)) {
+          return { ...prev, error: 'Math error', justEvaluated: true };
+        }
+        const formatted = formatValue(value);
+        return {
+          ...prev,
+          expression: String(value),
+          display: formatted,
+          lastAnswer: value,
+          history: pushHistory(prev, expressionLabel + ' =', value),
+          justEvaluated: true,
+          error: null,
+        };
+      });
+    }, [setState, evaluateExpression, formatValue, pushHistory]);
+
+    const factorial = React.useCallback((input) => {
+      if (input < 0 || !Number.isInteger(input) || input > 170) return NaN;
+      let result = 1;
+      for (let i = 2; i <= input; i += 1) {
+        result *= i;
+      }
+      return result;
+    }, []);
+
+    const applyUnary = React.useCallback((label, fn) => {
+      setState((prev) => {
+        const baseExpr = prev.expression && prev.expression.trim().length
+          ? prev.expression
+          : String(prev.lastAnswer ?? 0);
+        const baseDisplay = prev.display && prev.display.trim().length
+          ? prev.display
+          : formatValue(prev.lastAnswer ?? 0);
+        const value = evaluateExpression(baseExpr);
+        if (!Number.isFinite(value)) {
+          return { ...prev, error: 'Math error', justEvaluated: true };
+        }
+        const result = fn(value, prev);
+        if (!Number.isFinite(result)) {
+          return { ...prev, error: 'Out of range', justEvaluated: true };
+        }
+        const formatted = formatValue(result);
+        const historyLabel = label.replace('%value%', baseDisplay);
+        return {
+          ...prev,
+          expression: String(result),
+          display: formatted,
+          lastAnswer: result,
+          history: pushHistory(prev, historyLabel + ' =', result),
+          justEvaluated: true,
+          error: null,
+        };
+      });
+    }, [setState, evaluateExpression, formatValue, pushHistory]);
+
+    const handlePercent = React.useCallback(() => {
+      applyUnary('(%value%) ÷ 100', (value) => value / 100);
+    }, [applyUnary]);
+
+    const handleInsertConstant = React.useCallback((numericValue, displayToken) => {
+      appendToken(String(numericValue), displayToken, { preserve: true });
+    }, [appendToken]);
+
+    const handleInsertAnswer = React.useCallback(() => {
+      appendToken(String(state.lastAnswer ?? 0), 'Ans', { preserve: true });
+    }, [appendToken, state.lastAnswer]);
+
+    const buttons = [
+      ['Rad', 'Deg', 'x!', '(', ')', '%', 'AC'],
+      ['Inv', 'sin', 'ln', '7', '8', '9', '÷'],
+      ['π', 'cos', 'log', '4', '5', '6', '×'],
+      ['e', 'tan', '√', '1', '2', '3', '−'],
+      ['Ans', 'EXP', 'x^y', '0', '.', '=', '+'],
+    ];
+
+    const handleButton = React.useCallback((label) => {
+      switch (label) {
+        case 'Rad':
+        case 'Deg':
+          setState((prev) => ({ ...prev, angleMode: label, justEvaluated: false }));
+          return;
+        case 'x!':
+          applyUnary('fact(%value%)', (value) => factorial(Math.round(value)));
+          return;
+        case '(':
+          appendToken('(', '(', { preserve: true });
+          return;
+        case ')':
+          appendToken(')', ')', { preserve: true });
+          return;
+        case '%':
+          handlePercent();
+          return;
+        case 'AC':
+          resetAll();
+          return;
+        case 'Inv':
+          applyUnary('1 ÷ %value%', (value) => (value === 0 ? NaN : 1 / value));
+          return;
+        case 'sin':
+          applyUnary('sin(%value%)', (value, prev) => {
+            const radians = prev.angleMode === 'Deg' ? (value * Math.PI) / 180 : value;
+            return Math.sin(radians);
+          });
+          return;
+        case 'cos':
+          applyUnary('cos(%value%)', (value, prev) => {
+            const radians = prev.angleMode === 'Deg' ? (value * Math.PI) / 180 : value;
+            return Math.cos(radians);
+          });
+          return;
+        case 'tan':
+          applyUnary('tan(%value%)', (value, prev) => {
+            const radians = prev.angleMode === 'Deg' ? (value * Math.PI) / 180 : value;
+            return Math.tan(radians);
+          });
+          return;
+        case 'ln':
+          applyUnary('ln(%value%)', (value) => (value <= 0 ? NaN : Math.log(value)));
+          return;
+        case 'log':
+          applyUnary('log₁₀(%value%)', (value) => (value <= 0 ? NaN : Math.log(value) / Math.LN10));
+          return;
+        case '√':
+          applyUnary('√(%value%)', (value) => (value < 0 ? NaN : Math.sqrt(value)));
+          return;
+        case 'EXP':
+          applyUnary('exp(%value%)', (value) => Math.exp(value));
+          return;
+        case 'π':
+          handleInsertConstant(Math.PI, 'π');
+          return;
+        case 'e':
+          handleInsertConstant(Math.E, 'e');
+          return;
+        case 'Ans':
+          handleInsertAnswer();
+          return;
+        case 'x^y':
+          appendOperator('^', '**');
+          return;
+        case '÷':
+          appendOperator('÷', '/');
+          return;
+        case '×':
+          appendOperator('×', '*');
+          return;
+        case '−':
+          appendOperator('−', '-');
+          return;
+        case '+':
+          appendOperator('+', '+');
+          return;
+        case '=':
+          handleEquals();
+          return;
+        case '.':
+          appendToken('.', '.', { preserve: true });
+          return;
+        default:
+          if (/^\d$/.test(label)) {
+            appendToken(label, label);
+          }
+      }
+    }, [appendOperator, appendToken, applyUnary, factorial, handleEquals, handleInsertAnswer, handleInsertConstant, handlePercent, resetAll, setState]);
+
+    const expressionText = state.display && state.display.trim().length ? state.display : formatValue(state.lastAnswer ?? 0);
+    const livePreview = (() => {
+      if (state.error) return state.error;
+      if (state.justEvaluated) {
+        return formatValue(state.lastAnswer ?? evaluateExpression(state.expression));
+      }
+      if (!state.expression.trim()) {
+        return formatValue(state.lastAnswer ?? 0);
+      }
+      const value = evaluateExpression(state.expression);
+      if (!Number.isFinite(value)) {
+        return 'Math error';
+      }
+      return formatValue(value);
+    })();
+
+    const palette = isDark ? '#1f2937' : '#f8fafc';
+    const keypadBg = isDark ? '#111827' : '#e5e7eb';
+
+    return (
+      React.createElement(Paper, {
+        sx: {
+          p: 3,
+          borderRadius: 4,
+          width: '100%',
+          maxWidth: 640,
+          mx: 'auto',
+          background: palette,
+        }
+      },
+        React.createElement(Stack, { spacing: 3 },
+          React.createElement(Stack, { direction: 'row', justifyContent: 'space-between', alignItems: 'center' },
+            React.createElement(Typography, { variant: 'h6', fontWeight: 600 }, title),
+            React.createElement(Chip, {
+              label: state.angleMode === 'Deg' ? 'Degrees' : 'Radians',
+              color: 'primary',
+              variant: 'outlined',
+              size: 'small'
+            })
+          ),
+          React.createElement(Box, {
+            sx: {
+              borderRadius: 3,
+              p: 3,
+              background: isDark ? '#0f172a' : '#ffffff',
+              boxShadow: theme.shadows[isDark ? 6 : 3],
+              minHeight: 120,
+            }
+          },
+            React.createElement(Stack, { spacing: 1, alignItems: 'flex-end' },
+              React.createElement(Typography, {
+                variant: 'body1',
+                color: theme.palette.text.secondary,
+                sx: { wordBreak: 'break-all', minHeight: 24 }
+              }, expressionText),
+              React.createElement(Typography, {
+                variant: 'h3',
+                fontWeight: 700,
+                sx: { wordBreak: 'break-all' }
+              }, livePreview)
+            )
+          ),
+          React.createElement(Box, {
+            sx: {
+              display: 'grid',
+              gap: 1,
+              gridTemplateColumns: 'repeat(7, minmax(56px, 1fr))',
+              background: keypadBg,
+              borderRadius: 3,
+              p: 2,
+            }
+          },
+            ...buttons.flatMap((row, rowIdx) =>
+              row.map((label) => {
+                const isMode = label === 'Rad' || label === 'Deg';
+                const isPrimary = ['=', '+', '−', '×', '÷'].includes(label);
+                const isDestructive = label === 'AC';
+                const span = label === '0' ? { gridColumn: 'span 2' } : null;
+                const activeMode = isMode && state.angleMode === label;
+                return React.createElement(Button, {
+                  key: rowIdx + '-' + label,
+                  variant: activeMode || label === '=' ? 'contained' : 'outlined',
+                  color: isDestructive ? 'error' : (isPrimary || activeMode ? 'primary' : 'inherit'),
+                  onClick: () => handleButton(label),
+                  sx: Object.assign({
+                    py: 1.5,
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    borderRadius: 2,
+                    backgroundColor: activeMode ? theme.palette.primary.main : undefined,
+                    color: activeMode ? '#fff' : undefined,
+                  }, span)
+                }, label === 'x^y' ? 'xʸ' : label);
+              })
+            )
+          ),
+          React.createElement(Box, null,
+            React.createElement(Typography, { variant: 'subtitle2', color: 'text.secondary', gutterBottom: true }, 'Recent Calculations'),
+            React.createElement(Stack, { spacing: 1.2 },
+              ...(Array.isArray(state.history) ? state.history : []).map((entry, idx) =>
+                React.createElement(Paper, {
+                  key: entry.timestamp + '-' + idx,
+                  variant: 'outlined',
+                  sx: {
+                    p: 1.5,
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: isDark ? '#0b1220' : '#fdfdfd',
+                  }
+                },
+                  React.createElement(Box, null,
+                    React.createElement(Typography, { variant: 'caption', color: 'text.secondary' }, new Date(entry.timestamp).toLocaleString()),
+                    React.createElement(Typography, { variant: 'body2' }, entry.expression)
+                  ),
+                  React.createElement(Typography, { variant: 'body1', fontWeight: 600 }, entry.result)
+                )
+              )
+            )
+          )
+        )
+      )
+    );
+  },
+
+  Calendar: (props) => {
+    const {
+      persistKey = 'team-calendar',
+      title = 'Team Calendar',
+      initialEvents = [],
+      events = [], // Allow direct events prop
+      onEventUpdate = null, // Expose event update callback
+      onEventDelete = null, // Expose event delete callback
+      onEventCreate = null, // Expose event create callback
+      onDateClick = null, // Expose date click callback
+      onEventSelect = null, // Expose event select callback
+      renderEvent = null, // Custom event renderer
+      views = null, // Custom views
+      defaultView = 'month', // Default view
+      showCreateDialog = true, // Show create event dialog
+      showEventDetails = true, // Show event details panel
+      showUpcoming = true, // Show upcoming events panel
+      selectable = true, // Allow date selection
+      editable = true, // Allow event editing
+    } = props || {};
+    const theme = useTheme();
+    const factory = useExternalFactory('react-big-calendar', [persistKey]);
+
+    const sampleEvents = React.useMemo(() => {
+      // Use provided events first, then initialEvents, then samples
+      if (Array.isArray(events) && events.length) return events;
+      if (Array.isArray(initialEvents) && initialEvents.length) return initialEvents;
+      const today = new Date();
+      const span = (days, hour, duration = 1, color) => {
+        const start = new Date(today);
+        start.setDate(start.getDate() + days);
+        start.setHours(hour, 0, 0, 0);
+        const end = new Date(start);
+        end.setHours(hour + duration, 0, 0, 0);
+        return { start: start.toISOString(), end: end.toISOString(), color };
+      };
+      return [
+        Object.assign({ id: 'ev-1', title: 'Sprint Planning', description: 'Plan backlog and velocity.' }, span(1, 10, 2, '#1A73E8')),
+        Object.assign({ id: 'ev-2', title: 'Design Critique', description: 'Review dashboard refresh.' }, span(2, 14, 1, '#34A853')),
+        Object.assign({ id: 'ev-3', title: 'Customer Demo', description: 'Showcase latest workflow.' }, span(4, 16, 1, '#F9AB00')),
+        Object.assign({ id: 'ev-4', title: 'Retrospective', description: 'Celebrate wins and learnings.' }, span(6, 12, 1, '#A142F4')),
+      ];
+    }, [events, initialEvents]);
+
+    const [data, setData] = useEmbeddedData(persistKey, { events: sampleEvents });
+    const persistedEvents = Array.isArray(data?.events) && data.events.length ? data.events : sampleEvents;
+
+    const normalizeEvent = React.useCallback((event, index) => ({
+      ...event,
+      id: event.id ?? ('event-' + index),
+      start: event.start instanceof Date ? event.start : new Date(event.start),
+      end: event.end instanceof Date ? event.end : new Date(event.end),
+    }), []);
+
+    const normalizedEvents = React.useMemo(() => persistedEvents.map(normalizeEvent), [persistedEvents, normalizeEvent]);
+
+    const persistEvents = React.useCallback((events) => events.map((event, index) => ({
+      ...event,
+      id: event.id ?? ('event-' + index),
+      start: event.start instanceof Date ? event.start.toISOString() : event.start,
+      end: event.end instanceof Date ? event.end.toISOString() : event.end,
+    })), []);
+
+    const { Calendar, Views, localizer } = factory || {};
+    const monthView = Views?.MONTH || 'month';
+    const weekView = Views?.WEEK || 'week';
+    const dayView = Views?.DAY || 'day';
+    const availableViews = views || [monthView, weekView, dayView];
+
+    const [view, setView] = React.useState(defaultView === 'week' ? weekView : defaultView === 'day' ? dayView : monthView);
+    const [currentDate, setCurrentDate] = React.useState(new Date());
+    const [draftEvent, setDraftEvent] = React.useState(null);
+    const [formValues, setFormValues] = React.useState({ title: '', location: '', description: '' });
+    const [selectedEvent, setSelectedEvent] = React.useState(null);
+
+    const customEventRenderer = React.useMemo(() => {
+      if (typeof renderEvent !== 'function') return null;
+      return (eventProps) => renderEvent({
+        event: eventProps.event,
+        title: eventProps.title,
+        isAllDay: eventProps.isAllDay,
+        continuesPrior: eventProps.continuesPrior,
+        continuesAfter: eventProps.continuesAfter,
+        localizer,
+      });
+    }, [renderEvent, localizer]);
+
+    const calendarComponents = React.useMemo(() => {
+      const base = { toolbar: () => null };
+      if (customEventRenderer) {
+        base.event = customEventRenderer;
+      }
+      return base;
+    }, [customEventRenderer]);
+
+    const upcomingEvents = React.useMemo(() => {
+      if (!showUpcoming) return [];
+      const now = new Date();
+      return [...normalizedEvents]
+        .filter((event) => event.end >= now)
+        .sort((a, b) => a.start - b.start)
+        .slice(0, 6);
+    }, [normalizedEvents, showUpcoming]);
+
+    const handleCreateEvent = React.useCallback(() => {
+      if (!draftEvent) return;
+      const start = draftEvent.start instanceof Date ? draftEvent.start : new Date(draftEvent.start);
+      const end = draftEvent.end instanceof Date ? draftEvent.end : new Date(draftEvent.end);
+      const newEvent = {
+        id: 'event-' + Date.now(),
+        title: formValues.title || 'Untitled Event',
+        location: formValues.location,
+        description: formValues.description,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        color: '#34A853',
+      };
+      
+      // Call external callback if provided
+      if (typeof onEventCreate === 'function') {
+        onEventCreate(newEvent);
+      }
+      
+      setData((prev) => {
+        const existing = Array.isArray(prev?.events) ? prev.events : [];
+        return {
+          ...prev,
+          events: persistEvents([...existing, newEvent]),
+        };
+      });
+      setDraftEvent(null);
+      setFormValues({ title: '', location: '', description: '' });
+    }, [draftEvent, formValues, persistEvents, setData, onEventCreate]);
+
+    const handleUpdateEvent = React.useCallback((eventId, updates) => {
+      // Call external callback if provided
+      if (typeof onEventUpdate === 'function') {
+        onEventUpdate(eventId, updates);
+      }
+      
+      setData((prev) => {
+        const existing = Array.isArray(prev?.events) ? prev.events : [];
+        const updated = existing.map(event => 
+          (event.id ?? event.title) === eventId 
+            ? { ...event, ...updates }
+            : event
+        );
+        return {
+          ...prev,
+          events: persistEvents(updated),
+        };
+      });
+    }, [persistEvents, setData, onEventUpdate]);
+
+    const handleDeleteEvent = React.useCallback((eventId) => {
+      // Call external callback if provided
+      if (typeof onEventDelete === 'function') {
+        onEventDelete(eventId);
+      }
+      
+      setData((prev) => {
+        const existing = Array.isArray(prev?.events) ? prev.events : [];
+        return {
+          ...prev,
+          events: persistEvents(existing.filter((event) => (event.id ?? event.title) !== eventId)),
+        };
+      });
+      setSelectedEvent(null);
+    }, [persistEvents, setData, onEventDelete]);
+
+    const eventPropGetter = React.useCallback((event) => {
+      const backgroundColor = event.color || theme.palette.primary.main;
+      return {
+        style: {
+          backgroundColor,
+          borderRadius: 12,
+          border: 'none',
+          padding: '2px 8px',
+          color: theme.palette.getContrastText(backgroundColor),
+        },
+      };
+    }, [theme.palette]);
+
+    const handleSlotSelect = React.useCallback((slotInfo) => {
+      if (typeof onDateClick === 'function') {
+        onDateClick(slotInfo);
+      }
+      if (showCreateDialog) {
+        setDraftEvent(slotInfo);
+        setFormValues({ title: '', location: '', description: '' });
+      }
+    }, [onDateClick, showCreateDialog]);
+
+    const handleEventSelect = React.useCallback((event) => {
+      setSelectedEvent(event);
+      if (typeof onEventSelect === 'function') {
+        onEventSelect(event);
+      }
+    }, [onEventSelect]);
+
+    // Expose calendar API for advanced users
+    const calendarAPI = React.useMemo(() => ({
+      // Event management
+      createEvent: (event) => {
+        const newEvent = {
+          id: 'event-' + Date.now(),
+          title: event.title || 'New Event',
+          start: event.start || new Date(),
+          end: event.end || new Date(),
+          ...event,
+        };
+        setData((prev) => {
+          const existing = Array.isArray(prev?.events) ? prev.events : [];
+          return {
+            ...prev,
+            events: persistEvents([...existing, newEvent]),
+          };
+        });
+        return newEvent;
+      },
+      updateEvent: handleUpdateEvent,
+      deleteEvent: handleDeleteEvent,
+      
+      // Navigation
+      navigate: (date) => setCurrentDate(date),
+      setView: (viewName) => setView(viewName),
+      goToToday: () => setCurrentDate(new Date()),
+      
+      // State access
+      getCurrentDate: () => currentDate,
+      getCurrentView: () => view,
+      getEvents: () => normalizedEvents,
+      getSelectedEvent: () => selectedEvent,
+      
+      // Utilities
+      localizer,
+      Views,
+      theme,
+    }), [handleUpdateEvent, handleDeleteEvent, currentDate, view, normalizedEvents, selectedEvent, localizer, Views, theme, setData, persistEvents]);
+
+    // Expose API to parent component
+    React.useEffect(() => {
+      if (typeof props.onApiReady === 'function') {
+        props.onApiReady(calendarAPI);
+      }
+    }, [props.onApiReady, calendarAPI]);
+
+    if (!Calendar || !localizer) {
+      return React.createElement(Paper, { sx: { p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 } },
+        React.createElement(CircularProgress, { size: 20 }),
+        React.createElement(Typography, { variant: 'body2' }, 'Loading interactive calendar...')
+      );
+    }
+
+    return (
+      React.createElement(Paper, { sx: { p: 3, borderRadius: 4 } },
+        React.createElement(Stack, { spacing: 3 },
+          React.createElement(Stack, { direction: { xs: 'column', md: 'row' }, spacing: 2, justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' } },
+            React.createElement(Box, null,
+              React.createElement(Typography, { variant: 'h6', fontWeight: 600 }, title),
+              React.createElement(Typography, { variant: 'body2', color: 'text.secondary' }, 'Interactive calendar with full API access for customization.')
+            ),
+            React.createElement(Stack, { direction: 'row', spacing: 1 },
+              React.createElement(Button, { variant: 'outlined', onClick: () => setCurrentDate(new Date()) }, 'Today'),
+              React.createElement(ButtonGroup, { variant: 'outlined' },
+                availableViews.map((name) => React.createElement(Button, {
+                  key: name,
+                  variant: view === name ? 'contained' : 'outlined',
+                  onClick: () => setView(name)
+                }, name.charAt(0).toUpperCase() + name.slice(1)))
+              )
+            )
+          ),
+          React.createElement(Stack, { direction: { xs: 'column', xl: 'row' }, spacing: 3, alignItems: 'stretch' },
+            React.createElement(Box, { sx: { flex: 1.8, minWidth: 0 } },
+              React.createElement(Calendar, {
+                localizer,
+                events: normalizedEvents,
+                view,
+                date: currentDate,
+                onView: (nextView) => setView(nextView),
+                onNavigate: (nextDate) => setCurrentDate(nextDate),
+                selectable: selectable,
+                style: { minHeight: 540 },
+                popup: true,
+                eventPropGetter,
+                views: availableViews,
+                onSelectSlot: handleSlotSelect,
+                onSelectEvent: handleEventSelect,
+                components: calendarComponents
+              })
+            ),
+            (showUpcoming || showEventDetails) && React.createElement(Stack, { spacing: 2, sx: { width: { xs: '100%', xl: 320 } } },
+              showUpcoming && React.createElement(Paper, { variant: 'outlined', sx: { p: 2, borderRadius: 3 } },
+                React.createElement(Typography, { variant: 'subtitle2', color: 'text.secondary', gutterBottom: true }, 'Upcoming events'),
+                upcomingEvents.length === 0
+                  ? React.createElement(Typography, { variant: 'body2', color: 'text.secondary' }, 'No upcoming events scheduled.')
+                  : React.createElement(Stack, { spacing: 1.5 },
+                      ...upcomingEvents.map((event) => React.createElement(Paper, {
+                        key: event.id,
+                        sx: {
+                          p: 1.5,
+                          borderRadius: 2,
+                          backgroundColor: (event.color || theme.palette.background.paper) + '22',
+                          cursor: 'pointer',
+                        },
+                        onClick: () => setSelectedEvent(event)
+                      },
+                        React.createElement(Typography, { variant: 'subtitle2', fontWeight: 600 }, event.title),
+                        React.createElement(Typography, { variant: 'body2', color: 'text.secondary' }, event.location || '—'),
+                        React.createElement(Typography, { variant: 'caption', color: 'text.secondary' }, event.start.toLocaleString())
+                      ))
+                    )
+              ),
+              showEventDetails && selectedEvent && React.createElement(Paper, { variant: 'outlined', sx: { p: 2, borderRadius: 3 } },
+                React.createElement(Stack, { spacing: 1.2 },
+                  React.createElement(Typography, { variant: 'subtitle1', fontWeight: 600 }, selectedEvent.title),
+                  selectedEvent.description && React.createElement(Typography, { variant: 'body2' }, selectedEvent.description),
+                  selectedEvent.location && React.createElement(Typography, { variant: 'body2', color: 'text.secondary' }, selectedEvent.location),
+                  React.createElement(Typography, { variant: 'caption', color: 'text.secondary' }, selectedEvent.start.toLocaleString() + ' – ' + selectedEvent.end.toLocaleString()),
+                  editable && React.createElement(Stack, { direction: 'row', spacing: 1 },
+                    React.createElement(Button, {
+                      variant: 'outlined',
+                      size: 'small',
+                      onClick: () => {
+                        const newTitle = prompt('New title:', selectedEvent.title);
+                        if (newTitle && newTitle !== selectedEvent.title) {
+                          handleUpdateEvent(selectedEvent.id, { title: newTitle });
+                        }
+                      }
+                    }, 'Edit'),
+                    React.createElement(Button, {
+                      variant: 'outlined',
+                      color: 'error',
+                      size: 'small',
+                      onClick: () => handleDeleteEvent(selectedEvent.id)
+                    }, 'Delete')
+                  )
+                )
+              )
+            )
+          ),
+          showCreateDialog && React.createElement(Dialog, { open: Boolean(draftEvent), onClose: () => setDraftEvent(null) },
+            React.createElement(DialogTitle, null, 'Create Event'),
+            React.createElement(DialogContent, { sx: { minWidth: { xs: 'auto', sm: 420 } } },
+              React.createElement(Stack, { spacing: 2 },
+                React.createElement(TextField, {
+                  label: 'Title',
+                  value: formValues.title,
+                  onChange: (event) => setFormValues((prev) => ({ ...prev, title: event.target.value })),
+                  autoFocus: true,
+                  fullWidth: true
+                }),
+                React.createElement(TextField, {
+                  label: 'Location',
+                  value: formValues.location,
+                  onChange: (event) => setFormValues((prev) => ({ ...prev, location: event.target.value })),
+                  fullWidth: true
+                }),
+                React.createElement(TextField, {
+                  label: 'Notes',
+                  multiline: true,
+                  minRows: 3,
+                  value: formValues.description,
+                  onChange: (event) => setFormValues((prev) => ({ ...prev, description: event.target.value })),
+                  fullWidth: true
+                })
+              )
+            ),
+            React.createElement(DialogActions, null,
+              React.createElement(Button, { onClick: () => setDraftEvent(null) }, 'Cancel'),
+              React.createElement(Button, { variant: 'contained', onClick: handleCreateEvent }, 'Save Event')
+            )
+          )
+        )
+      )
+    );
+  },
+
+  StickyNotes: (props) => {
+    const {
+      persistKey = 'sticky-notes-board',
+      title = 'Sticky Notes',
+      initialNotes = [],
+    } = props || {};
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
+    const factory = useExternalFactory('react-stickies', [persistKey]);
+    const StickiesBoard = factory?.Stickies;
+    const palette = props.colors || ['#F28B82', '#FBBC04', '#FFF475', '#CCFF90', '#AECBFA', '#FDCFE8', '#CF93FF'];
+
+    const nowStamp = React.useCallback(() => new Date().toLocaleString(), []);
+
+    const defaultNotes = React.useMemo(() => {
+      if (Array.isArray(initialNotes) && initialNotes.length) return initialNotes;
+      return [
+        {
+          id: 'note-1',
+          title: 'Daily Stand-up',
+          text: 'Sync with team at 9:30 AM. Highlight blockers early.',
+          color: palette[0],
+          degree: '1deg',
+          timeStamp: nowStamp(),
+          contentEditable: true,
+          grid: { i: 'note-1', x: 0, y: 0, w: 3, h: 3 },
+        },
+        {
+          id: 'note-2',
+          title: 'Research Ideas',
+          text: 'Collect inspiration references for dashboard redesign.',
+          color: palette[1],
+          degree: '-2deg',
+          timeStamp: nowStamp(),
+          contentEditable: true,
+          grid: { i: 'note-2', x: 3, y: 0, w: 3, h: 3 },
+        },
+        {
+          id: 'note-3',
+          title: 'Launch Checklist',
+          text: 'QA ✅  Marketing ✅  Docs ☐',
+          color: palette[2],
+          degree: '0deg',
+          timeStamp: nowStamp(),
+          contentEditable: true,
+          grid: { i: 'note-3', x: 6, y: 0, w: 3, h: 3 },
+        },
+      ];
+    }, [initialNotes, palette, nowStamp]);
+
+    const [state, setState] = useEmbeddedData(persistKey, { notes: defaultNotes });
+    const notes = Array.isArray(state?.notes) && state.notes.length ? state.notes : defaultNotes;
+
+    const sanitizeNotes = React.useCallback((items) => {
+      if (!Array.isArray(items)) {
+        return [];
+      }
+
+      return items.map((note, index) => {
+        const noteData = note || {};
+        const noteDefault = noteData.default || {};
+        const rest = { ...noteData };
+        delete rest.editorState;
+        delete rest.default;
+
+        const gridSource = rest.grid && typeof rest.grid === 'object' ? rest.grid : {};
+        const id = rest.id || gridSource.i || 'note-' + index;
+
+        const grid = {
+          i: id,
+          x: gridSource.x !== undefined ? gridSource.x : (index % 4) * 2,
+          y: gridSource.y !== undefined ? gridSource.y : Infinity,
+          w: gridSource.w !== undefined ? gridSource.w : 2,
+          h: gridSource.h !== undefined ? gridSource.h : 2,
+          ...gridSource,
+        };
+
+        return {
+          id,
+          title: rest.title || noteDefault.title || 'Untitled',
+          text: rest.text || noteDefault.text || '',
+          color: rest.color || palette[index % palette.length],
+          degree: rest.degree || ((index % 5) - 2) + 'deg',
+          timeStamp: rest.timeStamp || nowStamp(),
+          contentEditable: rest.contentEditable !== false,
+          grid,
+        };
+      });
+    }, [palette, nowStamp]);
+
+    const normalizedNotes = React.useMemo(() => sanitizeNotes(notes), [notes, sanitizeNotes]);
+
+    const commitNotes = React.useCallback((items) => {
+      const cleaned = sanitizeNotes(items).map((note) => {
+        const cloned = { ...note };
+        delete cloned.editorState;
+        return cloned;
+      });
+      setState((prev) => ({ ...prev, notes: cleaned }));
+    }, [sanitizeNotes, setState]);
+
+    const handleChange = React.useCallback((items) => {
+      commitNotes(items);
+    }, [commitNotes]);
+
+    const handleAdd = React.useCallback((note) => {
+      commitNotes([...normalizedNotes, note]);
+    }, [commitNotes, normalizedNotes]);
+
+    const handleDelete = React.useCallback((note) => {
+      const remaining = normalizedNotes.filter((item) => (item.id || item.grid?.i) !== note.id);
+      commitNotes(remaining);
+    }, [commitNotes, normalizedNotes]);
+
+    const addNoteManually = React.useCallback(() => {
+      const id = 'note-' + Date.now();
+      const next = {
+        id,
+        title: 'New Idea',
+        text: 'Capture action items here…',
+        color: palette[normalizedNotes.length % palette.length],
+        degree: (Math.floor(Math.random() * 5) - 2) + 'deg',
+        timeStamp: nowStamp(),
+        contentEditable: true,
+        grid: { i: id, x: (normalizedNotes.length * 2) % 12, y: Infinity, w: 2, h: 2 },
+      };
+      commitNotes([...normalizedNotes, next]);
+    }, [commitNotes, normalizedNotes, palette]);
+
+    if (!StickiesBoard) {
+      return React.createElement(Paper, { sx: { p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 } },
+        React.createElement(CircularProgress, { size: 20 }),
+        React.createElement(Typography, { variant: 'body2' }, 'Loading sticky notes board...')
+      );
+    }
+
+    return (
+      React.createElement(Paper, { sx: { p: 3, borderRadius: 4, background: isDark ? '#111827' : '#ffffff' } },
+        React.createElement(Stack, { spacing: 2.5 },
+          React.createElement(Stack, { direction: { xs: 'column', sm: 'row' }, spacing: 2, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' } },
+            React.createElement(Box, null,
+              React.createElement(Typography, { variant: 'h6', fontWeight: 600 }, title),
+              React.createElement(Typography, { variant: 'body2', color: 'text.secondary' }, 'Drag, resize, and collaborate on shared sticky notes.')
+            ),
+            React.createElement(Stack, { direction: 'row', spacing: 1 },
+              React.createElement(Button, { variant: 'contained', startIcon: React.createElement(AddIcon, null), onClick: addNoteManually }, 'Add Note')
+            )
+          ),
+          React.createElement(Box, {
+            sx: {
+              background: isDark ? '#0f172a' : '#fdfaf4',
+              borderRadius: 4,
+              p: { xs: 2, md: 3 },
+              minHeight: 420,
+            }
+          },
+            React.createElement(StickiesBoard, {
+              notes: normalizedNotes,
+              colors: palette,
+              footer: true,
+              tape: true,
+              title: true,
+              wrapperStyle: { height: '100%' },
+              grid: { w: 2, h: 2, rowHeight: 140, cols: { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 } },
+              onChange: handleChange,
+              onAdd: handleAdd,
+              onDelete: handleDelete,
+            })
+          )
+        )
+      )
+    );
+  },
+
   CRMBoard: (props) => {
     const { stages = ['Todo','In Progress','Done'], items = [], persistKey = 'crm-board' } = props || {};
     const [data] = useEmbeddedData(persistKey, { stages, items });
@@ -575,16 +1535,16 @@ class ReactComponentRenderer extends React.Component {
 
     // Final safety: if icon names leaked into text content (e.g., "AddIcon Task"), collapse "Icon" suffix in text nodes only
     try {
-      const ICON_WORDS = ['Add','Edit','Delete','Save','Close','Search','Refresh','Warning','Error','Info','CheckCircle','MoreVert','Settings','Send','FilterList'];
+      const ICON_WORDS = ['Add', 'Edit', 'Delete', 'Save', 'Close', 'Search', 'Refresh', 'Warning', 'Error', 'Info', 'CheckCircle', 'MoreVert', 'Settings', 'Send', 'FilterList'];
       const iconWordRegex = new RegExp('\\b(' + ICON_WORDS.join('|') + ')Icon\\b', 'g');
       src = src.replace(/>([^<]+)</g, (match, inner) => {
-        const replaced = inner.replace(iconWordRegex, (w) => w.replace('Icon',''));
+        const replaced = inner.replace(iconWordRegex, (w) => w.replace('Icon', ''));
         return '>' + replaced + '<';
       });
     } catch (_) { /* noop */ }
 
     // Ensure StyledComponents destructuring exists when components are referenced
-    const styledNames = ['ContentContainer','BeautifulCard','SectionHeader','FormContainer','PrimaryButton','SuccessButton','DangerButton'];
+    const styledNames = ['ContentContainer', 'BeautifulCard', 'SectionHeader', 'FormContainer', 'PrimaryButton', 'SuccessButton', 'DangerButton'];
     const usesStyled = styledNames.some(n => new RegExp('(^|[^.\\w])' + n + '\\b').test(src));
     const hasDestructure = /const\s*\{\s*ContentContainer\s*,/m.test(src) || /StyledComponents\./.test(src);
     if (usesStyled && !hasDestructure) {
@@ -684,6 +1644,7 @@ const {
   Paper,
   Typography,
   Button,
+  ButtonGroup,
   TextField,
   IconButton,
   Chip,
@@ -835,6 +1796,74 @@ const allTasksDataFromProps = Array.isArray(allTasks) ? allTasks : __flatTasks;
 const __users = users;
 const __project = project;
 
+
+const ensureExternalStylesheet = (href) => {
+  if (typeof document === 'undefined') return;
+  if (document.querySelector('link[data-external-style="' + href + '"]')) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = href;
+  link.dataset.externalStyle = href;
+  document.head.appendChild(link);
+};
+
+const calendarLocalizerInstance = calendarLocalizer;
+
+const externalFactoryCache = window.__externalFactoryCache || (window.__externalFactoryCache = {});
+const externalFactoryLoaders = {
+  'react-big-calendar': async () => {
+    if (!externalFactoryCache['react-big-calendar']) {
+      externalFactoryCache['react-big-calendar'] = {
+        Calendar: RBCalendar,
+        Views: RBViews,
+        localizer: calendarLocalizerInstance,
+      };
+    }
+    return externalFactoryCache['react-big-calendar'];
+  },
+  'react-stickies': async () => {
+    if (externalFactoryCache['react-stickies']) return externalFactoryCache['react-stickies'];
+    const module = await import('https://esm.sh/react-stickies@0.0.16?bundle&external=react&external=react-dom');
+    ensureExternalStylesheet('https://unpkg.com/react-grid-layout@0.14.0/css/styles.css');
+    ensureExternalStylesheet('https://unpkg.com/react-resizable@3.0.4/css/styles.css');
+    const StickiesComponent = module.default || module.Stickies || module.ReactStickies || module;
+    const factory = { Stickies: StickiesComponent, module };
+    externalFactoryCache['react-stickies'] = factory;
+    return factory;
+  },
+};
+
+const useExternalFactory = (name, deps = []) => {
+  const [factory, setFactory] = React.useState(() => externalFactoryCache[name] || null);
+
+  React.useEffect(() => {
+    let active = true;
+    if (externalFactoryCache[name]) {
+      setFactory(externalFactoryCache[name]);
+      return () => { active = false; };
+    }
+    const loader = externalFactoryLoaders[name];
+    if (!loader) {
+      console.warn('No external factory loader registered for', name);
+      return () => { active = false; };
+    }
+    loader()
+      .then((mod) => {
+        if (!active) return;
+        externalFactoryCache[name] = mod;
+        setFactory(mod);
+      })
+      .catch((error) => {
+        console.error('Failed to load external factory', name, error);
+      });
+    return () => { active = false; };
+  }, [name, ...deps]);
+
+  return factory;
+};
+
+
+
 const ProfessionalThemeWrapper = ({ children }) => {
   const outer = (typeof useTheme === 'function') ? useTheme() : null;
   const [mode, setMode] = React.useState(outer?.palette?.mode || (typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'));
@@ -851,6 +1880,9 @@ const ProfessionalThemeWrapper = ({ children }) => {
 
   const isDarkMode = mode === 'dark';
   const surface = { default: isDarkMode ? '#0f172a' : '#ffffff', paper: isDarkMode ? '#111827' : '#ffffff' };
+
+
+
   const textColors = { primary: isDarkMode ? '#e5e7eb' : '#111827', secondary: isDarkMode ? 'rgba(229,231,235,0.7)' : '#4b5563' };
 
   const theme = React.useMemo(() => createTheme({
@@ -1041,6 +2073,9 @@ return __Themed;
 
     const factory = new Function(
       'React',
+      'RBCalendar',
+      'RBViews',
+      'calendarLocalizer',
       'Recharts',
       'MuiDataGrid',
       'MuiMaterial',
@@ -1083,8 +2118,20 @@ return __Themed;
       return fetch(url, options);
     };
 
+    // Create calendar localizer instance
+    const calendarLocalizer = rbDateFnsLocalizer({
+      format: dfFormat,
+      parse: dfParse,
+      startOfWeek: dfStartOfWeek,
+      getDay: dfGetDay,
+      locales: { 'en-US': enUSLocale }
+    });
+
     return factory(
       React,
+      RBCalendar,
+      RBViews,
+      calendarLocalizer,
       Recharts,
       MuiDataGrid,
       MuiMaterial,
