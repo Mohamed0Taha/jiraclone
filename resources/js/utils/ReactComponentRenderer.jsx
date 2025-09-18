@@ -1604,7 +1604,12 @@ class ReactComponentRenderer extends React.Component {
     let transformed = result.code || '';
     transformed = transformed.replace(/(^|\n)\s*export\s+[^;\n]*;?/g, '');
     // Remove React imports since React is provided by the factory function
-    transformed = transformed.replace(/import\s+React[^;\n]*;?\s*/g, '');
+    // Handle: import React from 'react';
+    transformed = transformed.replace(/import\s+React\s*from\s*['"][^'"]*['"];?\s*/g, '');
+    // Handle: import React, { ... } from 'react';
+    transformed = transformed.replace(/import\s+React\s*,\s*\{[^}]*\}\s*from\s*['"]react['"];?\s*/g, '');
+    // Handle: import { ... } from 'react';
+    transformed = transformed.replace(/import\s*\{\s*[^}]*\}\s*from\s*['"]react['"];?\s*/g, '');
 
     const designTokensLiteral = JSON.stringify(DESIGN_TOKENS, null, 2);
 
