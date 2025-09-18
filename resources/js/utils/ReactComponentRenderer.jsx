@@ -1151,37 +1151,6 @@ const Templates = {
       ]))
     ]);
   },
-            cursor: 'move',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            px: 1,
-            height: 28,
-            bgcolor: 'rgba(0,0,0,0.06)',
-          }
-        }, [
-          React.createElement(Typography, { key: 't', variant: 'caption', sx: { fontWeight: 600 } }, 'Sticky'),
-          React.createElement(IconButton, { key: 'x', size: 'small', onClick: () => deleteNote(note.id) }, React.createElement(CloseIcon, null))
-        ]),
-        React.createElement(Box, { key: 'body', sx: { flex: 1, p: 1 } },
-          React.createElement('textarea', {
-            value: note.text || '',
-            onChange: (e) => updateNote(note.id, { text: e.target.value }),
-            style: {
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              outline: 'none',
-              resize: 'none',
-              background: 'transparent',
-              font: '14px/1.4 ui-sans-serif, system-ui, -apple-system',
-              color: '#111',
-            }
-          })
-        )
-      )),
-    ]);
-  },
 
   CRMBoard: (props) => {
     const { stages = ['Todo','In Progress','Done'], items = [], persistKey = 'crm-board' } = props || {};
