@@ -1179,7 +1179,7 @@ const Templates = {
             }
           })
         )
-      ])),
+      )),
     ]);
   },
 
@@ -2136,7 +2136,7 @@ const __Themed = (props) => (
       extractedEmbeddedData,
     );
     if (globalCache && !globalCache.has(cacheKey)) {
-      try { globalCache.set(cacheKey, __ThemedFromFactory); } catch (_) {}
+      try { globalCache.set(cacheKey, __ThemedFromFactory); } catch (_) { }
     }
     return __ThemedFromFactory;
   };
