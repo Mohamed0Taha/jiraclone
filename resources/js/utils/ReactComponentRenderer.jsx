@@ -1010,7 +1010,7 @@ const Templates = {
       persistChanges(updatedNotes);
     }, [stickyNotes, persistChanges]);
 
-    // Update note text
+                backgroundColor: note.color.bg,
     const updateNoteText = useCallback((noteId, newText) => {
       const updatedNotes = stickyNotes.map(note =>
         note.id === noteId ? { ...note, text: newText } : note
@@ -1040,7 +1040,7 @@ const Templates = {
 
       const deltaX = e.clientX - dragging.startX;
       const deltaY = e.clientY - dragging.startY;
-
+                  color: isDark ? '#fff' : note.color.text,
       const updatedNotes = stickyNotes.map(note =>
         note.id === dragging.id
           ? {
@@ -1061,7 +1061,7 @@ const Templates = {
 
     // Handle drag end
     const handleMouseUp = useCallback(() => {
-      if (dragging) {
+                  color: isDark ? '#fff' : note.color.text,
         setDragging(null);
         // Persist final position
         if (onChange) {
