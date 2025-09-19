@@ -13,63 +13,6 @@ import { STYLED_COMPONENTS_SNIPPET } from './react-renderer/snippets/styledCompo
 
 // DESIGN_TOKENS, STYLE_UTILS_SNIPPET and STYLED_COMPONENTS_SNIPPET are imported above
 
-// Create actual objects from snippets
-const createStyleUtils = (designTokens) => ({
-  spacing: (size) => ({
-    margin: designTokens.spacing[size] || size,
-    padding: designTokens.spacing[size] || size,
-  }),
-  elevation: (level) => ({
-    boxShadow: designTokens.shadows[level] || level,
-    borderRadius: designTokens.borderRadius.lg,
-  }),
-  colorVariant: (color, shade = 500) => {
-    const swatch = (designTokens.colors[color] || {})[shade];
-    return {
-      backgroundColor: swatch,
-      color: shade >= 500 ? '#ffffff' : designTokens.colors.neutral[800],
-    };
-  },
-  flexCenter: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  flexBetween: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  gradients: {
-    primary: 'linear-gradient(135deg, ' + designTokens.colors.primary[400] + ' 0%, ' + designTokens.colors.primary[600] + ' 100%)',
-    success: 'linear-gradient(135deg, ' + designTokens.colors.success[400] + ' 0%, ' + designTokens.colors.success[600] + ' 100%)',
-    warm: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    cool: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-  },
-});
-
-const STYLE_UTILS = createStyleUtils(DESIGN_TOKENS);
-
-// Create StyledComponents object
-const createStyledComponents = (designTokens) => ({
-  BeautifulCard: (props) => React.createElement(MuiMaterial.Card, {
-    ...props,
-    sx: {
-      borderRadius: designTokens.borderRadius.lg,
-      boxShadow: 'none',
-      border: '1px solid',
-      borderColor: 'divider',
-      overflow: 'hidden',
-      transition: 'border-color 120ms ease',
-      '&:hover': { borderColor: 'divider' },
-      ...props.sx,
-    },
-  }),
-  // Add other styled components as needed
-});
-
-const STYLED_COMPONENTS = createStyledComponents(DESIGN_TOKENS);
-
 const TEMPLATES_SNIPPET = String.raw`
 // Lightweight Templates exposed to generated components
 const Templates = {
@@ -973,65 +916,113 @@ const Templates = {
     const theme = (typeof useTheme === 'function') ? useTheme() : { palette: { mode: 'light' } };
     const isDark = theme?.palette?.mode === 'dark';
 
-    // Predefined colors that retain their identity in both light and dark mode
-    const colorPalette = [
-      // Yellow
-      { 
-        bg: '#FFE066', 
-        text: '#2A2A2A' 
-      },
-      // Green
-      { 
-        bg: '#B4E7CE', 
-        text: '#2A2A2A' 
-      },
-      // Purple
-      { 
-        bg: '#B794F6', 
-        text: '#2A2A2A' 
-      },
-      // Pink
-      { 
-        bg: '#FBB6CE', 
-        text: '#2A2A2A' 
-      },
-      // Blue
-      { 
-        bg: '#93C5FD', 
-        text: '#2A2A2A' 
-      },
-      // Orange
-      { 
-        bg: '#FED7AA', 
-        text: '#2A2A2A' 
-      },
-      // Red
-      { 
-        bg: '#F87171', 
-        text: '#FFFFFF'
-      },
-      // Emerald
-      { 
-        bg: '#34D399', 
-        text: '#2A2A2A' 
-      },
-    ];
+    // Predefined colors that remain constant across light/dark themes.
+    // Text color is recomputed per-note to ensure readability, but the background stays identical.
+    const colorPalette = useMemo(() => ([
+      { bg: '#FFE066', text: '#2A2A2A' }, // Yellow
+      { bg: '#B4E7CE', text: '#2A2A2A' }, // Green
+      { bg: '#B794F6', text: '#2A2A2A' }, // Purple
+      { bg: '#FBB6CE', text: '#2A2A2A' }, // Pink
+      { bg: '#93C5FD', text: '#2A2A2A' }, // Blue
+      { bg: '#FED7AA', text: '#2A2A2A' }, // Orange
+      { bg: '#B5838D', text: '#FFFFFF' }, // Mauve
+      { bg: '#6D6875', text: '#FFFFFF' }, // Purple Grey
+    ]), []);
+
+    const getReadableTextColor = useCallback((bgColor) => {
+      if (typeof bgColor !== 'string') return '#2A2A2A';
+      const hex = bgColor.replace('#', '').trim();
+      const normalizeHex = (raw) => {
+        if (raw.length === 3) {
+          return raw.split('').map((c) => c + c).join('');
+        }
+        return raw.padEnd(6, raw[raw.length - 1] || '0').slice(0, 6);
+      };
+      const safeHex = normalizeHex(hex);
+      const r = parseInt(safeHex.slice(0, 2), 16) || 0;
+      const g = parseInt(safeHex.slice(2, 4), 16) || 0;
+      const b = parseInt(safeHex.slice(4, 6), 16) || 0;
+      const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+      return luminance > 0.6 ? '#2A2A2A' : '#FFFFFF';
+    }, []);
+
+    const resolveNoteColor = useCallback((rawColor, fallbackIndex) => {
+      const fallback = colorPalette[fallbackIndex % colorPalette.length];
+      if (!rawColor) {
+        return { ...fallback };
+      }
+      if (typeof rawColor === 'string') {
+        return { bg: rawColor, text: getReadableTextColor(rawColor) };
+      }
+      if (typeof rawColor === 'object') {
+        const bg = rawColor.bg || rawColor.background || rawColor.backgroundColor || rawColor.color || fallback.bg;
+        const text = rawColor.text || rawColor.foreground || getReadableTextColor(bg);
+        return { bg, text };
+      }
+      return { ...fallback };
+    }, [colorPalette, getReadableTextColor]);
+
+    const buildNoteState = useCallback((note, index) => {
+      const baseX = 20 + (index % 4) * 220;
+      const baseY = 20 + Math.floor(index / 4) * 180;
+      
+      // Retain existing note color as-is (do not force-switch to theme palette).
+      // Compute readable text via resolveNoteColor. This preserves color across light/dark mode.
+      let noteColor = note?.color;
+
+      // Robustly check palette membership without risking calling methods on non-strings.
+      // We no longer override the provided color, but we keep this computation defensive for future use.
+      /* const colorInPalette = colorPalette.some((c) => {
+        const bg = c?.bg;
+        if (typeof bg !== 'string') return false;
+        if (typeof noteColor === 'string') return bg.toLowerCase() === noteColor.toLowerCase();
+        if (noteColor && typeof noteColor === 'object') {
+          const ncBg = noteColor.bg || noteColor.background || noteColor.backgroundColor || noteColor.color;
+          return typeof ncBg === 'string' && bg.toLowerCase() === ncBg.toLowerCase();
+        }
+        return false;
+      }); */
+
+      const resolvedColor = resolveNoteColor(noteColor, index);
+      
+      return {
+        id: note?.id || ('note-' + Date.now() + '-' + index),
+        text: note?.text || note?.content || 'Add your notes...',
+        color: resolvedColor,
+        x: typeof note?.x === 'number' ? note.x : baseX,
+        y: typeof note?.y === 'number' ? note.y : baseY,
+        width: typeof note?.width === 'number' ? note.width : 200,
+        height: typeof note?.height === 'number' ? note.height : 160,
+      };
+    }, [resolveNoteColor, colorPalette]);
+
 
     // Initialize notes with default positions
     const [stickyNotes, setStickyNotes] = useState(() => {
       if (notes && notes.length > 0) {
-        return notes.map((note, index) => ({
-          id: note.id || ('note-' + Date.now() + '-' + index),
-          text: note.text || note.content || 'Add your notes...',
-          color: note.color || colorPalette[index % colorPalette.length],
-          x: note.x || 20 + (index % 4) * 220,
-          y: note.y || 20 + Math.floor(index / 4) * 180,
-          width: note.width || 200,
-          height: note.height || 160,
-        }));
+        return notes.map((note, index) => {
+          // Create a new note with the current theme's color palette
+          const newNote = buildNoteState(note, index);
+          return newNote;
+        });
       }
       return [];
     });
+
+    useEffect(() => {
+      setStickyNotes((prev) => {
+        let changed = false;
+        const normalized = prev.map((note, index) => {
+          const normalizedColor = resolveNoteColor(note?.color, index);
+          if (note?.color?.bg === normalizedColor.bg && note?.color?.text === normalizedColor.text) {
+            return note;
+          }
+          changed = true;
+          return { ...note, color: normalizedColor };
+        });
+        return changed ? normalized : prev;
+      });
+    }, [resolveNoteColor]);
 
     // Track dragging state
     const [dragging, setDragging] = useState(null);
@@ -1047,19 +1038,19 @@ const Templates = {
 
     // Add new note
     const addNote = useCallback(() => {
-      const colorIndex = stickyNotes.length % colorPalette.length;
-      const newNote = {
+      const nextIndex = stickyNotes.length;
+      const newNote = buildNoteState({
         id: 'note-' + Date.now(),
         text: 'Add your notes...',
-        color: colorPalette[colorIndex],
-        x: 20 + (stickyNotes.length % 4) * 220,
-        y: 20 + Math.floor(stickyNotes.length / 4) * 180,
+        color: colorPalette[nextIndex % colorPalette.length],
+        x: 20 + (nextIndex % 4) * 220,
+        y: 20 + Math.floor(nextIndex / 4) * 180,
         width: 200,
         height: 160,
-      };
+      }, nextIndex);
       const updatedNotes = [...stickyNotes, newNote];
       persistChanges(updatedNotes);
-    }, [stickyNotes, persistChanges]);
+    }, [stickyNotes, buildNoteState, persistChanges, colorPalette]);
 
     // Delete note
     const deleteNote = useCallback((noteId) => {
@@ -1067,7 +1058,7 @@ const Templates = {
       persistChanges(updatedNotes);
     }, [stickyNotes, persistChanges]);
 
-                backgroundColor: note.color.bg,
+    // Update note text
     const updateNoteText = useCallback((noteId, newText) => {
       const updatedNotes = stickyNotes.map(note =>
         note.id === noteId ? { ...note, text: newText } : note
@@ -1097,7 +1088,7 @@ const Templates = {
 
       const deltaX = e.clientX - dragging.startX;
       const deltaY = e.clientY - dragging.startY;
-                  color: isDark ? '#fff' : note.color.text,
+
       const updatedNotes = stickyNotes.map(note =>
         note.id === dragging.id
           ? {
@@ -1118,7 +1109,7 @@ const Templates = {
 
     // Handle drag end
     const handleMouseUp = useCallback(() => {
-                  color: isDark ? '#fff' : note.color.text,
+      if (dragging) {
         setDragging(null);
         // Persist final position
         if (onChange) {
@@ -1144,10 +1135,15 @@ const Templates = {
         position: 'relative',
         width: '100%',
         height: containerHeight,
-        backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
+        backgroundColor: isDark ? '#0f172a' : '#f5f5f5',
+        backgroundImage: 'none',
         borderRadius: 2,
         overflow: 'hidden',
         userSelect: 'none',
+        isolation: 'isolate',
+        mixBlendMode: 'normal',
+        filter: 'none',
+        border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
       },
       ...otherProps
     }, [
@@ -1169,28 +1165,28 @@ const Templates = {
         }
       }, React.createElement(AddIcon)),
 
-      // Render all sticky notes
-      ...stickyNotes.map((note) => React.createElement(Paper, {
+      // Render all sticky notes (sealed div to avoid theme overrides)
+      ...stickyNotes.map((note) => React.createElement('div', {
         key: note.id,
-        sx: {
+        style: {
           position: 'absolute',
           left: note.x,
           top: note.y,
           width: note.width,
           height: note.height,
           backgroundColor: note.color.bg,
+          color: note.color.text,
           cursor: dragging?.id === note.id ? 'grabbing' : 'grab',
           userSelect: 'none',
-          borderRadius: 2,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          borderRadius: 8,
+          boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.15)',
           overflow: 'hidden',
           border: '1px solid rgba(0,0,0,0.1)',
-          transition: dragging?.id === note.id ? 'none' : 'box-shadow 0.2s',
-          '&:hover': {
-            boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
-          },
+          transform: dragging?.id === note.id ? 'scale(1.02) rotate(0.5deg)' : 'none',
+          WebkitTapHighlightColor: 'transparent',
+          backgroundImage: 'none',
+          mixBlendMode: 'normal',
         },
-        elevation: 0,
         onMouseDown: (e) => handleMouseDown(e, note)
       }, [
         // Delete button in top right of note
@@ -1230,6 +1226,11 @@ const Templates = {
             resize: 'none',
             backgroundColor: 'transparent',
             color: note.color.text,
+            caretColor: note.color.text,
+            '::placeholder': {
+              color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+            },
+            caretColor: note.color.text,
             padding: '12px',
             fontSize: '14px',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -1396,29 +1397,22 @@ class ReactComponentRenderer extends React.Component {
     let extractedEmbeddedData = {};
 
     // More robust regex to capture the complete embedded data object
-    const embeddedMatch = /\/\*\s*EMBEDDED_DATA_START\s*\*\/[\s\S]*?\/\*\s*EMBEDDED_DATA_END\s*\*\//.exec(src);
+    const embeddedMatch = /\/\*\s*EMBEDDED_DATA_START\s*\*\/\s*const\s+__EMBEDDED_DATA__\s*=\s*(\{[\s\S]*?\});?\s*\/\*\s*EMBEDDED_DATA_END\s*\*\//.exec(src);
     if (embeddedMatch) {
       try {
-        // Extract just the JSON part
-        const jsonMatch = /const\s+__EMBEDDED_DATA__\s*=\s*(\{[\s\S]*?\});?/.exec(embeddedMatch[0]);
-        if (jsonMatch) {
-          extractedEmbeddedData = JSON.parse(jsonMatch[1]);
-        }
+        extractedEmbeddedData = JSON.parse(embeddedMatch[1]);
       } catch (error) {
         console.warn('[ReactComponentRenderer] Failed to parse embedded data:', error);
-        console.warn('[ReactComponentRenderer] Embedded data content:', embeddedMatch[0].substring(0, 500) + '...');
+        console.warn('[ReactComponentRenderer] Embedded data content:', embeddedMatch[1].substring(0, 500) + '...');
 
         // Try to fix common JSON issues
         try {
-          const jsonMatch = /const\s+__EMBEDDED_DATA__\s*=\s*(\{[\s\S]*?\});?/.exec(embeddedMatch[0]);
-          if (jsonMatch) {
-            let fixedJson = jsonMatch[1]
-              .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
-              .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":'); // Quote unquoted keys
+          let fixedJson = embeddedMatch[1]
+            .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+            .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":'); // Quote unquoted keys
 
-            extractedEmbeddedData = JSON.parse(fixedJson);
-            console.log('[ReactComponentRenderer] Successfully parsed fixed JSON');
-          }
+          extractedEmbeddedData = JSON.parse(fixedJson);
+          console.log('[ReactComponentRenderer] Successfully parsed fixed JSON');
         } catch (fixError) {
           console.error('[ReactComponentRenderer] Could not fix embedded data JSON:', fixError);
           // Continue without embedded data
@@ -1428,22 +1422,16 @@ class ReactComponentRenderer extends React.Component {
       src = src.replace(embeddedMatch[0], '');
     }
 
-    // Clean up any remaining embedded data patterns
-    src = src.replace(/\/\*\s*EMBEDDED_DATA_START\s*\*\/[\s\S]*?\/\*\s*EMBEDDED_DATA_END\s*\*\//g, '');
-    src = src.replace(/const\s+__EMBEDDED_DATA__\s*=\s*\{[\s\S]*?\};?/g, '');
-
     // FIX: Clean up React declarations BEFORE Babel and other processing
     src = cleanupReactDeclarations(src);
 
-    // Clean up imports and exports more aggressively
-    src = src.replace(/^import\s+.*?;?\s*$/gm, '');
-    src = src.replace(/^export\s+(?!default).*?;?\s*$/gm, '');
+    src = src.replace(/(^|\n)\s*import[^;]+;?/g, '\n');
+    src = src.replace(/(^|\n)\s*export\s+(?!default)[^;]+;?/g, '\n');
 
-    // Remove any stray 'const' declarations that might be leftover from embedded data
-    src = src.replace(/^\s*const\s+__EMBEDDED_DATA__.*?$/gm, '');
-
-    // Clean up multiple newlines
-    src = src.replace(/\n\s*\n\s*\n/g, '\n\n');
+    // Strip any JSX Add Note buttons early (pre-Babel) to avoid UI duplication
+    src = src
+      .replace(/<\s*(PrimaryButton|Button)\b[^>]*>[\s\S]*?Add\s*Note[\s\S]*?<\/\s*(PrimaryButton|Button)\s*>/gi, '')
+      .replace(/<\s*(PrimaryButton|Button)\b[^>]*label\s*=\s*["']\s*Add\s*Note\s*["'][^>]*\/>/gi, '');
 
     // Fix common icon usage issues - replace bare icon names with proper icon names
     src = src.replace(/\b(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)\b(?!\w)/g, '$1Icon');
@@ -1637,16 +1625,25 @@ class ReactComponentRenderer extends React.Component {
 
     transformed = transformed.replace(/(^|\n)\s*export\s+[^;\n]*;?/g, '');
 
+    // Remove any generated Add Note buttons to avoid duplicated controls
+    // Examples removed:
+    //   <PrimaryButton ...>Add Note</PrimaryButton>
+    //   <Button ...>Add Note</Button>
+    //   <PrimaryButton startIcon={<AddIcon />} onClick={...}> Add   Note </PrimaryButton>
+    transformed = transformed
+      .replace(/<\s*(PrimaryButton|Button)\b[^>]*>[\s\S]*?Add\s*Note[\s\S]*?<\/\s*(PrimaryButton|Button)\s*>/gi, '')
+      .replace(/<\s*(PrimaryButton|Button)\b[^>]*label\s*=\s*["']\s*Add\s*Note\s*["'][^>]*\/>/gi, '');
+
     const designTokensLiteral = JSON.stringify(DESIGN_TOKENS, null, 2);
 
     let factoryCode = `
-// Use parameters instead of const declarations to avoid syntax errors
-const React = __React;
+// Bind React from the injected argument without polluting globals
+const React = __React || (typeof window !== 'undefined' ? window.React : undefined);
 const { useState, useEffect, useMemo, useCallback, useRef, useReducer, useLayoutEffect } = React;
-const designTokens = designTokensParam;
-const styleUtils = styleUtilsParam;
-const StyledComponents = styledComponentsParam;
-const Templates = templatesParam;
+const designTokens = ${designTokensLiteral};
+${STYLE_UTILS_SNIPPET}
+${STYLED_COMPONENTS_SNIPPET}
+${TEMPLATES_SNIPPET}
 
 const {
   Box,
@@ -2135,86 +2132,27 @@ const __Themed = (props) => (
       // Clean factory code of any React redeclarations
     } catch (_) { /* noop */ }
 
-    // Debug: Log the factory code to see what's causing the syntax error
-    if (factoryCode.includes('const ') || factoryCode.includes('import ') || factoryCode.includes('export ')) {
-      console.warn('[ReactComponentRenderer] Potentially problematic code detected:', factoryCode.substring(0, 500));
-    }
-
-    let factory;
-    try {
-      factory = new Function(
-        '__React',
-        'designTokensParam',
-        'styleUtilsParam', 
-        'styledComponentsParam',
-        'templatesParam',
-        'RBCalendar',
-        'RBViews',
-        'calendarLocalizer',
-        'Recharts',
-        'MuiDataGrid',
-        'MuiMaterial',
-        'MuiIcons',
-        'csrfFetch',
-        'project',
-        'tasks',
-        'allTasks',
-        'users',
-        'methodology',
-        'auth',
-        'viewName',
-        'projectId',
-        'extractedEmbeddedData',
-        factoryCode,
-      );
-    } catch (syntaxError) {
-      console.error('[ReactComponentRenderer] Function constructor syntax error:', syntaxError);
-      console.error('[ReactComponentRenderer] Problematic code:', factoryCode);
-      
-      // Try to fix common issues and retry
-      let fixedCode = factoryCode
-        .replace(/^.*const React = __React.*$/gm, '') // Remove React binding
-        .replace(/^.*const \{ useState.*$/gm, '') // Remove destructuring
-        .replace(/^.*const designTokens.*$/gm, '') // Remove designTokens
-        .replace(/^.*const styleUtils.*$/gm, '') // Remove styleUtils
-        .replace(/^\s*const\s+.*$/gm, '') // Remove any const declarations
-        .replace(/^\s*let\s+.*$/gm, '')   // Remove any let declarations
-        .replace(/^\s*var\s+.*$/gm, '')   // Remove any var declarations
-        .replace(/^\s*import\s+.*$/gm, '') // Remove any import statements
-        .replace(/^\s*export\s+.*$/gm, '') // Remove any export statements
-        .replace(/\n\s*\n\s*\n/g, '\n\n'); // Clean up multiple newlines
-      
-      // Remove large object literal blocks that cause syntax errors
-      fixedCode = fixedCode.replace(/\{\s*"[^"]+"\s*:\s*\{[\s\S]*?\}\s*\}/g, '{}');
-      
-      console.log('[ReactComponentRenderer] Attempting to fix code...');
-      
-      factory = new Function(
-        '__React',
-        'designTokensParam',
-        'styleUtilsParam', 
-        'styledComponentsParam',
-        'templatesParam',
-        'RBCalendar',
-        'RBViews',
-        'calendarLocalizer',
-        'Recharts',
-        'MuiDataGrid',
-        'MuiMaterial',
-        'MuiIcons',
-        'csrfFetch',
-        'project',
-        'tasks',
-        'allTasks',
-        'users',
-        'methodology',
-        'auth',
-        'viewName',
-        'projectId',
-        'extractedEmbeddedData',
-        fixedCode,
-      );
-    }
+    const factory = new Function(
+      '__React',
+      'RBCalendar',
+      'RBViews',
+      'calendarLocalizer',
+      'Recharts',
+      'MuiDataGrid',
+      'MuiMaterial',
+      'MuiIcons',
+      'csrfFetch',
+      'project',
+      'tasks',
+      'allTasks',
+      'users',
+      'methodology',
+      'auth',
+      'viewName',
+      'projectId',
+      'extractedEmbeddedData',
+      factoryCode,
+    );
 
     const csrfFetch = async (input, init = {}) => {
       const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -2252,10 +2190,6 @@ const __Themed = (props) => (
 
     const __ThemedFromFactory = factory(
       React,
-      DESIGN_TOKENS,
-      STYLE_UTILS,
-      STYLED_COMPONENTS,
-      Templates,
       RBCalendar,
       RBViews,
       calendarLocalizer,

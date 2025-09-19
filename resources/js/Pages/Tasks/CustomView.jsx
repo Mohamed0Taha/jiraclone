@@ -47,9 +47,11 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
 import ChecklistRtlIcon from '@mui/icons-material/ChecklistRtl';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AssistantChat from './AssistantChat';
 import ReactComponentRenderer from '@/utils/ReactComponentRenderer';
 import { csrfFetch } from '@/utils/csrf';
+import MicroApps from '@/microapps';
 
 // Professional design tokens inspired by Board.jsx
 const designTokens = {
@@ -169,6 +171,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     const [assistantOpen, setAssistantOpen] = useState(false);
     const [isLocked, setIsLocked] = useState(true);
     const [componentCode, setComponentCode] = useState('');
+    const [selectedAppKey, setSelectedAppKey] = useState(null); // ready-made app selection
     const [customViewId, setCustomViewId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
@@ -187,6 +190,54 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         if (/function\s+GeneratedMicroApp/i.test(s)) return true;
         return false;
     }, []);
+
+    // Helper: encode/decode selection marker for server persistence
+    const encodeSelectedMarker = useCallback((appKey, state) => {
+        try {
+            const payload = { type: 'builtin_microapp', appKey: String(appKey || ''), version: 1, state: state ?? null };
+            return `/* MICROAPP_SELECTED_START */${JSON.stringify(payload)}/* MICROAPP_SELECTED_END */`;
+        } catch (_) {
+            return `/* MICROAPP_SELECTED_START */{"type":"builtin_microapp","appKey":"${String(appKey||'')}","state":null}/* MICROAPP_SELECTED_END */`;
+        }
+    }, []);
+
+    const decodeSelectedMarker = useCallback((html) => {
+        const s = String(html || '');
+        const m = /\/\*\s*MICROAPP_SELECTED_START\s*\*\/([\s\S]*?)\/\*\s*MICROAPP_SELECTED_END\s*\*\//.exec(s);
+        if (!m) return null;
+        try {
+            const obj = JSON.parse(m[1]);
+            if (obj && obj.type === 'builtin_microapp' && obj.appKey) return { appKey: String(obj.appKey), state: obj.state ?? null };
+        } catch (_) {}
+        return null;
+    }, []);
+
+    // Helpers to sync local app state with server marker
+    const readLocalAppState = useCallback((appKey) => {
+        try {
+            const key = `microapp-${project?.id}-${originalViewName}-${appKey}`;
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : null;
+        } catch (_) { return null; }
+    }, [project?.id, originalViewName]);
+
+    const writeLocalAppState = useCallback((appKey, data) => {
+        try {
+            const key = `microapp-${project?.id}-${originalViewName}-${appKey}`;
+            if (data == null) localStorage.removeItem(key);
+            else localStorage.setItem(key, JSON.stringify(data));
+        } catch (_) {}
+    }, [project?.id, originalViewName]);
+    
+    // Force read the latest state from localStorage when saving
+    const readLatestAppState = useCallback((appKey) => {
+        try {
+            // Force a fresh read from localStorage to get the most recent state
+            const key = `microapp-${project?.id}-${originalViewName}-${appKey}`;
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : null;
+        } catch (_) { return null; }
+    }, [project?.id, originalViewName]);
     const [isPersisted, setIsPersisted] = useState(false); // track if current component exists in DB
 
     // Local input state for chat
@@ -542,7 +593,11 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
     // Enhanced save mechanism with better feedback
     const handleManualSave = async () => {
-        if (!componentCode || isSaving) return;
+        if (isSaving) return;
+        // We can save either generated code or a built-in selection marker
+        const hasCode = Boolean(componentCode && componentCode.trim());
+        const hasSelection = Boolean(!hasCode && selectedAppKey);
+        if (!hasCode && !hasSelection) return;
 
         setIsSaving(true);
         try {
@@ -550,7 +605,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 method: 'POST',
                 body: JSON.stringify({
                     view_name: originalViewName,
-                    component_code: componentCode,
+                    component_code: hasCode ? componentCode : encodeSelectedMarker(selectedAppKey, readLatestAppState(selectedAppKey)),
                     custom_view_id: customViewId
                 }),
             });
@@ -559,13 +614,13 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 const data = await response.json();
                 setCustomViewId(data.customViewId);
                 setIsPersisted(true);
-                showSnackbar(t('customViews.saveSuccess'), 'success');
+                showSnackbar(hasCode ? t('customViews.saveSuccess') : 'Micro app pinned to this view', 'success');
             } else {
                 throw new Error('Save failed');
             }
         } catch (error) {
             console.error('Save error:', error);
-            showSnackbar(t('customViews.saveFailed'), 'error');
+            showSnackbar('Failed to save. Please try again.', 'error');
         } finally {
             setIsSaving(false);
         }
@@ -696,15 +751,42 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 console.log('[CustomView] HTML length:', data.html ? data.html.length : 0);
 
                 if (data.success && data.html && data.html.trim() && !isScaffoldHTML(data.html)) {
-                    console.log('[CustomView] Valid component found, setting component code');
-                    setComponentCode(data.html);
-                    setCustomViewId(data.customViewId || data.custom_view_id || null);
-                    setIsPersisted(true);
-                    showSnackbar('Micro-application loaded successfully', 'success');
+                    // Check if server stored a built-in micro app selection
+                    const decoded = decodeSelectedMarker(data.html);
+                    if (decoded && MicroApps && Object.prototype.hasOwnProperty.call(MicroApps, decoded.appKey)) {
+                        console.log('[CustomView] Server stored built-in app selection:', decoded.appKey);
+                        // hydrate local state if present
+                        if (decoded.state !== undefined) writeLocalAppState(decoded.appKey, decoded.state);
+                        setComponentCode('');
+                        setSelectedAppKey(decoded.appKey);
+                        setCustomViewId(data.customViewId || data.custom_view_id || null);
+                        setIsPersisted(true);
+                        showSnackbar('Micro app loaded successfully', 'success');
+                    } else {
+                        console.log('[CustomView] Valid component found, setting component code');
+                        setComponentCode(data.html);
+                        setSelectedAppKey(null); // ensure built-in selection is cleared
+                        setCustomViewId(data.customViewId || data.custom_view_id || null);
+                        setIsPersisted(true);
+                        showSnackbar('Micro-application loaded successfully', 'success');
+                    }
                 } else {
                     // Server responded but no view exists: treat server as source of truth.
                     console.log('[CustomView] No valid component found on server, showing empty state');
                     setComponentCode('');
+                    // Try restoring previously selected built-in app
+                    try {
+                        const selKey = `microapp-selected-${project.id}-${originalViewName}`;
+                        const saved = localStorage.getItem(selKey);
+                        const parsed = saved ? JSON.parse(saved) : null;
+                        if (parsed && MicroApps && Object.prototype.hasOwnProperty.call(MicroApps, parsed)) {
+                            setSelectedAppKey(parsed);
+                        } else {
+                            setSelectedAppKey(null);
+                        }
+                    } catch (_) {
+                        setSelectedAppKey(null);
+                    }
                     setCustomViewId(null);
                     setIsPersisted(false);
                     setIsLocked(true);
@@ -740,7 +822,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     }
                 } else {
                     // Network error only: provide a minimal, safe default (no hooks) so the user sees something.
-                    const defaultScaffold = `export default function HelloMicroApp() {\n  return (\n    <div style={{padding:20,fontFamily:'Inter, system-ui, Arial'}}>\n      <h2 style={{margin:0, marginBottom:8}}>Welcome to your Micro-App</h2>\n      <p>Project: {projectData?.name || 'Unknown'}</p>\n      <p>Tasks available: {Array.isArray(tasksDataFromProps) ? tasksDataFromProps.length : 0}</p>\n      <button onClick={() => alert('It works!')} style={{padding:'8px 12px', borderRadius:8, border:'1px solid #ddd', background:'#fff'}}>Click me</button>\n    </div>\n  );\n}`;
+                    const defaultScaffold = `export default function HelloMicroApp() {\n  const [message, setMessage] = React.useState('');\n  return (\n    <div style={{padding:20,fontFamily:'Inter, system-ui, Arial'}}>\n      <h2 style={{margin:0, marginBottom:8}}>Welcome to your Micro-App</h2>\n      <p>Project: {projectData?.name || 'Unknown'}</p>\n      <p>Tasks available: {Array.isArray(tasksDataFromProps) ? tasksDataFromProps.length : 0}</p>\n      <button onClick={() => setMessage('It works!')} style={{padding:'8px 12px', borderRadius:8, border:'1px solid #ddd', background:'#fff'}}>Click me</button>\n      {message && <p style={{marginTop:10, color:'#059669', fontWeight:500}}>{message}</p>}\n    </div>\n  );\n}`;
                     setComponentCode(defaultScaffold);
                     setIsLocked(false);
                     setIsPersisted(false);
@@ -754,6 +836,19 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
 
         loadCustomView();
     }, [project?.id, originalViewName]);
+
+    // Persist selected built-in micro app across visits (per project/view)
+    useEffect(() => {
+        if (!project?.id || !originalViewName) return;
+        const key = `microapp-selected-${project.id}-${originalViewName}`;
+        try {
+            if (selectedAppKey) {
+                localStorage.setItem(key, JSON.stringify(selectedAppKey));
+            } else {
+                localStorage.removeItem(key);
+            }
+        } catch (_) { /* ignore quota errors */ }
+    }, [selectedAppKey, project?.id, originalViewName]);
 
     // Listen for real-time updates to component data
     useEffect(() => {
@@ -942,6 +1037,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         setIsPersisted(false);
         setIsLocked(true);
         setDeleteConfirmOpen(false);
+        setSelectedAppKey(null);
 
         // Defensive: also clear any scoped localStorage data for this view
         try {
@@ -952,6 +1048,9 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 if (key && key.startsWith(prefix)) toRemove.push(key);
             }
             toRemove.forEach((k) => localStorage.removeItem(k));
+            // Also clear persisted selection
+            const selKey = `microapp-selected-${project?.id}-${originalViewName}`;
+            localStorage.removeItem(selKey);
         } catch (_) { }
     };
 
@@ -964,9 +1063,20 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     }, []);
 
     const handleCreateReadyMade = useCallback((key) => {
-        try { console.log('[CustomView] Creating ready-made:', key); } catch(_) {}
+        try { console.log('[CustomView] Loading ready-made micro app:', key); } catch(_) {}
+        // If we have a built-in micro app, use it directly
+        if (MicroApps && Object.prototype.hasOwnProperty.call(MicroApps, key)) {
+            setSelectedAppKey(key);
+            setComponentCode(''); // ensure renderer is not used
+            setIsLocked(true);
+            setIsPersisted(false);
+            showSnackbar(`${key} loaded.`, 'success');
+            return;
+        }
+        // Fallback: generate simple template via renderer if unknown key
         const code = buildTemplateCode(key);
         if (!code) return;
+        setSelectedAppKey(null);
         setComponentCode(code);
         setIsLocked(false);
         setIsPersisted(false);
@@ -1151,27 +1261,6 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             </IconButton>
                         </Tooltip>
 
-                        {/* Save Button */}
-                        {componentCode && (
-                            <Tooltip title={t('customViews.saveApplication')} placement="left">
-                                <IconButton
-                                    onClick={handleManualSave}
-                                    disabled={isSaving}
-                                    sx={{
-                                        p: 2,
-                                        borderRadius: 0,
-                                        color: designTokens.colors.success,
-                                        borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                                        '&:hover': {
-                                            background: alpha(designTokens.colors.success, 0.1),
-                                        },
-                                    }}
-                                >
-                                    {isSaving ? <CircularProgress size={20} /> : <SaveIcon />}
-                                </IconButton>
-                            </Tooltip>
-                        )}
-
                         {/* Lock/Unlock */}
                         {componentCode && (
                             <Tooltip title={isLocked ? t('customViews.unlockForEditing') : t('customViews.lockApplication')} placement="left">
@@ -1212,22 +1301,23 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             </Tooltip>
                         )}
 
-                        {/* Delete (when component exists) */}
-                        {componentCode && (
-                            <Tooltip title={isPersisted ? t('customViews.deleteSavedApplication') : t('customViews.clearWorkingArea')} placement="left">
+                        {/* Pin/Unpin Toggle Button */}
+                        {(componentCode || selectedAppKey) && (
+                            <Tooltip title={isPersisted ? (componentCode ? t('customViews.deleteSavedApplication') : 'Unpin micro app') : (componentCode ? t('customViews.saveApplication') : 'Pin micro app to this view')} placement="left">
                                 <IconButton
-                                    onClick={() => setDeleteConfirmOpen(true)}
+                                    onClick={isPersisted ? () => setDeleteConfirmOpen(true) : handleManualSave}
+                                    disabled={isSaving}
                                     sx={{
                                         p: 2,
                                         borderRadius: 0,
-                                        color: designTokens.colors.error,
+                                        color: isPersisted ? designTokens.colors.error : theme.palette.text.secondary,
                                         borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                                         '&:hover': {
-                                            background: alpha(designTokens.colors.error, 0.1),
+                                            background: alpha(isPersisted ? designTokens.colors.error : theme.palette.text.secondary, 0.1),
                                         },
                                     }}
                                 >
-                                    <DeleteIcon />
+                                    {isSaving ? <CircularProgress size={20} /> : (isPersisted ? <DeleteIcon /> : <SaveIcon />)}
                                 </IconButton>
                             </Tooltip>
                         )}
@@ -1257,11 +1347,43 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     </Stack>
                 </Paper>
 
+                {/* Back Button - Outside Working Area */}
+                {selectedAppKey && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, mr: 10 }}>
+                        <IconButton
+                            onClick={() => {
+                                if (isPersisted) {
+                                    // If pinned, go back to task board
+                                    window.location.href = `/projects/${project.id}`;
+                                } else {
+                                    // If not pinned, go back to tiles menu
+                                    setSelectedAppKey(null);
+                                }
+                            }}
+                            sx={{
+                                backgroundColor: (theme) => alpha(theme.palette.background.paper, 0.9),
+                                color: theme.palette.text.primary,
+                                border: `1px solid ${alpha(designTokens.colors.primary, 0.2)}`,
+                                '&:hover': {
+                                    backgroundColor: (theme) => theme.palette.background.paper,
+                                    transform: 'translateX(-2px)',
+                                },
+                                transition: 'all 0.2s ease',
+                            }}
+                        >
+                            <ArrowBackIcon />
+                        </IconButton>
+                        <Typography variant="h6" sx={{ ml: 2, fontWeight: 600 }}>
+                            {selectedAppKey}
+                        </Typography>
+                    </Box>
+                )}
+
                 {/* Enhanced Main Working Area */}
                 <Paper
                     elevation={0}
                     sx={{
-                        mt: 2,
+                        mt: selectedAppKey ? 0 : 2,
                         mr: 10, // Space for floating controls
                         p: 0, // Remove padding for working area per request
                         borderRadius: 3,
@@ -1277,7 +1399,20 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         animation: `${fadeSlideUp} 0.8s ease-out`,
                     }}
                 >
-                    {componentCode && componentCode.trim() && !componentError ? (
+                    {selectedAppKey ? (
+                        <Box sx={{ position: 'relative' }}>
+                            {(() => {
+                                const App = MicroApps?.[selectedAppKey] || null;
+                                return App ? (
+                                    <App projectId={project?.id} viewName={originalViewName} />
+                                ) : (
+                                    <Typography variant="body2" color="text.secondary" sx={{ p: 3 }}>
+                                        Unknown app: {String(selectedAppKey)}
+                                    </Typography>
+                                );
+                            })()}
+                        </Box>
+                    ) : componentCode && componentCode.trim() && !componentError ? (
                         <Box sx={{ position: 'relative' }}>
                             <ReactComponentRenderer
                                 componentCode={componentCode}
