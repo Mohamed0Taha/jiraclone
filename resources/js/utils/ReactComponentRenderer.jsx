@@ -1381,10 +1381,10 @@ class ReactComponentRenderer extends React.Component {
     // Clean up imports and exports more aggressively
     src = src.replace(/^import\s+.*?;?\s*$/gm, '');
     src = src.replace(/^export\s+(?!default).*?;?\s*$/gm, '');
-    
+
     // Remove any stray 'const' declarations that might be leftover from embedded data
     src = src.replace(/^\s*const\s+__EMBEDDED_DATA__.*?$/gm, '');
-    
+
     // Clean up multiple newlines
     src = src.replace(/\n\s*\n\s*\n/g, '\n\n');
 
@@ -2078,27 +2078,70 @@ const __Themed = (props) => (
       // Clean factory code of any React redeclarations
     } catch (_) { /* noop */ }
 
-    const factory = new Function(
-      '__React',
-      'RBCalendar',
-      'RBViews',
-      'calendarLocalizer',
-      'Recharts',
-      'MuiDataGrid',
-      'MuiMaterial',
-      'MuiIcons',
-      'csrfFetch',
-      'project',
-      'tasks',
-      'allTasks',
-      'users',
-      'methodology',
-      'auth',
-      'viewName',
-      'projectId',
-      'extractedEmbeddedData',
-      factoryCode,
-    );
+    // Debug: Log the factory code to see what's causing the syntax error
+    if (factoryCode.includes('const ') || factoryCode.includes('import ') || factoryCode.includes('export ')) {
+      console.warn('[ReactComponentRenderer] Potentially problematic code detected:', factoryCode.substring(0, 500));
+    }
+
+    try {
+      const factory = new Function(
+        '__React',
+        'RBCalendar',
+        'RBViews',
+        'calendarLocalizer',
+        'Recharts',
+        'MuiDataGrid',
+        'MuiMaterial',
+        'MuiIcons',
+        'csrfFetch',
+        'project',
+        'tasks',
+        'allTasks',
+        'users',
+        'methodology',
+        'auth',
+        'viewName',
+        'projectId',
+        'extractedEmbeddedData',
+        factoryCode,
+      );
+    } catch (syntaxError) {
+      console.error('[ReactComponentRenderer] Function constructor syntax error:', syntaxError);
+      console.error('[ReactComponentRenderer] Problematic code:', factoryCode);
+      
+      // Try to fix common issues and retry
+      let fixedCode = factoryCode
+        .replace(/^\s*const\s+.*$/gm, '') // Remove any const declarations
+        .replace(/^\s*let\s+.*$/gm, '')   // Remove any let declarations
+        .replace(/^\s*var\s+.*$/gm, '')   // Remove any var declarations
+        .replace(/^\s*import\s+.*$/gm, '') // Remove any import statements
+        .replace(/^\s*export\s+.*$/gm, '') // Remove any export statements
+        .replace(/\n\s*\n\s*\n/g, '\n\n'); // Clean up multiple newlines
+      
+      console.log('[ReactComponentRenderer] Attempting to fix code...');
+      
+      const factory = new Function(
+        '__React',
+        'RBCalendar',
+        'RBViews',
+        'calendarLocalizer',
+        'Recharts',
+        'MuiDataGrid',
+        'MuiMaterial',
+        'MuiIcons',
+        'csrfFetch',
+        'project',
+        'tasks',
+        'allTasks',
+        'users',
+        'methodology',
+        'auth',
+        'viewName',
+        'projectId',
+        'extractedEmbeddedData',
+        fixedCode,
+      );
+    }
 
     const csrfFetch = async (input, init = {}) => {
       const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
