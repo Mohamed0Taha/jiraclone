@@ -2140,8 +2140,9 @@ const __Themed = (props) => (
       console.warn('[ReactComponentRenderer] Potentially problematic code detected:', factoryCode.substring(0, 500));
     }
 
+    let factory;
     try {
-      const factory = new Function(
+      factory = new Function(
         '__React',
         'designTokensParam',
         'styleUtilsParam', 
@@ -2188,7 +2189,7 @@ const __Themed = (props) => (
       
       console.log('[ReactComponentRenderer] Attempting to fix code...');
       
-      const factory = new Function(
+      factory = new Function(
         '__React',
         'designTokensParam',
         'styleUtilsParam', 
