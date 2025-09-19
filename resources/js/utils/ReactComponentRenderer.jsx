@@ -916,47 +916,47 @@ const Templates = {
     const theme = (typeof useTheme === 'function') ? useTheme() : { palette: { mode: 'light' } };
     const isDark = theme?.palette?.mode === 'dark';
 
-    // Predefined colors that adapt to light/dark mode while retaining color identity
+    // Predefined colors that retain their identity in both light and dark mode
     const colorPalette = [
       // Yellow
       { 
-        bg: isDark ? '#B8860B' : '#FFE066', 
-        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+        bg: '#FFE066', 
+        text: '#2A2A2A' 
       },
       // Green
       { 
-        bg: isDark ? '#2D5A3D' : '#B4E7CE', 
-        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+        bg: '#B4E7CE', 
+        text: '#2A2A2A' 
       },
       // Purple
       { 
-        bg: isDark ? '#6B46C1' : '#B794F6', 
-        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+        bg: '#B794F6', 
+        text: '#2A2A2A' 
       },
       // Pink
       { 
-        bg: isDark ? '#BE185D' : '#FBB6CE', 
-        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+        bg: '#FBB6CE', 
+        text: '#2A2A2A' 
       },
       // Blue
       { 
-        bg: isDark ? '#1E40AF' : '#93C5FD', 
-        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+        bg: '#93C5FD', 
+        text: '#2A2A2A' 
       },
       // Orange
       { 
-        bg: isDark ? '#C2410C' : '#FED7AA', 
-        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+        bg: '#FED7AA', 
+        text: '#2A2A2A' 
       },
       // Red
       { 
-        bg: isDark ? '#B91C1C' : '#F87171', 
+        bg: '#F87171', 
         text: '#FFFFFF'
       },
       // Emerald
       { 
-        bg: isDark ? '#047857' : '#34D399', 
-        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+        bg: '#34D399', 
+        text: '#2A2A2A' 
       },
     ];
 
