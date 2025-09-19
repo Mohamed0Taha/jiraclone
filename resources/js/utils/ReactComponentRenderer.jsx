@@ -13,6 +13,63 @@ import { STYLED_COMPONENTS_SNIPPET } from './react-renderer/snippets/styledCompo
 
 // DESIGN_TOKENS, STYLE_UTILS_SNIPPET and STYLED_COMPONENTS_SNIPPET are imported above
 
+// Create actual objects from snippets
+const createStyleUtils = (designTokens) => ({
+  spacing: (size) => ({
+    margin: designTokens.spacing[size] || size,
+    padding: designTokens.spacing[size] || size,
+  }),
+  elevation: (level) => ({
+    boxShadow: designTokens.shadows[level] || level,
+    borderRadius: designTokens.borderRadius.lg,
+  }),
+  colorVariant: (color, shade = 500) => {
+    const swatch = (designTokens.colors[color] || {})[shade];
+    return {
+      backgroundColor: swatch,
+      color: shade >= 500 ? '#ffffff' : designTokens.colors.neutral[800],
+    };
+  },
+  flexCenter: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  flexBetween: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  gradients: {
+    primary: 'linear-gradient(135deg, ' + designTokens.colors.primary[400] + ' 0%, ' + designTokens.colors.primary[600] + ' 100%)',
+    success: 'linear-gradient(135deg, ' + designTokens.colors.success[400] + ' 0%, ' + designTokens.colors.success[600] + ' 100%)',
+    warm: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    cool: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+  },
+});
+
+const STYLE_UTILS = createStyleUtils(DESIGN_TOKENS);
+
+// Create StyledComponents object
+const createStyledComponents = (designTokens) => ({
+  BeautifulCard: (props) => React.createElement(MuiMaterial.Card, {
+    ...props,
+    sx: {
+      borderRadius: designTokens.borderRadius.lg,
+      boxShadow: 'none',
+      border: '1px solid',
+      borderColor: 'divider',
+      overflow: 'hidden',
+      transition: 'border-color 120ms ease',
+      '&:hover': { borderColor: 'divider' },
+      ...props.sx,
+    },
+  }),
+  // Add other styled components as needed
+});
+
+const STYLED_COMPONENTS = createStyledComponents(DESIGN_TOKENS);
+
 const TEMPLATES_SNIPPET = String.raw`
 // Lightweight Templates exposed to generated components
 const Templates = {
@@ -1583,13 +1640,13 @@ class ReactComponentRenderer extends React.Component {
     const designTokensLiteral = JSON.stringify(DESIGN_TOKENS, null, 2);
 
     let factoryCode = `
-// Bind React from the injected argument without polluting globals
-const React = __React || (typeof window !== 'undefined' ? window.React : undefined);
+// Use parameters instead of const declarations to avoid syntax errors
+const React = __React;
 const { useState, useEffect, useMemo, useCallback, useRef, useReducer, useLayoutEffect } = React;
-const designTokens = ${designTokensLiteral};
-${STYLE_UTILS_SNIPPET}
-${STYLED_COMPONENTS_SNIPPET}
-${TEMPLATES_SNIPPET}
+const designTokens = designTokensParam;
+const styleUtils = styleUtilsParam;
+const StyledComponents = styledComponentsParam;
+const Templates = templatesParam;
 
 const {
   Box,
@@ -2086,6 +2143,10 @@ const __Themed = (props) => (
     try {
       const factory = new Function(
         '__React',
+        'designTokensParam',
+        'styleUtilsParam', 
+        'styledComponentsParam',
+        'templatesParam',
         'RBCalendar',
         'RBViews',
         'calendarLocalizer',
@@ -2111,6 +2172,10 @@ const __Themed = (props) => (
       
       // Try to fix common issues and retry
       let fixedCode = factoryCode
+        .replace(/^.*const React = __React.*$/gm, '') // Remove React binding
+        .replace(/^.*const \{ useState.*$/gm, '') // Remove destructuring
+        .replace(/^.*const designTokens.*$/gm, '') // Remove designTokens
+        .replace(/^.*const styleUtils.*$/gm, '') // Remove styleUtils
         .replace(/^\s*const\s+.*$/gm, '') // Remove any const declarations
         .replace(/^\s*let\s+.*$/gm, '')   // Remove any let declarations
         .replace(/^\s*var\s+.*$/gm, '')   // Remove any var declarations
@@ -2118,10 +2183,17 @@ const __Themed = (props) => (
         .replace(/^\s*export\s+.*$/gm, '') // Remove any export statements
         .replace(/\n\s*\n\s*\n/g, '\n\n'); // Clean up multiple newlines
       
+      // Remove large object literal blocks that cause syntax errors
+      fixedCode = fixedCode.replace(/\{\s*"[^"]+"\s*:\s*\{[\s\S]*?\}\s*\}/g, '{}');
+      
       console.log('[ReactComponentRenderer] Attempting to fix code...');
       
       const factory = new Function(
         '__React',
+        'designTokensParam',
+        'styleUtilsParam', 
+        'styledComponentsParam',
+        'templatesParam',
         'RBCalendar',
         'RBViews',
         'calendarLocalizer',
@@ -2179,6 +2251,10 @@ const __Themed = (props) => (
 
     const __ThemedFromFactory = factory(
       React,
+      DESIGN_TOKENS,
+      STYLE_UTILS,
+      STYLED_COMPONENTS,
+      Templates,
       RBCalendar,
       RBViews,
       calendarLocalizer,
