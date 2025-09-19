@@ -1339,22 +1339,29 @@ class ReactComponentRenderer extends React.Component {
     let extractedEmbeddedData = {};
 
     // More robust regex to capture the complete embedded data object
-    const embeddedMatch = /\/\*\s*EMBEDDED_DATA_START\s*\*\/\s*const\s+__EMBEDDED_DATA__\s*=\s*(\{[\s\S]*?\});?\s*\/\*\s*EMBEDDED_DATA_END\s*\*\//.exec(src);
+    const embeddedMatch = /\/\*\s*EMBEDDED_DATA_START\s*\*\/[\s\S]*?\/\*\s*EMBEDDED_DATA_END\s*\*\//.exec(src);
     if (embeddedMatch) {
       try {
-        extractedEmbeddedData = JSON.parse(embeddedMatch[1]);
+        // Extract just the JSON part
+        const jsonMatch = /const\s+__EMBEDDED_DATA__\s*=\s*(\{[\s\S]*?\});?/.exec(embeddedMatch[0]);
+        if (jsonMatch) {
+          extractedEmbeddedData = JSON.parse(jsonMatch[1]);
+        }
       } catch (error) {
         console.warn('[ReactComponentRenderer] Failed to parse embedded data:', error);
-        console.warn('[ReactComponentRenderer] Embedded data content:', embeddedMatch[1].substring(0, 500) + '...');
+        console.warn('[ReactComponentRenderer] Embedded data content:', embeddedMatch[0].substring(0, 500) + '...');
 
         // Try to fix common JSON issues
         try {
-          let fixedJson = embeddedMatch[1]
-            .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
-            .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":'); // Quote unquoted keys
+          const jsonMatch = /const\s+__EMBEDDED_DATA__\s*=\s*(\{[\s\S]*?\});?/.exec(embeddedMatch[0]);
+          if (jsonMatch) {
+            let fixedJson = jsonMatch[1]
+              .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+              .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":'); // Quote unquoted keys
 
-          extractedEmbeddedData = JSON.parse(fixedJson);
-          console.log('[ReactComponentRenderer] Successfully parsed fixed JSON');
+            extractedEmbeddedData = JSON.parse(fixedJson);
+            console.log('[ReactComponentRenderer] Successfully parsed fixed JSON');
+          }
         } catch (fixError) {
           console.error('[ReactComponentRenderer] Could not fix embedded data JSON:', fixError);
           // Continue without embedded data
@@ -1364,11 +1371,22 @@ class ReactComponentRenderer extends React.Component {
       src = src.replace(embeddedMatch[0], '');
     }
 
+    // Clean up any remaining embedded data patterns
+    src = src.replace(/\/\*\s*EMBEDDED_DATA_START\s*\*\/[\s\S]*?\/\*\s*EMBEDDED_DATA_END\s*\*\//g, '');
+    src = src.replace(/const\s+__EMBEDDED_DATA__\s*=\s*\{[\s\S]*?\};?/g, '');
+
     // FIX: Clean up React declarations BEFORE Babel and other processing
     src = cleanupReactDeclarations(src);
 
-    src = src.replace(/(^|\n)\s*import[^;]+;?/g, '\n');
-    src = src.replace(/(^|\n)\s*export\s+(?!default)[^;]+;?/g, '\n');
+    // Clean up imports and exports more aggressively
+    src = src.replace(/^import\s+.*?;?\s*$/gm, '');
+    src = src.replace(/^export\s+(?!default).*?;?\s*$/gm, '');
+    
+    // Remove any stray 'const' declarations that might be leftover from embedded data
+    src = src.replace(/^\s*const\s+__EMBEDDED_DATA__.*?$/gm, '');
+    
+    // Clean up multiple newlines
+    src = src.replace(/\n\s*\n\s*\n/g, '\n\n');
 
     // Fix common icon usage issues - replace bare icon names with proper icon names
     src = src.replace(/\b(Add|Edit|Delete|Save|Close|Search|Refresh|Warning|Error|Info|CheckCircle|MoreVert|Settings|Send|FilterList)\b(?!\w)/g, '$1Icon');
