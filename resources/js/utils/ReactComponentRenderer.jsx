@@ -912,21 +912,53 @@ const Templates = {
       ...otherProps
     } = props || {};
 
-    // Predefined colors that work well in both light and dark mode
-    const colorPalette = [
-      { bg: '#FFE066', text: '#2A2A2A' }, // Yellow
-      { bg: '#B4E7CE', text: '#2A2A2A' }, // Green
-      { bg: '#B794F6', text: '#2A2A2A' }, // Purple
-      { bg: '#FBB6CE', text: '#2A2A2A' }, // Pink
-      { bg: '#93C5FD', text: '#2A2A2A' }, // Blue
-      { bg: '#FED7AA', text: '#2A2A2A' }, // Orange
-      { bg: '#F87171', text: '#FFFFFF' }, // Red
-      { bg: '#34D399', text: '#2A2A2A' }, // Emerald
-    ];
-
     // Get theme for responsive design
     const theme = (typeof useTheme === 'function') ? useTheme() : { palette: { mode: 'light' } };
     const isDark = theme?.palette?.mode === 'dark';
+
+    // Predefined colors that adapt to light/dark mode while retaining color identity
+    const colorPalette = [
+      // Yellow
+      { 
+        bg: isDark ? '#B8860B' : '#FFE066', 
+        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+      },
+      // Green
+      { 
+        bg: isDark ? '#2D5A3D' : '#B4E7CE', 
+        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+      },
+      // Purple
+      { 
+        bg: isDark ? '#6B46C1' : '#B794F6', 
+        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+      },
+      // Pink
+      { 
+        bg: isDark ? '#BE185D' : '#FBB6CE', 
+        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+      },
+      // Blue
+      { 
+        bg: isDark ? '#1E40AF' : '#93C5FD', 
+        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+      },
+      // Orange
+      { 
+        bg: isDark ? '#C2410C' : '#FED7AA', 
+        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+      },
+      // Red
+      { 
+        bg: isDark ? '#B91C1C' : '#F87171', 
+        text: '#FFFFFF'
+      },
+      // Emerald
+      { 
+        bg: isDark ? '#047857' : '#34D399', 
+        text: isDark ? '#FFFFFF' : '#2A2A2A' 
+      },
+    ];
 
     // Initialize notes with default positions
     const [stickyNotes, setStickyNotes] = useState(() => {
