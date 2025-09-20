@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, Stack, Button, List, ListItemButton, ListItemText, Paper, TextField, IconButton } from '@mui/material';
+import { Box, Typography, Stack, Button, List, ListItemButton, ListItemText, Paper, TextField, IconButton, Divider, Divider as NewDivider } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import useLocalViewData from '../useLocalViewData';
@@ -39,7 +39,7 @@ export default function WikiPage({ projectId, viewName }) {
           <Typography variant="subtitle2" fontWeight={700}>Pages</Typography>
           <Button size="small" onClick={addPage}>Add</Button>
         </Stack>
-        <Divider/>
+        <NewDivider/>
         <List dense>
           {pages.map((p) => (
             <ListItemButton key={p.id} selected={p.id === (current?.id)} onClick={() => selectPage(p.id)}>
