@@ -1560,7 +1560,7 @@ const ProjectTilesGrid = memo(function ProjectTilesGrid({ ownedProjects, memberP
                 {/* Ownership Badge */}
                 <Chip
                     size="small"
-                    label={isOwner ? t('common.owner') : t('common.collaborator')}
+                    label={isOwner ? t('dashboard.owner') : t('dashboard.collaborator')}
                     sx={{
                         position: 'absolute',
                         top: 12,
@@ -1607,7 +1607,7 @@ const ProjectTilesGrid = memo(function ProjectTilesGrid({ ownedProjects, memberP
                             letterSpacing: '0.3px',
                         }}
                     >
-                        {project.name || t('common.untitled')}
+                        {project.name || t('dashboard.untitled')}
                     </Typography>
                     
                     {project.description && (
@@ -1672,7 +1672,7 @@ const ProjectTilesGrid = memo(function ProjectTilesGrid({ ownedProjects, memberP
                             fontSize: '12px',
                             textShadow: '0 1px 2px rgba(0,0,0,0.3)',
                         }}>
-                            {t('common.progress')}
+                            {t('dashboard.completion')}
                         </Typography>
                         <Typography variant="caption" sx={{ 
                             fontWeight: 700,
@@ -1717,7 +1717,7 @@ const ProjectTilesGrid = memo(function ProjectTilesGrid({ ownedProjects, memberP
                             opacity: 1,
                         },
                     }}>
-                        <Tooltip title={t('common.edit')}>
+                        <Tooltip title={t('buttons.edit')}>
                             <IconButton
                                 size="small"
                                 onClick={(e) => {
@@ -1736,7 +1736,7 @@ const ProjectTilesGrid = memo(function ProjectTilesGrid({ ownedProjects, memberP
                                 <EditRoundedIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title={t('common.delete')}>
+                        <Tooltip title={t('buttons.delete')}>
                             <IconButton
                                 size="small"
                                 onClick={(e) => {
