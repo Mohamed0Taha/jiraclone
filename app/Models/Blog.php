@@ -22,6 +22,7 @@ class Blog extends Model
         'is_published',
         'published_at',
         'author_id',
+        'views',
     ];
 
     protected $casts = [
@@ -31,7 +32,41 @@ class Blog extends Model
 
     protected $attributes = [
         'is_published' => false,
+        'views' => 0,
     ];
+
+    /**
+     * Increment the view count for this blog post
+     */
+    public function incrementViews()
+    {
+        $this->increment('views');
+        return $this;
+    }
+
+    /**
+     * Get formatted view count (e.g., 1.2K, 5M)
+     */
+    public function getFormattedViewsAttribute()
+    {
+        $views = $this->views;
+        
+        if ($views >= 1000000) {
+            return round($views / 1000000, 1) . 'M';
+        } elseif ($views >= 1000) {
+            return round($views / 1000, 1) . 'K';
+        }
+        
+        return number_format($views);
+    }
+
+    /**
+     * Scope to order by most viewed
+     */
+    public function scopeMostViewed($query)
+    {
+        return $query->orderBy('views', 'desc');
+    }
 
     /**
      * Get SEO-optimized title
@@ -169,5 +204,19 @@ class Blog extends Model
     public function getExcerptAttribute($value)
     {
         return $value ?: Str::limit(strip_tags($this->content), 160);
+    }
+
+    /**
+     * Get blog analytics data
+     */
+    public static function getAnalytics()
+    {
+        return [
+            'total_blogs' => static::count(),
+            'published_blogs' => static::published()->count(),
+            'total_views' => static::sum('views'),
+            'most_viewed' => static::mostViewed()->first(),
+            'average_views' => static::avg('views'),
+        ];
     }
 }

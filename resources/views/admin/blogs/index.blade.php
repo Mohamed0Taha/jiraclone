@@ -21,6 +21,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Author</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Views</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Published</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -47,6 +48,18 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {{ $blog->author->name }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                    @if($blog->views >= 1000000)
+                                        {{ number_format($blog->views / 1000000, 1) }}M
+                                    @elseif($blog->views >= 1000)
+                                        {{ number_format($blog->views / 1000, 1) }}K
+                                    @else
+                                        {{ number_format($blog->views) }}
+                                    @endif
+                                    views
+                                </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @if($blog->is_published)
@@ -95,7 +108,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                            <td colspan="7" class="px-6 py-4 text-center text-gray-500">
                                 No blog posts found. <a href="{{ route('admin.blogs.create') }}" class="text-blue-600 hover:text-blue-800">Create your first post</a>
                             </td>
                         </tr>

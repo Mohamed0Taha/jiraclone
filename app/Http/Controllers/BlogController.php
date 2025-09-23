@@ -15,9 +15,16 @@ class BlogController extends Controller
             ->orderBy('published_at', 'desc')
             ->paginate(12);
 
+        // Get popular posts (most viewed)
+        $popularPosts = Blog::published()
+            ->with('author')
+            ->mostViewed()
+            ->limit(5)
+            ->get();
+
         \Log::info('Blog index query result', ['count' => $blogs->count()]);
 
-        return view('blog.index', compact('blogs'));
+        return view('blog.index', compact('blogs', 'popularPosts'));
     }
 
     public function show(Blog $blog)
@@ -40,6 +47,9 @@ class BlogController extends Controller
             }
             // Ensure required relations are loaded (avoid lazy-loading exception in prod)
             $blog->loadMissing('author');
+
+            // Increment view count
+            $blog->incrementViews();
 
             // Related posts (eager load author for potential future use)
             $relatedPosts = Blog::published()
