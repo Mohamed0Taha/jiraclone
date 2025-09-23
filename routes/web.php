@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
+use App\Events\CustomViewDataUpdated;
 
 /*
 |--------------------------------------------------------------------------
@@ -565,6 +566,46 @@ Route::middleware('auth')->group(function () {
 
         // Chat endpoint (JSON; client falls back when streaming unavailable)
         Route::post('/custom-views/chat', [ProjectViewsController::class, 'chat'])->name('custom-views.chat');
+
+        // TEMP: E2E realtime test route - emits a sample workflow_step event
+        // Visit: /projects/{project}/custom-views/test-realtime?view_name=default
+        Route::get('/custom-views/test-realtime', function (Request $request, Project $project) {
+            // Ensure the authenticated user can view the project
+            if (! $request->user() || ! $request->user()->can('view', $project)) {
+                abort(403);
+            }
+
+            $viewName = $request->query('view_name', 'default');
+
+            try {
+                broadcast(new CustomViewDataUpdated(
+                    $project->id,
+                    $viewName,
+                    'workflow_step',
+                    [
+                        'sequence' => 1,
+                        'step' => 'analysis',
+                        'status' => 'completed',
+                        'details' => 'Realtime test event delivered successfully',
+                        'total' => 1,
+                    ],
+                    $request->user()
+                ));
+
+                return response()->json([
+                    'ok' => true,
+                    'message' => 'Test event broadcasted on private-custom-view.' . $project->id . '.' . $viewName,
+                    'event' => 'custom-view-data-updated',
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Test realtime broadcast failed', [
+                    'project_id' => $project->id,
+                    'view_name' => $viewName,
+                    'error' => $e->getMessage(),
+                ]);
+                return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);
+            }
+        })->name('custom-views.test-realtime');
 
         /* AUTOMATIONS (premium feature - automation) */
         // Allow all authenticated users to view automations index (overlay handles upsell)

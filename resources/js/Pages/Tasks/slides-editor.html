@@ -1,0 +1,1096 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Slides Editor - PowerPoint Clone (Fabric-Ready + UI Fixes)</title>
+  <!-- Optional (kept from yours) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/antd/3.26.20/antd.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body, #root {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      color-scheme: light dark;
+    }
+
+    :root { --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.5); }
+
+    @media (prefers-color-scheme: light) {
+      .editor-container {
+        --bg-primary: #ffffff;
+        --bg-secondary: #f8fafc;
+        --bg-tertiary: #f1f5f9;
+        --border-color: #cbd5e1;
+        --text-primary: #1e293b;
+        --text-secondary: #475569;
+        --btn-bg: #f1f5f9;
+        --btn-hover: #e2e8f0;
+        --canvas-bg: #eef2f7;
+        --shadow-color: rgba(0,0,0,0.08);
+        --thumb-bg: #ffffff;
+      }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .editor-container {
+        --bg-primary: #1a1d23;
+        --bg-secondary: #111827;
+        --bg-tertiary: #0f172a;
+        --border-color: #374151;
+        --text-primary: #e5e7eb;
+        --text-secondary: #9ca3af;
+        --btn-bg: #374151;
+        --btn-hover: #4b5563;
+        --canvas-bg: #0f172a;
+        --shadow-color: rgba(0,0,0,0.35);
+        --thumb-bg: #0f172a;
+      }
+    }
+
+    .editor-container {
+      height: 100%;
+      display: flex;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    /* Slides sidebar */
+    .slides-sidebar {
+      width: 240px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      min-width: 240px;
+    }
+
+    .slides-header {
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+    }
+
+    /* Unified button treatment (fix black halos) */
+    .btn, .tool-btn, .zoom-btn, .slides-sidebar button, .slide-controls button, .btn-add-slide {
+      -webkit-appearance: none;
+      appearance: none;
+      outline: none;
+      box-shadow: none;
+      border: none;
+      background: var(--btn-bg);
+      color: var(--text-primary);
+      cursor: pointer;
+      border-radius: 6px;
+      transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+    }
+    .btn:focus, .tool-btn:focus, .zoom-btn:focus, .slides-sidebar button:focus, .slide-controls button:focus, .btn-add-slide:focus { outline: none; }
+    .btn:focus-visible, .tool-btn:focus-visible, .zoom-btn:focus-visible, .slides-sidebar button:focus-visible, .slide-controls button:focus-visible, .btn-add-slide:focus-visible { box-shadow: var(--focus-ring); }
+
+    .btn-add-slide {
+      background: #3b82f6;
+      color: #fff;
+      padding: 6px 12px;
+    }
+    .btn-add-slide:hover { background: #2563eb; }
+
+    .slides-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .slide-item {
+      background: var(--btn-bg);
+      border: 2px solid transparent;
+      border-radius: 10px;
+      padding: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      position: relative;
+      transition: border-color .15s ease, transform .1s ease;
+    }
+    .slide-item:hover { transform: translateY(-1px); }
+    .slide-item.active { border-color: #3b82f6; }
+
+    .slide-preview {
+      width: 100%;
+      height: 120px;
+      background: var(--thumb-bg);
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid var(--border-color);
+      box-shadow: 0 2px 10px var(--shadow-color);
+    }
+
+    .slide-number {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      z-index: 1;
+    }
+
+    .slide-controls {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .slide-controls button { flex: 1; padding: 6px 8px; font-size: 12px; }
+
+    /* Main editor */
+    .main-editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 8px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .tool-group {
+      display: flex;
+      gap: 6px;
+      padding: 0 8px;
+      border-right: 1px solid var(--border-color);
+      align-items: center;
+    }
+    .tool-group:last-child { border-right: none; }
+
+    .tool-btn {
+      padding: 8px 10px;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tool-btn:hover { background: var(--btn-hover); transform: translateY(-1px); }
+    .tool-btn.present { background: #10b981; color: white; }
+    .tool-btn.present:hover { background: #059669; }
+
+    .tool-select {
+      padding: 6px 8px;
+      background: var(--btn-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      min-width: 120px;
+      outline: none;
+    }
+    .tool-select:focus-visible { box-shadow: var(--focus-ring); }
+
+    .color-picker-wrapper { position: relative; display: inline-block; }
+    .color-picker-btn {
+      padding: 6px 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .color-swatch {
+      width: 22px; height: 22px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      padding: 0;
+    }
+    .tool-btn i { font-size: 14px; }
+
+    /* Canvas area with clearly defined frame */
+    .canvas-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--canvas-bg);
+      position: relative;
+      overflow: hidden;
+      padding: 16px;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      background: #ffffff;
+      border: 3px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 14px 40px var(--shadow-color);
+      overflow: hidden;
+      /* faint grid so slide stands out on any theme */
+      background-image: linear-gradient(0deg, rgba(0,0,0,.04) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(0,0,0,.04) 1px, transparent 1px);
+      background-size: 16px 16px;
+      background-position: -1px -1px;
+    }
+
+    .canvas {
+      display: block;
+      background: #ffffff; /* ensures text is visible even in dark UI */
+    }
+
+    /* Properties */
+    .properties-panel {
+      width: 280px;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-color);
+      padding: 16px;
+      overflow-y: auto;
+      min-width: 280px;
+    }
+
+    .prop-group { margin-bottom: 20px; }
+    .prop-group h3 {
+      color: var(--text-secondary);
+      font-size: 12px;
+      text-transform: uppercase;
+      margin: 0 0 12px 0;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+    .prop-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .prop-label {
+      flex: 0 0 90px;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .prop-input, .prop-select, .prop-color {
+      border-radius: 6px;
+      outline: none;
+    }
+    .prop-input, .prop-select {
+      flex: 1;
+      padding: 6px 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+    .prop-input:focus-visible, .prop-select:focus-visible, .prop-color:focus-visible { box-shadow: var(--focus-ring); }
+
+    .prop-color {
+      width: 36px; height: 36px;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      background: transparent;
+      padding: 0;
+    }
+
+    /* Status bar */
+    .status-bar {
+      background: var(--bg-tertiary);
+      border-top: 1px solid var(--border-color);
+      padding: 6px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .zoom-controls { display: flex; gap: 8px; align-items: center; }
+    .zoom-btn { padding: 4px 10px; }
+
+    /* Loading */
+    .loading {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      text-align: center;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+    }
+
+    .spinner {
+      border: 3px solid var(--border-color);
+      border-top: 3px solid #3b82f6;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Fix for odd black halos on buttons in light mode */
+    button::-moz-focus-inner { border: 0; }
+    button { -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div>Loading Slides Editor...</div>
+    </div>
+  </div>
+
+  <!-- React UMD -->
+  <script src="https://unpkg.com/react@16.14.0/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@16.14.0/umd/react-dom.production.min.js"></script>
+
+  <!-- We'll dynamically load Fabric below to guarantee availability -->
+  <script src="https://unpkg.com/uuid@8.3.2/dist/umd/uuid.min.js"></script>
+
+  <script>
+    // --- Robust Fabric loader: ensures `window.fabric` exists before mounting React ---
+    (function loadFabricAndMount() {
+      const fabricGlobal = () => window.fabric || window.Fabric;
+      const cdns = [
+        // Primary (modern)
+        "https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js",
+        // Fallback (older but compatible with our usage)
+        "https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.6.0/fabric.min.js"
+      ];
+      let tried = 0;
+
+      function inject(src, onload, onerror) {
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onload = onload;
+        s.onerror = onerror;
+        document.head.appendChild(s);
+      }
+
+      function ensureFabric(cb) {
+        if (fabricGlobal()) { window.fabric = fabricGlobal(); cb(); return; }
+        function tryNext() {
+          if (tried >= cdns.length) {
+            console.error("Failed to load FabricJS from all CDNs.");
+            const root = document.getElementById('root');
+            if (root) {
+              root.innerHTML = '<div style="padding:24px;font-family:Segoe UI,Tahoma,sans-serif;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;max-width:720px;margin:24px auto;">' +
+                               '<h2 style="margin:0 0 12px 0;">FabricJS failed to load</h2>' +
+                               '<p style="margin:0;">Check your network/CSP and try again. The editor requires FabricJS to function.</p>' +
+                               '</div>';
+            }
+            return;
+          }
+          const src = cdns[tried++];
+          inject(src, () => {
+            window.fabric = fabricGlobal();
+            if (!window.fabric) { tryNext(); return; }
+            cb();
+          }, () => tryNext());
+        }
+        tryNext();
+      }
+
+      ensureFabric(() => {
+        // After Fabric is definitely present, boot the editor
+        bootSlidesEditor();
+      });
+    })();
+
+    // -------------------- Application --------------------
+    function bootSlidesEditor() {
+      const { useState, useEffect, useRef, useCallback } = React;
+      const h = React.createElement;
+
+      function SlidesEditor() {
+        const [slides, setSlides] = useState([{
+          id: uuid.v4(),
+          name: 'Slide 1',
+          objects: { version: '3.6.6', objects: [] },
+          background: '#ffffff'
+        }]);
+        const [activeIndex, setActiveIndex] = useState(0);
+        const [canvas, setCanvas] = useState(null);
+        const [selectedObject, setSelectedObject] = useState(null);
+        const [zoom, setZoom] = useState(100);
+        const [textColor, setTextColor] = useState('#000000');
+        const [selectedFont, setSelectedFont] = useState('Arial');
+        const [fontSize, setFontSize] = useState(36);
+        const [presentMode, setPresentMode] = useState(false);
+        const canvasRef = useRef(null);
+
+        const fontFamilies = [
+          'Arial','Helvetica','Times New Roman','Georgia','Verdana','Courier New','Comic Sans MS','Impact','Lucida Console','Tahoma','Trebuchet MS','Palatino','Garamond','Bookman','Avant Garde'
+        ];
+
+        const activeSlide = slides[activeIndex];
+
+        // Initialize Fabric canvas (runs only once)
+        useEffect(() => {
+          if (!canvasRef.current || canvas) return;
+
+          const fabricCanvas = new window.fabric.Canvas(canvasRef.current, {
+            width: 1280,
+            height: 720,
+            backgroundColor: '#ffffff',
+            selection: true,
+            preserveObjectStacking: true
+          });
+
+          fabricCanvas.setBackgroundColor('#ffffff', fabricCanvas.renderAll.bind(fabricCanvas));
+
+          fabricCanvas.on('selection:created', (e) => setSelectedObject(e.selected[0]));
+          fabricCanvas.on('selection:updated', (e) => setSelectedObject(e.selected[0]));
+          fabricCanvas.on('selection:cleared', () => setSelectedObject(null));
+
+          const debouncedSave = debounce(() => saveCurrentSlide(fabricCanvas), 100);
+          fabricCanvas.on('object:modified', debouncedSave);
+          fabricCanvas.on('object:added', debouncedSave);
+          fabricCanvas.on('object:removed', debouncedSave);
+
+          setCanvas(fabricCanvas);
+
+          return () => fabricCanvas.dispose();
+        }, []);
+
+        // Save current slide
+        const saveCurrentSlide = useCallback((cv = canvas) => {
+          if (!cv) return;
+          const newSlides = [...slides];
+          newSlides[activeIndex] = {
+            ...newSlides[activeIndex],
+            objects: cv.toJSON()
+          };
+          setSlides(newSlides);
+          renderThumbnails(newSlides);
+          sendToParent(newSlides, activeIndex);
+        }, [canvas, slides, activeIndex]);
+
+        // Load slide data
+        const loadSlide = useCallback((slideData) => {
+          if (!canvas || !slideData) return;
+          canvas.clear();
+          canvas.setBackgroundColor(slideData.background || '#ffffff', canvas.renderAll.bind(canvas));
+          if (slideData.objects && slideData.objects.objects) {
+            canvas.loadFromJSON(slideData.objects, () => canvas.renderAll());
+          } else {
+            canvas.renderAll();
+          }
+        }, [canvas]);
+
+        // Switch slide
+        const switchSlide = useCallback((index) => {
+          if (index === activeIndex || !canvas) return;
+          saveCurrentSlide();
+          setActiveIndex(index);
+          loadSlide(slides[index]);
+          setTimeout(() => renderThumbnails(slides), 0);
+        }, [activeIndex, canvas, saveCurrentSlide, slides, loadSlide]);
+
+        // Load initial slide when canvas is ready
+        useEffect(() => {
+          if (canvas && activeSlide) {
+            loadSlide(activeSlide);
+            setTimeout(() => renderThumbnails(slides), 0);
+          }
+        }, [canvas]);
+
+        // Messaging (optional host)
+        const sendToParent = (slidesData, index) => {
+          try {
+            window.parent.postMessage({
+              type: 'RDE_DATA_CHANGED',
+              json: { slides: slidesData || slides, activeIndex: index !== undefined ? index : activeIndex }
+            }, '*');
+          } catch {}
+        };
+
+        useEffect(() => {
+          const handleMessage = (event) => {
+            if (event?.data?.type === 'RDE_LOAD_JSON') {
+              const data = event.data.json;
+              if (data && Array.isArray(data.slides) && data.slides.length) {
+                setSlides(data.slides);
+                setActiveIndex(data.activeIndex || 0);
+                if (canvas) {
+                  loadSlide(data.slides[data.activeIndex || 0]);
+                }
+                setTimeout(() => renderThumbnails(data.slides), 0);
+              }
+            }
+          };
+          window.addEventListener('message', handleMessage);
+          try { window.parent.postMessage({ type: 'RDE_READY' }, '*'); } catch {}
+          return () => window.removeEventListener('message', handleMessage);
+        }, [canvas, loadSlide]);
+
+        // Add/duplicate/delete slide
+        const addSlide = () => {
+          saveCurrentSlide();
+          const newSlide = {
+            id: uuid.v4(),
+            name: `Slide ${slides.length + 1}`,
+            objects: { version: '3.6.6', objects: [] },
+            background: '#ffffff'
+          };
+          const newSlides = [...slides, newSlide];
+          setSlides(newSlides);
+          setActiveIndex(newSlides.length - 1);
+
+          if (canvas) {
+            canvas.clear();
+            canvas.setBackgroundColor('#ffffff', canvas.renderAll.bind(canvas));
+          }
+
+          renderThumbnails(newSlides);
+          sendToParent(newSlides, newSlides.length - 1);
+        };
+
+        const duplicateSlide = (index) => {
+          const slide = slides[index];
+          const newSlide = { ...slide, id: uuid.v4(), name: slide.name + ' (Copy)' };
+          const newSlides = [...slides];
+          newSlides.splice(index + 1, 0, newSlide);
+          setSlides(newSlides);
+          renderThumbnails(newSlides);
+          sendToParent(newSlides, activeIndex);
+        };
+
+        const deleteSlide = (index) => {
+          if (slides.length <= 1) return;
+          const newSlides = slides.filter((_, i) => i !== index);
+          const newIndex = Math.min(index, newSlides.length - 1);
+          setSlides(newSlides);
+          setActiveIndex(newIndex);
+          loadSlide(newSlides[newIndex]);
+          renderThumbnails(newSlides);
+          sendToParent(newSlides, newIndex);
+        };
+
+        // Add text: visible by default, enters editing
+        const addText = () => {
+          if (!canvas) return;
+          const t = new window.fabric.IText('Double click to edit', {
+            left: 100,
+            top: 100,
+            fontFamily: selectedFont,
+            fontSize: fontSize,
+            fill: textColor,
+            opacity: 1,
+            editable: true,
+            selectionColor: 'rgba(59,130,246,0.25)',
+            cursorColor: textColor,
+            backgroundColor: '',
+            textBackgroundColor: '',
+            paintFirst: 'fill',
+            objectCaching: false
+          });
+          canvas.add(t);
+          canvas.setActiveObject(t);
+          t.bringToFront();
+          canvas.renderAll();
+          try {
+            t.enterEditing();
+            t.selectAll();
+          } catch {}
+          setTimeout(() => saveCurrentSlide(), 50);
+        };
+
+        // Shapes
+        const addRectangle = () => {
+          if (!canvas) return;
+          const rect = new window.fabric.Rect({ left: 100, top: 100, width: 200, height: 120, fill: '#3b82f6', stroke: '#1e40af', strokeWidth: 2 });
+          canvas.add(rect); canvas.setActiveObject(rect); canvas.renderAll();
+        };
+
+        const addCircle = () => {
+          if (!canvas) return;
+          const circle = new window.fabric.Circle({ left: 100, top: 100, radius: 60, fill: '#10b981', stroke: '#059669', strokeWidth: 2 });
+          canvas.add(circle); canvas.setActiveObject(circle); canvas.renderAll();
+        };
+
+        const addTriangle = () => {
+          if (!canvas) return;
+          const tri = new window.fabric.Triangle({ left: 100, top: 100, width: 110, height: 110, fill: '#f59e0b', stroke: '#d97706', strokeWidth: 2 });
+          canvas.add(tri); canvas.setActiveObject(tri); canvas.renderAll();
+        };
+
+        const addLine = () => {
+          if (!canvas) return;
+          const line = new window.fabric.Line([50, 50, 220, 50], { stroke: '#374151', strokeWidth: 3 });
+          canvas.add(line); canvas.setActiveObject(line); canvas.renderAll();
+        };
+
+        const addArrow = () => {
+          if (!canvas) return;
+          const arrow = new window.fabric.Path('M 0 0 L 150 0 L 150 -10 L 175 5 L 150 20 L 150 10 L 0 10 z', { left: 100, top: 100, fill: '#ef4444', stroke: '#dc2626', strokeWidth: 1 });
+          canvas.add(arrow); canvas.setActiveObject(arrow); canvas.renderAll();
+        };
+
+        const addStar = () => {
+          if (!canvas) return;
+          const star = new window.fabric.Path('M 50 0 L 61 35 L 98 35 L 68 57 L 79 91 L 50 70 L 21 91 L 32 57 L 2 35 L 39 35 z', { left: 100, top: 100, fill: '#fbbf24', stroke: '#f59e0b', strokeWidth: 2 });
+          canvas.add(star); canvas.setActiveObject(star); canvas.renderAll();
+        };
+
+        const addPentagon = () => {
+          if (!canvas) return;
+          const points = []; const sides = 5; const radius = 55;
+          for (let i = 0; i < sides; i++) {
+            const angle = (i * 2 * Math.PI) / sides - Math.PI / 2;
+            points.push({ x: radius * Math.cos(angle), y: radius * Math.sin(angle) });
+          }
+          const pentagon = new window.fabric.Polygon(points, { left: 100, top: 100, fill: '#8b5cf6', stroke: '#7c3aed', strokeWidth: 2 });
+          canvas.add(pentagon); canvas.setActiveObject(pentagon); canvas.renderAll();
+        };
+
+        const addHexagon = () => {
+          if (!canvas) return;
+          const points = []; const sides = 6; const radius = 55;
+          for (let i = 0; i < sides; i++) {
+            const angle = (i * 2 * Math.PI) / sides;
+            points.push({ x: radius * Math.cos(angle), y: radius * Math.sin(angle) });
+          }
+          const hexagon = new window.fabric.Polygon(points, { left: 100, top: 100, fill: '#ec4899', stroke: '#db2777', strokeWidth: 2 });
+          canvas.add(hexagon); canvas.setActiveObject(hexagon); canvas.renderAll();
+        };
+
+        // Add image
+        const addImage = () => {
+          const input = document.createElement('input');
+          input.type = 'file'; input.accept = 'image/*';
+          input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file && canvas) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                window.fabric.Image.fromURL(event.target.result, (img) => {
+                  img.scaleToWidth(600);
+                  img.set({ left: 80, top: 80 });
+                  canvas.add(img); canvas.setActiveObject(img); canvas.renderAll();
+                  saveCurrentSlide();
+                }, { crossOrigin: 'anonymous' });
+              };
+              reader.readAsDataURL(file);
+            }
+          };
+          input.click();
+        };
+
+        // Object ops
+        const deleteSelected = () => {
+          if (!canvas) return;
+          const obj = canvas.getActiveObject();
+          if (obj) { canvas.remove(obj); canvas.discardActiveObject(); canvas.requestRenderAll(); saveCurrentSlide(); }
+        };
+
+        const duplicateSelected = () => {
+          if (!canvas) return;
+          const obj = canvas.getActiveObject();
+          if (obj) {
+            obj.clone((cloned) => {
+              cloned.left = (obj.left || 0) + 20;
+              cloned.top = (obj.top || 0) + 20;
+              canvas.add(cloned); canvas.setActiveObject(cloned); canvas.renderAll(); saveCurrentSlide();
+            });
+          }
+        };
+
+        const bringToFront = () => {
+          if (!canvas) return;
+          const obj = canvas.getActiveObject();
+          if (obj) { canvas.bringToFront(obj); canvas.renderAll(); saveCurrentSlide(); }
+        };
+
+        const sendToBack = () => {
+          if (!canvas) return;
+          const obj = canvas.getActiveObject();
+          if (obj) { canvas.sendToBack(obj); canvas.renderAll(); saveCurrentSlide(); }
+        };
+
+        // Update property
+        const updateObjectProperty = (property, value) => {
+          if (!canvas || !selectedObject) return;
+          selectedObject.set(property, value);
+          canvas.renderAll();
+          saveCurrentSlide();
+        };
+
+        // Zoom
+        const handleZoom = (newZoom) => {
+          if (!canvas) return;
+          const clamped = Math.max(25, Math.min(200, newZoom));
+          setZoom(clamped);
+          const factor = clamped / 100;
+          canvas.setZoom(factor);
+          const vp = canvas.viewportTransform || [1,0,0,1,0,0];
+          canvas.setViewportTransform([factor, vp[1], vp[2], factor, 0, 0]);
+          canvas.renderAll();
+        };
+
+        // Presentation
+        const startPresentation = () => {
+          setPresentMode(true);
+          if (document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen().catch(()=>{}); }
+        };
+        const exitPresentation = () => {
+          setPresentMode(false);
+          if (document.exitFullscreen) { document.exitFullscreen().catch(()=>{}); }
+        };
+
+        // Keyboard
+        useEffect(() => {
+          const handleKeyPress = (e) => {
+            if (e.key === 'F5' && !presentMode) { e.preventDefault(); startPresentation(); return; }
+            if (!presentMode) return;
+            if (e.key === 'Escape') { exitPresentation(); }
+            else if (e.key === 'ArrowRight' || e.key === ' ') {
+              if (activeIndex < slides.length - 1) { switchSlide(activeIndex + 1); }
+            } else if (e.key === 'ArrowLeft') {
+              if (activeIndex > 0) { switchSlide(activeIndex - 1); }
+            }
+          };
+          window.addEventListener('keydown', handleKeyPress);
+          return () => window.removeEventListener('keydown', handleKeyPress);
+        }, [presentMode, activeIndex, slides.length]);
+
+        // Thumbnails
+        const renderThumbnails = (slidesData = slides) => {
+          slidesData.forEach((slide) => {
+            const el = document.getElementById(`thumb-${slide.id}`);
+            if (!el) return;
+            const ctx = el.getContext('2d');
+            ctx.save();
+            ctx.clearRect(0, 0, el.width, el.height);
+            ctx.fillStyle = (slide.background || '#ffffff');
+            ctx.fillRect(0, 0, el.width, el.height);
+
+            const scaleX = el.width / 1280;
+            const scaleY = el.height / 720;
+            const scale = Math.min(scaleX, scaleY);
+            ctx.scale(scale, scale);
+
+            if (slide.objects && slide.objects.objects && slide.objects.objects.length) {
+              const staticCanvas = new window.fabric.StaticCanvas(null, { width: 1280, height: 720, backgroundColor: slide.background || '#ffffff' });
+              staticCanvas.loadFromJSON(slide.objects, () => {
+                const dataURL = staticCanvas.toDataURL({ format: 'png', multiplier: 1 });
+                const img = new Image();
+                img.onload = () => {
+                  ctx.drawImage(img, 0, 0, 1280, 720);
+                  ctx.restore();
+                  // outer border for thumb frame
+                  ctx.beginPath();
+                  ctx.rect(1, 1, el.width - 2, el.height - 2);
+                  ctx.lineWidth = 2;
+                  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border-color') || '#cbd5e1';
+                  ctx.stroke();
+                };
+                img.src = dataURL;
+              });
+            } else {
+              ctx.restore();
+              ctx.beginPath();
+              ctx.rect(1, 1, el.width - 2, el.height - 2);
+              ctx.lineWidth = 2;
+              ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border-color') || '#cbd5e1';
+              ctx.stroke();
+            }
+          });
+        };
+
+        // Presentation view
+        if (presentMode) {
+          return h('div', {
+            style: { position: 'fixed', inset: 0, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'none' },
+            onClick: () => { if (activeIndex < slides.length - 1) { switchSlide(activeIndex + 1); } }
+          },
+            h('div', { style: { position: 'relative', background: activeSlide.background || '#ffffff', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', borderRadius: '4px' } },
+              h('canvas', {
+                id: 'present-canvas', width: 1280, height: 720,
+                ref: (el) => {
+                  if (el && canvas) {
+                    const ctx = el.getContext('2d');
+                    ctx.clearRect(0, 0, 1280, 720);
+                    const dataUrl = canvas.toDataURL();
+                    const img = new Image();
+                    img.onload = () => ctx.drawImage(img, 0, 0);
+                    img.src = dataUrl;
+                  }
+                }
+              })
+            ),
+            h('div', { style: { position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', color: 'white', fontSize: '14px', opacity: 0.7 } }, `${activeIndex + 1} / ${slides.length}`),
+            h('button', {
+              onClick: exitPresentation,
+              style: { position: 'absolute', top: 20, right: 20, background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }
+            }, 'Exit (ESC)')
+          );
+        }
+
+        // Editor
+        return h('div', { className: 'editor-container' },
+          // Sidebar
+          h('div', { className: 'slides-sidebar' },
+            h('div', { className: 'slides-header' },
+              h('span', {}, 'Slides'),
+              h('button', { className: 'btn-add-slide', onClick: addSlide }, '+ New')
+            ),
+            h('div', { className: 'slides-list' },
+              slides.map((slide, index) =>
+                h('div', {
+                  key: slide.id,
+                  className: `slide-item ${index === activeIndex ? 'active' : ''}`,
+                  onClick: () => switchSlide(index)
+                },
+                  h('div', { className: 'slide-preview' },
+                    h('span', { className: 'slide-number' }, index + 1),
+                    h('canvas', { id: `thumb-${slide.id}`, width: 196, height: 120, style: { width: '100%', height: '100%' } })
+                  ),
+                  h('div', { className: 'slide-controls' },
+                    h('button', { onClick: (e) => { e.stopPropagation(); duplicateSlide(index); } }, 'Duplicate'),
+                    h('button', { onClick: (e) => { e.stopPropagation(); deleteSlide(index); }, disabled: slides.length <= 1 }, 'Delete')
+                  )
+                )
+              )
+            )
+          ),
+
+          // Main editor
+          h('div', { className: 'main-editor' },
+            // Toolbar
+            h('div', { className: 'toolbar' },
+              h('div', { className: 'tool-group' },
+                h('button', { className: 'tool-btn present', onClick: startPresentation, title: 'Start Presentation (F5)' }, h('i', { className: 'fas fa-play' }), 'Present')
+              ),
+              h('div', { className: 'tool-group' },
+                h('button', { className: 'tool-btn', onClick: addText }, h('i', { className: 'fas fa-font' }), 'Text'),
+                h('select', {
+                  className: 'tool-select', value: selectedFont,
+                  onChange: (e) => {
+                    setSelectedFont(e.target.value);
+                    if (selectedObject && selectedObject.type === 'i-text') {
+                      selectedObject.set('fontFamily', e.target.value); canvas.renderAll(); saveCurrentSlide();
+                    }
+                  }
+                }, fontFamilies.map(font => h('option', { key: font, value: font }, font))),
+                h('input', {
+                  type: 'number', className: 'tool-select', style: { width: '72px' },
+                  value: fontSize, min: 8, max: 200,
+                  onChange: (e) => {
+                    const v = parseInt(e.target.value || '0', 10);
+                    const clamped = Math.max(8, Math.min(200, v));
+                    setFontSize(clamped);
+                    if (selectedObject && selectedObject.type === 'i-text') {
+                      selectedObject.set('fontSize', clamped); canvas.renderAll(); saveCurrentSlide();
+                    }
+                  }
+                }),
+                h('div', { className: 'color-picker-wrapper' },
+                  h('div', { className: 'color-picker-btn' },
+                    h('span', {}, 'Color'),
+                    h('input', {
+                      type: 'color', className: 'color-swatch', value: textColor,
+                      onChange: (e) => {
+                        setTextColor(e.target.value);
+                        if (selectedObject && selectedObject.type === 'i-text') {
+                          selectedObject.set('fill', e.target.value);
+                          if (selectedObject.cursorColor !== undefined) selectedObject.cursorColor = e.target.value;
+                          canvas.renderAll(); saveCurrentSlide();
+                        }
+                      }
+                    })
+                  )
+                )
+              ),
+              h('div', { className: 'tool-group' },
+                h('button', { className: 'tool-btn', onClick: addImage }, h('i', { className: 'fas fa-image' }), 'Image')
+              ),
+              h('div', { className: 'tool-group' },
+                h('button', { className: 'tool-btn', onClick: addRectangle, title: 'Rectangle' }, h('i', { className: 'fas fa-square' })),
+                h('button', { className: 'tool-btn', onClick: addCircle, title: 'Circle' }, h('i', { className: 'fas fa-circle' })),
+                h('button', { className: 'tool-btn', onClick: addTriangle, title: 'Triangle' }, h('i', { className: 'fas fa-play', style: { transform: 'rotate(-90deg)' } })),
+                h('button', { className: 'tool-btn', onClick: addLine, title: 'Line' }, h('i', { className: 'fas fa-minus' })),
+                h('button', { className: 'tool-btn', onClick: addArrow, title: 'Arrow' }, h('i', { className: 'fas fa-long-arrow-alt-right' })),
+                h('button', { className: 'tool-btn', onClick: addStar, title: 'Star' }, h('i', { className: 'fas fa-star' })),
+                h('button', { className: 'tool-btn', onClick: addPentagon, title: 'Pentagon' }, h('span', {}, '⬟')),
+                h('button', { className: 'tool-btn', onClick: addHexagon, title: 'Hexagon' }, h('span', {}, '⬢'))
+              ),
+              h('div', { className: 'tool-group' },
+                h('button', { className: 'tool-btn', onClick: deleteSelected }, h('i', { className: 'fas fa-trash' }), 'Delete'),
+                h('button', { className: 'tool-btn', onClick: duplicateSelected }, h('i', { className: 'fas fa-copy' }), 'Duplicate')
+              ),
+              h('div', { className: 'tool-group' },
+                h('button', { className: 'tool-btn', onClick: bringToFront }, h('i', { className: 'fas fa-arrow-up' }), 'Front'),
+                h('button', { className: 'tool-btn', onClick: sendToBack }, h('i', { className: 'fas fa-arrow-down' }), 'Back')
+              )
+            ),
+
+            // Canvas
+            h('div', { className: 'canvas-area' },
+              h('div', { className: 'canvas-wrapper' },
+                h('canvas', { ref: canvasRef, className: 'canvas', width: 1280, height: 720 })
+              )
+            ),
+
+            // Status bar
+            h('div', { className: 'status-bar' },
+              h('span', {}, `Slide ${activeIndex + 1} of ${slides.length}`),
+              h('div', { className: 'zoom-controls' },
+                h('button', { className: 'zoom-btn', onClick: () => handleZoom(zoom - 25) }, '-'),
+                h('span', {}, `${zoom}%`),
+                h('button', { className: 'zoom-btn', onClick: () => handleZoom(zoom + 25) }, '+'),
+                h('button', { className: 'zoom-btn', onClick: () => handleZoom(100) }, 'Fit')
+              )
+            )
+          ),
+
+          // Properties
+          h('div', { className: 'properties-panel' },
+            h('div', { className: 'prop-group' },
+              h('h3', {}, 'Slide Properties'),
+              h('div', { className: 'prop-row' },
+                h('span', { className: 'prop-label' }, 'Name:'),
+                h('input', {
+                  className: 'prop-input', type: 'text', value: activeSlide.name,
+                  onChange: (e) => {
+                    const newSlides = [...slides];
+                    newSlides[activeIndex].name = e.target.value;
+                    setSlides(newSlides);
+                    renderThumbnails(newSlides);
+                  }
+                })
+              ),
+              h('div', { className: 'prop-row' },
+                h('span', { className: 'prop-label' }, 'Background:'),
+                h('input', {
+                  className: 'prop-color', type: 'color', value: activeSlide.background || '#ffffff',
+                  onChange: (e) => {
+                    const newSlides = [...slides];
+                    newSlides[activeIndex].background = e.target.value;
+                    setSlides(newSlides);
+                    if (canvas) {
+                      canvas.setBackgroundColor(e.target.value, canvas.renderAll.bind(canvas));
+                      sendToParent(newSlides, activeIndex);
+                    }
+                    renderThumbnails(newSlides);
+                  }
+                })
+              )
+            ),
+            selectedObject && h('div', { className: 'prop-group' },
+              h('h3', {}, 'Object Properties'),
+              selectedObject.type === 'i-text' ? [
+                h('div', { key: 'fontFamily', className: 'prop-row' },
+                  h('span', { className: 'prop-label' }, 'Font:'),
+                  h('select', {
+                    className: 'prop-select', value: selectedObject.fontFamily || 'Arial',
+                    onChange: (e) => updateObjectProperty('fontFamily', e.target.value)
+                  }, fontFamilies.map(font => h('option', { key: font, value: font }, font)))
+                ),
+                h('div', { key: 'fontSize', className: 'prop-row' },
+                  h('span', { className: 'prop-label' }, 'Size:'),
+                  h('input', {
+                    className: 'prop-input', type: 'number', value: selectedObject.fontSize || 16, min: 8, max: 200,
+                    onChange: (e) => updateObjectProperty('fontSize', parseInt(e.target.value || '0', 10))
+                  })
+                ),
+                h('div', { key: 'fontWeight', className: 'prop-row' },
+                  h('span', { className: 'prop-label' }, 'Bold:'),
+                  h('input', {
+                    type: 'checkbox', checked: selectedObject.fontWeight === 'bold',
+                    onChange: (e) => updateObjectProperty('fontWeight', e.target.checked ? 'bold' : 'normal')
+                  })
+                ),
+                h('div', { key: 'fontStyle', className: 'prop-row' },
+                  h('span', { className: 'prop-label' }, 'Italic:'),
+                  h('input', {
+                    type: 'checkbox', checked: selectedObject.fontStyle === 'italic',
+                    onChange: (e) => updateObjectProperty('fontStyle', e.target.checked ? 'italic' : 'normal')
+                  })
+                ),
+                h('div', { key: 'textAlign', className: 'prop-row' },
+                  h('span', { className: 'prop-label' }, 'Align:'),
+                  h('select', {
+                    className: 'prop-select', value: selectedObject.textAlign || 'left',
+                    onChange: (e) => updateObjectProperty('textAlign', e.target.value)
+                  }, [
+                    h('option', { value: 'left' }, 'Left'),
+                    h('option', { value: 'center' }, 'Center'),
+                    h('option', { value: 'right' }, 'Right'),
+                    h('option', { value: 'justify' }, 'Justify')
+                  ])
+                ),
+                h('div', { key: 'color', className: 'prop-row' },
+                  h('span', { className: 'prop-label' }, 'Color:'),
+                  h('input', {
+                    className: 'prop-color', type: 'color', value: selectedObject.fill || '#000000',
+                    onChange: (e) => updateObjectProperty('fill', e.target.value)
+                  })
+                )
+              ] : [
+                h('div', { key: 'fill', className: 'prop-row' },
+                  h('span', { className: 'prop-label' }, 'Fill:'),
+                  h('input', {
+                    className: 'prop-color', type: 'color', value: selectedObject.fill || '#000000',
+                    onChange: (e) => updateObjectProperty('fill', e.target.value)
+                  })
+                ),
+                h('div', { key: 'stroke', className: 'prop-row' },
+                  h('span', { className: 'prop-label' }, 'Stroke:'),
+                  h('input', {
+                    className: 'prop-color', type: 'color', value: selectedObject.stroke || '#000000',
+                    onChange: (e) => updateObjectProperty('stroke', e.target.value)
+                  })
+                ),
+                h('div', { key: 'strokeWidth', className: 'prop-row' },
+                  h('span', { className: 'prop-label' }, 'Width:'),
+                  h('input', {
+                    className: 'prop-input', type: 'number', value: selectedObject.strokeWidth || 1, min: 0,
+                    onChange: (e) => updateObjectProperty('strokeWidth', parseInt(e.target.value || '0', 10))
+                  })
+                )
+              ],
+              h('div', { key: 'opacity', className: 'prop-row' },
+                h('span', { className: 'prop-label' }, 'Opacity:'),
+                h('input', {
+                  className: 'prop-input', type: 'range', min: 0, max: 100,
+                  value: Math.round((selectedObject.opacity == null ? 1 : selectedObject.opacity) * 100),
+                  onChange: (e) => updateObjectProperty('opacity', parseInt(e.target.value || '0', 10) / 100)
+                })
+              )
+            )
+          )
+        );
+      }
+
+      ReactDOM.render(React.createElement(SlidesEditor), document.getElementById('root'));
+
+      // Utilities
+      function debounce(fn, wait) {
+        let t;
+        return function(...args) {
+          clearTimeout(t);
+          t = setTimeout(() => fn.apply(this, args), wait);
+        };
+      }
+    }
+  </script>
+</body>
+</html>

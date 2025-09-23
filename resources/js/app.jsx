@@ -1,5 +1,6 @@
 import '../css/app.css';
 import './bootstrap';
+import 'react-calendar-timeline/dist/style.css';
 
 import React, { Suspense } from 'react';
 import { createRoot } from 'react-dom/client';

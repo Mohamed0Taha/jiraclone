@@ -320,7 +320,7 @@ class TaskController extends Controller
     }
 
     /* ---------------------------- Update task ------------------------ */
-    public function update(Request $request, Project $project, Task $task): RedirectResponse
+    public function update(Request $request, Project $project, Task $task)
     {
         $this->authorize('update', $task);
 
@@ -370,6 +370,17 @@ class TaskController extends Controller
         $changes = array_keys($validated);
         TaskUpdated::dispatch($task, $changes);
 
+        // Return JSON response for AJAX requests (Timeline, etc.)
+        if ($request->expectsJson()) {
+            $task->load(['assignee:id,name', 'creator:id,name', 'attachments']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Task updated successfully',
+                'task' => $task
+            ]);
+        }
+
+        // Return redirect for regular web requests
         return back()->with('success', 'Task updated.');
     }
 

@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>React Design Editor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/antd/3.26.20/antd.min.css" />
+    <style>
+      html, body, #root { height: 100%; margin: 0; padding: 0; }
+      body { background: #f5f5f5; }
+      .rde-container { height: 100%; display: flex; flex-direction: column; }
+      .rde-toolbar { display: flex; gap: 8px; align-items: center; padding: 8px; background: #fff; border-bottom: 1px solid #d9d9d9; }
+      .rde-content { flex: 1; min-height: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    
+    <script src="https://unpkg.com/react@16.14.0/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@16.14.0/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/fabric@3.4.0/dist/fabric.min.js"></script>
+    <script src="https://unpkg.com/react-design-editor@0.0.3/dist/react-design-editor.min.js"></script>
+    
+    <script>
+      const { useState, useEffect, useRef } = React;
+      const { Canvas } = window['react-design-editor.js'];
+      
+      function RDEApp() {
+        const [canvasRef, setCanvasRef] = useState(null);
+        const [currentData, setCurrentData] = useState(null);
+        
+        // Listen for messages from parent
+        useEffect(() => {
+          const handleMessage = (event) => {
+            if (event.data.type === 'RDE_LOAD_JSON' && canvasRef) {
+              try {
+                canvasRef.handler.importJSON(event.data.json);
+              } catch (e) {
+                console.error('Failed to load JSON:', e);
+              }
+            }
+          };
+          
+          window.addEventListener('message', handleMessage);
+          return () => window.removeEventListener('message', handleMessage);
+        }, [canvasRef]);
+        
+        // Send data changes to parent
+        const sendDataToParent = (data) => {
+          window.parent.postMessage({
+            type: 'RDE_DATA_CHANGED',
+            json: data
+          }, '*');
+        };
+        
+        const handleCanvasRef = (ref) => {
+          setCanvasRef(ref);
+          
+          // Send initial ready message
+          window.parent.postMessage({
+            type: 'RDE_READY'
+          }, '*');
+        };
+        
+        const handleModified = () => {
+          if (canvasRef) {
+            try {
+              const json = canvasRef.handler.exportJSON();
+              sendDataToParent(json);
+            } catch (e) {
+              console.error('Failed to export JSON:', e);
+            }
+          }
+        };
+        
+        return React.createElement('div', { className: 'rde-container' },
+          React.createElement('div', { className: 'rde-toolbar' },
+            React.createElement('button', {
+              onClick: () => canvasRef?.handler.add({ type: 'textbox', text: 'Sample Text' })
+            }, 'Add Text'),
+            React.createElement('button', {
+              onClick: () => canvasRef?.handler.add({ type: 'rect', width: 100, height: 100, fill: '#ff0000' })
+            }, 'Add Rectangle'),
+            React.createElement('button', {
+              onClick: () => canvasRef?.handler.add({ type: 'circle', radius: 50, fill: '#00ff00' })
+            }, 'Add Circle')
+          ),
+          React.createElement('div', { className: 'rde-content' },
+            React.createElement(Canvas, {
+              ref: handleCanvasRef,
+              canvasOption: {
+                width: 800,
+                height: 600,
+                backgroundColor: '#ffffff'
+              },
+              onModified: handleModified,
+              onAdd: handleModified,
+              onRemove: handleModified
+            })
+          )
+        );
+      }
+      
+      ReactDOM.render(React.createElement(RDEApp), document.getElementById('root'));
+    </script>
+  </body>
+</html>

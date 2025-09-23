@@ -80,6 +80,14 @@ export function withCsrf(init = {}) {
         console.error('No CSRF token available for request - this will likely cause a 419 error');
     }
 
+    // Attach current Pusher socket id so server can broadcast()->toOthers()
+    try {
+        const socketId = window.__pusherSocketId || null;
+        if (socketId) {
+            headers['X-Socket-Id'] = socketId;
+        }
+    } catch (_) {}
+
     return {
         ...init,
         headers,

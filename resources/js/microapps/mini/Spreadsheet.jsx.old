@@ -1,0 +1,846 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  Box,
+  Typography,
+  Stack,
+  Button,
+  Chip,
+  Tooltip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  IconButton,
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import SaveIcon from '@mui/icons-material/Save';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import MicroAppWrapper from '../components/MicroAppWrapper';
+
+const EditableCell = ({ 
+  value, 
+  onChange, 
+  onBlur, 
+  isSelected, 
+  onSelect,
+  onKeyDown: onKeyDownProp,
+  rowIndex,
+  columnName
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [cellValue, setCellValue] = useState(value);
+  const inputRef = React.useRef(null);
+
+  useEffect(() => {
+    setCellValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      // Move cursor to end of text
+      const length = String(cellValue || '').length;
+      inputRef.current.setSelectionRange(length, length);
+    }
+  }, [isEditing, cellValue]);
+
+  const handleClick = () => {
+    onSelect && onSelect();
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    if (onBlur) onBlur(cellValue);
+  };
+
+  const handleChange = (e) => {
+    const newValue = e.target.value;
+    setCellValue(newValue);
+    if (onChange) onChange(newValue);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleBlur();
+      // Move to cell below on Enter
+      onKeyDownProp?.({ key: 'Enter', shiftKey: e.shiftKey });
+      return;
+    }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      handleBlur();
+      onKeyDownProp?.({ key: 'Tab', shiftKey: e.shiftKey });
+      return;
+    }
+    if (e.key === 'Escape') {
+      setCellValue(value); // Revert changes
+      handleBlur();
+      return;
+    }
+    // Allow typing to start editing
+    if (!isEditing && /^[a-zA-Z0-9\s]/.test(e.key)) {
+      e.preventDefault();
+      setCellValue(e.key);
+      setIsEditing(true);
+    }
+  };
+
+  const handleDoubleClick = () => {
+    setIsEditing(true);
+  };
+
+  const cellContent = cellValue || '';
+  const showPlaceholder = cellContent === '';
+
+  return (
+    <Box
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      sx={{
+        p: 1,
+        minHeight: '40px',
+        display: 'flex',
+        alignItems: 'center',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        position: 'relative',
+        cursor: 'cell',
+        border: '2px solid',
+        borderColor: isSelected ? 'primary.main' : 'transparent',
+        '&:hover': {
+          borderColor: isSelected ? 'primary.main' : 'action.hover',
+        },
+        backgroundColor: isSelected ? 'action.selected' : 'background.paper',
+        '&:focus-within': {
+          borderColor: 'primary.main',
+          outline: 'none',
+        },
+      }}
+      tabIndex={0}
+      onKeyDown={!isEditing ? handleKeyDown : undefined}
+    >
+      {isEditing ? (
+        <TextField
+          inputRef={inputRef}
+          value={cellValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          autoFocus
+          fullWidth
+          size="small"
+          variant="standard"
+          InputProps={{
+            disableUnderline: true,
+            style: { 
+              fontSize: '0.875rem',
+              height: '100%',
+            },
+          }}
+          sx={{
+            '& .MuiInputBase-input': {
+              p: 0,
+              height: '100%',
+              lineHeight: '1.5',
+            },
+            width: '100%',
+            height: '100%',
+          }}
+        />
+      ) : (
+        <Box
+          sx={{
+            width: '100%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            fontStyle: showPlaceholder ? 'italic' : 'normal',
+            color: showPlaceholder ? 'text.secondary' : 'text.primary',
+          }}
+        >
+          {showPlaceholder ? 'Double click to edit' : cellContent}
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+export default function SpreadsheetApp({ projectId, viewName }) {
+  const [selectedCell, setSelectedCell] = useState({ row: 0, col: 0 });
+  const [showColumnDialog, setShowColumnDialog] = useState(false);
+  const [newColumnName, setNewColumnName] = useState('');
+
+  // Initialize default state structure
+  const defaultValue = useMemo(() => ({
+    columns: [
+      { name: 'A', label: '' },
+      { name: 'B', label: '' },
+      { name: 'C', label: '' },
+    ],
+    data: Array(10).fill(null).map(() => ({}))
+  }), []);
+  
+  // Ensure we always have valid data
+  const { columns = ['A', 'B', 'C'], rows = [{}], lastUpdated } = state || defaultValue;
+  
+  // Update the selected cell if it's out of bounds after data changes
+  useEffect(() => {
+    if (rows.length > 0 && selectedCell.row >= rows.length) {
+      setSelectedCell(prev => ({
+        ...prev,
+        row: rows.length - 1
+      }));
+    }
+    
+    if (columns.length > 0 && selectedCell.col >= columns.length) {
+      setSelectedCell(prev => ({
+        ...prev,
+        col: columns.length - 1
+      }));
+    }
+  }, [rows.length, columns.length]);
+
+  // Add a new column
+  const addColumn = () => {
+    setNewColumnName('');
+    setIsEditingColumn(false);
+    setShowColumnDialog(true);
+  };
+
+  // Handle save column (add or edit)
+  const handleSaveColumn = () => {
+    if (!newColumnName.trim()) return;
+
+    if (isEditingColumn && editColumnIndex >= 0) {
+      // Edit existing column
+      const oldColumnName = columns[editColumnIndex];
+      const updatedColumns = [...columns];
+      updatedColumns[editColumnIndex] = newColumnName;
+
+      const updatedRows = rows.map(row => {
+        const newRow = { ...row };
+        if (oldColumnName in newRow) {
+          newRow[newColumnName] = newRow[oldColumnName];
+          delete newRow[oldColumnName];
+        }
+        return newRow;
+      });
+
+      setState(prev => ({
+        ...prev,
+        columns: updatedColumns,
+        rows: updatedRows,
+        lastUpdated: new Date().toISOString()
+      }));
+    } else {
+      // Add new column
+      const columnExists = columns.some(col => col === newColumnName);
+      if (!columnExists) {
+        setState(prev => ({
+          ...prev,
+          columns: [...columns, newColumnName],
+          lastUpdated: new Date().toISOString()
+        }));
+      }
+    }
+    
+    setShowColumnDialog(false);
+  };
+
+  // Edit column
+  const editColumn = (columnIndex) => {
+    setEditColumnIndex(columnIndex);
+    setNewColumnName(columns[columnIndex]);
+    setIsEditingColumn(true);
+    setShowColumnDialog(true);
+  };
+
+  // Delete column
+  const deleteColumn = (columnIndex) => {
+    if (columns.length <= 1) return; // Prevent deleting the last column
+    
+    const columnToDelete = columns[columnIndex];
+    const updatedColumns = columns.filter((_, index) => index !== columnIndex);
+    
+    const updatedRows = rows.map(row => {
+      const newRow = { ...row };
+      delete newRow[columnToDelete];
+      return newRow;
+    });
+
+    setState(prev => ({
+      ...prev,
+      columns: updatedColumns,
+      rows: updatedRows,
+      lastUpdated: new Date().toISOString()
+    }));
+  };
+
+  // Add a new row
+  const addRow = () => {
+    const newRow = {};
+    columns.forEach(col => {
+      newRow[col] = '';
+    });
+    
+    setState(prev => ({
+      ...prev,
+      rows: [...prev.rows, newRow],
+      lastUpdated: new Date().toISOString()
+    }));
+  };
+
+  // Delete a row
+  const deleteRow = (rowIndex) => {
+    if (rows.length <= 1) return; // Prevent deleting the last row
+    
+    setState(prev => ({
+      ...prev,
+      rows: prev.rows.filter((_, index) => index !== rowIndex),
+      lastUpdated: new Date().toISOString()
+    }));
+  };
+
+  // Handle cell value change
+  const handleCellChange = (rowIndex, columnName, value) => {
+    const updateFn = useShared ? setSharedState : setLocalState;
+    
+    updateFn(prev => {
+      const updatedRows = [...(prev?.rows || [])];
+      if (!updatedRows[rowIndex]) {
+        updatedRows[rowIndex] = {};
+      }
+      
+      updatedRows[rowIndex] = {
+        ...updatedRows[rowIndex],
+        [columnName]: value
+      };
+      
+      return {
+        ...prev,
+        rows: updatedRows,
+        lastUpdated: new Date().toISOString()
+      };
+    });
+  };
+
+  // Handle keyboard navigation
+  const handleCellKeyDown = (e) => {
+    const { key, shiftKey } = e;
+    const { row, col } = selectedCell;
+    const lastRowIndex = Math.max(0, (state?.rows?.length || 1) - 1);
+    const lastColIndex = Math.max(0, (state?.columns?.length || 1) - 1);
+
+    let newRow = row;
+    let newCol = col;
+
+    switch (key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        newRow = Math.max(0, row - 1);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        newRow = Math.min(lastRowIndex, row + 1);
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        newCol = Math.max(0, col - 1);
+        break;
+      case 'ArrowRight':
+      case 'Tab':
+        e.preventDefault();
+        if (key === 'Tab' && !shiftKey) {
+          if (col === lastColIndex && row < lastRowIndex) {
+            newCol = 0;
+            newRow = row + 1;
+          } else if (col < lastColIndex) {
+            newCol = col + 1;
+          }
+        } else if (key === 'Tab' && shiftKey) {
+          if (col === 0 && row > 0) {
+            newCol = lastColIndex;
+            newRow = row - 1;
+          } else if (col > 0) {
+            newCol = col - 1;
+          }
+        } else {
+          newCol = Math.min(lastColIndex, col + 1);
+        }
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (shiftKey) {
+          newRow = Math.max(0, row - 1);
+        } else {
+          newRow = Math.min(lastRowIndex, row + 1);
+        }
+        break;
+      case 'Home':
+        e.preventDefault();
+        newCol = 0;
+        if (e.ctrlKey) newRow = 0;
+        break;
+      case 'End':
+        e.preventDefault();
+        newCol = lastColIndex;
+        if (e.ctrlKey) newRow = lastRowIndex;
+        break;
+      case 'PageUp':
+        e.preventDefault();
+        newRow = Math.max(0, row - 10);
+        break;
+      case 'PageDown':
+        e.preventDefault();
+        newRow = Math.min(lastRowIndex, row + 10);
+        break;
+      default:
+        return; // Don't update selection for other keys
+    }
+
+    if (newRow !== row || newCol !== col) {
+      setSelectedCell({ row: newRow, col: newCol });
+      // Scroll the cell into view
+      setTimeout(() => {
+        const cell = document.querySelector(`[data-row="${newRow}"][data-col="${newCol}"]`);
+        if (cell) {
+          cell.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 0);
+    }
+  };
+
+  // Focus the table when the component mounts
+  useEffect(() => {
+    if (tableRef.current) {
+      tableRef.current.focus();
+    }
+  }, []);
+
+  // Save data explicitly
+  const handleSave = () => {
+    const updatedState = {
+      ...state,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    if (useShared) {
+      // Force persistence even if only volatile fields changed, and save immediately
+      setSharedState(updatedState, { force: true, immediate: true });
+    } else {
+      setLocalState(updatedState);
+    }
+  };
+  
+  // Remove auto-save - it's causing a feedback loop
+  // The useSharedViewData hook already handles saving when data changes
+  // useEffect(() => {
+  //   if (state && state.lastUpdated) {
+  //     const saveTimeout = setTimeout(() => {
+  //       handleSave();
+  //     }, 1000); // Debounce save to avoid too many updates
+  //     
+  //     return () => clearTimeout(saveTimeout);
+  //   }
+  // }, [state?.rows, state?.columns, state?.lastUpdated]);
+
+  return (
+    <MicroAppWrapper
+      projectId={projectId}
+      viewName={viewName}
+      appKey="Spreadsheet"
+      defaultValue={defaultValue}
+      title="Spreadsheet"
+      enableSharing={true}
+      defaultShared={true}
+    >
+      {({ state, setState }) => {
+        const columns = state?.columns || [];
+        const data = state?.data || [];
+
+        return (
+          <Box sx={{ p: 2 }}>
+            {/* Toolbar */}
+            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+              <Button 
+                variant="outlined" 
+                startIcon={<AddIcon />}
+                onClick={() => addColumn(columns, data, setState)}
+                size="small"
+                sx={{ borderRadius: 2 }}
+              >
+                Add Column
+              </Button>
+              <Button 
+                variant="contained" 
+                startIcon={<AddIcon />}
+                onClick={() => addRow(columns, data, setState)}
+                size="small"
+                sx={{ borderRadius: 2, background: (theme) => theme.palette.mode === 'dark' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}
+              >
+                Add Row
+              </Button>
+              <Button 
+                variant="contained" 
+                color="success" 
+                startIcon={<SaveIcon />}
+                onClick={() => handleSave(state, setState)}
+                size="small"
+                sx={{ borderRadius: 2 }}
+              >
+                Save
+              </Button>
+            </Stack>
+      
+      <Box sx={{ 
+        flex: 1, 
+        overflow: 'auto', 
+        border: '1px solid', 
+        borderColor: 'divider', 
+        borderRadius: 1,
+        '&:focus': {
+          outline: '2px solid',
+          outlineColor: 'primary.main',
+          outlineOffset: '-1px',
+        }
+      }}>
+        <TableContainer 
+          component={Paper} 
+          sx={{ 
+            maxHeight: '100%', 
+            borderRadius: 2.5,
+            border: '1px solid',
+            borderColor: 'divider',
+            background: (theme) => theme.palette.mode === 'dark'
+              ? 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))'
+              : 'linear-gradient(180deg, #ffffff, #fbfbfd)',
+            boxShadow: (theme) => theme.palette.mode === 'dark' ? 0 : 1,
+            '&:focus-visible': {
+              outline: 'none',
+            }
+          }}
+        >
+          <Table 
+            size="small" 
+            sx={{ 
+              minWidth: 650,
+              '& .MuiTableCell-root': {
+                p: 0,
+                border: '1px solid',
+                borderColor: 'divider',
+              },
+              '& .MuiTableRow-root:last-child .MuiTableCell-root': {
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+              },
+              '& .MuiTableHead .MuiTableCell-root': {
+                backgroundColor: 'background.default',
+                borderBottom: '2px solid',
+                borderColor: 'divider',
+              },
+            }}
+          >
+            <TableHead>
+              <TableRow>
+                <TableCell 
+                  sx={{ 
+                    width: '50px', 
+                    minWidth: '50px',
+                    maxWidth: '50px',
+                    p: 1, 
+                    textAlign: 'center',
+                    position: 'sticky',
+                    left: 0,
+                    zIndex: 2,
+                    backgroundColor: 'background.paper',
+                    borderRight: '2px solid',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Typography variant="subtitle2" noWrap>
+                    #
+                  </Typography>
+                </TableCell>
+                {columns.map((column, colIndex) => (
+                  <TableCell 
+                    key={colIndex}
+                    sx={{
+                      minWidth: '150px',
+                      maxWidth: '300px',
+                      bgcolor: 'background.paper',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 1,
+                      '&:hover': {
+                        '& .column-actions': {
+                          opacity: 1
+                        }
+                      },
+                      ...(colIndex === columns.length - 1 ? {
+                        borderRight: '2px solid',
+                        borderColor: 'divider',
+                      } : {})
+                    }}
+                  >
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      p: 1,
+                      position: 'relative',
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                      },
+                    }}>
+                      <Typography 
+                        variant="subtitle2" 
+                        noWrap
+                        sx={{
+                          flex: 1,
+                          textOverflow: 'ellipsis',
+                          overflow: 'hidden',
+                          pr: 1,
+                        }}
+                      >
+                        {column}
+                      </Typography>
+                      <Box 
+                        className="column-actions"
+                        sx={{ 
+                          display: 'flex',
+                          opacity: 0,
+                          transition: 'opacity 0.2s',
+                          position: 'absolute',
+                          right: 8,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          backgroundColor: 'background.paper',
+                          borderRadius: 1,
+                          boxShadow: 1,
+                          zIndex: 3,
+                        }}
+                      >
+                        <Tooltip title="Rename column">
+                          <IconButton 
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              editColumn(colIndex);
+                            }}
+                            sx={{ p: 0.5 }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        {columns.length > 1 && (
+                          <Tooltip title="Delete column">
+                            <IconButton 
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteColumn(colIndex);
+                              }}
+                              sx={{ p: 0.5 }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
+                    </Box>
+                  </TableCell>
+                ))}
+                <TableCell 
+                  sx={{ 
+                    width: '50px', 
+                    minWidth: '50px',
+                    maxWidth: '50px',
+                    p: 1, 
+                    position: 'sticky',
+                    right: 0,
+                    zIndex: 2,
+                    backgroundColor: 'background.paper',
+                    borderLeft: '2px solid',
+                    borderColor: 'divider',
+                  }}
+                ></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rows.map((row, rowIndex) => (
+                <TableRow 
+                  key={rowIndex} 
+                  hover
+                  sx={{
+                    '&:last-child td': {
+                      borderBottom: 'none',
+                    },
+                  }}
+                >
+                  <TableCell 
+                    sx={{ 
+                      width: '50px',
+                      minWidth: '50px',
+                      maxWidth: '50px',
+                      p: 0, 
+                      textAlign: 'center',
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 1,
+                      backgroundColor: 'background.paper',
+                      borderRight: '2px solid',
+                      borderColor: 'divider',
+                      '&:hover': {
+                        '& .row-actions': {
+                          opacity: 1
+                        }
+                      },
+                    }}
+                  >
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        height: '100%',
+                        minHeight: '40px',
+                        position: 'relative',
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        {rowIndex + 1}
+                      </Typography>
+                      <Box 
+                        className="row-actions"
+                        sx={{ 
+                          position: 'absolute',
+                          right: 4,
+                          display: 'flex',
+                          opacity: 0,
+                          transition: 'opacity 0.2s',
+                          backgroundColor: 'background.paper',
+                          borderRadius: 1,
+                          boxShadow: 1,
+                          zIndex: 2,
+                        }}
+                      >
+                        {rows.length > 1 && (
+                          <Tooltip title="Delete row">
+                            <IconButton 
+                              size="small"
+                              onClick={() => deleteRow(rowIndex)}
+                              sx={{ p: 0.5 }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  {columns.map((column, colIndex) => {
+                    const isSelected = selectedCell.row === rowIndex && selectedCell.col === colIndex;
+                    return (
+                      <TableCell 
+                        key={`${rowIndex}-${colIndex}`} 
+                        sx={{ 
+                          p: 0,
+                          height: '40px',
+                          position: 'relative',
+                          minWidth: '150px',
+                          maxWidth: '300px',
+                          backgroundColor: isSelected ? 'action.selected' : 'background.paper',
+                          '&:hover': {
+                            '& .cell-actions': {
+                              opacity: 1
+                            }
+                          },
+                          ...(colIndex === columns.length - 1 ? {
+                            borderRight: '2px solid',
+                            borderColor: 'divider',
+                          } : {})
+                        }}
+                        data-row={rowIndex}
+                        data-col={colIndex}
+                      >
+                        <EditableCell
+                          value={row[column] || ''}
+                          onChange={(value) => handleCellChange(rowIndex, column, value)}
+                          onBlur={(value) => handleCellChange(rowIndex, column, value)}
+                          isSelected={isSelected}
+                          onSelect={() => setSelectedCell({ row: rowIndex, col: colIndex })}
+                          onKeyDown={handleCellKeyDown}
+                          rowIndex={rowIndex}
+                          columnName={column}
+                        />
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell 
+                    sx={{ 
+                      width: '50px',
+                      minWidth: '50px',
+                      maxWidth: '50px',
+                      p: 0,
+                      position: 'sticky',
+                      right: 0,
+                      zIndex: 1,
+                      backgroundColor: 'background.paper',
+                      borderLeft: '2px solid',
+                      borderColor: 'divider',
+                    }}
+                  ></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+
+      {/* Column Name Dialog */}
+      <Dialog open={showColumnDialog} onClose={() => setShowColumnDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{isEditingColumn ? 'Edit Column' : 'Add New Column'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Column Name"
+            fullWidth
+            variant="outlined"
+            value={newColumnName}
+            onChange={(e) => setNewColumnName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSaveColumn();
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowColumnDialog(false)}>Cancel</Button>
+          <Button 
+            onClick={handleSaveColumn} 
+            variant="contained"
+            disabled={!newColumnName.trim()}
+          >
+            {isEditingColumn ? 'Update' : 'Add'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}

@@ -1,0 +1,144 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { 
+  Box, Typography, Stack, Button, Paper, TextField, IconButton, 
+  ToggleButton, ToggleButtonGroup, Divider, Select, MenuItem,
+  FormControl, InputLabel, Tooltip, Slider, Fab, Dialog,
+  DialogContent, Toolbar, AppBar
+} from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import CloseIcon from '@mui/icons-material/Close';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import FormatBoldIcon from '@mui/icons-material/FormatBold';
+import FormatItalicIcon from '@mui/icons-material/FormatItalic';
+import FormatUnderlinedIcon from '@mui/icons-material/FormatUnderlined';
+import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft';
+import FormatAlignCenterIcon from '@mui/icons-material/FormatAlignCenter';
+import FormatAlignRightIcon from '@mui/icons-material/FormatAlignRight';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
+import ImageIcon from '@mui/icons-material/Image';
+import TextFieldsIcon from '@mui/icons-material/TextFields';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import MicroAppWrapper from '../components/MicroAppWrapper';
+
+export default function Slides({ projectId, viewName }) {
+  return (
+    <MicroAppWrapper
+      projectId={projectId}
+      viewName={viewName}
+      appKey="Slides"
+      defaultValue={{ 
+        slides: [{ 
+          id: 1, 
+          layout: 'title',
+          elements: [
+            { type: 'text', content: 'Welcome to Slides', x: 25, y: 35, width: 50, height: 15, fontSize: 48, fontWeight: 'bold', align: 'center', color: '#000' },
+            { type: 'text', content: 'Click to add subtitle', x: 20, y: 55, width: 60, height: 10, fontSize: 24, align: 'center', color: '#666' }
+          ],
+          background: '#ffffff',
+          transition: 'fade'
+        }], 
+        current: 0,
+        theme: 'default'
+      }}
+      title="Slides"
+      enableSharing={true}
+      defaultShared={true}
+    >
+      {({ state, setState }) => {
+        const { slides = [], current = 0 } = state || {};
+        const [draftTitle, setDraftTitle] = useState(slides[current]?.title || '');
+        const [draftContent, setDraftContent] = useState(slides[current]?.content || '');
+
+        useEffect(() => {
+          setDraftTitle(slides[current]?.title || '');
+          setDraftContent(slides[current]?.content || '');
+        }, [current, slides]);
+
+        const addSlide = () => {
+          const id = Date.now();
+          const slide = { id, title: `Slide ${slides.length + 1}`, content: '' };
+          setState({ slides: [...slides, slide], current: slides.length });
+        };
+
+        const save = () => {
+          const updated = slides.map((s, idx) => idx === current ? { ...s, title: draftTitle, content: draftContent } : s);
+          setState({ slides: updated, current }, { force: true, immediate: true });
+        };
+
+        const delSlide = (idx) => {
+          const nextSlides = slides.filter((_, i) => i !== idx);
+          const nextIndex = Math.max(0, Math.min(idx, nextSlides.length - 1));
+          setState({ slides: nextSlides, current: nextIndex });
+        };
+
+        const goto = (idx) => setState({ ...state, current: Math.max(0, Math.min(idx, slides.length - 1)) });
+
+        const slide = slides[current];
+
+        return (
+          <Box sx={{ p: 2, display: 'flex', gap: 2 }}>
+            <Paper 
+              variant="outlined" 
+              sx={{ 
+                width: 240, 
+                p: 1.25,
+                borderRadius: 2.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                background: (theme) => theme.palette.mode === 'dark'
+                  ? 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))'
+                  : 'linear-gradient(180deg, #ffffff, #fbfbfd)',
+                boxShadow: (theme) => theme.palette.mode === 'dark' ? 0 : 1,
+              }}
+            >
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                <Typography variant="subtitle2" fontWeight={700}>Slides</Typography>
+                <Button size="small" onClick={addSlide} sx={{ borderRadius: 2 }}>Add</Button>
+              </Stack>
+              <Stack spacing={1}>
+                {slides.map((s, idx) => (
+                  <Box key={s.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Button variant={idx === current ? 'contained' : 'outlined'} size="small" fullWidth onClick={() => goto(idx)}>{s.title}</Button>
+                    <IconButton size="small" onClick={() => delSlide(idx)}><DeleteIcon fontSize="small"/></IconButton>
+                  </Box>
+                ))}
+              </Stack>
+            </Paper>
+            <Paper 
+              variant="outlined" 
+              sx={{ 
+                flex: 1, 
+                p: 2, 
+                minHeight: 360,
+                borderRadius: 2.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                background: (theme) => theme.palette.mode === 'dark'
+                  ? 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))'
+                  : 'linear-gradient(180deg, #ffffff, #fbfbfd)',
+                boxShadow: (theme) => theme.palette.mode === 'dark' ? 0 : 1,
+              }}
+            >
+              {slide ? (
+                <>
+                  <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                    <TextField label="Title" size="small" value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)} sx={{ flex: 1 }}/>
+                    <Button variant="contained" onClick={save} sx={{ borderRadius: 2 }}>Save</Button>
+                  </Stack>
+                  <TextField multiline minRows={12} fullWidth placeholder="Slide content..." value={draftContent} onChange={(e) => setDraftContent(e.target.value)} />
+                </>
+              ) : (
+                <Typography variant="body2" color="text.secondary">No slide selected.</Typography>
+              )}
+            </Paper>
+          </Box>
+        );
+      }}
+    </MicroAppWrapper>
+  );
+}

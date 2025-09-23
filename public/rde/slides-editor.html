@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slides Editor - Based on React Design Editor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .rde-main {
+            display: flex;
+            height: 100vh;
+            background: #fff;
+            max-width: 100vw;
+            overflow: hidden;
+        }
+
+        /* Left Sidebar - Items/Slides */
+        .rde-editor-items {
+            width: 160px;
+            background: #fff;
+            border-right: 1px solid #e8e8e8;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .items-header {
+            padding: 12px;
+            background: #fafafa;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+        }
+
+        .btn-add-slide {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .btn-add-slide:hover {
+            background: #40a9ff;
+        }
+
+        .slides-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .slide-item {
+            background: #fff;
+            border: 2px solid #d9d9d9;
+            border-radius: 2px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .slide-item.active {
+            border-color: #1890ff;
+            box-shadow: 0 0 0 2px rgba(24,144,255,0.2);
+        }
+
+        .slide-item:hover {
+            border-color: #40a9ff;
+        }
+
+        .slide-number {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            background: rgba(0,0,0,0.45);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 2px;
+            font-size: 11px;
+        }
+
+        .slide-canvas {
+            width: 100%;
+            height: 50px;
+            background: white;
+        }
+
+        /* Editor Container */
+        .rde-editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f0f2f5;
+            min-width: 0; /* Allow shrinking */
+            max-width: calc(100vw - 160px - 250px); /* Account for sidebars */
+        }
+
+        /* Toolbar */
+        .rde-editor-header {
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            padding: 8px 16px;
+        }
+
+        .rde-editor-header-toolbar {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .header-toolbar-group {
+            display: flex;
+            gap: 8px;
+            padding-right: 16px;
+            border-right: 1px solid #e8e8e8;
+        }
+
+        .header-toolbar-group:last-child {
+            border-right: none;
+        }
+
+        .toolbar-btn {
+            background: #fff;
+            border: 1px solid #d9d9d9;
+            padding: 4px 12px;
+            border-radius: 2px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 32px;
+            transition: all 0.3s;
+        }
+
+        .toolbar-btn:hover {
+            border-color: #40a9ff;
+            color: #40a9ff;
+        }
+
+        .toolbar-btn.primary {
+            background: #52c41a;
+            border-color: #52c41a;
+            color: white;
+        }
+
+        .toolbar-btn.primary:hover {
+            background: #73d13d;
+            border-color: #73d13d;
+        }
+
+        /* Canvas Area */
+        .rde-editor-canvas {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 8px;
+            min-height: 200px;
+            max-height: calc(100vh - 120px); /* Account for header/footer */
+        }
+
+        .canvas-container {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border-radius: 2px;
+        }
+
+        #canvas {
+            display: block;
+        }
+
+        /* Properties Panel */
+        .rde-editor-configurations {
+            width: 250px;
+            background: #fff;
+            border-left: 1px solid #e8e8e8;
+            overflow-y: auto;
+        }
+
+        .configuration-tabs {
+            display: flex;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            background: #fafafa;
+            border: none;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: white;
+            border-bottom-color: #1890ff;
+            color: #1890ff;
+        }
+
+        .tab-content {
+            padding: 16px;
+        }
+
+        .property-group {
+            margin-bottom: 24px;
+        }
+
+        .property-group-title {
+            font-size: 12px;
+            color: rgba(0,0,0,0.45);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .property-field {
+            margin-bottom: 16px;
+        }
+
+        .property-label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 14px;
+            color: rgba(0,0,0,0.85);
+        }
+
+        .property-input,
+        .property-select {
+            width: 100%;
+            padding: 4px 11px;
+            border: 1px solid #d9d9d9;
+            border-radius: 2px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .property-input:hover,
+        .property-select:hover {
+            border-color: #40a9ff;
+        }
+
+        .property-input:focus,
+        .property-select:focus {
+            border-color: #40a9ff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(24,144,255,0.2);
+        }
+
+        .property-color {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #d9d9d9;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        /* Footer/Status */
+        .rde-editor-footer {
+            background: #fff;
+            border-top: 1px solid #e8e8e8;
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-zoom {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .zoom-btn {
+            background: #fff;
+            border: 1px solid #d9d9d9;
+            padding: 4px 8px;
+            border-radius: 2px;
+            cursor: pointer;
+            min-width: 32px;
+        }
+
+        .zoom-btn:hover {
+            border-color: #40a9ff;
+            color: #40a9ff;
+        }
+
+        .zoom-value {
+            min-width: 50px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        /* Presentation Management Dialog */
+        .presentation-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .presentation-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            padding: 24px;
+            min-width: 500px;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e8e8e8;
+            padding-bottom: 16px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+            padding: 4px;
+        }
+
+        .modal-close:hover {
+            color: #000;
+        }
+
+        .presentation-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .presentation-input:focus {
+            border-color: #40a9ff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(24,144,255,0.2);
+        }
+
+        .presentations-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e8e8e8;
+            border-radius: 4px;
+        }
+
+        .presentation-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .presentation-item:last-child {
+            border-bottom: none;
+        }
+
+        .presentation-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .presentation-item.selected {
+            background-color: #e6f7ff;
+            border-color: #91d5ff;
+        }
+
+        .presentation-info {
+            flex: 1;
+        }
+
+        .presentation-name {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .presentation-details {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .presentation-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 12px;
+            border: 1px solid #d9d9d9;
+            background: white;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .btn-small:hover {
+            border-color: #40a9ff;
+            color: #40a9ff;
+        }
+
+        .btn-danger {
+            color: #ff4d4f;
+            border-color: #ff4d4f;
+        }
+
+        .btn-danger:hover {
+            background: #ff4d4f;
+            color: white;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #e8e8e8;
+        }
+
+        .btn-modal {
+            padding: 8px 16px;
+            border: 1px solid #d9d9d9;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-modal:hover {
+            border-color: #40a9ff;
+            color: #40a9ff;
+        }
+
+        .btn-modal.primary {
+            background: #1890ff;
+            border-color: #1890ff;
+            color: white;
+        }
+
+        .btn-modal.primary:hover {
+            background: #40a9ff;
+            border-color: #40a9ff;
+        }
+
+        .current-presentation {
+            font-size: 14px;
+            color: #666;
+            margin-left: 16px;
+        }
+
+        /* Alert and Confirm Modals */
+        .alert-modal {
+            display: none;
+            position: fixed;
+            z-index: 10001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .alert-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .alert-content {
+            background-color: white;
+            border-radius: 8px;
+            padding: 24px;
+            min-width: 400px;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .alert-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .alert-icon {
+            font-size: 24px;
+            margin-right: 12px;
+            width: 32px;
+            text-align: center;
+        }
+
+        .alert-icon.warning {
+            color: #faad14;
+        }
+
+        .alert-icon.error {
+            color: #ff4d4f;
+        }
+
+        .alert-icon.info {
+            color: #1890ff;
+        }
+
+        .alert-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .alert-message {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .alert-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        /* Loading */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1890ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Shapes Dropdown */
+        .shapes-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .shapes-dropdown-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .shapes-dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: white;
+            min-width: 300px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            z-index: 1000;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            padding: 8px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            grid-template-rows: auto;
+        }
+
+        .shapes-dropdown.show .shapes-dropdown-content {
+            display: grid;
+        }
+
+        .shape-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafafa;
+            height: 45px;
+            font-size: 16px;
+            color: #666;
+        }
+
+        .shape-item:hover {
+            border-color: #40a9ff;
+            background: #e6f7ff;
+            color: #40a9ff;
+        }
+
+        .shape-item i {
+            font-size: 18px;
+        }
+
+        /* Custom shapes using CSS */
+        .shape-diamond {
+            width: 14px;
+            height: 14px;
+            background: currentColor;
+            transform: rotate(45deg);
+        }
+
+        .shape-pentagon {
+            position: relative;
+            width: 14px;
+            height: 14px;
+        }
+
+        .shape-pentagon::before {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-bottom: 5px solid currentColor;
+            top: 0;
+        }
+
+        .shape-pentagon::after {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 9px;
+            background: currentColor;
+            top: 5px;
+        }
+
+        .shape-hexagon {
+            position: relative;
+            width: 14px;
+            height: 8px;
+            background: currentColor;
+            margin: 3px 0;
+        }
+
+        .shape-hexagon::before,
+        .shape-hexagon::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+        }
+
+        .shape-hexagon::before {
+            bottom: 100%;
+            border-bottom: 4px solid currentColor;
+        }
+
+        .shape-hexagon::after {
+            top: 100%;
+            border-top: 4px solid currentColor;
+        }
+
+        .shape-star {
+            position: relative;
+            width: 14px;
+            height: 14px;
+            background: currentColor;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+        }
+
+        .shape-heart {
+            position: relative;
+            width: 14px;
+            height: 12px;
+            transform: rotate(-45deg);
+        }
+
+        .shape-heart::before,
+        .shape-heart::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 14px;
+            background: currentColor;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .shape-heart::before {
+            left: 7px;
+            transform: rotate(-45deg);
+            transform-origin: 0 100%;
+        }
+
+        .shape-heart::after {
+            left: 0;
+            transform: rotate(45deg);
+            transform-origin: 100% 100%;
+        }
+
+        .shape-arrow-right {
+            width: 0;
+            height: 0;
+            border-left: 8px solid currentColor;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+        }
+
+        .shape-arrow-left {
+            width: 0;
+            height: 0;
+            border-right: 8px solid currentColor;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+        }
+
+        .shape-arrow-up {
+            width: 0;
+            height: 0;
+            border-bottom: 8px solid currentColor;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+        }
+
+        .shape-arrow-down {
+            width: 0;
+            height: 0;
+            border-top: 8px solid currentColor;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="loading">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+    <script>
+        // Global variables
+        let canvas;
+        let slides = [];
+        let currentSlideIndex = 0;
+        let zoom = 100;
+        
+        // Global variables for presentation management
+        let currentPresentation = null;
+        let autoSave = false;
+
+        // Validate and fix slide objects to prevent Fabric.js errors
+        function validateSlideObjects(objects) {
+            if (!objects || !objects.objects) return objects;
+
+            objects.objects.forEach(obj => {
+                // Fix invalid textBaseline values
+                if (obj.type === 'i-text' || obj.type === 'text') {
+                    if (obj.textBaseline === 'alphabetical') {
+                        obj.textBaseline = 'alphabetic';
+                    }
+                    // Ensure textBaseline is valid
+                    const validBaselines = ['top', 'hanging', 'middle', 'alphabetic', 'ideographic', 'bottom'];
+                    if (!validBaselines.includes(obj.textBaseline)) {
+                        obj.textBaseline = 'alphabetic';
+                    }
+                }
+            });
+            return objects;
+        }
+
+        // Fix all slides with invalid properties
+        function fixAllSlides() {
+            slides.forEach((slide, index) => {
+                if (slide.objects) {
+                    slides[index].objects = validateSlideObjects(JSON.parse(JSON.stringify(slide.objects)));
+                }
+            });
+            console.log('Fixed all slides with invalid properties');
+        }
+
+        // Shapes Dropdown Functions
+        function toggleShapesDropdown() {
+            const dropdown = document.querySelector('.shapes-dropdown');
+            dropdown.classList.toggle('show');
+
+            // Close dropdown when clicking outside
+            if (dropdown.classList.contains('show')) {
+                document.addEventListener('click', function closeOnClickOutside(event) {
+                    if (!dropdown.contains(event.target)) {
+                        dropdown.classList.remove('show');
+                        document.removeEventListener('click', closeOnClickOutside);
+                    }
+                });
+            }
+        }
+
+        function closeShapesDropdown() {
+            document.querySelector('.shapes-dropdown').classList.remove('show');
+        }
+
+        // Initialize the application
+        function initApp() {
+            const appHTML = `
+                <div class="rde-main">
+                    <!-- Left Sidebar - Slides -->
+                    <div class="rde-editor-items">
+                        <div class="items-header">
+                            <span>Slides</span>
+                            <button class="btn-add-slide" onclick="addSlide()">
+                                <i class="fas fa-plus"></i> New
+                            </button>
+                        </div>
+                        <div class="slides-container" id="slidesList"></div>
+                    </div>
+
+                    <!-- Main Editor -->
+                    <div class="rde-editor-container">
+                        <!-- Header Toolbar -->
+                        <div class="rde-editor-header">
+                            <div class="rde-editor-header-toolbar">
+                                <div class="header-toolbar-group">
+                                    <button class="toolbar-btn" onclick="newPresentation()">
+                                        <i class="fas fa-file"></i> New
+                                    </button>
+                                    <button class="toolbar-btn" onclick="openPresentationDialog()">
+                                        <i class="fas fa-folder-open"></i> Open
+                                    </button>
+                                    <button class="toolbar-btn" onclick="savePresentationAs()">
+                                        <i class="fas fa-save"></i> Save As
+                                    </button>
+                                </div>
+                                
+                                <div class="header-toolbar-group">
+                                    <button class="toolbar-btn primary" onclick="presentSlides()">
+                                        <i class="fas fa-play"></i> Present
+                                    </button>
+                                </div>
+                                
+                                <div class="header-toolbar-group">
+                                    <button class="toolbar-btn" onclick="addText()">
+                                        <i class="fas fa-font"></i> Text
+                                    </button>
+                                    <button class="toolbar-btn" onclick="addImage()">
+                                        <i class="fas fa-image"></i> Image
+                                    </button>
+                                </div>
+
+                                <div class="header-toolbar-group">
+                                    <div class="shapes-dropdown">
+                                        <button class="toolbar-btn shapes-dropdown-btn" onclick="toggleShapesDropdown()">
+                                            <i class="fas fa-shapes"></i> Shapes <i class="fas fa-chevron-down"></i>
+                                        </button>
+                                        <div class="shapes-dropdown-content">
+                                            <!-- Basic Shapes Row 1 -->
+                                            <div class="shape-item" onclick="addRect(); closeShapesDropdown();" title="Rectangle">
+                                                <i class="fas fa-square"></i>
+                                            </div>
+                                            <div class="shape-item" onclick="addCircle(); closeShapesDropdown();" title="Circle">
+                                                <i class="fas fa-circle"></i>
+                                            </div>
+                                            <div class="shape-item" onclick="addTriangle(); closeShapesDropdown();" title="Triangle">
+                                                <i class="fas fa-play" style="transform: rotate(30deg);"></i>
+                                            </div>
+                                            <div class="shape-item" onclick="addLine(); closeShapesDropdown();" title="Line">
+                                                <i class="fas fa-minus"></i>
+                                            </div>
+
+                                            <!-- Shapes Row 2 -->
+                                            <div class="shape-item" onclick="addArrowRight(); closeShapesDropdown();" title="Arrow Right">
+                                                <div class="shape-arrow-right"></div>
+                                            </div>
+                                            <div class="shape-item" onclick="addArrowLeft(); closeShapesDropdown();" title="Arrow Left">
+                                                <div class="shape-arrow-left"></div>
+                                            </div>
+                                            <div class="shape-item" onclick="addArrowUp(); closeShapesDropdown();" title="Arrow Up">
+                                                <div class="shape-arrow-up"></div>
+                                            </div>
+                                            <div class="shape-item" onclick="addArrowDown(); closeShapesDropdown();" title="Arrow Down">
+                                                <div class="shape-arrow-down"></div>
+                                            </div>
+
+                                            <!-- Shapes Row 3 -->
+                                            <div class="shape-item" onclick="addDiamond(); closeShapesDropdown();" title="Diamond">
+                                                <div class="shape-diamond"></div>
+                                            </div>
+                                            <div class="shape-item" onclick="addPentagon(); closeShapesDropdown();" title="Pentagon">
+                                                <div class="shape-pentagon"></div>
+                                            </div>
+                                            <div class="shape-item" onclick="addHexagon(); closeShapesDropdown();" title="Hexagon">
+                                                <div class="shape-hexagon"></div>
+                                            </div>
+                                            <div class="shape-item" onclick="addStar(); closeShapesDropdown();" title="Star">
+                                                <div class="shape-star"></div>
+                                            </div>
+
+                                            <!-- Special Shapes Row 4 -->
+                                            <div class="shape-item" onclick="addHeart(); closeShapesDropdown();" title="Heart">
+                                                <i class="fas fa-heart"></i>
+                                            </div>
+                                            <div class="shape-item" onclick="addCloud(); closeShapesDropdown();" title="Cloud">
+                                                <i class="fas fa-cloud"></i>
+                                            </div>
+                                            <div class="shape-item" onclick="addLightning(); closeShapesDropdown();" title="Lightning">
+                                                <i class="fas fa-bolt"></i>
+                                            </div>
+                                            <div class="shape-item" onclick="addSpeechBubble(); closeShapesDropdown();" title="Speech Bubble">
+                                                <i class="fas fa-comment"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="header-toolbar-group">
+                                    <button class="toolbar-btn" onclick="deleteSelected()">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <button class="toolbar-btn" onclick="cloneSelected()">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    <button class="toolbar-btn" onclick="bringForward()">
+                                        <i class="fas fa-arrow-up"></i>
+                                    </button>
+                                    <button class="toolbar-btn" onclick="sendBackward()">
+                                        <i class="fas fa-arrow-down"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Canvas -->
+                        <div class="rde-editor-canvas">
+                            <div class="canvas-container">
+                                <canvas id="canvas"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="rde-editor-footer">
+                            <span id="slideInfo">Slide 1 of 1</span>
+                            <div class="footer-zoom">
+                                <button class="zoom-btn" onclick="zoomOut()">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <span class="zoom-value" id="zoomValue">100%</span>
+                                <button class="zoom-btn" onclick="zoomIn()">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button class="zoom-btn" onclick="zoomFit()">Fit</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel - Properties -->
+                    <div class="rde-editor-configurations">
+                        <div class="configuration-tabs">
+                            <button class="tab active" onclick="switchTab('properties')">Properties</button>
+                            <button class="tab" onclick="switchTab('slide')">Slide</button>
+                        </div>
+                        <div class="tab-content" id="propertiesPanel">
+                            <div class="property-group">
+                                <div class="property-group-title">Object Properties</div>
+                                <div id="objectProperties">
+                                    <p style="color: #999;">Select an object to edit</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-content" id="slidePanel" style="display: none;">
+                            <div class="property-group">
+                                <div class="property-group-title">Slide Settings</div>
+                                <div class="property-field">
+                                    <label class="property-label">Background</label>
+                                    <input type="color" class="property-color" id="slideBackground" value="#ffffff" onchange="changeSlideBackground(this.value)">
+                                </div>
+                                <div class="property-field">
+                                    <label class="property-label">Name</label>
+                                    <input type="text" class="property-input" id="slideName" placeholder="Slide name" onchange="changeSlideName(this.value)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Presentation Management Modals -->
+                <div id="saveAsModal" class="presentation-modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 class="modal-title">Save Presentation As</h3>
+                            <button class="modal-close" onclick="closeSaveAsModal()">&times;</button>
+                        </div>
+                        <div>
+                            <label for="presentationName">Presentation Name:</label>
+                            <input type="text" id="presentationName" class="presentation-input" placeholder="Enter presentation name..." />
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn-modal" onclick="closeSaveAsModal()">Cancel</button>
+                            <button class="btn-modal primary" onclick="savePresentation()">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="openModal" class="presentation-modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 class="modal-title">Open Presentation</h3>
+                            <button class="modal-close" onclick="closeOpenModal()">&times;</button>
+                        </div>
+                        <div id="presentationsList" class="presentations-list"></div>
+                        <div class="modal-footer">
+                            <button class="btn-modal" onclick="closeOpenModal()">Cancel</button>
+                            <button class="btn-modal primary" onclick="openSelectedPresentation()">Open</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alert Modal -->
+                <div id="alertModal" class="alert-modal">
+                    <div class="alert-content">
+                        <div class="alert-header">
+                            <i id="alertIcon" class="fas fa-info-circle alert-icon info"></i>
+                            <span id="alertTitle" class="alert-title">Information</span>
+                        </div>
+                        <div id="alertMessage" class="alert-message"></div>
+                        <div class="alert-footer">
+                            <button class="btn-modal primary" onclick="closeAlert()">OK</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Confirm Modal -->
+                <div id="confirmModal" class="alert-modal">
+                    <div class="alert-content">
+                        <div class="alert-header">
+                            <i class="fas fa-question-circle alert-icon warning"></i>
+                            <span id="confirmTitle" class="alert-title">Confirm Action</span>
+                        </div>
+                        <div id="confirmMessage" class="alert-message"></div>
+                        <div class="alert-footer">
+                            <button class="btn-modal" onclick="closeConfirm(false)">Cancel</button>
+                            <button class="btn-modal primary" onclick="closeConfirm(true)">OK</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('app').innerHTML = appHTML;
+            initCanvas();
+            initSlides();
+        }
+
+        // Initialize Fabric.js canvas
+        function initCanvas() {
+            canvas = new fabric.Canvas('canvas', {
+                width: 640,
+                height: 360,
+                backgroundColor: '#ffffff',
+                selection: true,
+                preserveObjectStacking: true
+            });
+
+            // Selection events
+            canvas.on('selection:created', updateProperties);
+            canvas.on('selection:updated', updateProperties);
+            canvas.on('selection:cleared', clearProperties);
+            canvas.on('object:modified', saveCurrentSlide);
+        }
+
+        // Initialize slides
+        function initSlides() {
+            // Create first slide
+            slides = [{
+                id: Date.now(),
+                name: 'Slide 1',
+                background: '#ffffff',
+                objects: null
+            }];
+            currentSlideIndex = 0;
+            renderSlidesList();
+            loadSlide(0);
+        }
+
+        // Add new slide
+        function addSlide() {
+            saveCurrentSlide();
+            const newSlide = {
+                id: Date.now(),
+                name: `Slide ${slides.length + 1}`,
+                background: '#ffffff',
+                objects: null
+            };
+            slides.push(newSlide);
+            currentSlideIndex = slides.length - 1;
+            loadSlide(currentSlideIndex);
+            renderSlidesList();
+            updateSlideInfo();
+            
+            // Auto-save after adding slide
+            autoSavePresentation();
+        }
+
+        // Load slide
+        function loadSlide(index) {
+            const slide = slides[index];
+            canvas.clear();
+            canvas.backgroundColor = slide.background;
+
+            if (slide.objects) {
+                const validatedObjects = validateSlideObjects(JSON.parse(JSON.stringify(slide.objects)));
+                canvas.loadFromJSON(validatedObjects, () => {
+                    canvas.renderAll();
+                });
+            } else {
+                canvas.renderAll();
+            }
+
+            currentSlideIndex = index;
+            renderSlidesList();
+            updateSlideInfo();
+        }
+
+        // Save current slide
+        function saveCurrentSlide() {
+            if (slides[currentSlideIndex]) {
+                slides[currentSlideIndex].objects = canvas.toJSON();
+            }
+        }
+
+        // Render slides list
+        function renderSlidesList() {
+            const container = document.getElementById('slidesList');
+            container.innerHTML = slides.map((slide, index) => `
+                <div class="slide-item ${index === currentSlideIndex ? 'active' : ''}" onclick="switchToSlide(${index})">
+                    <span class="slide-number">${index + 1}</span>
+                    <canvas class="slide-canvas" id="thumb-${slide.id}"></canvas>
+                </div>
+            `).join('');
+
+            // Render thumbnails
+            setTimeout(() => {
+                slides.forEach((slide, index) => {
+                    renderThumbnail(slide, index);
+                });
+            }, 100);
+        }
+
+        // Render thumbnail
+        function renderThumbnail(slide, index) {
+            const thumbCanvas = document.getElementById(`thumb-${slide.id}`);
+            if (!thumbCanvas) return;
+
+            const ctx = thumbCanvas.getContext('2d');
+            thumbCanvas.width = 80;
+            thumbCanvas.height = 45;
+
+            // Background
+            ctx.fillStyle = slide.background || '#ffffff';
+            ctx.fillRect(0, 0, 80, 45);
+
+            // Simple representation
+            if (slide.objects && slide.objects.objects && slide.objects.objects.length > 0) {
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '6px Arial';
+                ctx.fillText(`${slide.objects.objects.length} objects`, 4, 12);
+            }
+        }
+
+        // Switch to slide
+        function switchToSlide(index) {
+            if (index !== currentSlideIndex) {
+                saveCurrentSlide();
+                loadSlide(index);
+            }
+        }
+
+        // Update slide info
+        function updateSlideInfo() {
+            document.getElementById('slideInfo').textContent = `Slide ${currentSlideIndex + 1} of ${slides.length}`;
+            document.getElementById('slideName').value = slides[currentSlideIndex].name || '';
+        }
+
+        // Add text
+        function addText() {
+            const text = new fabric.IText('Double click to edit', {
+                left: 100,
+                top: 100,
+                fontFamily: 'Arial',
+                fontSize: 40,
+                fill: '#000000'
+            });
+            canvas.add(text);
+            canvas.setActiveObject(text);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        // Add rectangle
+        function addRect() {
+            const rect = new fabric.Rect({
+                left: 100,
+                top: 100,
+                width: 200,
+                height: 100,
+                fill: '#4285f4'
+            });
+            canvas.add(rect);
+            canvas.setActiveObject(rect);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        // Add circle
+        function addCircle() {
+            const circle = new fabric.Circle({
+                left: 100,
+                top: 100,
+                radius: 50,
+                fill: '#34a853'
+            });
+            canvas.add(circle);
+            canvas.setActiveObject(circle);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        // Add triangle
+        function addTriangle() {
+            const triangle = new fabric.Triangle({
+                left: 100,
+                top: 100,
+                width: 100,
+                height: 100,
+                fill: '#fbbc04'
+            });
+            canvas.add(triangle);
+            canvas.setActiveObject(triangle);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        // Add line
+        function addLine() {
+            const line = new fabric.Line([50, 50, 200, 50], {
+                left: 100,
+                top: 100,
+                stroke: '#ea4335',
+                strokeWidth: 3
+            });
+            canvas.add(line);
+            canvas.setActiveObject(line);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+        function addImage() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    fabric.Image.fromURL(event.target.result, (img) => {
+                        img.scaleToWidth(400);
+                        canvas.add(img);
+                        canvas.setActiveObject(img);
+                        canvas.renderAll();
+                        saveCurrentSlide();
+                    });
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+
+        // Arrow shapes
+        function addArrowRight() {
+            const arrow = new fabric.Polygon([
+                {x: 0, y: 40},
+                {x: 120, y: 40},
+                {x: 120, y: 20},
+                {x: 160, y: 60},
+                {x: 120, y: 100},
+                {x: 120, y: 80},
+                {x: 0, y: 80}
+            ], {
+                left: 100,
+                top: 100,
+                fill: '#4285f4',
+                stroke: '#3367d6',
+                strokeWidth: 2
+            });
+            canvas.add(arrow);
+            canvas.setActiveObject(arrow);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        function addArrowLeft() {
+            const arrow = new fabric.Polygon([
+                {x: 160, y: 40},
+                {x: 40, y: 40},
+                {x: 40, y: 20},
+                {x: 0, y: 60},
+                {x: 40, y: 100},
+                {x: 40, y: 80},
+                {x: 160, y: 80}
+            ], {
+                left: 100,
+                top: 100,
+                fill: '#4285f4',
+                stroke: '#3367d6',
+                strokeWidth: 2
+            });
+            canvas.add(arrow);
+            canvas.setActiveObject(arrow);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        function addArrowUp() {
+            const arrow = new fabric.Polygon([
+                {x: 40, y: 160},
+                {x: 40, y: 40},
+                {x: 20, y: 40},
+                {x: 60, y: 0},
+                {x: 100, y: 40},
+                {x: 80, y: 40},
+                {x: 80, y: 160}
+            ], {
+                left: 100,
+                top: 100,
+                fill: '#4285f4',
+                stroke: '#3367d6',
+                strokeWidth: 2
+            });
+            canvas.add(arrow);
+            canvas.setActiveObject(arrow);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        function addArrowDown() {
+            const arrow = new fabric.Polygon([
+                {x: 40, y: 0},
+                {x: 40, y: 120},
+                {x: 20, y: 120},
+                {x: 60, y: 160},
+                {x: 100, y: 120},
+                {x: 80, y: 120},
+                {x: 80, y: 0}
+            ], {
+                left: 100,
+                top: 100,
+                fill: '#4285f4',
+                stroke: '#3367d6',
+                strokeWidth: 2
+            });
+            canvas.add(arrow);
+            canvas.setActiveObject(arrow);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        // Diamond shape
+        function addDiamond() {
+            const diamond = new fabric.Rect({
+                left: 100,
+                top: 100,
+                width: 120,
+                height: 120,
+                fill: '#e91e63',
+                stroke: '#c2185b',
+                strokeWidth: 2,
+                angle: 45
+            });
+            canvas.add(diamond);
+            canvas.setActiveObject(diamond);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        // Pentagon shape
+        function addPentagon() {
+            const pentagon = new fabric.Polygon([
+                {x: 60, y: 0},
+                {x: 116, y: 44},
+                {x: 94, y: 114},
+                {x: 26, y: 114},
+                {x: 4, y: 44}
+            ], {
+                left: 100,
+                top: 100,
+                fill: '#ff9800',
+                stroke: '#f57c00',
+                strokeWidth: 2
+            });
+            canvas.add(pentagon);
+            canvas.setActiveObject(pentagon);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        // Hexagon shape
+        function addHexagon() {
+            const hexagon = new fabric.Polygon([
+                {x: 30, y: 0},
+                {x: 90, y: 0},
+                {x: 120, y: 52},
+                {x: 90, y: 104},
+                {x: 30, y: 104},
+                {x: 0, y: 52}
+            ], {
+                left: 100,
+                top: 100,
+                fill: '#9c27b0',
+                stroke: '#7b1fa2',
+                strokeWidth: 2
+            });
+            canvas.add(hexagon);
+            canvas.setActiveObject(hexagon);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        // Star shape
+        function addStar() {
+            const star = new fabric.Polygon([
+                {x: 50, y: 0},
+                {x: 61, y: 35},
+                {x: 98, y: 35},
+                {x: 68, y: 57},
+                {x: 79, y: 91},
+                {x: 50, y: 70},
+                {x: 21, y: 91},
+                {x: 32, y: 57},
+                {x: 2, y: 35},
+                {x: 39, y: 35}
+            ], {
+                left: 100,
+                top: 100,
+                fill: '#ffeb3b',
+                stroke: '#fbc02d',
+                strokeWidth: 2
+            });
+            canvas.add(star);
+            canvas.setActiveObject(star);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        // Special shapes
+        function addHeart() {
+            const heartPath = 'M12,21.35l-1.45-1.32C5.4,15.36,2,12.28,2,8.5 C2,5.42,4.42,3,7.5,3c1.74,0,3.41,0.81,4.5,2.09C13.09,3.81,14.76,3,16.5,3 C19.58,3,22,5.42,22,8.5c0,3.78-3.4,6.86-8.55,11.54L12,21.35z';
+            const heart = new fabric.Path(heartPath, {
+                left: 100,
+                top: 100,
+                fill: '#e91e63',
+                stroke: '#c2185b',
+                strokeWidth: 1,
+                scaleX: 8,
+                scaleY: 8
+            });
+            canvas.add(heart);
+            canvas.setActiveObject(heart);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        function addCloud() {
+            const cloudPath = 'M35,20c1.8-5.7,7.1-10,13.4-10c4.6,0,8.8,2.3,11.4,6.1c2.6-0.8,5.5-0.3,7.6,1.4c2.1,1.7,3.2,4.4,2.9,7.1c2.4,1.5,3.7,4.3,3.2,7.1c-0.5,2.8-2.5,5.1-5.2,6.1H15c-3.3,0-6-2.7-6-6c0-1.8,0.8-3.5,2.2-4.7c-0.3-1.9,0.3-3.9,1.6-5.3C14.1,20.2,16.3,19.5,18.5,20c0.8-5.2,5.2-9,10.5-9C32.2,11,35,15.1,35,20z';
+            const cloud = new fabric.Path(cloudPath, {
+                left: 100,
+                top: 100,
+                fill: '#e3f2fd',
+                stroke: '#2196f3',
+                strokeWidth: 2,
+                scaleX: 3,
+                scaleY: 3
+            });
+            canvas.add(cloud);
+            canvas.setActiveObject(cloud);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        function addLightning() {
+            const lightning = new fabric.Polygon([
+                {x: 20, y: 0},
+                {x: 60, y: 0},
+                {x: 40, y: 50},
+                {x: 80, y: 50},
+                {x: 30, y: 120},
+                {x: 50, y: 70},
+                {x: 10, y: 70}
+            ], {
+                left: 100,
+                top: 100,
+                fill: '#ffeb3b',
+                stroke: '#ff9800',
+                strokeWidth: 2
+            });
+            canvas.add(lightning);
+            canvas.setActiveObject(lightning);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        function addSpeechBubble() {
+            const bubble = new fabric.Group([
+                new fabric.Ellipse({
+                    left: 0,
+                    top: 0,
+                    rx: 80,
+                    ry: 60,
+                    fill: '#ffffff',
+                    stroke: '#757575',
+                    strokeWidth: 2
+                }),
+                new fabric.Polygon([
+                    {x: -30, y: 40},
+                    {x: -10, y: 60},
+                    {x: -50, y: 80}
+                ], {
+                    left: 0,
+                    top: 0,
+                    fill: '#ffffff',
+                    stroke: '#757575',
+                    strokeWidth: 2
+                })
+            ], {
+                left: 100,
+                top: 100
+            });
+            canvas.add(bubble);
+            canvas.setActiveObject(bubble);
+            canvas.renderAll();
+            saveCurrentSlide();
+        }
+
+        // Delete selected
+        function deleteSelected() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject) {
+                canvas.remove(activeObject);
+                canvas.renderAll();
+                saveCurrentSlide();
+            }
+        }
+
+        // Clone selected
+        function cloneSelected() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject) {
+                activeObject.clone((cloned) => {
+                    cloned.left += 10;
+                    cloned.top += 10;
+                    canvas.add(cloned);
+                    canvas.setActiveObject(cloned);
+                    canvas.renderAll();
+                    saveCurrentSlide();
+                });
+            }
+        }
+
+        // Bring forward
+        function bringForward() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject) {
+                canvas.bringForward(activeObject);
+                canvas.renderAll();
+                saveCurrentSlide();
+            }
+        }
+
+        // Send backward
+        function sendBackward() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject) {
+                canvas.sendBackward(activeObject);
+                canvas.renderAll();
+                saveCurrentSlide();
+            }
+        }
+
+        // Zoom functions
+        function zoomIn() {
+            zoom = Math.min(200, zoom + 25);
+            canvas.setZoom(zoom / 100);
+            updateZoomValue();
+        }
+
+        function zoomOut() {
+            zoom = Math.max(25, zoom - 25);
+            canvas.setZoom(zoom / 100);
+            updateZoomValue();
+        }
+
+        function zoomFit() {
+            const container = document.querySelector('.canvas-container');
+            const scaleX = (container.clientWidth - 50) / 640;
+            const scaleY = (container.clientHeight - 50) / 360;
+            const scale = Math.min(scaleX, scaleY, 1);
+            zoom = Math.round(scale * 100);
+            canvas.setZoom(scale);
+            updateZoomValue();
+        }
+
+        function updateZoomValue() {
+            document.getElementById('zoomValue').textContent = `${zoom}%`;
+        }
+
+        // Properties panel
+        function updateProperties() {
+            const activeObject = canvas.getActiveObject();
+            if (!activeObject) return;
+
+            let html = '';
+            
+            if (activeObject.type === 'i-text') {
+                html = `
+                    <div class="property-field">
+                        <label class="property-label">Text</label>
+                        <input type="text" class="property-input" value="${activeObject.text}" onchange="updateObjectProperty('text', this.value)">
+                    </div>
+                    <div class="property-field">
+                        <label class="property-label">Font Family</label>
+                        <select class="property-select" onchange="updateObjectProperty('fontFamily', this.value)">
+                            <option value="Arial" ${activeObject.fontFamily === 'Arial' ? 'selected' : ''}>Arial</option>
+                            <option value="Times New Roman" ${activeObject.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times New Roman</option>
+                            <option value="Georgia" ${activeObject.fontFamily === 'Georgia' ? 'selected' : ''}>Georgia</option>
+                        </select>
+                    </div>
+                    <div class="property-field">
+                        <label class="property-label">Font Size</label>
+                        <input type="number" class="property-input" value="${activeObject.fontSize}" onchange="updateObjectProperty('fontSize', parseInt(this.value))">
+                    </div>
+                `;
+            }
+            
+            html += `
+                <div class="property-field">
+                    <label class="property-label">Fill Color</label>
+                    <input type="color" class="property-color" value="${activeObject.fill || '#000000'}" onchange="updateObjectProperty('fill', this.value)">
+                </div>
+                <div class="property-field">
+                    <label class="property-label">Opacity</label>
+                    <input type="range" class="property-input" min="0" max="100" value="${(activeObject.opacity || 1) * 100}" onchange="updateObjectProperty('opacity', this.value / 100)">
+                </div>
+            `;
+            
+            document.getElementById('objectProperties').innerHTML = html;
+        }
+
+        function clearProperties() {
+            document.getElementById('objectProperties').innerHTML = '<p style="color: #999;">Select an object to edit</p>';
+        }
+
+        function updateObjectProperty(property, value) {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject) {
+                activeObject.set(property, value);
+                canvas.renderAll();
+                saveCurrentSlide();
+            }
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tab === 'properties') {
+                document.getElementById('propertiesPanel').style.display = 'block';
+                document.getElementById('slidePanel').style.display = 'none';
+            } else {
+                document.getElementById('propertiesPanel').style.display = 'none';
+                document.getElementById('slidePanel').style.display = 'block';
+            }
+        }
+
+        // Slide properties
+        function changeSlideBackground(color) {
+            slides[currentSlideIndex].background = color;
+            canvas.backgroundColor = color;
+            canvas.renderAll();
+            renderSlidesList();
+            saveCurrentSlide();
+        }
+
+        function changeSlideName(name) {
+            slides[currentSlideIndex].name = name;
+            saveCurrentSlide();
+        }
+
+        // Presentation Management Functions
+        function generatePresentationId() {
+            return 'presentation_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function getPresentations() {
+            const presentations = localStorage.getItem('slide_presentations');
+            return presentations ? JSON.parse(presentations) : {};
+        }
+
+        function savePresentationToStorage(id, data) {
+            const presentations = getPresentations();
+            presentations[id] = {
+                ...data,
+                lastModified: new Date().toISOString()
+            };
+            localStorage.setItem('slide_presentations', JSON.stringify(presentations));
+        }
+
+        function deletePresentationFromStorage(id) {
+            const presentations = getPresentations();
+            delete presentations[id];
+            localStorage.setItem('slide_presentations', JSON.stringify(presentations));
+        }
+
+        function newPresentation() {
+            // Ask for confirmation if current presentation has unsaved changes
+            if (currentPresentation && autoSave === false) {
+                showConfirm(
+                    'Are you sure you want to create a new presentation? Any unsaved changes will be lost.',
+                    'Create New Presentation',
+                    function(result) {
+                        if (result) {
+                            createNewPresentation();
+                        }
+                    }
+                );
+                return;
+            }
+
+            createNewPresentation();
+        }
+
+        function createNewPresentation() {
+            // Reset to new presentation
+            currentPresentation = null;
+            autoSave = false;
+
+            // Initialize with one blank slide
+            slides = [{
+                id: Date.now(),
+                name: 'Slide 1',
+                background: '#ffffff',
+                objects: null
+            }];
+            currentSlideIndex = 0;
+
+            // Update UI
+            loadSlide(0);
+            renderSlidesList();
+            updateSlideInfo();
+            updatePresentationTitle();
+
+            console.log('New presentation created');
+        }
+
+        function savePresentationAs() {
+            document.getElementById('saveAsModal').classList.add('show');
+            document.getElementById('presentationName').value = currentPresentation ? currentPresentation.name : '';
+            document.getElementById('presentationName').focus();
+        }
+
+        function savePresentation() {
+            const name = document.getElementById('presentationName').value.trim();
+            if (!name) {
+                showAlert('Please enter a presentation name.', 'Validation Error', 'warning');
+                return;
+            }
+
+            // Save current slide before saving presentation
+            saveCurrentSlide();
+
+            const presentationId = currentPresentation ? currentPresentation.id : generatePresentationId();
+            const presentationData = {
+                id: presentationId,
+                name: name,
+                slides: slides,
+                currentSlideIndex: currentSlideIndex,
+                created: currentPresentation ? currentPresentation.created : new Date().toISOString(),
+                slideCount: slides.length
+            };
+
+            savePresentationToStorage(presentationId, presentationData);
+
+            // Update current presentation reference
+            currentPresentation = presentationData;
+            autoSave = true;
+
+            closeSaveAsModal();
+            updatePresentationTitle();
+
+            console.log('Presentation saved:', name);
+        }
+
+        function openPresentationDialog() {
+            const presentations = getPresentations();
+            const presentationsList = document.getElementById('presentationsList');
+
+            if (Object.keys(presentations).length === 0) {
+                presentationsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No saved presentations found.</div>';
+            } else {
+                presentationsList.innerHTML = Object.values(presentations)
+                    .sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified))
+                    .map(presentation => `
+                        <div class="presentation-item" data-id="${presentation.id}" onclick="selectPresentation('${presentation.id}')">
+                            <div class="presentation-info">
+                                <div class="presentation-name">${presentation.name}</div>
+                                <div class="presentation-details">
+                                    ${presentation.slideCount} slides • Modified ${new Date(presentation.lastModified).toLocaleDateString()}
+                                </div>
+                            </div>
+                            <div class="presentation-actions">
+                                <button class="btn-small btn-danger" onclick="event.stopPropagation(); deletePresentation('${presentation.id}')">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+            }
+
+            selectedPresentationId = null;
+            document.getElementById('openModal').classList.add('show');
+        }
+
+        function selectPresentation(id) {
+            // Remove previous selection
+            document.querySelectorAll('.presentation-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+
+            // Add selection to clicked item
+            document.querySelector(`[data-id="${id}"]`).classList.add('selected');
+            selectedPresentationId = id;
+        }
+
+        function openSelectedPresentation() {
+            if (!selectedPresentationId) {
+                showAlert('Please select a presentation to open.', 'No Selection', 'warning');
+                return;
+            }
+
+            const presentations = getPresentations();
+            const presentation = presentations[selectedPresentationId];
+
+            if (presentation) {
+                // Load presentation data
+                currentPresentation = presentation;
+                slides = presentation.slides || [{
+                    id: Date.now(),
+                    name: 'Slide 1',
+                    background: '#ffffff',
+                    objects: null
+                }];
+                currentSlideIndex = Math.min(presentation.currentSlideIndex || 0, slides.length - 1);
+                autoSave = true;
+
+                // Update UI
+                loadSlide(currentSlideIndex);
+                renderSlidesList();
+                updateSlideInfo();
+                updatePresentationTitle();
+
+                closeOpenModal();
+                console.log('Presentation opened:', presentation.name);
+            }
+        }
+
+        function deletePresentation(id) {
+            const presentations = getPresentations();
+            const presentation = presentations[id];
+
+            if (presentation) {
+                showConfirm(
+                    `Are you sure you want to delete "${presentation.name}"? This action cannot be undone.`,
+                    'Delete Presentation',
+                    function(result) {
+                        if (result) {
+                            deletePresentationFromStorage(id);
+
+                            // If we're currently editing this presentation, create a new one
+                            if (currentPresentation && currentPresentation.id === id) {
+                                createNewPresentation();
+                            }
+
+                            // Refresh the presentations list
+                            openPresentationDialog();
+                            console.log('Presentation deleted:', presentation.name);
+                        }
+                    }
+                );
+            }
+        }
+
+        function updatePresentationTitle() {
+            const titleElement = document.querySelector('.items-header span');
+            if (currentPresentation) {
+                titleElement.textContent = `${currentPresentation.name}`;
+            } else {
+                titleElement.textContent = 'Untitled Presentation';
+            }
+        }
+
+        function closeSaveAsModal() {
+            document.getElementById('saveAsModal').classList.remove('show');
+        }
+
+        function closeOpenModal() {
+            document.getElementById('openModal').classList.remove('show');
+        }
+
+        // Auto-save current presentation if enabled
+        function autoSavePresentation() {
+            if (autoSave && currentPresentation) {
+                saveCurrentSlide();
+                const presentationData = {
+                    ...currentPresentation,
+                    slides: slides,
+                    currentSlideIndex: currentSlideIndex,
+                    slideCount: slides.length
+                };
+                savePresentationToStorage(currentPresentation.id, presentationData);
+            }
+        }
+
+        // Modal Alert and Confirm System
+        let confirmCallback = null;
+        let selectedPresentationId = null;
+
+        function showAlert(message, title = 'Information', type = 'info') {
+            document.getElementById('alertTitle').textContent = title;
+            document.getElementById('alertMessage').textContent = message;
+
+            const iconElement = document.getElementById('alertIcon');
+            iconElement.className = 'fas alert-icon ' + type;
+
+            switch(type) {
+                case 'warning':
+                    iconElement.classList.add('fa-exclamation-triangle');
+                    break;
+                case 'error':
+                    iconElement.classList.add('fa-exclamation-circle');
+                    break;
+                case 'info':
+                default:
+                    iconElement.classList.add('fa-info-circle');
+                    break;
+            }
+
+            document.getElementById('alertModal').classList.add('show');
+
+            // Focus management and keyboard support
+            setTimeout(() => {
+                const modal = document.getElementById('alertModal');
+                modal.focus();
+
+                // Add keyboard listener
+                const keyHandler = function(e) {
+                    if (e.key === 'Escape' || e.key === 'Enter') {
+                        e.preventDefault();
+                        closeAlert();
+                        modal.removeEventListener('keydown', keyHandler);
+                    }
+                };
+                modal.addEventListener('keydown', keyHandler);
+            }, 100);
+        }
+
+        function closeAlert() {
+            document.getElementById('alertModal').classList.remove('show');
+        }
+
+        function showConfirm(message, title = 'Confirm Action', callback = null) {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmMessage').textContent = message;
+            confirmCallback = callback;
+            document.getElementById('confirmModal').classList.add('show');
+
+            // Focus management and keyboard support
+            setTimeout(() => {
+                const modal = document.getElementById('confirmModal');
+                modal.focus();
+
+                // Add keyboard listener
+                const keyHandler = function(e) {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        closeConfirm(false);
+                        modal.removeEventListener('keydown', keyHandler);
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        closeConfirm(true);
+                        modal.removeEventListener('keydown', keyHandler);
+                    }
+                };
+                modal.addEventListener('keydown', keyHandler);
+            }, 100);
+        }
+
+        function closeConfirm(result) {
+            document.getElementById('confirmModal').classList.remove('show');
+            if (confirmCallback) {
+                confirmCallback(result);
+                confirmCallback = null;
+            }
+        }
+
+        // Present slides
+        function presentSlides() {
+            saveCurrentSlide();
+            
+            // Create presentation overlay
+            const presentationDiv = document.createElement('div');
+            presentationDiv.id = 'presentationMode';
+            presentationDiv.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: #000;
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            `;
+
+            // Create canvas for presentation
+            const presentCanvas = document.createElement('canvas');
+            presentCanvas.id = 'presentationCanvas';
+            presentCanvas.width = 640;
+            presentCanvas.height = 360;
+            presentCanvas.style.cssText = `
+                max-width: 90vw;
+                max-height: 60vh;
+                background: white;
+                box-shadow: 0 0 20px rgba(255,255,255,0.3);
+            `;
+
+            // Create controls
+            const controlsDiv = document.createElement('div');
+            controlsDiv.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                display: flex;
+                gap: 10px;
+                background: rgba(0,0,0,0.7);
+                padding: 10px 20px;
+                border-radius: 25px;
+                color: white;
+                font-size: 14px;
+                align-items: center;
+            `;
+
+            const prevBtn = document.createElement('button');
+            prevBtn.innerHTML = '←';
+            prevBtn.style.cssText = 'background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 12px; border-radius: 4px; cursor: pointer;';
+
+            const slideCounter = document.createElement('span');
+            slideCounter.style.cssText = 'margin: 0 15px; min-width: 80px; text-align: center;';
+
+            const nextBtn = document.createElement('button');
+            nextBtn.innerHTML = '→';
+            nextBtn.style.cssText = 'background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 12px; border-radius: 4px; cursor: pointer;';
+
+            const exitBtn = document.createElement('button');
+            exitBtn.innerHTML = '✕ Exit';
+            exitBtn.style.cssText = 'background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-left: 10px;';
+
+            controlsDiv.appendChild(prevBtn);
+            controlsDiv.appendChild(slideCounter);
+            controlsDiv.appendChild(nextBtn);
+            controlsDiv.appendChild(exitBtn);
+
+            presentationDiv.appendChild(presentCanvas);
+            presentationDiv.appendChild(controlsDiv);
+            document.body.appendChild(presentationDiv);
+
+            // Visible rendering context
+            const presentCtx = presentCanvas.getContext('2d');
+
+            // Hidden helper Fabric canvas used to faithfully render slide JSON before blitting to the visible canvas
+            const helperCanvasEl = document.createElement('canvas');
+            helperCanvasEl.width = 640;
+            helperCanvasEl.height = 360;
+            helperCanvasEl.style.display = 'none';
+            presentationDiv.appendChild(helperCanvasEl);
+
+            const helperFabricCanvas = new fabric.StaticCanvas(helperCanvasEl, {
+                width: 640,
+                height: 360,
+                selection: false,
+                interactive: false
+            });
+
+            let currentPresentationSlide = currentSlideIndex;
+            let renderSequence = 0;
+
+            function renderPresentationSlide() {
+                const slide = slides[currentPresentationSlide];
+                if (!slide) return;
+
+                renderSequence += 1;
+                const seq = renderSequence;
+
+                helperFabricCanvas.clear();
+                helperFabricCanvas.backgroundColor = slide.background || '#ffffff';
+
+                const drawToPresent = () => {
+                    if (seq !== renderSequence) return;
+
+                    // Clear and set background on presentation canvas
+                    presentCtx.fillStyle = slide.background || '#ffffff';
+                    presentCtx.fillRect(0, 0, presentCanvas.width, presentCanvas.height);
+
+                    // If there are objects, render them using helper canvas
+                    if (slide.objects && slide.objects.objects && slide.objects.objects.length > 0) {
+                        helperFabricCanvas.renderAll();
+                        presentCtx.drawImage(helperCanvasEl, 0, 0, 640, 360);
+                    }
+                };
+
+                if (slide.objects) {
+                    const validatedObjects = validateSlideObjects(JSON.parse(JSON.stringify(slide.objects)));
+                    helperFabricCanvas.loadFromJSON(validatedObjects, drawToPresent);
+                } else {
+                    drawToPresent();
+                }
+
+                slideCounter.textContent = `${currentPresentationSlide + 1} / ${slides.length}`;
+            }
+
+            function nextSlide() {
+                if (currentPresentationSlide < slides.length - 1) {
+                    currentPresentationSlide++;
+                    renderPresentationSlide();
+                }
+            }
+
+            function prevSlide() {
+                if (currentPresentationSlide > 0) {
+                    currentPresentationSlide--;
+                    renderPresentationSlide();
+                }
+            }
+
+            function exitPresentation() {
+                document.body.removeChild(presentationDiv);
+                document.removeEventListener('keydown', presentationKeyHandler);
+                helperFabricCanvas.dispose();
+                helperCanvasEl.remove();
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                }
+            }
+
+            function presentationKeyHandler(e) {
+                switch(e.key) {
+                    case 'ArrowRight':
+                    case ' ':
+                        e.preventDefault();
+                        nextSlide();
+                        break;
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        prevSlide();
+                        break;
+                    case 'Escape':
+                        e.preventDefault();
+                        exitPresentation();
+                        break;
+                }
+            }
+
+            // Event listeners
+            nextBtn.addEventListener('click', nextSlide);
+            prevBtn.addEventListener('click', prevSlide);
+            exitBtn.addEventListener('click', exitPresentation);
+            document.addEventListener('keydown', presentationKeyHandler);
+
+            // Start presentation
+            renderPresentationSlide();
+
+            // Try to enter fullscreen
+            try {
+                presentationDiv.requestFullscreen().catch(err => {
+                    console.log('Fullscreen not supported:', err);
+                });
+            } catch (err) {
+                console.log('Fullscreen not available:', err);
+            }
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            initApp();
+            setTimeout(zoomFit, 100);
+            // Fix any existing slides with invalid properties
+            setTimeout(fixAllSlides, 500);
+        };
+
+        // Handle messages from parent (if in iframe)
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'RDE_LOAD_JSON') {
+                // Load saved data
+                const data = event.data.json;
+                if (data && data.slides) {
+                    slides = data.slides.map(slide => ({
+                        ...slide,
+                        objects: slide.objects ? validateSlideObjects(JSON.parse(JSON.stringify(slide.objects))) : null
+                    }));
+                    currentSlideIndex = data.currentSlideIndex || 0;
+                    loadSlide(currentSlideIndex);
+                }
+            }
+        });
+
+        // Send data to parent periodically (if in iframe)
+        setInterval(() => {
+            saveCurrentSlide();
+            window.parent.postMessage({
+                type: 'RDE_DATA_CHANGED',
+                json: {
+                    slides: slides,
+                    currentSlideIndex: currentSlideIndex
+                }
+            }, '*');
+        }, 1000);
+
+        // Ready message
+        window.parent.postMessage({ type: 'RDE_READY' }, '*');
+    </script>
+</body>
+</html>

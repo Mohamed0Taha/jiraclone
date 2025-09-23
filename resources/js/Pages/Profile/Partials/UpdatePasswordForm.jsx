@@ -41,9 +41,9 @@ export default function UpdatePasswordForm({ className = '' }) {
     return (
         <section className={className}>
             <header>
-                <h2 className="text-lg font-medium text-gray-900">{t('profile.updatePassword')}</h2>
+                <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">{t('profile.updatePassword')}</h2>
 
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                     {t('profile.passwordSecurityAdvice')}
                 </p>
             </header>
@@ -106,7 +106,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                         leave="transition ease-in-out"
                         leaveTo="opacity-0"
                     >
-                        <p className="text-sm text-gray-600">{t('common.saved')}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{t('common.saved')}</p>
                     </Transition>
                 </div>
             </form>

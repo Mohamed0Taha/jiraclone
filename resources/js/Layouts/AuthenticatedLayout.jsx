@@ -7,11 +7,11 @@ import LanguageDropdown from '@/Components/LanguageDropdown';
 import { Link, usePage } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 
-export default function AuthenticatedLayout({ header, children }) {
+export default function AuthenticatedLayout({ user, header, children }) {
     const { t } = useTranslation();
     // CACHE BUST: Admin button completely removed - build 002
     const { props } = usePage();
-    const user = props?.auth?.user || {};
+    const authenticatedUser = user || props?.auth?.user || {};
     const [mobileOpen, setMobileOpen] = useState(false);
 
     const closeMobile = useCallback(() => setMobileOpen(false), []);
@@ -24,7 +24,7 @@ export default function AuthenticatedLayout({ header, children }) {
         return () => window.removeEventListener('keydown', handler);
     }, [closeMobile]);
 
-    const initials = (user.name || user.email || 'U')
+    const initials = (authenticatedUser.name || authenticatedUser.email || 'U')
         .split(/\s+/)
         .map((s) => s[0])
         .join('')
@@ -133,7 +133,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                                 {initials}
                                             </span>
                                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                {user.name || t('common.user')}
+                                                {authenticatedUser.name || t('common.user')}
                                             </span>
                                             <svg
                                                 className="h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform group-data-[open=true]:rotate-180"
@@ -154,7 +154,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                                 {t('common.signedInAs')}
                                             </p>
                                             <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-                                                {user.email}
+                                                {authenticatedUser.email}
                                             </p>
                                         </div>
                                         <Dropdown.Link href={route('profile.edit')}>
@@ -275,10 +275,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                 </span>
                                 <div className="min-w-0">
                                     <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-                                        {user.name || t('common.user')}
+                                        {authenticatedUser.name || t('common.user')}
                                     </div>
                                     <div className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
-                                        {user.email}
+                                        {authenticatedUser.email}
                                     </div>
                                 </div>
                             </div>

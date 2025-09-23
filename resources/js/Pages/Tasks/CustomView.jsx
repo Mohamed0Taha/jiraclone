@@ -46,10 +46,16 @@ import ChecklistRtlIcon from '@mui/icons-material/ChecklistRtl';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import SlideshowIcon from '@mui/icons-material/Slideshow';
+import CalculateIcon from '@mui/icons-material/Calculate';
+import CloudIcon from '@mui/icons-material/Cloud';
+import ComputerIcon from '@mui/icons-material/Computer';
+import { Fab, Tooltip as MuiTooltip } from '@mui/material';
 import AssistantChat from './AssistantChat';
 import ReactComponentRenderer from '@/utils/ReactComponentRenderer';
 import { csrfFetch } from '@/utils/csrf';
 import MicroApps from '@/microapps';
+import PusherService from '@/services/PusherService';
 
 const designTokens = {
     gradients: {
@@ -530,13 +536,20 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     }, [selectedAppKey, project?.id, originalViewName]);
 
     useEffect(() => {
-        if (!project?.id || !originalViewName || !window.Echo) return;
-        const baseName = `custom-view.${project.id}.${originalViewName}`;
-        const channel = window.Echo.private(baseName);
-        channel.listen('.custom-view-data-updated', (event) => {
-            if (event.data_key === 'workflow_step') {
-                if (event.user?.id && event.user.id !== currentAuth?.id) return;
-                const payload = event.data || {};
+        if (!project?.id || !originalViewName) return;
+        const privateChannelName = `private-custom-view.${project.id}.${originalViewName}`;
+        const eventName = 'custom-view-data-updated';
+
+        const channel = PusherService.subscribe(privateChannelName);
+        if (!channel) {
+            console.warn('[CustomView] Realtime unavailable - subscription failed:', privateChannelName);
+            return;
+        }
+
+        const handler = (evt) => {
+            if (evt?.data_key === 'workflow_step') {
+                if (evt.user?.id && evt.user.id !== currentAuth?.id) return;
+                const payload = evt.data || {};
                 const total = Number(payload.total) || 5;
                 const sequence = Number(payload.sequence) || 1;
                 const stageKey = payload.step || payload.stage || payload.step_key || 'analysis';
@@ -547,7 +560,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     const nextStage = stageKey || base.stage || 'analysis';
                     const nextStatus = status || base.status || 'in_progress';
                     const nextDetails = payload.details || base.details || resolveProgressMeta({ stage: nextStage }).label;
-                    return { ...base, step: sequence, stage: nextStage, status: nextStatus, total, details: nextDetails, timestamp: event.timestamp, step_key: nextStage };
+                    return { ...base, step: sequence, stage: nextStage, status: nextStatus, total, details: nextDetails, timestamp: evt.timestamp, step_key: nextStage };
                 });
 
                 if (status === 'failed') showSnackbar(payload.details || 'Generation encountered an error.', 'error');
@@ -562,27 +575,32 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 return;
             }
 
-            if (event.user?.id !== currentAuth?.id) {
+            if (evt?.user?.id !== currentAuth?.id) {
                 const reloadComponent = async () => {
                     try {
                         const response = await csrfFetch(`/projects/${project.id}/custom-views/get?view_name=${encodeURIComponent(originalViewName)}`);
                         const data = await response.json();
                         if (data.success && data.html && data.html.trim() && !isScaffoldHTML(data.html)) {
                             setComponentCode(data.html);
-                            showSnackbar(`Component updated by ${event.user?.name || 'another user'}`, 'info');
+                            showSnackbar(`Component updated by ${evt.user?.name || 'another user'}`, 'info');
                         } else {
                             setComponentCode('');
                             setIsPersisted(false);
-                            showSnackbar(`Component removed or unavailable${event.user?.name ? ' (by ' + event.user.name + ')' : ''}`, 'info');
+                            showSnackbar(`Component removed or unavailable${evt.user?.name ? ' (by ' + evt.user.name + ')' : ''}`, 'info');
                         }
                     } catch (_e) {}
                 };
                 reloadComponent();
             }
-        });
+        };
+
+        channel.bind(eventName, handler);
 
         return () => {
-            window.Echo.leave(`private-${baseName}`);
+            if (channel && channel.unbind) {
+                channel.unbind(eventName, handler);
+            }
+            PusherService.unsubscribe(privateChannelName);
         };
     }, [project?.id, originalViewName, currentAuth?.id, isScaffoldHTML]);
 
@@ -741,8 +759,9 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         { key: 'CRMBoard', title: 'CRM', size: 'small', bg: 'linear-gradient(135deg,#F59E0B,#F97316)', Icon: ViewKanbanIcon },
         { key: 'OKRTracker', title: 'OKRs', size: 'large', bg: 'linear-gradient(135deg,#EC4899,#A855F7)', Icon: ChecklistRtlIcon },
         { key: 'WikiPage', title: 'Wiki', size: 'wide', bg: 'linear-gradient(135deg,#14B8A6,#22D3EE)', Icon: MenuBookIcon },
-        { key: 'PMBoard', title: 'Projects', size: 'small', bg: 'linear-gradient(135deg,#9333EA,#7C3AED)', Icon: ViewKanbanIcon },
         { key: 'HRLeave', title: 'Leave', size: 'small', bg: 'linear-gradient(135deg,#0EA5E9,#38BDF8)', Icon: PeopleAltIcon },
+        { key: 'Slides', title: 'Slides', size: 'wide', bg: 'linear-gradient(135deg,#0EA5E9,#6366F1)', Icon: SlideshowIcon },
+        { key: 'Calculator', title: 'Calculator', size: 'small', bg: 'linear-gradient(135deg,#22C55E,#16A34A)', Icon: CalculateIcon },
     ];
 
     const sizeToSpan = (size) => {
@@ -853,7 +872,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     };
 
     return (
-        <AuthenticatedLayout user={auth.user}>
+        <AuthenticatedLayout user={auth}>
             <Head title={`${t('customViews.headTitle', { name: originalViewName, project: project.name })}`} />
 
             <Dialog
@@ -1036,25 +1055,29 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 </Paper>
 
                 {selectedAppKey && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, mr: 10 }}>
-                        <IconButton
-                            onClick={() => {
-                                if (isPersisted) window.location.href = `/projects/${project.id}`;
-                                else setSelectedAppKey(null);
-                            }}
-                            sx={{
-                                backgroundColor: (theme) => alpha(theme.palette.background.paper, 0.9),
-                                color: theme.palette.text.primary,
-                                border: `1px solid ${alpha(designTokens.colors.primary, 0.2)}`,
-                                '&:hover': { backgroundColor: (theme) => theme.palette.background.paper, transform: 'translateX(-2px)' },
-                                transition: 'all 0.2s ease',
-                            }}
-                        >
-                            <ArrowBackIcon />
-                        </IconButton>
-                        <Typography variant="h6" sx={{ ml: 2, fontWeight: 600 }}>
-                            {selectedAppKey}
-                        </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, mr: 10 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <IconButton
+                                onClick={() => {
+                                    if (isPersisted) window.location.href = `/projects/${project.id}`;
+                                    else setSelectedAppKey(null);
+                                }}
+                                sx={{
+                                    backgroundColor: (theme) => alpha(theme.palette.background.paper, 0.9),
+                                    color: theme.palette.text.primary,
+                                    border: `1px solid ${alpha(designTokens.colors.primary, 0.2)}`,
+                                    '&:hover': { backgroundColor: (theme) => theme.palette.background.paper, transform: 'translateX(-2px)' },
+                                    transition: 'all 0.2s ease',
+                                }}
+                            >
+                                <ArrowBackIcon />
+                            </IconButton>
+                            <Typography variant="h6" sx={{ ml: 2, fontWeight: 600 }}>
+                                {selectedAppKey}
+                            </Typography>
+                        </Box>
+                        {/* Cloud/Local toggle button for micro apps */}
+                        <Box id="cloud-local-toggle-container" />
                     </Box>
                 )}
 
@@ -1076,7 +1099,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     }}
                 >
                     {selectedAppKey ? (
-                        <Box sx={{ position: 'relative' }}>
+                        <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)' }}>
                             {(() => {
                                 const App = MicroApps?.[selectedAppKey] || null;
                                 return App ? (

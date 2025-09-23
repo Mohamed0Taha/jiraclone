@@ -13,109 +13,38 @@ if (token) {
     console.error('CSRF token not found: https://laravel.com/docs/csrf#csrf-x-csrf-token');
 }
 
-// Set up Laravel Echo for real-time broadcasting (only if Pusher is properly configured)
-if (import.meta.env.VITE_PUSHER_APP_KEY && import.meta.env.VITE_PUSHER_APP_KEY !== 'your_pusher_app_key') {
-    import('laravel-echo').then(({ default: Echo }) => {
-        import('pusher-js').then(({ default: Pusher }) => {
-            window.Pusher = Pusher;
+// Set up Pusher configuration globally
+window.pusherKey = import.meta.env.VITE_PUSHER_APP_KEY || '';
+window.pusherCluster = (import.meta.env.VITE_PUSHER_APP_CLUSTER || 'eu').trim();
 
-            // Optional: enable detailed Pusher logs during development
-            try {
-                if (import.meta.env.DEV) {
-                    // eslint-disable-next-line no-undef
-                    Pusher.logToConsole = true;
-                }
-            } catch (_) { }
-
-            const cluster = (import.meta.env.VITE_PUSHER_APP_CLUSTER || 'eu').trim();
-            // Prefer VITE_PUSHER_WS_HOST if provided; otherwise let Pusher choose based on cluster.
-            // If someone incorrectly passes the REST host (api.pusherapp.com), normalize it.
-            let wsHost = (import.meta.env.VITE_PUSHER_WS_HOST || '').trim();
-            if (wsHost) {
-                if (/^api\./.test(wsHost)) {
-                    wsHost = `ws-${cluster}.pusher.com`;
-                }
-                wsHost = wsHost.replace('pusherapp.com', 'pusher.com');
-            }
-
-            const echoOptions = {
-                broadcaster: 'pusher',
-                key: import.meta.env.VITE_PUSHER_APP_KEY,
-                cluster,
-                forceTLS: true,
-                // Pusher v8: use enableStats: false
-                enableStats: false,
-                authorizer: (channel, options) => {
-                    return {
-                        authorize: (socketId, callback) => {
-                            window.axios.post('/broadcasting/auth', {
-                                socket_id: socketId,
-                                channel_name: channel.name
-                            })
-                                .then(response => {
-                                    callback(false, response.data);
-                                })
-                                .catch(error => {
-                                    callback(true, error);
-                                });
-                        }
-                    };
-                },
-            };
-
-            if (wsHost) {
-                Object.assign(echoOptions, {
-                    wsHost,
-                    wssPort: 443,
-                });
-            }
-
-            window.Echo = new Echo(echoOptions);
-
-            // Extra diagnostics to surface connection errors/reasons
-            try {
-                const pusher = window.Echo.connector?.pusher;
-                const connection = pusher?.connection;
-                if (connection) {
-                    connection.bind('error', (err) => {
-                        console.warn('[Pusher] connection error', err);
-                    });
-                    connection.bind('state_change', (states) => {
-                        console.log('[Pusher] state change', states);
-                    });
-                    let retriedWithoutWsHost = false;
-                    connection.bind('unavailable', () => {
-                        console.warn('[Pusher] connection unavailable (network or blocked websockets)');
-                        // Fallback: if we forced a wsHost override, retry without it to let Pusher auto-resolve
-                        try {
-                            if (!retriedWithoutWsHost && wsHost) {
-                                retriedWithoutWsHost = true;
-                                console.warn('[Pusher] Retrying connection without wsHost override to allow fallbacks');
-                                try { window.Echo.disconnect?.(); } catch (_) {}
-                                const retryOptions = { ...echoOptions };
-                                delete retryOptions.wsHost;
-                                delete retryOptions.wssPort;
-                                window.Echo = new Echo(retryOptions);
-                            }
-                        } catch (e) {
-                            console.warn('[Pusher] Retry without wsHost failed', e);
-                        }
-                    });
-                    connection.bind('failed', () => {
-                        console.warn('[Pusher] connection failed (all strategies exhausted)');
-                    });
-                    pusher?.bind('pusher:subscription_error', (status) => {
-                        console.warn('[Pusher] subscription_error', status);
-                    });
-                }
-            } catch (_) { }
-        });
+// Only initialize Pusher if we have a valid key
+if (window.pusherKey && window.pusherKey !== 'your_pusher_app_key') {
+    // Initialize PusherService for single connection management
+    import('@/services/PusherService').then(({ default: PusherService }) => {
+        // Initialize the singleton service
+        const pusherInstance = PusherService.getInstance();
+        if (pusherInstance) {
+            console.log('[bootstrap] PusherService initialized successfully');
+        }
+    }).catch(error => {
+        console.error('Failed to initialize PusherService:', error);
     });
 } else {
-    console.log('Pusher not configured, skipping Echo setup');
-}// Add request interceptor to check and warn about large cookie headers
+    console.log('Pusher not configured, skipping realtime setup');
+}
+
+// Add request interceptor to check and warn about large cookie headers
 window.axios.interceptors.request.use(
     (config) => {
+        // Attach Pusher socket ID so the server can broadcast()->toOthers()
+        try {
+            const socketId = window.__pusherSocketId || null;
+            if (socketId) {
+                if (!config.headers) config.headers = {};
+                config.headers['X-Socket-Id'] = socketId;
+            }
+        } catch (_) {}
+
         // Check if cookie header might be too large
         const cookieHeader = document.cookie;
         if (cookieHeader && cookieHeader.length > 2048) {

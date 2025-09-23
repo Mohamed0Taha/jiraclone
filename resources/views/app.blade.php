@@ -47,6 +47,13 @@
         csrfToken: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
         appUrl: document.querySelector('meta[name="app-url"]')?.getAttribute('content') || '',
         env: "{{ app()->environment() }}",
+        @auth
+        user: {
+          id: {{ auth()->user()->id }},
+          name: "{{ auth()->user()->name }}",
+          email: "{{ auth()->user()->email }}"
+        },
+        @endauth
       };
     </script>
     @inertia

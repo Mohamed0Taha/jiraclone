@@ -3,6 +3,7 @@ import React, { useMemo, useState, useCallback, memo } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { useTranslation } from 'react-i18next';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import {
     Box,
     Container,
@@ -28,6 +29,11 @@ import {
     Badge,
     alpha,
     useTheme,
+    Grid,
+    Fade,
+    Card,
+    CardContent,
+    CardActions,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import SortIcon from '@mui/icons-material/Sort';
@@ -44,21 +50,25 @@ import PersonIcon from '@mui/icons-material/Person';
 import ProjectAccordion from '@/Pages/ProjectAccordion';
 const designTokens = {
     radii: {
-        xl: 4,
-        lg: 4,
-        md: 4,
+        xl: 16,
+        lg: 12,
+        md: 8,
+        sm: 4,
     },
     gradients: (theme) => ({
         hero:
             theme.palette.mode === 'dark'
-                ? `linear-gradient(135deg, #1a1b3a 0%, #2d1b69 50%, #4338ca 100%)`
-                : `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`,
-        accent: `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`,
+                ? `linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)`
+                : `linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 50%, #a5b4fc 100%)`,
+        accent: `linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)`,
         card:
             theme.palette.mode === 'dark'
                 ? `linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)`
-                : `linear-gradient(145deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%)`,
-        stats: `linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)`,
+                : `linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%)`,
+        stats: `linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)`,
+        enterprise: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, #1f2937 0%, #111827 100%)`
+            : `linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)`,
     }),
     blur: {
         heavy: '24px',
@@ -66,10 +76,11 @@ const designTokens = {
         light: '8px',
     },
     shadows: {
-        subtle: '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)',
-        soft: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-        medium: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        subtle: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        soft: '0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04)',
+        medium: '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
         elevated: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        enterprise: '0 0 0 1px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
     },
 };
 
@@ -1030,48 +1041,13 @@ export default function Dashboard({ auth, projects, appsumo_welcome, message }) 
                                 ) : displayCount === 0 ? (
                                     <FilteredEmptyState reset={handleClearSearch} />
                                 ) : viewMode === 'grid' ? (
-                                    <Grid container spacing={3} aria-label="Projects grid view">
-                                        {(scope === 'owned' ? ownedProjects : ownedProjects).map(
-                                            (p, idx) => (
-                                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={p.id}>
-                                                    <Fade
-                                                        in
-                                                        timeout={500}
-                                                        style={{ transitionDelay: `${idx * 50}ms` }}
-                                                    >
-                                                        <div>
-                                                            <ProjectCard
-                                                                project={p}
-                                                                ownership="owner"
-                                                                onDelete={askDelete}
-                                                            />
-                                                        </div>
-                                                    </Fade>
-                                                </Grid>
-                                            )
-                                        )}
-                                        {scope === 'owned'
-                                            ? null
-                                            : memberProjects.map((p, idx) => (
-                                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={p.id}>
-                                                    <Fade
-                                                        in
-                                                        timeout={500}
-                                                        style={{
-                                                            transitionDelay: `${(idx + ownedProjects.length) * 50}ms`,
-                                                        }}
-                                                    >
-                                                        <div>
-                                                            <ProjectCard
-                                                                project={p}
-                                                                ownership="member"
-                                                                onDelete={askDelete}
-                                                            />
-                                                        </div>
-                                                    </Fade>
-                                                </Grid>
-                                            ))}
-                                    </Grid>
+                                    <ProjectTilesGrid
+                                        ownedProjects={ownedProjects}
+                                        memberProjects={scope === 'owned' ? [] : memberProjects}
+                                        onDelete={askDelete}
+                                        onEdit={(project) => router.visit(route('projects.edit', project.id))}
+                                        onView={(project) => router.visit(route('tasks.index', project.id))}
+                                    />
                                 ) : (
                                     <Stack spacing={3}>
                                         {/* All Projects - Visually Distinguished by Ownership */}
@@ -1498,6 +1474,597 @@ function FilteredEmptyState({ reset }) {
         </Box>
     );
 }
+
+// Project Tiles Grid Component - Similar to CustomView
+const ProjectTilesGrid = memo(function ProjectTilesGrid({ ownedProjects, memberProjects, onDelete, onEdit, onView }) {
+    const theme = useTheme();
+    const { t } = useTranslation();
+    
+    // Color palette for project tiles
+    const tileColors = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+        'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+        'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)',
+        'linear-gradient(135deg, #fdcbf1 0%, #e6dee9 100%)',
+    ];
+    
+    const ProjectTile = ({ project, index, isOwner }) => {
+        const tasks = project.tasks || {};
+        let total = 0;
+        let done = 0;
+        
+        if (Array.isArray(tasks)) {
+            total = tasks.length;
+            done = tasks.filter((t) => t.status === 'done').length;
+        } else if (typeof tasks === 'object') {
+            Object.entries(tasks).forEach(([status, arr]) => {
+                if (Array.isArray(arr)) {
+                    total += arr.length;
+                    if (status === 'done') done += arr.length;
+                }
+            });
+        }
+        
+        const percentage = total === 0 ? 0 : Math.round((done / total) * 100);
+        const bgColor = tileColors[index % tileColors.length];
+        
+        return (
+            <Box
+                onClick={() => onView(project)}
+                sx={{
+                    position: 'relative',
+                    background: bgColor,
+                    borderRadius: 0, // No border radius for tiles
+                    padding: 3,
+                    height: '100%',
+                    minHeight: 180,
+                    cursor: 'pointer',
+                    color: '#fff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    transition: 'transform 200ms ease, box-shadow 200ms ease, filter 200ms ease',
+                    overflow: 'hidden',
+                    '&:hover': {
+                        transform: 'translateY(-4px) scale(1.02)',
+                        boxShadow: '0 12px 24px rgba(0,0,0,0.25)',
+                        filter: 'brightness(1.1)',
+                    },
+                    '&:active': {
+                        transform: 'translateY(-2px) scale(1.01)',
+                    },
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0) 60%)', // Darker overlay for contrast
+                        pointerEvents: 'none',
+                    },
+                }}
+            >
+                {/* Ownership Badge */}
+                <Chip
+                    size="small"
+                    label={isOwner ? t('common.owner') : t('common.collaborator')}
+                    sx={{
+                        position: 'absolute',
+                        top: 12,
+                        right: 12,
+                        backgroundColor: 'rgba(0,0,0,0.4)',
+                        color: '#fff',
+                        fontWeight: 700,
+                        fontSize: '11px',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                    }}
+                />
+                
+                {/* Project Icon */}
+                <Box sx={{ mb: 2 }}>
+                    <Box sx={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 2,
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backdropFilter: 'blur(5px)',
+                    }}>
+                        <ViewModuleIcon sx={{ fontSize: 28, color: '#fff' }} />
+                    </Box>
+                </Box>
+                
+                {/* Project Info */}
+                <Box sx={{ flex: 1 }}>
+                    <Typography
+                        variant="h6"
+                        sx={{
+                            fontWeight: 700,
+                            mb: 1,
+                            textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontSize: '18px',
+                            letterSpacing: '0.3px',
+                        }}
+                    >
+                        {project.name || t('common.untitled')}
+                    </Typography>
+                    
+                    {project.description && (
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                opacity: 1,
+                                mb: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                lineHeight: 1.4,
+                                textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+                                fontWeight: 500,
+                            }}
+                        >
+                            {project.description}
+                        </Typography>
+                    )}
+                    
+                    {/* Task Statistics */}
+                    <Box sx={{ display: 'flex', gap: 1.5, mt: 1.5, mb: 1 }}>
+                        <Chip
+                            size="small"
+                            label={`${total} ${t('common.tasks')}`}
+                            sx={{
+                                backgroundColor: 'rgba(0,0,0,0.3)',
+                                color: '#fff',
+                                fontWeight: 700,
+                                fontSize: '12px',
+                                height: 24,
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                '& .MuiChip-label': { px: 1 }
+                            }}
+                        />
+                        {project.members && project.members.length > 0 && (
+                            <Chip
+                                size="small"
+                                icon={<GroupIcon sx={{ fontSize: 14, color: '#fff !important' }} />}
+                                label={project.members.length}
+                                sx={{
+                                    backgroundColor: 'rgba(0,0,0,0.3)',
+                                    color: '#fff',
+                                    fontWeight: 700,
+                                    fontSize: '12px',
+                                    height: 24,
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    '& .MuiChip-label': { px: 0.5 }
+                                }}
+                            />
+                        )}
+                    </Box>
+                </Box>
+                
+                {/* Progress Bar */}
+                <Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="caption" sx={{ 
+                            fontWeight: 600,
+                            fontSize: '12px',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                        }}>
+                            {t('common.progress')}
+                        </Typography>
+                        <Typography variant="caption" sx={{ 
+                            fontWeight: 700,
+                            fontSize: '13px',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                        }}>
+                            {percentage}%
+                        </Typography>
+                    </Box>
+                    <Box
+                        sx={{
+                            height: 8,
+                            backgroundColor: 'rgba(0,0,0,0.3)',
+                            borderRadius: 4, // Border radius ONLY for progress bar
+                            overflow: 'hidden',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                height: '100%',
+                                width: `${percentage}%`,
+                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                borderRadius: 4, // Border radius for inner bar
+                                transition: 'width 0.5s ease',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                            }}
+                        />
+                    </Box>
+                </Box>
+                
+                {/* Action Buttons - Moved outside overlay area */}
+                {isOwner && (
+                    <Box sx={{ 
+                        mt: 2,
+                        display: 'flex',
+                        gap: 1,
+                        justifyContent: 'flex-end',
+                        opacity: 0,
+                        transition: 'opacity 0.2s ease',
+                        '.MuiBox-root:hover > &': {
+                            opacity: 1,
+                        },
+                    }}>
+                        <Tooltip title={t('common.edit')}>
+                            <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEdit(project);
+                                }}
+                                sx={{
+                                    backgroundColor: 'rgba(0,0,0,0.5)',
+                                    color: '#fff',
+                                    backdropFilter: 'blur(4px)',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(0,0,0,0.7)',
+                                    },
+                                }}
+                            >
+                                <EditRoundedIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title={t('common.delete')}>
+                            <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDelete(project);
+                                }}
+                                sx={{
+                                    backgroundColor: 'rgba(0,0,0,0.5)',
+                                    color: '#fff',
+                                    backdropFilter: 'blur(4px)',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(0,0,0,0.7)',
+                                    },
+                                }}
+                            >
+                                <DeleteForeverIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                )}
+            </Box>
+        );
+    };
+    
+    const allProjects = [...ownedProjects.map(p => ({ ...p, isOwner: true })), ...memberProjects.map(p => ({ ...p, isOwner: false }))];
+    
+    return (
+        <Grid container spacing={2} sx={{ mt: 1, justifyContent: 'flex-start' }}>
+            {allProjects.map((project, index) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={project.id} sx={{
+                    minWidth: { xs: '100%', sm: '350px', md: '320px', lg: '300px' },
+                    maxWidth: { xs: '100%', sm: '50%', md: '33.33%', lg: '25%' },
+                }}>
+                    <Fade in timeout={300 + index * 50}>
+                        <Box sx={{ height: '100%' }}>
+                            <ProjectTile 
+                                project={project} 
+                                index={index} 
+                                isOwner={project.isOwner}
+                            />
+                        </Box>
+                    </Fade>
+                </Grid>
+            ))}
+        </Grid>
+    );
+});
+
+// Original EnterpriseDataGrid component (keeping for reference but not used)
+const EnterpriseDataGrid = memo(function EnterpriseDataGrid({ projects, onDelete, onEdit, onView }) {
+    const theme = useTheme();
+    const { t } = useTranslation();
+    
+    const columns = [
+        {
+            field: 'name',
+            headerName: t('common.projectName'),
+            flex: 2,
+            minWidth: 200,
+            renderCell: (params) => (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                        sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: params.row.is_owner 
+                                ? theme.palette.primary.main 
+                                : theme.palette.secondary.main,
+                        }}
+                    />
+                    <Typography 
+                        variant="body2" 
+                        sx={{ 
+                            fontWeight: 600,
+                            color: theme.palette.text.primary,
+                            '&:hover': { color: theme.palette.primary.main },
+                        }}
+                    >
+                        {params.value}
+                    </Typography>
+                </Box>
+            ),
+        },
+        {
+            field: 'status',
+            headerName: t('common.status'),
+            width: 150,
+            renderCell: (params) => {
+                const isOwner = params.row.is_owner;
+                return (
+                    <Chip
+                        size="small"
+                        label={isOwner ? 'Owner' : 'Collaborator'}
+                        sx={{
+                            fontWeight: 600,
+                            fontSize: '11px',
+                            background: isOwner
+                                ? alpha(theme.palette.primary.main, 0.1)
+                                : alpha(theme.palette.secondary.main, 0.1),
+                            color: isOwner
+                                ? theme.palette.primary.main
+                                : theme.palette.secondary.main,
+                            border: `1px solid ${
+                                isOwner
+                                    ? alpha(theme.palette.primary.main, 0.2)
+                                    : alpha(theme.palette.secondary.main, 0.2)
+                            }`,
+                        }}
+                    />
+                );
+            },
+        },
+        {
+            field: 'progress',
+            headerName: t('common.progress'),
+            width: 150,
+            renderCell: (params) => {
+                const tasks = params.row.tasks || {};
+                let total = 0;
+                let done = 0;
+                
+                if (Array.isArray(tasks)) {
+                    total = tasks.length;
+                    done = tasks.filter((t) => t.status === 'done').length;
+                } else if (typeof tasks === 'object') {
+                    Object.entries(tasks).forEach(([status, arr]) => {
+                        if (Array.isArray(arr)) {
+                            total += arr.length;
+                            if (status === 'done') done += arr.length;
+                        }
+                    });
+                }
+                
+                const percentage = total === 0 ? 0 : Math.round((done / total) * 100);
+                
+                return (
+                    <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ flex: 1 }}>
+                            <Box
+                                sx={{
+                                    height: 6,
+                                    background: alpha(theme.palette.primary.main, 0.1),
+                                    borderRadius: 3,
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        height: '100%',
+                                        width: `${percentage}%`,
+                                        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.info.main})`,
+                                        transition: 'width 0.3s ease',
+                                    }}
+                                />
+                            </Box>
+                        </Box>
+                        <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                            {percentage}%
+                        </Typography>
+                    </Box>
+                );
+            },
+        },
+        {
+            field: 'team',
+            headerName: t('common.team'),
+            width: 120,
+            renderCell: (params) => {
+                const memberCount = params.row.members?.length || 0;
+                return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <GroupIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+                        <Typography variant="body2">{memberCount} members</Typography>
+                    </Box>
+                );
+            },
+        },
+        {
+            field: 'updated_at',
+            headerName: t('common.lastUpdated'),
+            width: 140,
+            renderCell: (params) => {
+                const date = new Date(params.value);
+                const now = new Date();
+                const diffTime = Math.abs(now - date);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                let displayText = '';
+                if (diffDays === 0) displayText = 'Today';
+                else if (diffDays === 1) displayText = 'Yesterday';
+                else if (diffDays < 7) displayText = `${diffDays} days ago`;
+                else displayText = date.toLocaleDateString();
+                
+                return (
+                    <Typography variant="caption" color="text.secondary">
+                        {displayText}
+                    </Typography>
+                );
+            },
+        },
+        {
+            field: 'actions',
+            headerName: '',
+            width: 120,
+            sortable: false,
+            filterable: false,
+            disableColumnMenu: true,
+            renderCell: (params) => (
+                <Stack direction="row" spacing={0.5}>
+                    <Tooltip title={t('common.view')}>
+                        <IconButton
+                            size="small"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onView(params.row);
+                            }}
+                            sx={{
+                                color: theme.palette.primary.main,
+                                '&:hover': { background: alpha(theme.palette.primary.main, 0.1) },
+                            }}
+                        >
+                            <ViewModuleIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    {params.row.is_owner && (
+                        <>
+                            <Tooltip title={t('common.edit')}>
+                                <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onEdit(params.row);
+                                    }}
+                                    sx={{
+                                        color: theme.palette.info.main,
+                                        '&:hover': { background: alpha(theme.palette.info.main, 0.1) },
+                                    }}
+                                >
+                                    <EditRoundedIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title={t('common.delete')}>
+                                <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDelete(params.row);
+                                    }}
+                                    sx={{
+                                        color: theme.palette.error.main,
+                                        '&:hover': { background: alpha(theme.palette.error.main, 0.1) },
+                                    }}
+                                >
+                                    <DeleteForeverIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                        </>
+                    )}
+                </Stack>
+            ),
+        },
+    ];
+
+    const rows = projects.map((project) => ({
+        ...project,
+        id: project.id || Math.random(),
+    }));
+
+    return (
+        <Paper
+            elevation={0}
+            sx={{
+                borderRadius: designTokens.radii.lg,
+                overflow: 'hidden',
+                border: `1px solid ${theme.palette.divider}`,
+                background: theme.palette.background.paper,
+                height: 600,
+            }}
+        >
+            <DataGrid
+                rows={rows}
+                columns={columns}
+                pageSize={10}
+                rowsPerPageOptions={[10, 25, 50]}
+                checkboxSelection
+                disableSelectionOnClick
+                onRowClick={(params) => onView(params.row)}
+                components={{
+                    Toolbar: GridToolbar,
+                }}
+                sx={{
+                    border: 'none',
+                    '& .MuiDataGrid-columnHeaders': {
+                        background: designTokens.gradients(theme).enterprise,
+                        borderBottom: `1px solid ${theme.palette.divider}`,
+                        '& .MuiDataGrid-columnHeaderTitle': {
+                            fontWeight: 700,
+                            fontSize: '12px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            color: theme.palette.text.secondary,
+                        },
+                    },
+                    '& .MuiDataGrid-row': {
+                        cursor: 'pointer',
+                        '&:hover': {
+                            background: alpha(theme.palette.primary.main, 0.03),
+                        },
+                        '&.Mui-selected': {
+                            background: alpha(theme.palette.primary.main, 0.05),
+                            '&:hover': {
+                                background: alpha(theme.palette.primary.main, 0.08),
+                            },
+                        },
+                    },
+                    '& .MuiDataGrid-cell': {
+                        borderColor: alpha(theme.palette.divider, 0.5),
+                    },
+                    '& .MuiDataGrid-footerContainer': {
+                        background: designTokens.gradients(theme).enterprise,
+                        borderTop: `1px solid ${theme.palette.divider}`,
+                    },
+                    '& .MuiDataGrid-toolbarContainer': {
+                        padding: 2,
+                        background: alpha(theme.palette.background.default, 0.5),
+                        borderBottom: `1px solid ${theme.palette.divider}`,
+                        '& button': {
+                            color: theme.palette.text.secondary,
+                        },
+                    },
+                }}
+            />
+        </Paper>
+    );
+});
 
 // Enhanced Project Card for grid view
 const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) {

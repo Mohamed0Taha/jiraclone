@@ -502,7 +502,7 @@ class GenerativeUIService
                     'ux_action',
                     [ 'action' => 'close_generator', 'reason' => 'generation_complete' ],
                     $authUser
-                ));
+                ))->toOthers();
             } catch (\Throwable $e) {
                 Log::debug('UX close_generator broadcast failed', ['error' => $e->getMessage()]);
             }
@@ -2353,7 +2353,7 @@ REACT;
                         'saved_at' => now()->toISOString(),
                     ],
                     $user
-                ));
+                ))->toOthers();
                 // Also request the UI to close/minimize the generator if it is open
                 broadcast(new CustomViewDataUpdated(
                     $project->id,
@@ -2361,7 +2361,7 @@ REACT;
                     'ux_action',
                     [ 'action' => 'close_generator', 'reason' => 'save_completed' ],
                     $user
-                ));
+                ))->toOthers();
             } catch (\Throwable $e) {
                 Log::warning('Broadcast failed after saveCustomView', [
                     'project_id' => $project->id,
@@ -2404,19 +2404,48 @@ REACT;
                 'data_size' => is_array($data) ? count($data) : (is_string($data) ? strlen($data) : 'unknown')
             ]);
 
-            // Get or create the custom view
+            // Get active custom view; if missing, create a minimal one using the selected micro-app marker
             $customView = CustomView::getActiveForProject($project->id, $userId, $viewName);
 
             if (!$customView) {
-                \Log::warning('CustomView not found', [
+                \Log::warning('CustomView not found - creating minimal view to persist shared data', [
                     'project_id' => $project->id,
                     'user_id' => $userId,
-                    'view_name' => $viewName
+                    'view_name' => $viewName,
+                    'data_key' => $dataKey,
                 ]);
-                return [
-                    'success' => false,
-                    'message' => 'Custom view not found; data not saved',
+
+                // Derive appKey from dataKey pattern: e.g., 'Spreadsheet-data' -> 'Spreadsheet'
+                $appKey = preg_match('/^(.+)-data$/', $dataKey, $m) ? $m[1] : 'microapp';
+
+                // Build the same selection marker used by the frontend
+                $markerPayload = [
+                    'type' => 'builtin_microapp',
+                    'appKey' => (string) $appKey,
+                    'version' => 1,
+                    'state' => $data ?? null,
                 ];
+                $marker = '/* MICROAPP_SELECTED_START */' . json_encode($markerPayload) . '/* MICROAPP_SELECTED_END */';
+
+                // Create the minimal view record
+                $customView = CustomView::createOrUpdate(
+                    $project->id,
+                    $userId,
+                    $viewName,
+                    $marker,
+                    [
+                        'type' => 'react_component',
+                        'saved_at' => now()->toISOString(),
+                        'created_via' => 'save_data_autocreate',
+                    ]
+                );
+
+                \Log::info('Created minimal CustomView for data persistence', [
+                    'view_id' => $customView->id,
+                    'project_id' => $project->id,
+                    'view_name' => $viewName,
+                    'app_key' => $appKey,
+                ]);
             }
 
             \Log::info('CustomView found', [
@@ -2468,7 +2497,7 @@ REACT;
                 $dataKey,
                 $data,
                 auth()->user()
-            ));
+            ))->toOthers();
 
             \Log::info('CustomView saved successfully', [
                 'view_id' => $customView->id,
@@ -2702,7 +2731,7 @@ const __EMBEDDED_DATA__ = $dataJson;
                     'component',
                     [ 'deleted' => true ],
                     $user
-                ));
+                ))->toOthers();
             } catch (\Throwable $e) {
                 Log::warning('Broadcast failed after deleteCustomView', [
                     'project_id' => $project->id,
