@@ -651,7 +651,7 @@
     "leaveProject": "Leave project",
     "completionProgress": "Completion {{percentage}}%",
     "areYouSure": "Are you sure?",
-    "createProject": "Projekt erstellen"
+    "createProject": "Create Project"
   },
   "floating": {
     "aiAssistant": "AI Assistant",
