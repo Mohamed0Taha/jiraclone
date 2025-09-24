@@ -390,7 +390,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.delete');
     Route::post('/users/{user}/upgrade', [AdminController::class, 'upgradeUser'])->name('users.upgrade');
-    Route::get('/users/{user}/verify', [AdminController::class, 'verifyUser'])->name('users.verify');
+    Route::post('/users/{user}/verify', [AdminController::class, 'verifyUser'])->name('users.verify');
 
     // Analytics routes
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
