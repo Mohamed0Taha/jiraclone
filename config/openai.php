@@ -61,7 +61,9 @@ return [
     |
     | The timeout may be used to specify the maximum number of seconds to wait
     | for a response. By default, the client will time out after 30 seconds.
+    | Image generation typically takes longer, so it has a separate timeout.
     */
 
-    'request_timeout' => env('OPENAI_REQUEST_TIMEOUT', 30),
+    'request_timeout' => env('OPENAI_REQUEST_TIMEOUT', 60),
+    'image_timeout' => env('OPENAI_IMAGE_TIMEOUT', 120),
 ];

@@ -71,8 +71,9 @@ class OpenAIService
         $startTime = microtime(true);
 
         try {
+            $timeout = (int) config('openai.request_timeout', 30);
             $start = microtime(true);
-            $res = Http::timeout(25)->withHeaders([
+            $res = Http::timeout($timeout)->withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
             ])->post($this->baseUri().'/chat/completions', [
@@ -168,8 +169,9 @@ class OpenAIService
         $userId = Auth::id();
 
         try {
+            $timeout = (int) config('openai.request_timeout', 30);
             $start = microtime(true);
-            $res = Http::timeout(120)->withHeaders([
+            $res = Http::timeout($timeout)->withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
             ])->post($this->baseUri().'/chat/completions', [
@@ -425,7 +427,8 @@ class OpenAIService
         $startTime = microtime(true);
 
         try {
-            $res = Http::timeout(25)->withHeaders([
+            $timeout = (int) config('openai.request_timeout', 30);
+            $res = Http::timeout($timeout)->withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
             ])->post($this->baseUri().'/chat/completions', [
@@ -545,7 +548,9 @@ class OpenAIService
         $startTime = microtime(true);
 
         try {
-            $res = Http::timeout(120)->withHeaders([
+            // Image generation typically takes longer, so use a longer timeout
+            $timeout = (int) config('openai.image_timeout', 120);
+            $res = Http::timeout($timeout)->withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
             ])->post($this->baseUri().'/images/generations', [

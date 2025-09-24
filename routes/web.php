@@ -367,6 +367,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     // Blog management routes
     Route::resource('blogs', \App\Http\Controllers\Admin\BlogController::class);
     
+    // Blog API test page (development only)
+    Route::get('/blogs/test-api', function() {
+        return view('admin.blogs.test-api');
+    })->name('blogs.test-api');
+    
     // Blog AI routes
     Route::post('/blogs/generate', [\App\Http\Controllers\Admin\BlogController::class, 'generate'])->name('blogs.generate');
     Route::post('/blogs/ideas', [\App\Http\Controllers\Admin\BlogController::class, 'ideas'])->name('blogs.ideas');

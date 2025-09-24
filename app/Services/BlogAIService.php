@@ -18,25 +18,77 @@ class BlogAIService
     }
 
     /**
+     * Make a request with retry logic for transient failures
+     */
+    private function makeRequestWithRetry(callable $request, int $maxRetries = 2)
+    {
+        $attempt = 0;
+        $lastException = null;
+
+        while ($attempt <= $maxRetries) {
+            try {
+                return $request();
+            } catch (\Exception $e) {
+                $lastException = $e;
+                $attempt++;
+                
+                // Only retry on timeout or server errors
+                $message = $e->getMessage();
+                $shouldRetry = (
+                    strpos($message, 'timeout') !== false ||
+                    strpos($message, 'cURL error 28') !== false ||
+                    strpos($message, '500') !== false ||
+                    strpos($message, '502') !== false ||
+                    strpos($message, '503') !== false
+                );
+                
+                if (!$shouldRetry || $attempt > $maxRetries) {
+                    break;
+                }
+                
+                // Wait before retry (exponential backoff)
+                $waitTime = min(pow(2, $attempt - 1), 5); // Max 5 seconds
+                Log::info("Request failed, retrying in {$waitTime}s", [
+                    'attempt' => $attempt,
+                    'error' => $message
+                ]);
+                sleep($waitTime);
+            }
+        }
+
+        throw $lastException;
+    }
+
+    /**
      * Generate a complete blog post with AI (including featured image)
      */
     public function generateBlogPost($topic, $targetAudience = 'project managers and teams', $tone = 'professional and engaging')
     {
         try {
+            // Check if OpenAI API key is configured
+            if (empty(config('openai.api_key'))) {
+                throw new \Exception('OpenAI API key is not configured. Please set OPENAI_API_KEY in your environment variables.');
+            }
+
             $overallStart = microtime(true);
-            // Generate the blog content
+            Log::info('Starting blog generation', ['topic' => $topic, 'audience' => $targetAudience]);
+            
+            // Generate the blog content with retry logic
             $prompt = $this->buildBlogPrompt($topic, $targetAudience, $tone);
             $messages = [
                 ['role' => 'user', 'content' => $prompt],
             ];
 
-            $response = $this->openAIService->chatJson($messages, 0.6);
+            $response = $this->makeRequestWithRetry(function() use ($messages) {
+                return $this->openAIService->chatJson($messages, 0.6);
+            }, 2); // Retry up to 2 times
+            
             if (! is_array($response)) {
                 throw new \Exception('Unexpected AI response format');
             }
 
             if (! $response) {
-                throw new \Exception('Failed to generate blog content');
+                throw new \Exception('Failed to generate blog content - empty response from AI');
             }
 
             $parsedResponse = $this->parseBlogResponse($response);
@@ -91,8 +143,28 @@ class BlogAIService
             return $parsedResponse;
 
         } catch (\Exception $e) {
-            Log::error('BlogAIService generateBlogPost error: '.$e->getMessage());
-            throw $e;
+            Log::error('BlogAIService generateBlogPost error', [
+                'error' => $e->getMessage(),
+                'topic' => $topic,
+                'audience' => $targetAudience,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Provide more user-friendly error messages
+            $message = $e->getMessage();
+            if (strpos($message, 'cURL error 28') !== false || strpos($message, 'timeout') !== false) {
+                throw new \Exception('Request timed out. The AI service is taking longer than expected. Please try again with a simpler topic or try again later.');
+            } elseif (strpos($message, 'API key') !== false) {
+                throw new \Exception('OpenAI API configuration error. Please contact the administrator.');
+            } elseif (strpos($message, '401') !== false) {
+                throw new \Exception('Authentication failed with OpenAI API. Please check the API key configuration.');
+            } elseif (strpos($message, '429') !== false) {
+                throw new \Exception('Rate limit exceeded. Please wait a moment and try again.');
+            } elseif (strpos($message, '500') !== false || strpos($message, '502') !== false || strpos($message, '503') !== false) {
+                throw new \Exception('OpenAI service is temporarily unavailable. Please try again in a few minutes.');
+            }
+            
+            throw new \Exception('Failed to generate blog post: ' . $message);
         }
     }
 
@@ -196,66 +268,41 @@ Return as JSON with these keys:
      */
     protected function buildBlogPrompt($topic, $targetAudience, $tone)
     {
-        $taskPilotContext = $this->getTaskPilotFeatureContext();
+        return "Write a professional blog post about: {$topic}
 
-        return "You are an expert SEO content marketer writing for TaskPilot, creating high-quality, SEO-optimized, how-to style blog posts similar to WikiHow and HubSpot. 
-
-Create a comprehensive, step-by-step guide about: {$topic}
-
-Target Audience: {$targetAudience}
+Target: {$targetAudience}
 Tone: {$tone}
 
-TASKPILOT PLATFORM OVERVIEW:
-{$taskPilotContext}
+Create a step-by-step guide (1500-2000 words) that:
+1. Addresses the topic with actionable advice
+2. Includes TaskPilot project management platform features
+3. Uses clear headings and bullet points
+4. Provides practical examples
 
-SEO OPTIMIZATION REQUIREMENTS:
-1. **Primary Keyword Strategy**: Include primary keyword in title, first paragraph, and naturally throughout content
-2. **Content Structure for SEO**: Use secondary keywords in H2 and H3 headings, maintain 1-2% keyword density
-3. **Internal Linking Strategy**: Include 5-8 strategic backlinks to TaskPilot throughout content
+TaskPilot Features to mention:
+- AI Task Generation
+- Project Dashboard
+- Automation Rules
+- Template Library
+- Real-time Collaboration
 
-CONTENT STYLE REQUIREMENTS:
-1. **WikiHow/HubSpot Style Structure**: Clear step-by-step instructions, detailed explanations, actionable tips
-2. **Rich Content Formatting**: Use **bold text** for important points, *italic text* for emphasis, numbered steps, bullet points
-3. **NO COLOR FORMATTING**: Do not use any color codes, HTML color tags, or CSS color styling in the content
-4. **Specific TaskPilot Integration**: Reference exact TaskPilot features by name, provide step-by-step instructions
-5. **Content Requirements**: 2000-2500 words of detailed, valuable content
+Include these links naturally:
+- [TaskPilot platform](https://taskpilot.us)
+- [TaskPilot features](https://taskpilot.us/features)
+- [Start free trial](https://taskpilot.us/register)
 
-TASKPILOT BACKLINK STRATEGY (MUST INCLUDE):
-Include these links naturally in content:
-- [TaskPilot project management platform](https://taskpilot.us)
-- [TaskPilot's AI-powered features](https://taskpilot.us/features)
-- [TaskPilot pricing plans](https://taskpilot.us/pricing)
-- [Start your free TaskPilot trial](https://taskpilot.us/register)
-- [TaskPilot's AI task generation](https://taskpilot.us/features/ai-task-generation)
-- [TaskPilot automation features](https://taskpilot.us/features/automation)
+Return JSON with:
+- title: SEO title (under 60 chars)
+- excerpt: Brief summary (150 chars)
+- content: Full article with markdown formatting
+- meta_title: SEO meta title (60 chars max)
+- meta_description: Meta description (160 chars max)
+- target_keywords: Array of main keywords
+- primary_keyword: Main SEO keyword
+- cta_text: Call-to-action text
+- cta_url: CTA URL (/register)
 
-ARTICLE STRUCTURE:
-**Introduction**: Hook with primary keyword, problem statement, TaskPilot solution preview
-**Step-by-Step Guide**: 5-7 detailed steps with TaskPilot feature integration
-**Advanced Tips**: Power user techniques with TaskPilot automation
-**Troubleshooting**: Common problems and TaskPilot-specific solutions
-**Conclusion**: Recap benefits, strong call-to-action
-
-TASKPILOT FEATURE MENTIONS (Include at least 8):
-- AI Task Generation, Project Dashboard, Automation Rules, Template Library
-- Real-time Collaboration, Progress Tracking, Resource Management
-- Include exact button names, menu locations, navigation paths
-
-Return as JSON with these keys:
-- title: SEO-optimized how-to title (60 chars max, include primary keyword)
-- excerpt: Compelling summary focusing on the solution (150-160 chars, include keyword)
-- content: Full step-by-step guide (formatted text with markdown-style formatting and internal links)
-- meta_title: SEO title optimized for search engines (MUST be 60 characters or less)
-- meta_description: SEO meta description with primary keyword and CTA (150-160 chars max)
-- target_keywords: Array of primary and secondary SEO keywords
-- primary_keyword: Main keyword to optimize for
-- lsi_keywords: Array of LSI and semantic keywords used
-- internal_links_used: Array of TaskPilot links included in content
-- schema_data: Suggested schema markup elements
-- cta_text: Call-to-action button text (action-oriented)
-- cta_url: Call-to-action URL (/register or /free-trial)
-
-Make this a comprehensive, actionable guide that positions TaskPilot as the essential tool for implementing these strategies successfully.";
+Focus on practical value and clear instructions.";
     }
 
     /**
@@ -301,7 +348,12 @@ Make this a comprehensive, actionable guide that positions TaskPilot as the esse
                     'quality' => $opts['quality'],
                 ]);
 
-                return $imageKitResponse['url'];
+                return [
+                    'success' => true,
+                    'url' => $imageKitResponse['url'],
+                    'file_id' => $imageKitResponse['fileId'] ?? null,
+                    'thumbnail_url' => $imageKitResponse['thumbnailUrl'] ?? null,
+                ];
             } catch (\Throwable $e) {
                 Log::warning('BlogAIService: image attempt failed', [
                     'attempt' => $idx + 1,
@@ -320,10 +372,22 @@ Make this a comprehensive, actionable guide that positions TaskPilot as the esse
             $url = $placeholderBase.'/'.$query;
             Log::notice('BlogAIService: using placeholder image', ['url' => $url]);
 
-            return $url; // Not uploaded to ImageKit; external link
+            return [
+                'success' => true,
+                'url' => $url,
+                'file_id' => null,
+                'thumbnail_url' => null,
+                'placeholder' => true
+            ]; // Not uploaded to ImageKit; external link
         }
 
-        throw new \Exception('All image generation attempts failed');
+        return [
+            'success' => false,
+            'error' => 'All image generation attempts failed',
+            'url' => null,
+            'file_id' => null,
+            'thumbnail_url' => null,
+        ];
     }
 
     /**

@@ -203,11 +203,26 @@ class BlogController extends Controller
                 'error' => $e->getMessage(),
                 'topic' => $request->topic,
                 'target_audience' => $request->target_audience,
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+                'request_data' => $request->all()
             ]);
+
+            // Provide helpful error message based on error type
+            $userMessage = $e->getMessage();
+            if (strpos($userMessage, 'timeout') !== false) {
+                $userMessage = 'The AI service is taking longer than expected. Please try with a shorter or simpler topic, or try again in a few minutes.';
+            } elseif (strpos($userMessage, 'API key') !== false) {
+                $userMessage = 'AI service configuration issue. Please contact support.';
+            } elseif (strpos($userMessage, '429') !== false) {
+                $userMessage = 'Too many requests. Please wait a moment and try again.';
+            }
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate blog post: '.$e->getMessage(),
+                'message' => $userMessage,
+                'suggestion' => 'Try using a simpler topic or fewer keywords for faster generation.',
+                'debug' => app()->environment('local') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -310,11 +325,15 @@ class BlogController extends Controller
                 'title' => $request->title,
                 'excerpt' => $request->excerpt,
                 'topic' => $request->topic,
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+                'request_data' => $request->all()
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to generate image: '.$e->getMessage(),
+                'debug' => app()->environment('local') ? $e->getMessage() : null
             ], 500);
         }
     }
