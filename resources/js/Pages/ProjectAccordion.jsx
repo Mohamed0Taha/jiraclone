@@ -65,9 +65,11 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
         },
     };
 
-    // Determine ownership colors
+    // Determine ownership colors and draft status
     const isOwner = ownership === 'owner';
+    const isDraft = project?.status === 'draft';
     const ownershipColor = isOwner ? theme.palette.primary.main : theme.palette.secondary.main;
+    const draftColor = theme.palette.warning.main;
 
     /* Normalize tasks */
     const grouped = useMemo(() => {
@@ -99,7 +101,13 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
 
     const gotoBoard = (e) => {
         e.stopPropagation();
-        router.visit(`/projects/${project.id}/tasks`);
+        if (isDraft) {
+            // Open stepper for draft projects
+            router.visit(`/projects/create?draft=${project.id}`);
+        } else {
+            // Open board for active projects
+            router.visit(`/projects/${project.id}`);
+        }
     };
 
     const gotoEdit = (e) => {
@@ -375,15 +383,15 @@ export default function ProjectAccordion({ project, ownership, rowSx = {}, onDel
                         </Typography>
                         <Chip
                             size="small"
-                            label={isOwner ? 'OWNER' : 'COLLABORATOR'}
+                            label={isDraft ? 'DRAFT' : (isOwner ? 'OWNER' : 'COLLABORATOR')}
                             sx={{
                                 height: 20,
                                 fontWeight: 700,
                                 fontSize: '0.65rem',
                                 letterSpacing: '0.05em',
-                                background: alpha(ownershipColor, 0.12),
-                                color: ownershipColor,
-                                border: `1px solid ${alpha(ownershipColor, 0.25)}`,
+                                background: alpha(isDraft ? draftColor : ownershipColor, 0.12),
+                                color: isDraft ? draftColor : ownershipColor,
+                                border: `1px solid ${alpha(isDraft ? draftColor : ownershipColor, 0.25)}`,
                                 flexShrink: 0,
                                 maxWidth: { xs: 90, sm: 120 },
                                 '& .MuiChip-label': { px: 0.75 },

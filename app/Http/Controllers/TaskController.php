@@ -804,4 +804,42 @@ class TaskController extends Controller
             ->route('tasks.ai.form', $project)
             ->with('info', 'AI preview discarded. You can generate new tasks.');
     }
+
+    /**
+     * Store multiple tasks for a project (bulk creation)
+     */
+    public function storeBulk(Request $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'tasks' => 'required|array|min:1|max:20',
+            'tasks.*.title' => 'required|string|max:255',
+            'tasks.*.description' => 'nullable|string|max:2000',
+            'tasks.*.status' => 'nullable|string|in:todo,inprogress,review,done',
+            'tasks.*.priority' => 'nullable|string|in:low,medium,high,urgent',
+            // Note: estimated_hours column doesn't exist in tasks table
+        ]);
+
+        $createdTasks = [];
+
+        foreach ($validated['tasks'] as $taskData) {
+            $task = $project->tasks()->create([
+                'title' => $taskData['title'],
+                'description' => $taskData['description'] ?? '',
+                'status' => $taskData['status'] ?? 'todo',
+                'priority' => $taskData['priority'] ?? 'medium',
+                'creator_id' => $request->user()->id,
+            ]);
+
+            $createdTasks[] = $task;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tasks created successfully',
+            'tasks' => $createdTasks,
+            'count' => count($createdTasks),
+        ]);
+    }
 }

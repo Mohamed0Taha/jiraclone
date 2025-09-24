@@ -27,6 +27,7 @@ class Task extends Model
         'status',
         'milestone',
         'priority',
+        'estimated_hours',
         'duplicate_of',
         'parent_id',
     ];

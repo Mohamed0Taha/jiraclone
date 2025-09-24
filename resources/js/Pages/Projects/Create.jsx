@@ -29,6 +29,7 @@ import DocumentUploadStep from './DocumentUploadStep';
 const CreateStepBasics = lazy(() => import('./CreateStepBasics'));
 const CreateStepScope = lazy(() => import('./CreateStepScope'));
 const CreateStepObjectives = lazy(() => import('./CreateStepObjectives'));
+const CreateStepAITasks = lazy(() => import('./CreateStepAITasks'));
 const CreateStepReview = lazy(() => import('./CreateStepReview'));
 
 // Loading component for lazy-loaded steps
@@ -46,11 +47,16 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
         t('projects.steps.basics'),
         t('projects.steps.scopeTeam'),
         t('projects.steps.objectives'),
+        t('projects.steps.aiTasks'),
         t('projects.steps.review'),
     ];
     const [active, setActive] = useState(0);
     const [creationMethod, setCreationMethod] = useState(null); // 'manual' or 'document'
     const [documentAnalysisData, setDocumentAnalysisData] = useState(null);
+    const [aiTasksData, setAiTasksData] = useState(null);
+    const [skipAiTasks, setSkipAiTasks] = useState(false);
+    const [draftProject, setDraftProject] = useState(null); // Draft project for AI suggestions/tasks
+    const [isLoadingDraft, setIsLoadingDraft] = useState(false);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
@@ -80,6 +86,68 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
         nameRef.current?.focus();
     }, []);
 
+    // Load draft project if draft parameter is provided
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const draftId = urlParams.get('draft');
+        
+        if (draftId && !draftProject && !isLoadingDraft) {
+            setIsLoadingDraft(true);
+            
+            // Load draft project data
+            fetch(`/projects/${draftId}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin',
+            })
+                .then(response => {
+                    console.log('Draft loading response:', response.status, response.statusText);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    console.log('Draft project loaded:', result);
+                    const project = result.project || result;
+                    
+                    // Populate form with draft project data
+                    setData({
+                        name: project.name || '',
+                        key: project.key || '',
+                        description: project.description || '',
+                        start_date: project.start_date || '',
+                        end_date: project.end_date || '',
+                        meta: {
+                            project_type: project.meta?.project_type || '',
+                            domain: project.meta?.domain || '',
+                            area: project.meta?.area || '',
+                            location: project.meta?.location || '',
+                            team_size: project.meta?.team_size || 3,
+                            budget: project.meta?.budget || '',
+                            primary_stakeholder: project.meta?.primary_stakeholder || '',
+                            objectives: project.meta?.objectives || '',
+                            constraints: project.meta?.constraints || '',
+                        },
+                    });
+                    
+                    setDraftProject(project);
+                    setCreationMethod('manual'); // Set default method
+                    setActive(1); // Skip method selection, go to basics
+                })
+                .catch(error => {
+                    console.error('Failed to load draft project:', error);
+                    // Continue with normal flow if draft loading fails
+                })
+                .finally(() => {
+                    setIsLoadingDraft(false);
+                });
+        }
+    }, [draftProject, isLoadingDraft, setData]);
+
     // Debug: Log form data changes
     useEffect(() => {
         console.log('Form data changed:', data);
@@ -102,17 +170,70 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
     // Validation function using extracted logic
     const validate = useCallback((idx) => validateStep(idx, data, setLocalErrors, t), [data, t]);
 
-    const next = useCallback(() => {
+    // Create draft project for AI suggestions and tasks
+    const createDraftProject = useCallback(async () => {
+        if (draftProject) return draftProject; // Already created
+        
+        setIsLoadingDraft(true);
+        console.log('Creating draft project with data:', { name: data.name, description: data.description, key: data.key });
+        
+        try {
+            const response = await fetch('/projects/draft', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    name: data.name || 'Untitled Project',
+                    key: data.key || 'DRAFT',
+                    description: data.description || '',
+                    status: 'draft',
+                    ...data
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            console.log('Draft project created successfully:', result.project);
+            setDraftProject(result.project);
+            return result.project;
+        } catch (error) {
+            console.error('Failed to create draft project:', error);
+            return null;
+        } finally {
+            setIsLoadingDraft(false);
+        }
+    }, [data, draftProject]);
+
+    // Create draft project whenever we have sufficient data and no draft exists
+    useEffect(() => {
+        if (!draftProject && (data.name || data.description) && active >= 1 && !isLoadingDraft) {
+            createDraftProject().catch((error) => {
+                console.error('Failed to create draft project:', error);
+            });
+        }
+    }, [draftProject, data.name, data.description, active, createDraftProject, isLoadingDraft]);
+
+    const next = useCallback(async () => {
         // Skip validation for method selection step
         if (active === 0) {
             setActive((n) => Math.min(steps.length - 1, n + 1));
             return;
         }
         if (!validate(active)) return;
+        
         setActive((n) => Math.min(steps.length - 1, n + 1));
     }, [active, validate, steps.length]);
 
-    const back = useCallback(() => setActive((n) => Math.max(0, n - 1)), []);
+    const back = useCallback(() => {
+        setActive((n) => Math.max(0, n - 1));
+    }, []);
 
     const handleDocumentAnalyzed = useCallback(
         (analysisDataRaw) => {
@@ -319,17 +440,55 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
         setActive(1);
     }, []);
 
+    const handleTasksGenerated = useCallback((tasks, context) => {
+        setAiTasksData({ tasks, context });
+        setActive(active + 1); // Move to review step
+    }, [active]);
+
+    const handleSkipAiTasks = useCallback(() => {
+        setSkipAiTasks(true);
+        setActive(active + 1); // Move to review step
+    }, [active]);
+
     const submit = useCallback(
         (e) => {
             e.preventDefault();
             if (!validate(active)) return;
-            post('/projects', {
-                onSuccess: () => {
-                    reset();
-                },
-            });
+            
+            // If we have a draft project, complete it instead of creating new
+            if (draftProject) {
+                const submitData = {
+                    ...data,
+                    aiTasksData: aiTasksData,
+                    skipAiTasks: skipAiTasks,
+                    status: 'active', // Change from draft to active
+                };
+                
+                // Tasks are already saved to draft project, just completing it
+                console.log('Completing draft project:', draftProject?.id);
+                
+                post(`/projects/${draftProject.id}/complete`, submitData, {
+                    onSuccess: () => {
+                        reset();
+                        setDraftProject(null);
+                    },
+                });
+            } else {
+                // Fallback: create new project directly
+                const submitData = {
+                    ...data,
+                    aiTasksData: aiTasksData,
+                    skipAiTasks: skipAiTasks,
+                };
+                
+                post('/projects', submitData, {
+                    onSuccess: () => {
+                        reset();
+                    },
+                });
+            }
         },
-        [active, validate, post, reset]
+        [active, validate, post, reset, data, aiTasksData, skipAiTasks, draftProject]
     );
 
     // Keyboard shortcut (Ctrl/Cmd + S)
@@ -397,10 +556,23 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
             case 4:
                 return (
                     <Suspense fallback={<StepLoader />}>
+                        <CreateStepAITasks
+                            {...commonProps}
+                            draftProject={draftProject}
+                            onTasksGenerated={handleTasksGenerated}
+                            onSkip={handleSkipAiTasks}
+                        />
+                    </Suspense>
+                );
+            case 5:
+                return (
+                    <Suspense fallback={<StepLoader />}>
                         <CreateStepReview
                             data={data}
                             documentAnalysisData={documentAnalysisData}
                             creationMethod={creationMethod}
+                            aiTasksData={aiTasksData}
+                            skipAiTasks={skipAiTasks}
                         />
                     </Suspense>
                 );
@@ -490,13 +662,16 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
                                 textShadow: '0 4px 22px rgba(0,0,0,0.25)',
                             }}
                         >
-                            {t('projects.createNewProjectTitle')}
+                            {draftProject ? 'Continue Draft Project' : t('projects.createNewProjectTitle')}
                         </Typography>
                         <Typography
                             variant="h6"
                             sx={{ mt: 2, maxWidth: 720, color: alpha('#fff', 0.92) }}
                         >
-                            {t('projects.createNewProjectSubtitle')}
+                            {draftProject 
+                                ? 'Complete your project setup and add tasks to get started' 
+                                : t('projects.createNewProjectSubtitle')
+                            }
                         </Typography>
                     </Container>
                 </Box>
@@ -526,7 +701,7 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
                                     overflow: 'hidden',
                                 }}
                             >
-                                {processing && (
+                                {(processing || isLoadingDraft) && (
                                     <LinearProgress
                                         sx={{
                                             position: 'absolute',
@@ -565,8 +740,8 @@ export default function Create({ auth, projectTypes = [], domains = [] }) {
                                 <form onSubmit={submit}>
                                     <Box sx={{ mb: 4, minHeight: 400 }}>{renderStepContent()}</Box>
 
-                                    {/* Hide navigation buttons on method selection step */}
-                                    {active > 0 && (
+                                    {/* Hide navigation buttons on method selection step and AI tasks step */}
+                                    {active > 0 && active !== 4 && (
                                         <Stack
                                             direction="row"
                                             spacing={2}

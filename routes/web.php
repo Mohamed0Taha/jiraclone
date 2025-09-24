@@ -464,6 +464,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects/analyze-document', [ProjectController::class, 'analyzeDocument'])->name('projects.analyze-document');
+    Route::post('/projects/draft', [ProjectController::class, 'createDraft'])->name('projects.draft.create');
+    Route::post('/projects/{project}/complete', [ProjectController::class, 'completeDraft'])->name('projects.draft.complete');
+    Route::post('/projects/{project}/tasks/bulk', [TaskController::class, 'storeBulk'])->name('projects.tasks.bulk');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
 
     // Single, canonical AI PDF endpoint (premium feature - reports)

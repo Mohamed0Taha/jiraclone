@@ -1054,6 +1054,7 @@
       "basics": "Basics",
       "scopeTeam": "Scope & Team",
       "objectives": "Objectives",
+      "aiTasks": "AI Tasks",
       "review": "Review"
     },
     "edit": {
@@ -1104,6 +1105,12 @@
       "startsOn": "Starts {{date}}",
       "teamMembersChip": "{{count}} team member",
       "teamMembersChip_plural": "{{count}} team members"
+    },
+    "aiTasks": {
+      "title": "AI Task Generation",
+      "subtitle": "Let AI generate initial tasks for your project based on the information you've provided.",
+      "skipTitle": "Skip AI Task Generation",
+      "skipDescription": "You can always generate tasks later from the project dashboard."
     },
     "validation": {
       "endDateAfterStart": "End date must be after start date",

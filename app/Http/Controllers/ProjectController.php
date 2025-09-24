@@ -84,6 +84,7 @@ class ProjectController extends Controller
                 'key' => $p->key,
                 'description' => $p->description,
                 'meta' => $p->meta,
+                'status' => $p->status ?? 'active',
                 'start_date' => optional($p->start_date)->toDateString(),
                 'end_date' => optional($p->end_date)->toDateString(),
                 'tasks' => $tasks,
@@ -197,6 +198,115 @@ class ProjectController extends Controller
         return redirect()->route('projects.show', $project);
     }
 
+    public function createDraft(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'key' => 'nullable|string|max:12|regex:/^[A-Z0-9]+$/',
+            'description' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'meta' => 'nullable|array',
+            'meta.project_type' => 'nullable|string|max:120',
+            'meta.domain' => 'nullable|string|max:120',
+            'meta.area' => 'nullable|string|max:120',
+            'meta.location' => 'nullable|string|max:180',
+            'meta.team_size' => 'nullable|integer|min:1|max:10000',
+            'meta.budget' => 'nullable|string|max:120',
+            'meta.primary_stakeholder' => 'nullable|string|max:180',
+            'meta.objectives' => 'nullable|string|max:2000',
+            'meta.constraints' => 'nullable|string|max:2000',
+        ]);
+
+        $meta = $this->sanitizeMeta($validated['meta'] ?? []);
+
+        $lines = $this->buildContextLines($validated, $meta);
+
+        $augmented = trim((string) ($validated['description'] ?? ''));
+        if (! empty($lines)) {
+            $augmented = trim($augmented."\n\nContext Summary:\n- ".implode("\n- ", $lines));
+        }
+
+        $project = $request->user()->projects()->create([
+            'name' => $validated['name'],
+            'key' => $validated['key'] ?: null,
+            'description' => $augmented,
+            'meta' => ! empty($meta) ? $meta : null,
+            'start_date' => $validated['start_date'] ?? null,
+            'end_date' => $validated['end_date'] ?? null,
+            'status' => 'draft', // Mark as draft
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'project' => $project,
+            'message' => 'Draft project created successfully',
+        ]);
+    }
+
+    public function completeDraft(Request $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        // Validate that this is a draft project
+        if ($project->status !== 'draft') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Project is not in draft status',
+            ], 400);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'key' => 'nullable|string|max:12|regex:/^[A-Z0-9]+$/',
+            'description' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'meta' => 'nullable|array',
+            'meta.project_type' => 'nullable|string|max:120',
+            'meta.domain' => 'nullable|string|max:120',
+            'meta.area' => 'nullable|string|max:120',
+            'meta.location' => 'nullable|string|max:180',
+            'meta.team_size' => 'nullable|integer|min:1|max:10000',
+            'meta.budget' => 'nullable|string|max:120',
+            'meta.primary_stakeholder' => 'nullable|string|max:180',
+            'meta.objectives' => 'nullable|string|max:2000',
+            'meta.constraints' => 'nullable|string|max:2000',
+            'aiTasksData' => 'nullable|array',
+            'aiTasksData.tasks' => 'nullable|array',
+            'aiTasksData.tasks.*.title' => 'nullable|string',
+            'aiTasksData.tasks.*.description' => 'nullable|string',
+            'aiTasksData.tasks.*.priority' => 'nullable|string',
+            'aiTasksData.tasks.*.status' => 'nullable|string',
+            'aiTasksData.tasks.*.estimated_hours' => 'nullable|integer',
+            'skipAiTasks' => 'nullable|boolean',
+        ]);
+
+        $meta = $this->sanitizeMeta($validated['meta'] ?? []);
+        $lines = $this->buildContextLines($validated, $meta);
+
+        $augmented = trim((string) ($validated['description'] ?? ''));
+        if (! empty($lines)) {
+            $augmented = trim($augmented."\n\nContext Summary:\n- ".implode("\n- ", $lines));
+        }
+
+        // Update the project with final data
+        $project->update([
+            'name' => $validated['name'],
+            'key' => $validated['key'] ?: null,
+            'description' => $augmented,
+            'meta' => ! empty($meta) ? $meta : null,
+            'start_date' => $validated['start_date'] ?? null,
+            'end_date' => $validated['end_date'] ?? null,
+            'status' => 'active', // Change from draft to active
+        ]);
+
+        // Tasks are now created immediately when generated, not during project completion
+        // This maintains backward compatibility but tasks should already exist
+
+        return redirect()->route('projects.show', $project);
+    }
+
     public function show(Project $project)
     {
         $this->authorize('view', $project);
@@ -212,16 +322,27 @@ class ProjectController extends Controller
             $tasks[$status] = $raw->get($status, collect())->values();
         }
 
+        $projectData = [
+            'id' => $project->id,
+            'name' => $project->name,
+            'key' => $project->key,
+            'description' => $project->description,
+            'meta' => $project->meta,
+            'status' => $project->status ?? 'active',
+            'start_date' => optional($project->start_date)->toDateString(),
+            'end_date' => optional($project->end_date)->toDateString(),
+        ];
+
+        // Return JSON for API requests (used by draft loading)
+        if (request()->wantsJson() || request()->expectsJson()) {
+            return response()->json([
+                'project' => $projectData,
+                'tasks' => $tasks,
+            ]);
+        }
+
         return Inertia::render('Tasks/Board', [
-            'project' => [
-                'id' => $project->id,
-                'name' => $project->name,
-                'key' => $project->key,
-                'description' => $project->description,
-                'meta' => $project->meta,
-                'start_date' => optional($project->start_date)->toDateString(),
-                'end_date' => optional($project->end_date)->toDateString(),
-            ],
+            'project' => $projectData,
             'tasks' => $tasks,
         ]);
     }

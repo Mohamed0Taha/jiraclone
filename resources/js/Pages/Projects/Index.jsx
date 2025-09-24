@@ -109,13 +109,23 @@ export default function ProjectsIndex({ projects, auth }) {
                                 >
                                     {project.name}
                                 </Typography>
-                                <Chip
-                                    icon={getRoleIcon(project.user_role)}
-                                    label={project.user_role}
-                                    size="small"
-                                    color={getRoleColor(project.user_role)}
-                                    sx={{ textTransform: 'capitalize' }}
-                                />
+                                {/* Show DRAFT status for draft projects, otherwise show user role */}
+                                {project.status === 'draft' ? (
+                                    <Chip
+                                        label="DRAFT"
+                                        size="small"
+                                        color="warning"
+                                        sx={{ textTransform: 'uppercase', fontWeight: 600 }}
+                                    />
+                                ) : (
+                                    <Chip
+                                        icon={getRoleIcon(project.user_role)}
+                                        label={project.user_role}
+                                        size="small"
+                                        color={getRoleColor(project.user_role)}
+                                        sx={{ textTransform: 'capitalize' }}
+                                    />
+                                )}
                             </Stack>
                             {project.description && (
                                 <Typography

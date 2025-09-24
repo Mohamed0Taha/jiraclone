@@ -2111,10 +2111,17 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
     }
     const pct = total === 0 ? 0 : Math.round((done / total) * 100);
 
-    const ownershipColor = isOwner ? theme.palette.primary.main : theme.palette.secondary.main;
-    const ownershipBg = isOwner
-        ? alpha(theme.palette.primary.main, 0.05)
-        : alpha(theme.palette.secondary.main, 0.05);
+    const isDraftProject = project?.status === 'draft';
+    const ownershipColor = isDraftProject
+        ? theme.palette.warning.main
+        : isOwner
+            ? theme.palette.primary.main
+            : theme.palette.secondary.main;
+    const ownershipBg = isDraftProject
+        ? alpha(theme.palette.warning.main, 0.08)
+        : isOwner
+            ? alpha(theme.palette.primary.main, 0.05)
+            : alpha(theme.palette.secondary.main, 0.05);
 
     return (
         <Card
@@ -2171,14 +2178,14 @@ const ProjectCard = memo(function ProjectCard({ project, ownership, onDelete }) 
             >
                 <Chip
                     size="small"
-                    label={isOwner ? 'OWNER' : 'COLLABORATOR'}
+                    label={isDraftProject ? 'DRAFT' : isOwner ? 'OWNER' : 'COLLABORATOR'}
                     sx={{
                         fontWeight: 800,
                         fontSize: '0.65rem',
                         letterSpacing: '0.1em',
-                        background: alpha(ownershipColor, 0.15),
+                        background: alpha(ownershipColor, 0.18),
                         color: ownershipColor,
-                        border: `1px solid ${alpha(ownershipColor, 0.3)}`,
+                        border: `1px solid ${alpha(ownershipColor, 0.35)}`,
                         '& .MuiChip-label': {
                             px: 1.5,
                         },

@@ -18,6 +18,7 @@ class Project extends Model
         'meta',
         'start_date',
         'end_date',
+        'status',
     ];
 
     protected $casts = [

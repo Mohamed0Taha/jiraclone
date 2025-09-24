@@ -32,6 +32,7 @@ class DashboardController extends Controller
                 'id' => $p->id,
                 'name' => $p->name,
                 'description' => $p->description,
+                'status' => $p->status ?? 'active',
                 'is_owner' => $p->user_id === $user->id,
                 'owner' => [
                     'id' => $p->user->id,

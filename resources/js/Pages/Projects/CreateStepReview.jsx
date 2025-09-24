@@ -3,7 +3,7 @@
 
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Typography, Stack, Chip, Divider, Alert } from '@mui/material';
+import { Box, Typography, Stack, Chip, Divider, Alert, Card, CardContent } from '@mui/material';
 
 const ReviewLine = memo(({ label, value }) => (
     <Stack direction="row" spacing={1.5} alignItems="baseline">
@@ -14,7 +14,7 @@ const ReviewLine = memo(({ label, value }) => (
     </Stack>
 ));
 
-const CreateStepReview = memo(({ data, documentAnalysisData, creationMethod }) => {
+const CreateStepReview = memo(({ data, documentAnalysisData, creationMethod, aiTasksData, skipAiTasks }) => {
     const { t } = useTranslation();
     const formatDate = (dateStr) => {
         if (!dateStr) return '';
@@ -95,6 +95,65 @@ const CreateStepReview = memo(({ data, documentAnalysisData, creationMethod }) =
                 </Stack>
             </Box>
 
+            {/* AI Tasks Section */}
+            {(aiTasksData || skipAiTasks) && (
+                <>
+                    <Divider />
+                    <Box>
+                        <Typography variant="subtitle1" fontWeight={600} mb={2}>
+                            AI Task Generation
+                        </Typography>
+                        {skipAiTasks ? (
+                            <Alert severity="info">
+                                <Typography variant="body2">
+                                    AI task generation was skipped. You can generate tasks later from the project dashboard.
+                                </Typography>
+                            </Alert>
+                        ) : aiTasksData?.tasks ? (
+                            <Box>
+                                <Alert severity="success" sx={{ mb: 2 }}>
+                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
+                                        ✨ AI Generated {aiTasksData.tasks.length} Tasks
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Tasks will be created automatically when the project is set up.
+                                    </Typography>
+                                </Alert>
+                                <Card variant="outlined">
+                                    <CardContent>
+                                        <Typography variant="subtitle2" fontWeight={600} mb={1}>
+                                            Generated Tasks Preview:
+                                        </Typography>
+                                        <Stack spacing={1}>
+                                            {aiTasksData.tasks.slice(0, 3).map((task, index) => (
+                                                <Box key={task.id} sx={{ pl: 2 }}>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {index + 1}. {task.title}
+                                                    </Typography>
+                                                    {task.description && (
+                                                        <Typography variant="caption" color="text.secondary" sx={{ pl: 1 }}>
+                                                            {task.description.length > 80 
+                                                                ? task.description.substring(0, 80) + '...'
+                                                                : task.description
+                                                            }
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                            ))}
+                                            {aiTasksData.tasks.length > 3 && (
+                                                <Typography variant="caption" color="text.secondary" sx={{ pl: 2 }}>
+                                                    ... and {aiTasksData.tasks.length - 3} more tasks
+                                                </Typography>
+                                            )}
+                                        </Stack>
+                                    </CardContent>
+                                </Card>
+                            </Box>
+                        ) : null}
+                    </Box>
+                </>
+            )}
+
             <Box sx={{ pt: 2 }}>
                 <Stack direction="row" spacing={1} flexWrap="wrap">
                     <Chip
@@ -108,6 +167,13 @@ const CreateStepReview = memo(({ data, documentAnalysisData, creationMethod }) =
                     )}
                     {data.meta.team_size > 1 && (
                         <Chip label={t('projects.review.teamMembersChip_plural', { count: data.meta.team_size })} variant="outlined" />
+                    )}
+                    {aiTasksData?.tasks && (
+                        <Chip 
+                            label={`${aiTasksData.tasks.length} AI Tasks Ready`} 
+                            variant="outlined" 
+                            color="success"
+                        />
                     )}
                 </Stack>
             </Box>
