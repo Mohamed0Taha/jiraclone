@@ -30,6 +30,7 @@ import {
     ListItemText,
     Divider,
     Fab,
+    useTheme,
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
@@ -216,6 +217,7 @@ export default function Board({
 }) {
     const page = usePage();
     const { t } = useTranslation();
+    const theme = useTheme();
     const isPro = typeof isProProp === 'boolean' ? isProProp : !!(page?.props && page.props.isPro);
     const { shouldShowOverlay, userPlan } = useSubscription();
     const automationLocked = shouldShowOverlay('automation');
@@ -1488,13 +1490,54 @@ export default function Board({
                                         overflowY: 'hidden',
                                         scrollSnapType: 'x proximity',
                                         width: '100%',
-                                        '&::-webkit-scrollbar': { height: 8 },
+                                        minWidth: 0, // Ensures flex container can shrink
+                                        // Enhanced scrollbar styling
+                                        '&::-webkit-scrollbar': { 
+                                            height: 12,
+                                            backgroundColor: alpha('#f1f5f9', 0.3),
+                                            borderRadius: 6,
+                                        },
                                         '&::-webkit-scrollbar-thumb': {
-                                            background: alpha('#000', 0.2),
-                                            borderRadius: 8,
+                                            background: theme.palette.mode === 'dark' 
+                                                ? 'linear-gradient(90deg, rgba(148, 163, 184, 0.8), rgba(100, 116, 139, 0.9))'
+                                                : 'linear-gradient(90deg, rgba(71, 85, 105, 0.6), rgba(51, 65, 85, 0.8))',
+                                            borderRadius: 6,
+                                            border: `1px solid ${alpha('#e2e8f0', 0.4)}`,
+                                            '&:hover': {
+                                                background: theme.palette.mode === 'dark'
+                                                    ? 'linear-gradient(90deg, rgba(148, 163, 184, 0.9), rgba(100, 116, 139, 1))'
+                                                    : 'linear-gradient(90deg, rgba(71, 85, 105, 0.8), rgba(51, 65, 85, 1))',
+                                            },
                                         },
                                         '&::-webkit-scrollbar-track': {
-                                            background: 'transparent',
+                                            background: alpha('#f8fafc', 0.2),
+                                            borderRadius: 6,
+                                        },
+                                        // Scroll indicators for better UX
+                                        position: 'relative',
+                                        '&::before': {
+                                            content: '""',
+                                            position: 'absolute',
+                                            top: 0,
+                                            right: 0,
+                                            width: 20,
+                                            height: '100%',
+                                            background: 'linear-gradient(90deg, transparent, rgba(0,0,0,0.05))',
+                                            pointerEvents: 'none',
+                                            zIndex: 1,
+                                            opacity: 0.6,
+                                        },
+                                        '&::after': {
+                                            content: '""',
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: 20,
+                                            height: '100%',
+                                            background: 'linear-gradient(90deg, rgba(0,0,0,0.05), transparent)',
+                                            pointerEvents: 'none',
+                                            zIndex: 1,
+                                            opacity: 0.6,
                                         },
                                     }}
                                 >
