@@ -83,6 +83,11 @@ class CommandExecutionService
                 'data' => $snapshot,
                 'requires_confirmation' => false,
                 'ui' => ['show_snapshot' => true],
+                'meta' => [
+                    'intent' => 'command_execution',
+                    'tool' => 'command-execution',
+                    'executed_plan' => $plan,
+                ],
             ];
         } catch (Throwable $e) {
             Log::error('[CommandExecutionService] Execution failed', [
@@ -96,6 +101,11 @@ class CommandExecutionService
                 'type' => 'error',
                 'message' => 'Something went wrong. Please adjust and try again.',
                 'requires_confirmation' => false,
+                'meta' => [
+                    'intent' => 'command_execution',
+                    'tool' => 'command-execution',
+                    'error' => true,
+                ],
             ];
         }
     }

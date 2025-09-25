@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { generateCustomView } from '@/lib/ai-actions';
 import { router, usePage } from '@inertiajs/react';
@@ -23,6 +23,7 @@ import {
     FormControlLabel,
     keyframes,
     alpha,
+    useTheme,
 } from '@mui/material';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
@@ -50,59 +51,267 @@ const float = keyframes`
   100% { transform: translateY(0px); }
 `;
 
-// Theme colors (from your theme.js)
-const colors = {
-    primary: '#6366F1',
-    secondary: '#22D3EE',
-    success: '#34D399',
-    warning: '#F59E0B',
-    error: '#F87171',
-    info: '#60A5FA',
-    textPrimary: '#1E293B',
-    textSecondary: '#64748B',
-    background: '#FAFBFC',
-    paper: '#FFFFFF',
+const toTitleCase = (value) => {
+    if (!value) return '';
+    return String(value)
+        .replace(/[_-]+/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+        .trim();
 };
 
-// Chat-specific palette using theme colors
-const palette = {
-    appBg: 'linear-gradient(135deg, #1e3a8a, #4f46e5, #7c3aed)',
-    appGlass: alpha(colors.paper, 0.2),
-    titleBg: `linear-gradient(90deg, ${alpha(colors.primary, 0.55)}, ${alpha(colors.secondary, 0.45)})`,
-    ribbonBg: alpha('#233096', 0.65),
-    ribbonBorder: alpha(colors.paper, 0.35),
-    scrollbar: alpha(colors.primary, 0.55),
-    userBubble: `linear-gradient(135deg, ${alpha('#ec4899', 0.9)}, ${alpha('#8b5cf6', 0.85)})`,
-    userBubbleBorder: alpha('#a78bfa', 0.75),
-    asstBubble: `linear-gradient(135deg, ${alpha(colors.info, 0.9)}, ${alpha(colors.secondary, 0.85)})`,
-    asstBubbleBorder: alpha(colors.secondary, 0.75),
-    stripeUser: 'linear-gradient(90deg, #f472b6, #a78bfa)',
-    stripeAsst: `linear-gradient(90deg, ${colors.info}, ${colors.secondary})`,
-    chipGold: colors.warning,
-    chipGoldBg: alpha(colors.warning, 0.18),
-    chipGoldHover: alpha(colors.warning, 0.28),
-    sendGradient: `linear-gradient(135deg, ${colors.secondary}, ${colors.primary})`,
-    sendGradientHover: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
-    sendFocusRing: `0 0 0 3px ${alpha(colors.secondary, 0.35)}`,
-    sendShadow: `0 6px 24px ${alpha(colors.primary, 0.35)}`,
-    sendShadowHover: `0 10px 28px ${alpha(colors.primary, 0.5)}`,
-    inputBg: alpha(colors.paper, 0.2),
-    inputBgHover: alpha(colors.paper, 0.25),
-    inputBgFocus: alpha(colors.paper, 0.27),
-    inputRing: `0 0 0 3px ${alpha('#a78bfa', 0.35)}`,
-    borderSoft: alpha(colors.paper, 0.35),
-    snapshotBg: alpha(colors.secondary, 0.12),
-    snapshotBorder: alpha(colors.secondary, 0.35),
-    dangerBorder: alpha(colors.error, 0.85),
-    dangerBg: alpha(colors.error, 0.15),
-    successBg: alpha(colors.success, 0.2),
-    successText: colors.success,
-    cancelBg: alpha(colors.error, 0.18),
-    cancelText: colors.error,
+const formatPlanValue = (value) => {
+    if (Array.isArray(value)) {
+        return value.map((item) => formatPlanValue(item)).join(', ');
+    }
+
+    if (value && typeof value === 'object') {
+        const entries = Object.entries(value).filter(([, v]) => v !== undefined && v !== null);
+        if (entries.length === 1 && entries[0][0] === 'id') {
+            const idVal = entries[0][1];
+
+            return typeof idVal === 'number' ? `#${idVal}` : String(idVal);
+        }
+
+        return entries
+            .map(([key, val]) => `${toTitleCase(key)}: ${formatPlanValue(val)}`)
+            .join(' • ');
+    }
+
+    if (typeof value === 'boolean') {
+        return value ? 'Yes' : 'No';
+    }
+
+    if (value === null || typeof value === 'undefined') {
+        return '—';
+    }
+
+    return String(value);
+};
+
+const summarizeCommandPlan = (plan) => {
+    if (!plan || typeof plan !== 'object') {
+        return [];
+    }
+
+    const rows = [];
+    const append = (label, value) => {
+        const formatted = formatPlanValue(value);
+        if (formatted && formatted !== '—') {
+            rows.push({ label, value: formatted });
+        }
+    };
+
+    if (plan.type) {
+        append('Action', toTitleCase(plan.type));
+    }
+
+    if (plan.selector && Object.keys(plan.selector).length > 0) {
+        append('Selector', plan.selector);
+    }
+
+    if (plan.filters && Object.keys(plan.filters).length > 0) {
+        append('Filters', plan.filters);
+    }
+
+    if (plan.payload && Object.keys(plan.payload).length > 0) {
+        append('Payload', plan.payload);
+    }
+
+    if (plan.changes && Object.keys(plan.changes).length > 0) {
+        append('Changes', plan.changes);
+    }
+
+    if (plan.updates && Object.keys(plan.updates).length > 0) {
+        append('Updates', plan.updates);
+    }
+
+    if (plan.assignee) {
+        append('Assignee', plan.assignee);
+    }
+
+    if (plan.assignee_hint) {
+        append('Assignee Hint', plan.assignee_hint);
+    }
+
+    if (plan.limit || plan.order || plan.order_by) {
+        append('Window', {
+            limit: plan.limit,
+            order: plan.order,
+            order_by: plan.order_by,
+        });
+    }
+
+    return rows;
+};
+
+const sanitizeAssistantText = (text) => {
+    if (!text) return '';
+    return text
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/__(.*?)__/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .trim();
+};
+
+const structureAssistantMessage = (text) => {
+    const sanitized = sanitizeAssistantText(text);
+    if (!sanitized) {
+        return [];
+    }
+
+    const lines = sanitized.split(/\r?\n/);
+    const blocks = [];
+    let listBuffer = null;
+
+    const flushList = () => {
+        if (listBuffer && listBuffer.length > 0) {
+            blocks.push({ type: 'list', items: listBuffer });
+        }
+        listBuffer = null;
+    };
+
+    lines.forEach((rawLine) => {
+        const line = rawLine.trim();
+        if (line === '') {
+            flushList();
+            return;
+        }
+
+        const bulletMatch = line.match(/^(?:[•*\-]|\d+\.)\s*(.+)$/);
+        if (bulletMatch) {
+            if (!listBuffer) {
+                listBuffer = [];
+            }
+            listBuffer.push(bulletMatch[1]);
+
+            return;
+        }
+
+        flushList();
+        blocks.push({ type: 'paragraph', text: line });
+    });
+
+    flushList();
+
+    return blocks;
 };
 
 export default function AssistantChat({ project, tasks, allTasks, users, methodology, open, onClose, isCustomView = false, onSpaGenerated = null, viewName, currentComponentCode = null }) {
     const { t } = useTranslation();
+    const theme = useTheme();
+    const palette = useMemo(() => {
+        const isDark = theme.palette.mode === 'dark';
+        const primary = theme.palette.primary?.main ?? '#1d4ed8';
+        const primaryDark = theme.palette.primary?.dark ?? '#1e3a8a';
+        const secondary = theme.palette.secondary?.main ?? '#0ea5e9';
+        const secondaryDark = theme.palette.secondary?.dark ?? '#0369a1';
+        const success = theme.palette.success?.main ?? '#22c55e';
+        const warning = theme.palette.warning?.main ?? '#f59e0b';
+        const error = theme.palette.error?.main ?? '#ef4444';
+        const info = theme.palette.info?.main ?? '#60a5fa';
+        const grey = theme.palette.grey ?? {};
+        const surface = isDark ? alpha('#0b1220', 0.94) : '#ffffff';
+
+        return {
+            tone: {
+                primary,
+                primaryDark,
+                secondary,
+                secondaryDark,
+                success,
+                warning,
+                error,
+                info,
+                neutral: {
+                    50: grey[50] ?? '#f8fafc',
+                    100: grey[100] ?? '#f1f5f9',
+                    200: grey[200] ?? '#e2e8f0',
+                    300: grey[300] ?? '#cbd5f5',
+                    400: grey[400] ?? '#94a3b8',
+                    500: grey[500] ?? '#64748b',
+                    600: grey[600] ?? '#475569',
+                },
+            },
+            appBg: isDark
+                ? 'radial-gradient(circle at 10% -10%, rgba(14,32,58,0.9) 0%, rgba(2,6,15,0.95) 55%, rgba(1,3,10,0.98) 100%)'
+                : 'radial-gradient(circle at 0% -20%, rgba(226,232,240,0.8) 0%, #f7f8fb 55%, #eef3f9 100%)',
+            panelBg: surface,
+            panelBorder: isDark ? 'rgba(148,163,184,0.14)' : 'rgba(15,23,42,0.08)',
+            panelShadow: isDark ? '0 32px 68px rgba(3,7,18,0.65)' : '0 32px 68px rgba(15,23,42,0.15)',
+            titleBg: isDark
+                ? 'linear-gradient(120deg, rgba(30,41,59,0.95), rgba(51,65,85,0.92))'
+                : 'linear-gradient(120deg, rgba(59,130,246,0.9), rgba(37,99,235,0.95))',
+            headerText: isDark ? '#f8fbff' : '#ffffff',
+            headerIcon: isDark ? 'rgba(226,232,240,0.9)' : 'rgba(255,255,255,0.95)',
+            projectChipBg: isDark ? 'rgba(148,163,184,0.12)' : 'rgba(255,255,255,0.15)',
+            projectChipBorder: isDark ? 'rgba(148,163,184,0.24)' : 'rgba(255,255,255,0.25)',
+            projectChipText: isDark ? '#f1f5f9' : '#ffffff',
+            ribbonBg: isDark ? 'rgba(8,14,24,0.88)' : 'rgba(248,250,252,0.92)',
+            ribbonBorder: isDark ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.06)',
+            ribbonLabel: isDark ? 'rgba(148,163,184,0.7)' : '#334155',
+            ribbonText: isDark ? 'rgba(226,232,240,0.92)' : '#1f2937',
+            ribbonTextMuted: isDark ? 'rgba(148,163,184,0.6)' : 'rgba(71,85,105,0.75)',
+            chipGold: isDark ? '#facc15' : primary,
+            chipGoldBg: isDark ? 'rgba(250,204,21,0.12)' : alpha(primary, 0.1),
+            chipGoldHover: isDark ? 'rgba(250,204,21,0.2)' : alpha(primary, 0.16),
+            chipGoldBorder: isDark ? 'rgba(250,204,21,0.3)' : alpha(primary, 0.22),
+            scrollbar: isDark ? 'rgba(148,163,184,0.45)' : 'rgba(148,163,184,0.6)',
+            scrollTrack: isDark ? 'rgba(14,20,32,0.55)' : 'rgba(226,232,240,0.7)',
+            asstBubble: isDark
+                ? 'linear-gradient(135deg, rgba(30,41,59,0.95), rgba(51,65,85,0.92))'
+                : 'linear-gradient(135deg, rgba(248,250,252,0.98), rgba(241,245,249,0.96))',
+            asstBubbleBorder: isDark ? 'rgba(148,163,184,0.25)' : 'rgba(203,213,225,0.3)',
+            assistantStripe: isDark
+                ? 'linear-gradient(90deg, rgba(56,189,248,0.28), rgba(59,130,246,0.2))'
+                : 'linear-gradient(90deg, rgba(59,130,246,0.25), rgba(14,165,233,0.2))',
+            stripeAsst: isDark
+                ? 'linear-gradient(90deg, rgba(56,189,248,0.28), rgba(59,130,246,0.2))'
+                : 'linear-gradient(90deg, rgba(59,130,246,0.25), rgba(14,165,233,0.2))',
+            assistantText: isDark ? 'rgba(241,245,249,0.95)' : '#374151',
+            userBubble: isDark
+                ? 'linear-gradient(135deg, rgba(59,130,246,0.9), rgba(37,99,235,0.85))'
+                : 'linear-gradient(135deg, rgba(59,130,246,0.95), rgba(37,99,235,0.9))',
+            userBubbleBorder: isDark ? 'rgba(96,165,250,0.3)' : 'rgba(147,197,253,0.4)',
+            userStripe: isDark
+                ? 'linear-gradient(90deg, rgba(250,204,21,0.32), rgba(148,163,184,0.2))'
+                : 'linear-gradient(90deg, rgba(148,163,184,0.22), rgba(203,213,225,0.16))',
+            stripeUser: isDark
+                ? 'linear-gradient(90deg, rgba(250,204,21,0.32), rgba(148,163,184,0.2))'
+                : 'linear-gradient(90deg, rgba(148,163,184,0.22), rgba(203,213,225,0.16))',
+            userText: '#ffffff',
+            metaCaption: isDark ? 'rgba(148,163,184,0.75)' : 'rgba(71,85,105,0.75)',
+            metaTime: isDark ? 'rgba(148,163,184,0.55)' : 'rgba(100,116,139,0.6)',
+            inputBg: isDark ? 'rgba(15,23,42,0.65)' : 'rgba(248,250,252,0.8)',
+            inputBgHover: isDark ? 'rgba(23,37,69,0.72)' : 'rgba(241,245,249,0.95)',
+            inputBgFocus: isDark ? 'rgba(30,41,59,0.8)' : 'rgba(226,232,240,0.95)',
+            inputOutline: isDark ? 'rgba(59,130,246,0.35)' : 'rgba(15,23,42,0.12)',
+            inputFocusRing: isDark ? '0 0 0 2px rgba(59,130,246,0.25)' : '0 0 0 2px rgba(59,130,246,0.12)',
+            sendGradient: `linear-gradient(135deg, ${secondary}, ${primary})`,
+            sendGradientHover: `linear-gradient(135deg, ${primary}, ${secondary})`,
+            sendShadow: isDark
+                ? `0 10px 28px rgba(15,23,42,0.65)`
+                : `0 10px 28px rgba(15,23,42,0.18)`,
+            sendShadowHover: isDark
+                ? `0 12px 30px rgba(15,23,42,0.7)`
+                : `0 12px 30px rgba(59,130,246,0.28)`,
+            successBg: isDark ? 'rgba(34,197,94,0.18)' : 'rgba(22,163,74,0.14)',
+            successText: success,
+            cancelBg: isDark ? 'rgba(248,113,113,0.12)' : 'rgba(248,113,113,0.16)',
+            cancelText: error,
+            dangerBg: isDark ? 'rgba(220,88,88,0.14)' : 'rgba(220,38,38,0.12)',
+            dangerBorder: isDark ? 'rgba(220,38,38,0.3)' : 'rgba(220,38,38,0.22)',
+            snapshotBg: isDark ? 'rgba(14,165,233,0.12)' : 'rgba(14,116,233,0.1)',
+            snapshotBorder: isDark ? 'rgba(56,189,248,0.28)' : 'rgba(59,130,246,0.18)',
+            badgeBg: isDark ? 'rgba(56,189,248,0.16)' : 'rgba(59,130,246,0.12)',
+            badgeText: isDark ? 'rgba(125,211,252,0.9)' : 'rgba(30,64,175,0.9)',
+            isDark,
+        };
+    }, [theme]);
+
+    const tone = palette.tone;
+    const neutral = tone.neutral;
+    const isDarkMode = palette.isDark;
 
     useEffect(() => {
         if (open && isCustomView) {
@@ -157,6 +366,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
     const [busy, setBusy] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
     const [copiedIndex, setCopiedIndex] = useState(null);
+    const [expandedPlanIndex, setExpandedPlanIndex] = useState(null);
     const [pendingCommand, setPendingCommand] = useState(null);
     const [generationProgress, setGenerationProgress] = useState(null); // New state for SPA generation progress
 
@@ -271,6 +481,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                 });
                 return next;
             });
+            setExpandedPlanIndex(null);
 
             setPendingCommand(null);
             navigateToBoard();
@@ -285,6 +496,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     ts: Date.now(),
                 },
             ]);
+            setExpandedPlanIndex(null);
         } finally {
             setBusy(false);
         }
@@ -403,6 +615,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
 
         const userMsg = { role: 'user', text, ts: Date.now() };
         setMessages((prev) => [...prev, userMsg]);
+        setExpandedPlanIndex(null);
         setInput('');
 
         if (pendingCommand && !pendingCommand.executed) {
@@ -611,6 +824,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                 ts: Date.now(),
                             };
                             setMessages((prev) => [...prev, asstMsg]);
+                            setExpandedPlanIndex(null);
                             if (onSpaGenerated) onSpaGenerated(evt.html, evt);
                             setTimeout(() => setGenerationProgress(null), 1500);
                         } else if (evt.type === 'error') {
@@ -618,6 +832,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                 ...prev,
                                 { role: 'assistant', text: `Error: ${evt.message || 'Generation failed'}`, error: true, ts: Date.now(), response: { type: 'error' } },
                             ]);
+                            setExpandedPlanIndex(null);
                         }
                     },
                 });
@@ -657,6 +872,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                 };
 
                 setMessages((prev) => [...prev, asstMsg]);
+                setExpandedPlanIndex(null);
                 setBusy(false);
                 return;
             }
@@ -687,6 +903,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                 };
 
                 setMessages((prev) => [...prev, asstMsg]);
+                setExpandedPlanIndex(null);
 
                 // Notify parent component about the generated SPA
                 if (onSpaGenerated) {
@@ -711,6 +928,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                         ts: Date.now(),
                     },
                 ]);
+                setExpandedPlanIndex(null);
                 setBusy(false);
                 return;
             }
@@ -733,6 +951,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
 
                 return next;
             });
+            setExpandedPlanIndex(null);
         } catch (e) {
             setMessages((prev) => [
                 ...prev,
@@ -744,6 +963,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     response: { type: 'error' },
                 },
             ]);
+            setExpandedPlanIndex(null);
         } finally {
             setBusy(false);
             setGenerationProgress(null);
@@ -763,6 +983,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
             });
             return next;
         });
+        setExpandedPlanIndex(null);
     };
 
     const handleSuggestion = (s) => sendMessage(s);
@@ -785,12 +1006,12 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     borderRadius: 3,
                     overflow: 'hidden',
                     background: palette.appBg,
-                    border: 'none',
-                    boxShadow: '0 30px 60px -12px rgba(31,41,255,0.45)',
+                    border: `1px solid ${palette.panelBorder}`,
+                    boxShadow: palette.panelShadow,
                     display: 'flex',
                     width: 'clamp(420px, 92vw, 900px)',
-                    minWidth: 400,
-                    height: '85vh',
+                    minWidth: 420,
+                    height: '86vh',
                 },
             }}
         >
@@ -798,30 +1019,36 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1,
+                    gap: 1.5,
+                    pl: 3,
                     pr: 6,
-                    py: 1.25,
+                    py: 1.5,
                     background: palette.titleBg,
-                    borderBottom: '1px solid rgba(255,255,255,0.25)',
-                    color: 'white',
+                    borderBottom: `1px solid ${palette.panelBorder}`,
+                    color: palette.headerText,
                     position: 'relative',
                 }}
             >
                 <Avatar
                     sx={{
-                        width: 32,
-                        height: 32,
-                        background: `linear-gradient(135deg, ${colors.secondary}, ${colors.primary})`,
-                        boxShadow: '0 0 18px rgba(167,139,250,0.65)',
-                        animation: `${pulse} 2.2s infinite`,
+                        width: 36,
+                        height: 36,
+                        background: `linear-gradient(140deg, ${tone.secondary}, ${tone.primary})`,
+                        border: `1px solid ${alpha(tone.primaryDark, 0.4)}`,
+                        boxShadow: `0 12px 28px ${alpha(tone.primaryDark, 0.35)}`,
+                        animation: `${pulse} 2.6s ease-in-out infinite`,
                     }}
                 >
-                    <SmartToyRoundedIcon fontSize="small" />
+                    <SmartToyRoundedIcon fontSize="small" sx={{ color: palette.headerIcon }} />
                 </Avatar>
                 <Typography
                     variant="subtitle1"
                     component="div"
-                    sx={{ fontWeight: 800, letterSpacing: 0.15 }}
+                    sx={{
+                        fontWeight: 700,
+                        letterSpacing: 0.25,
+                        color: palette.headerText,
+                    }}
                 >
                     {isCustomView ? 'Custom SPA Generator' : 'Project Assistant'}
                 </Typography>
@@ -829,12 +1056,15 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     size="small"
                     label={project?.name || 'Project'}
                     sx={{
-                        ml: 1,
-                        fontWeight: 800,
-                        height: 22,
-                        background: palette.appGlass,
-                        color: 'white',
-                        border: '1px solid rgba(255,255,255,0.5)',
+                        ml: 1.5,
+                        fontWeight: 600,
+                        height: 24,
+                        px: 1.25,
+                        borderRadius: 999,
+                        background: palette.projectChipBg,
+                        border: `1px solid ${palette.projectChipBorder}`,
+                        color: palette.projectChipText,
+                        textTransform: 'none',
                     }}
                 />
 
@@ -847,11 +1077,13 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             size="small"
                             sx={{
                                 '& .MuiSwitch-switchBase.Mui-checked': {
-                                    color: colors.secondary,
+                                    color: tone.secondary,
                                     '& + .MuiSwitch-track': {
-                                        backgroundColor: colors.secondary,
-                                        opacity: 0.7,
+                                        backgroundColor: alpha(tone.secondary, 0.65),
                                     },
+                                },
+                                '& .MuiSwitch-track': {
+                                    backgroundColor: alpha(palette.headerIcon, 0.25),
                                 },
                             }}
                         />
@@ -863,25 +1095,36 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             ) : (
                                 <ChatBubbleOutlineRoundedIcon fontSize="small" />
                             )}
-                            <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                            <Typography
+                                variant="caption"
+                                sx={{ fontWeight: 600, color: alpha(palette.headerText, 0.85) }}
+                            >
                                 {voiceMode ? t('aiTask.voice') : t('common.text')}
                             </Typography>
                         </Box>
                     }
                     sx={{
-                        ml: 2,
+                        ml: 2.5,
                         '& .MuiFormControlLabel-label': {
-                            color: 'white',
+                            color: alpha(palette.headerText, 0.9),
                         },
                     }}
                 />
 
                 <IconButton
                     onClick={onClose}
-                    sx={{ position: 'absolute', top: 8, right: 8 }}
+                    sx={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        color: palette.headerIcon,
+                        '&:hover': {
+                            color: palette.headerText,
+                        },
+                    }}
                     aria-label={t('assistantChat.close')}
                 >
-                    <CloseRoundedIcon fontSize="small" sx={{ color: 'white' }} />
+                    <CloseRoundedIcon fontSize="small" />
                 </IconButton>
             </DialogTitle>
 
@@ -893,34 +1136,48 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     gap: 1,
                     px: 0,
                     py: 0,
-                    background:
-                        'linear-gradient(to bottom, rgba(30,58,138,0.85), rgba(67,56,202,0.85))',
+                    backgroundColor: palette.panelBg,
+                    position: 'relative',
                     overflow: 'hidden',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        inset: 0,
+                        background: isCustomView
+                            ? 'linear-gradient(145deg, rgba(8,15,30,0.35), rgba(3,8,18,0.15))'
+                            : 'linear-gradient(145deg, rgba(15,23,42,0.08), rgba(15,23,42,0.02))',
+                        pointerEvents: 'none',
+                    },
                 }}
             >
                 {/* Suggestions ribbon */}
                 <Box
                     sx={{
-                        px: 2,
+                        px: 2.75,
                         py: 1.5,
                         position: 'sticky',
                         top: 0,
                         zIndex: 2,
                         background: palette.ribbonBg,
-                        backdropFilter: 'blur(10px)',
+                        backdropFilter: 'blur(18px)',
                         borderBottom: `1px solid ${palette.ribbonBorder}`,
                     }}
                 >
                     {suggestions.length > 0 ? (
-                        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 0.75 }}>
+                        <Stack
+                            direction="row"
+                            spacing={1}
+                            sx={{ flexWrap: 'wrap', rowGap: 0.9, alignItems: 'center' }}
+                        >
                             <Typography
                                 variant="caption"
                                 component="span"
                                 sx={{
-                                    fontWeight: 800,
-                                    pr: 0.5,
+                                    fontWeight: 700,
+                                    pr: 0.75,
                                     alignSelf: 'center',
-                                    color: palette.chipGold,
+                                    color: palette.ribbonLabel,
+                                    textTransform: 'uppercase',
                                 }}
                             >
                                 Quick actions:
@@ -933,16 +1190,18 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                     clickable
                                     size="small"
                                     sx={{
-                                        border: `1px solid ${palette.chipGold}`,
+                                        border: `1px solid ${palette.chipGoldBorder}`,
                                         background: palette.chipGoldBg,
                                         color: palette.chipGold,
                                         '&:hover': {
                                             background: palette.chipGoldHover,
                                             transform: 'translateY(-1px)',
-                                            boxShadow: '0 3px 10px rgba(255,215,0,0.3)',
+                                            boxShadow: `0 6px 18px ${alpha(palette.chipGold, 0.24)}`,
                                         },
                                         transition: 'all 0.2s ease',
-                                        fontWeight: 700,
+                                        fontWeight: 600,
+                                        letterSpacing: 0.15,
+                                        textTransform: 'none',
                                     }}
                                 />
                             ))}
@@ -951,7 +1210,12 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                         <Typography
                             variant="caption"
                             component="span"
-                            sx={{ opacity: 0.9, color: '#e0fbfc', fontWeight: 600 }}
+                            sx={{
+                                opacity: 0.85,
+                                color: palette.ribbonTextMuted,
+                                fontWeight: 500,
+                                letterSpacing: 0.15,
+                            }}
                         >
                             Ask for summaries, bulk ops, assignments, or reporting. I'll always
                             request confirmation before executing changes.
@@ -1026,31 +1290,37 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                 <Chip
                                     label="Delete all overdue tasks"
                                     sx={{
-                                        background: alpha(colors.error, 0.22),
-                                        color: colors.error,
-                                        fontWeight: 700,
+                                        background: alpha(tone.error, 0.18),
+                                        color: tone.error,
+                                        fontWeight: 600,
+                                        letterSpacing: 0.1,
                                         mb: 1,
-                                        border: `1px solid ${alpha(colors.error, 0.45)}`,
+                                        border: `1px solid ${alpha(tone.error, 0.28)}`,
+                                        textTransform: 'none',
                                     }}
                                 />
                                 <Chip
                                     label="Move Review → Done"
                                     sx={{
-                                        background: alpha('#a78bfa', 0.22),
-                                        color: '#a78bfa',
-                                        fontWeight: 700,
+                                        background: alpha(tone.primary, 0.16),
+                                        color: tone.primary,
+                                        fontWeight: 600,
+                                        letterSpacing: 0.1,
                                         mb: 1,
-                                        border: `1px solid ${alpha('#a78bfa', 0.45)}`,
+                                        border: `1px solid ${alpha(tone.primary, 0.28)}`,
+                                        textTransform: 'none',
                                     }}
                                 />
                                 <Chip
                                     label="Assign tasks to Alex"
                                     sx={{
-                                        background: alpha(colors.secondary, 0.22),
-                                        color: colors.secondary,
-                                        fontWeight: 700,
+                                        background: alpha(tone.secondary, 0.18),
+                                        color: tone.secondaryDark,
+                                        fontWeight: 600,
+                                        letterSpacing: 0.1,
                                         mb: 1,
-                                        border: `1px solid ${alpha(colors.secondary, 0.45)}`,
+                                        border: `1px solid ${alpha(tone.secondary, 0.28)}`,
+                                        textTransform: 'none',
                                     }}
                                 />
                                 <Chip
@@ -1058,9 +1328,11 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                     sx={{
                                         background: palette.chipGoldBg,
                                         color: palette.chipGold,
-                                        fontWeight: 700,
+                                        fontWeight: 600,
+                                        letterSpacing: 0.1,
                                         mb: 1,
-                                        border: `1px solid ${palette.chipGold}`,
+                                        border: `1px solid ${palette.chipGoldBorder}`,
+                                        textTransform: 'none',
                                     }}
                                 />
                             </Stack>
@@ -1068,11 +1340,11 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     )}
 
                     {messages.map((m, idx) => {
-                        const cmdData = m?.response?.command_data || m?.response?.data;
-                        const needsConfirm = !!(m?.response?.requires_confirmation && cmdData);
+                    const cmdData = m?.response?.command_data || m?.response?.data;
+                    const needsConfirm = !!(m?.response?.requires_confirmation && cmdData);
 
-                        const typeStr = (
-                            cmdData && typeof cmdData.type !== 'undefined'
+                    const typeStr = (
+                        cmdData && typeof cmdData.type !== 'undefined'
                                 ? String(cmdData.type)
                                 : ''
                         ).toLowerCase();
@@ -1081,11 +1353,15 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             typeStr.includes('destroy') ||
                             typeStr.includes('remove');
 
-                        const showSnapshot = !!m?.response?.ui?.show_snapshot;
-                        const isUser = m?.role === 'user';
+                    const showSnapshot = !!m?.response?.ui?.show_snapshot;
+                    const isUser = m?.role === 'user';
 
-                        // Inline upgrade card
-                        if (m.upgrade) {
+                    const planSummary = summarizeCommandPlan(cmdData);
+                    const planExpanded = expandedPlanIndex === idx;
+                    const structuredContent = !isUser ? structureAssistantMessage(m?.text || '') : [];
+
+                    // Inline upgrade card
+                    if (m.upgrade) {
                             return (
                                 <Stack
                                     key={idx}
@@ -1190,8 +1466,9 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                             width: 36,
                                             height: 36,
                                             mt: 0.5,
-                                            background: `linear-gradient(135deg, ${colors.info}, ${colors.secondary})`,
-                                            boxShadow: `0 0 16px ${alpha(colors.secondary, 0.6)}`,
+                                            background: `linear-gradient(145deg, ${tone.secondary}, ${tone.secondaryDark})`,
+                                            border: `1px solid ${alpha(tone.secondaryDark, 0.4)}`,
+                                            boxShadow: `0 10px 22px ${alpha(tone.secondaryDark, 0.35)}`,
                                         }}
                                     >
                                         <SmartToyRoundedIcon fontSize="small" />
@@ -1209,7 +1486,9 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                         border: isUser
                                             ? `1px solid ${palette.userBubbleBorder}`
                                             : `1px solid ${palette.asstBubbleBorder}`,
-                                        boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
+                                        boxShadow: isUser
+                                            ? `0 12px 26px ${alpha(tone.primaryDark, 0.22)}`
+                                            : `0 12px 26px ${alpha(tone.secondaryDark, 0.18)}`,
                                         ...(isUser
                                             ? {
                                                 borderTopRightRadius: 10,
@@ -1244,8 +1523,10 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                             variant="caption"
                                             component="span"
                                             sx={{
-                                                fontWeight: 900,
-                                                color: isUser ? '#fff7ed' : '#ecfeff',
+                                                fontWeight: 700,
+                                                color: isUser
+                                                    ? alpha(palette.userText, 0.9)
+                                                    : alpha(palette.assistantText, 0.85),
                                             }}
                                         >
                                             {isUser ? 'You' : 'Assistant'}
@@ -1253,7 +1534,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                         <Typography
                                             variant="caption"
                                             component="span"
-                                            sx={{ color: 'rgba(255,255,255,0.9)' }}
+                                            sx={{ color: alpha(palette.metaTime, 0.85) }}
                                         >
                                             {new Date(m?.ts || Date.now()).toLocaleTimeString([], {
                                                 hour: '2-digit',
@@ -1271,12 +1552,12 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                     {copiedIndex === idx ? (
                                                         <CheckRoundedIcon
                                                             fontSize="small"
-                                                            sx={{ color: '#ecfeff' }}
+                                                            sx={{ color: palette.assistantText }}
                                                         />
                                                     ) : (
                                                         <ContentCopyRoundedIcon
                                                             fontSize="small"
-                                                            sx={{ color: 'rgba(255,255,255,0.95)' }}
+                                                            sx={{ color: alpha(palette.assistantText, 0.85) }}
                                                         />
                                                     )}
                                                 </IconButton>
@@ -1284,82 +1565,66 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                         )}
                                     </Stack>
 
-                                    {/* Enhanced conversation flow indicators */}
-                                    {!isUser && m?.conversation_type && (
-                                        <Box
+                                    {structuredContent.length > 0 ? (
+                                        <Stack spacing={1.1} sx={{ mt: 0.5 }}>
+                                            {structuredContent.map((block, blockIdx) => {
+                                                if (block.type === 'list') {
+                                                    return (
+                                                        <Stack
+                                                            key={`list-${blockIdx}`}
+                                                            component="ul"
+                                                            spacing={0.6}
+                                                            sx={{
+                                                                pl: 2.2,
+                                                                m: 0,
+                                                                listStyleType: 'disc',
+                                                                color: palette.assistantText,
+                                                            }}
+                                                        >
+                                                            {block.items.map((item, itemIdx) => (
+                                                                <Box
+                                                                    key={`list-${blockIdx}-item-${itemIdx}`}
+                                                                    component="li"
+                                                                    sx={{
+                                                                        fontSize: '0.95rem',
+                                                                        lineHeight: 1.65,
+                                                                    }}
+                                                                >
+                                                                    {item}
+                                                                </Box>
+                                                            ))}
+                                                        </Stack>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <Typography
+                                                        key={`paragraph-${blockIdx}`}
+                                                        variant="body2"
+                                                        sx={{
+                                                            lineHeight: 1.7,
+                                                            color: palette.assistantText,
+                                                            fontWeight: 500,
+                                                        }}
+                                                    >
+                                                        {block.text}
+                                                    </Typography>
+                                                );
+                                            })}
+                                        </Stack>
+                                    ) : (
+                                        <Typography
+                                            variant="body2"
                                             sx={{
-                                                mb: 1,
-                                                p: 1,
-                                                borderRadius: 1.5,
-                                                background: alpha(
-                                                    m.conversation_type === 'question' ? colors.warning :
-                                                        m.conversation_type === 'clarification' ? colors.info :
-                                                            m.conversation_type === 'solution' ? colors.success :
-                                                                colors.secondary,
-                                                    0.2
-                                                ),
-                                                border: `1px solid ${alpha(
-                                                    m.conversation_type === 'question' ? colors.warning :
-                                                        m.conversation_type === 'clarification' ? colors.info :
-                                                            m.conversation_type === 'solution' ? colors.success :
-                                                                colors.secondary,
-                                                    0.4
-                                                )}`,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 1,
+                                                whiteSpace: 'pre-wrap',
+                                                lineHeight: 1.7,
+                                                color: isUser ? palette.userText : palette.assistantText,
+                                                fontWeight: 500,
                                             }}
                                         >
-                                            <Box
-                                                sx={{
-                                                    fontSize: '0.8rem',
-                                                }}
-                                            >
-                                                {m.conversation_type === 'question' ? '🤔' :
-                                                    m.conversation_type === 'clarification' ? '❓' :
-                                                        m.conversation_type === 'solution' ? '✨' : '💬'}
-                                            </Box>
-                                            <Typography
-                                                variant="caption"
-                                                sx={{
-                                                    fontWeight: 600,
-                                                    color: 'white',
-                                                    opacity: 0.9,
-                                                }}
-                                            >
-                                                {m.conversation_type === 'question' ? 'Asking for details' :
-                                                    m.conversation_type === 'clarification' ? 'Seeking clarification' :
-                                                        m.conversation_type === 'solution' ? 'Solution ready' : 'Continuing conversation'}
-                                            </Typography>
-                                            {m?.requires_response && (
-                                                <Chip
-                                                    size="small"
-                                                    label="Response needed"
-                                                    sx={{
-                                                        ml: 'auto',
-                                                        height: 20,
-                                                        fontSize: '0.7rem',
-                                                        fontWeight: 700,
-                                                        background: alpha(colors.warning, 0.3),
-                                                        color: colors.warning,
-                                                        animation: `${pulse} 2s infinite`,
-                                                    }}
-                                                />
-                                            )}
-                                        </Box>
+                                            {m?.text}
+                                        </Typography>
                                     )}
-
-                                    <Typography
-                                        variant="body2"
-                                        sx={{
-                                            whiteSpace: 'pre-wrap',
-                                            lineHeight: 1.7,
-                                            color: 'white',
-                                            fontWeight: 500,
-                                        }}
-                                    >
-                                        {m?.text}
-                                    </Typography>
 
                                     {needsConfirm && (
                                         <Box
@@ -1367,10 +1632,10 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                 mt: 1.8,
                                                 p: 1.8,
                                                 borderRadius: 2.5,
-                                                border: `1px dashed ${isDeleteCommand ? palette.dangerBorder : alpha(colors.warning, 0.85)}`,
+                                                border: `1px dashed ${isDeleteCommand ? palette.dangerBorder : alpha(tone.warning, 0.45)}`,
                                                 background: isDeleteCommand
                                                     ? palette.dangerBg
-                                                    : alpha(colors.warning, 0.15),
+                                                    : alpha(tone.warning, 0.15),
                                             }}
                                         >
                                             <Typography
@@ -1394,17 +1659,43 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                 sx={{
                                                     mb: 1.5,
                                                     lineHeight: 1.6,
-                                                    color: 'rgba(255,255,255,0.98)',
+                                                color: 'rgba(255,255,255,0.98)',
+                                            }}
+                                        >
+                                            {m?.response?.message}
+                                        </Typography>
+
+                                        {planSummary.length > 0 && (
+                                            <Stack
+                                                component="ul"
+                                                spacing={0.6}
+                                                sx={{
+                                                    pl: 2,
+                                                    mt: 1.2,
+                                                    color: 'rgba(255,255,255,0.92)',
+                                                    listStyleType: 'disc',
                                                 }}
                                             >
-                                                {m?.response?.message}
-                                            </Typography>
+                                                {planSummary.map((item, itemIdx) => (
+                                                    <Box
+                                                        component="li"
+                                                        key={`plan-summary-${itemIdx}`}
+                                                        sx={{ fontSize: '0.85rem', lineHeight: 1.5 }}
+                                                    >
+                                                        <Box component="span" sx={{ fontWeight: 700 }}>
+                                                            {item.label}:
+                                                        </Box>{' '}
+                                                        {item.value}
+                                                    </Box>
+                                                ))}
+                                            </Stack>
+                                        )}
 
-                                            <Stack
-                                                direction="row"
-                                                spacing={1.5}
-                                                alignItems="center"
-                                            >
+                                        <Stack
+                                            direction="row"
+                                            spacing={1.5}
+                                            alignItems="center"
+                                        >
                                                 <Button
                                                     size="small"
                                                     variant="contained"
@@ -1429,11 +1720,11 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                         },
                                                         transition: 'all 0.25s ease',
                                                     }}
-                                                    aria-label={t('assistantChat.confirmExecute')}
-                                                >
-                                                    {m?.executed ? 'Executed' : 'Confirm'}
-                                                </Button>
-                                                <Button
+                                                aria-label={t('assistantChat.confirmExecute')}
+                                            >
+                                                {m?.executed ? 'Executed' : 'Confirm'}
+                                            </Button>
+                                            <Button
                                                     size="small"
                                                     variant="outlined"
                                                     onClick={() => cancelPending(idx)}
@@ -1463,7 +1754,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                             fontWeight: 800,
                                                             background: palette.successBg,
                                                             color: palette.successText,
-                                                            border: `1px solid ${alpha(colors.success, 0.5)}`,
+                                                            border: `1px solid ${alpha(tone.success, 0.45)}`,
                                                         }}
                                                     />
                                                 )}
@@ -1476,12 +1767,59 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                             fontWeight: 800,
                                                             background: palette.cancelBg,
                                                             color: palette.cancelText,
-                                                            border: `1px solid ${alpha(colors.error, 0.45)}`,
+                                                            border: `1px solid ${alpha(tone.error, 0.4)}`,
                                                         }}
                                                     />
+                                            )}
+                                        </Stack>
+
+                                        {cmdData && (
+                                            <Box sx={{ mt: 1.4 }}>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="inherit"
+                                                    onClick={() =>
+                                                        setExpandedPlanIndex(
+                                                            planExpanded ? null : idx
+                                                        )
+                                                    }
+                                                    sx={{
+                                                        textTransform: 'none',
+                                                        borderRadius: 20,
+                                                        fontWeight: 700,
+                                                        borderColor: 'rgba(255,255,255,0.5)',
+                                                        color: 'rgba(255,255,255,0.85)',
+                                                        '&:hover': {
+                                                            borderColor: 'rgba(255,255,255,0.8)',
+                                                            background: 'rgba(255,255,255,0.08)',
+                                                        },
+                                                    }}
+                                                >
+                                                    {planExpanded ? 'Hide raw plan' : 'View raw plan'}
+                                                </Button>
+                                                {planExpanded && (
+                                                    <Box
+                                                        component="pre"
+                                                        sx={{
+                                                            mt: 1,
+                                                            fontSize: '0.72rem',
+                                                            whiteSpace: 'pre-wrap',
+                                                            background: 'rgba(15,23,42,0.35)',
+                                                            borderRadius: 1.5,
+                                                            p: 1.2,
+                                                            color: 'rgba(226,232,240,0.95)',
+                                                            maxHeight: 220,
+                                                            overflow: 'auto',
+                                                            border: '1px solid rgba(148,163,184,0.2)',
+                                                        }}
+                                                    >
+                                                        {JSON.stringify(cmdData, null, 2)}
+                                                    </Box>
                                                 )}
-                                            </Stack>
-                                        </Box>
+                                            </Box>
+                                        )}
+                                    </Box>
                                     )}
 
                                     {m?.response?.type === 'information' &&
@@ -1535,11 +1873,11 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                                 sx={{
                                                                     fontWeight: 800,
                                                                     background: alpha(
-                                                                        colors.secondary,
-                                                                        0.22
+                                                                        tone.secondary,
+                                                                        0.2
                                                                     ),
-                                                                    color: colors.secondary,
-                                                                    border: `1px solid ${alpha(colors.secondary, 0.45)}`,
+                                                                    color: tone.secondary,
+                                                                    border: `1px solid ${alpha(tone.secondary, 0.35)}`,
                                                                 }}
                                                             />
                                                         ))}
@@ -1551,11 +1889,11 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                                 sx={{
                                                                     fontWeight: 800,
                                                                     background: alpha(
-                                                                        colors.error,
-                                                                        0.22
+                                                                        tone.error,
+                                                                        0.2
                                                                     ),
-                                                                    color: colors.error,
-                                                                    border: `1px solid ${alpha(colors.error, 0.45)}`,
+                                                                    color: tone.error,
+                                                                    border: `1px solid ${alpha(tone.error, 0.35)}`,
                                                                 }}
                                                             />
                                                         )}
@@ -1591,8 +1929,9 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                             width: 36,
                                             height: 36,
                                             mt: 0.5,
-                                            background: 'linear-gradient(135deg, #f472b6, #a78bfa)',
-                                            boxShadow: '0 0 16px rgba(244,114,182,0.55)',
+                                            background: `linear-gradient(150deg, ${tone.primary}, ${tone.primaryDark})`,
+                                            border: `1px solid ${alpha(tone.primaryDark, 0.35)}`,
+                                            boxShadow: `0 10px 22px ${alpha(tone.primaryDark, 0.35)}`,
                                         }}
                                     >
                                         <PersonOutlineRoundedIcon fontSize="small" />
@@ -1616,8 +1955,9 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                         width: 36,
                                         height: 36,
                                         mt: 0.5,
-                                        background: `linear-gradient(135deg, ${colors.info}, ${colors.secondary})`,
-                                        boxShadow: `0 0 16px ${alpha(colors.secondary, 0.6)}`,
+                                        background: `linear-gradient(145deg, ${tone.secondary}, ${tone.secondaryDark})`,
+                                        border: `1px solid ${alpha(tone.secondaryDark, 0.35)}`,
+                                        boxShadow: `0 10px 22px ${alpha(tone.secondaryDark, 0.35)}`,
                                     }}
                                 >
                                     <SmartToyRoundedIcon fontSize="small" />
@@ -1693,7 +2033,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                         sx={{
                                                             width: `${(generationProgress.step / generationProgress.total) * 100}%`,
                                                             height: '100%',
-                                                            backgroundColor: colors.secondary,
+                                                            backgroundColor: tone.secondary,
                                                             borderRadius: 2,
                                                             transition: 'width 0.5s ease',
                                                         }}
@@ -1815,7 +2155,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                     boxShadow: `${palette.sendShadow}, ${palette.sendFocusRing}`,
                                 },
                                 '&.Mui-disabled': {
-                                    background: `linear-gradient(135deg, ${alpha(colors.secondary, 0.45)}, ${alpha(colors.primary, 0.45)})`,
+                                    background: `linear-gradient(135deg, ${alpha(tone.secondary, 0.45)}, ${alpha(tone.primary, 0.45)})`,
                                     color: 'rgba(255,255,255,0.85)',
                                 },
                                 transition: 'all 0.25s ease',
@@ -1848,7 +2188,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                 py: 1.25,
                                 borderRadius: 24,
                                 backgroundColor: palette.inputBg,
-                                border: `1.8px solid ${listening ? colors.secondary : palette.borderSoft}`,
+                                border: `1.8px solid ${listening ? tone.secondary : palette.borderSoft}`,
                                 minHeight: 42,
                                 transition: 'all 0.25s ease',
                             }}
@@ -1859,7 +2199,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                     height: 8,
                                     borderRadius: '50%',
                                     backgroundColor: listening
-                                        ? colors.secondary
+                                        ? tone.secondary
                                         : 'rgba(255,255,255,0.4)',
                                     animation: listening ? `${pulse} 1.5s infinite` : 'none',
                                 }}
@@ -1890,20 +2230,20 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                 width: 56,
                                 height: 42,
                                 borderRadius: 24,
-                                backgroundColor: listening ? colors.error : colors.secondary,
+                                backgroundColor: listening ? tone.error : tone.secondary,
                                 color: 'white',
                                 boxShadow: listening
-                                    ? `0 4px 20px ${alpha(colors.error, 0.4)}`
-                                    : `0 4px 20px ${alpha(colors.secondary, 0.4)}`,
+                                    ? `0 4px 20px ${alpha(tone.error, 0.4)}`
+                                    : `0 4px 20px ${alpha(tone.secondary, 0.4)}`,
                                 '&:hover': {
-                                    backgroundColor: listening ? colors.error : colors.secondary,
+                                    backgroundColor: listening ? tone.error : tone.secondary,
                                     transform: 'translateY(-1px) scale(1.05)',
                                     boxShadow: listening
-                                        ? `0 6px 24px ${alpha(colors.error, 0.5)}`
-                                        : `0 6px 24px ${alpha(colors.secondary, 0.5)}`,
+                                        ? `0 6px 24px ${alpha(tone.error, 0.5)}`
+                                        : `0 6px 24px ${alpha(tone.secondary, 0.5)}`,
                                 },
                                 '&.Mui-disabled': {
-                                    backgroundColor: alpha(colors.secondary, 0.3),
+                                    backgroundColor: alpha(tone.secondary, 0.3),
                                     color: 'rgba(255,255,255,0.5)',
                                 },
                                 transition: 'all 0.25s ease',
