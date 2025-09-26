@@ -43,12 +43,14 @@ use App\Events\CustomViewDataUpdated;
 
 // Removed ad-hoc test/debug routes for clarity
 
-Route::get('/', function () {
+Route::get('/', function (\App\Services\SubscriptionPlanService $planService) {
     if (Auth::check()) {
         return redirect()->route('dashboard');
     }
 
-    return Inertia::render('Landing');
+    return Inertia::render('Landing', [
+        'plans' => $planService->allWithPricing(),
+    ]);
 })->name('landing');
 
 // Blog routes (public, unauthenticated)

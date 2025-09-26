@@ -2,12 +2,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { languages, getCurrentLanguage, setLanguage } from '../utils/languageUtils';
+import { useTheme } from '@mui/material/styles';
 
 export default function LanguageDropdown() {
     const { t, i18n } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [isChangingLanguage, setIsChangingLanguage] = useState(false);
     const dropdownRef = useRef(null);
+    const theme = useTheme();
+    const [hovered, setHovered] = useState(false);
+
+    const primaryMain = theme?.palette?.primary?.main ?? '#1976d2';
+    const primaryDark = theme?.palette?.primary?.dark ?? '#115293';
+    const isDark = theme?.palette?.mode === 'dark';
+    const darkAccentBorder = '#60a5fa';
+    const accentColor = hovered
+        ? (isDark ? darkAccentBorder : primaryDark)
+        : (isDark ? darkAccentBorder : primaryMain);
+    const chipBackground = isDark
+        ? theme?.palette?.background?.paper ?? 'rgba(30,41,59,0.9)'
+        : 'rgba(255,255,255,0.85)';
 
     // Get current language with fallback to prevent crashes
     let currentLanguage;
@@ -70,21 +84,65 @@ export default function LanguageDropdown() {
         return null;
     }
 
+    const menuClassName = 'language-dropdown-menu';
+    useEffect(() => {
+        const styleId = 'language-dropdown-scrollbar-css';
+        let styleEl = document.getElementById(styleId);
+        const track = isDark ? 'rgba(15,23,42,0.72)' : '#f3f4f6';
+        const thumb = isDark ? 'rgba(226,232,240,0.45)' : '#9ca3af';
+        const thumbHover = isDark ? 'rgba(226,232,240,0.65)' : '#6b7280';
+
+        const css = `
+            .${menuClassName} {
+                scrollbar-width: thin;
+                scrollbar-color: ${thumb} ${track};
+            }
+            .${menuClassName}::-webkit-scrollbar {
+                width: 8px;
+            }
+            .${menuClassName}::-webkit-scrollbar-track {
+                background: ${track};
+                border-radius: 8px;
+            }
+            .${menuClassName}::-webkit-scrollbar-thumb {
+                background-color: ${thumb};
+                border-radius: 8px;
+                border: 1px solid ${track};
+            }
+            .${menuClassName}::-webkit-scrollbar-thumb:hover {
+                background-color: ${thumbHover};
+            }
+        `;
+
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = styleId;
+            document.head.appendChild(styleEl);
+        }
+
+        styleEl.textContent = css;
+    }, [isDark, menuClassName]);
+
     return (
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
                 className="
                     inline-flex items-center gap-2
                     rounded-full pl-3 pr-2 py-1.5
-                    bg-white/80 dark:bg-gray-700/80
-                    border border-gray-300 dark:border-gray-600
-                    hover:bg-white dark:hover:bg-gray-600
                     transition-all duration-200
                     focus:outline-none focus-visible:ring-2 ring-indigo-500
-                    text-sm font-medium text-gray-700 dark:text-gray-300
+                    text-sm font-medium
                     shadow-sm min-w-[100px]
                 "
+                style={{
+                    border: `1px solid ${accentColor}`,
+                    color: accentColor,
+                    backgroundColor: chipBackground,
+                    backdropFilter: 'blur(6px)',
+                }}
                 aria-label={`Current language: ${currentLanguage.nativeName}`}
                 aria-expanded={isOpen}
                 aria-haspopup="menu"
@@ -93,7 +151,8 @@ export default function LanguageDropdown() {
                     {currentLanguage.nativeName}
                 </span>
                 <svg
-                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+                    className={`w-4 h-4 transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+                    style={{ color: accentColor }}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -104,20 +163,35 @@ export default function LanguageDropdown() {
 
             {isOpen && (
                 <div
-                    className="
+                    className={`
+                        ${menuClassName}
                         absolute right-0 mt-2 w-56
-                        bg-white dark:bg-gray-800
-                        border border-gray-200 dark:border-gray-700
-                        rounded-lg shadow-lg
+                        border rounded-lg shadow-lg
                         py-1 z-50
                         transform transition-all duration-200 ease-out origin-top-right
                         max-h-80 overflow-y-auto
-                    "
+                    `}
+                    style={{
+                        backgroundColor: isDark ? 'rgba(15,23,42,0.94)' : '#ffffff',
+                        borderColor: isDark ? 'rgba(148,163,184,0.24)' : '#e5e7eb',
+                        backdropFilter: 'blur(8px)',
+                        color: isDark ? 'rgba(241,245,249,0.92)' : '#1f2937',
+                    }}
                     role="menu"
                     aria-orientation="vertical"
                 >
-                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    <div
+                        className="px-3 py-2 border-b"
+                        style={{
+                            borderColor: isDark ? 'rgba(148,163,184,0.22)' : '#f3f4f6',
+                        }}
+                    >
+                        <p
+                            className="text-xs font-semibold uppercase tracking-wide"
+                            style={{
+                                color: isDark ? 'rgba(226,232,240,0.7)' : '#6b7280',
+                            }}
+                        >
                             {t('language.select')}
                         </p>
                     </div>
@@ -129,28 +203,50 @@ export default function LanguageDropdown() {
                                 key={language.code}
                                 onClick={() => handleLanguageChange(language.code)}
                                 disabled={isChangingLanguage}
-                                className={`
+                                className="
                                     w-full px-4 py-2 text-left text-sm
-                                    hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200
-                                    focus:outline-none focus:bg-gray-50 dark:focus:bg-gray-700
+                                    transition-colors duration-200 rounded-none
+                                    focus:outline-none
                                     disabled:opacity-50 disabled:cursor-not-allowed
-                                    ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}
-                                `}
+                                "
+                                style={{
+                                    backgroundColor: isSelected
+                                        ? isDark
+                                            ? 'rgba(99,102,241,0.16)'
+                                            : 'rgba(99,102,241,0.1)'
+                                        : 'transparent',
+                                    color: isSelected
+                                        ? (isDark ? darkAccentBorder : '#4338ca')
+                                        : (isDark ? 'rgba(226,232,240,0.92)' : '#374151'),
+                                    border: isSelected
+                                        ? `1px solid ${isDark ? darkAccentBorder : '#4338ca'}`
+                                        : '1px solid transparent',
+                                    borderRadius: 8,
+                                    boxSizing: 'border-box',
+                                }}
                                 aria-label={`Switch to ${language.nativeName}`}
                                 role="menuitem"
                                 tabIndex={isOpen ? 0 : -1}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="flex flex-col flex-1 min-w-0">
-                                        <span className="font-medium truncate">{t(language.name)}</span>
+                                        <span className="font-medium truncate">
+                                            {t(language.name)}
+                                        </span>
                                         {t(language.name) !== language.nativeName && (
-                                            <span className="text-xs opacity-75 truncate">{language.nativeName}</span>
+                                            <span
+                                                className="text-xs truncate"
+                                                style={{ opacity: isDark ? 0.75 : 0.6, color: isDark ? 'rgba(226,232,240,0.75)' : undefined }}
+                                            >
+                                                {language.nativeName}
+                                            </span>
                                         )}
                                     </div>
                                     {isChangingLanguage && currentLanguage.code === language.code ? (
                                         <div className="flex-shrink-0">
                                             <svg
-                                                className="w-4 h-4 animate-spin text-indigo-600"
+                                                className="w-4 h-4 animate-spin"
+                                                style={{ color: isDark ? 'rgba(196,203,255,0.9)' : '#6366f1' }}
                                                 fill="none"
                                                 viewBox="0 0 24 24"
                                                 aria-hidden="true"
@@ -161,7 +257,8 @@ export default function LanguageDropdown() {
                                         </div>
                                     ) : isSelected ? (
                                         <svg
-                                            className="w-4 h-4 flex-shrink-0 text-indigo-600"
+                                            className="w-4 h-4 flex-shrink-0"
+                                            style={{ color: isDark ? 'rgba(196,203,255,0.9)' : '#6366f1' }}
                                             fill="currentColor"
                                             viewBox="0 0 20 20"
                                             aria-hidden="true"

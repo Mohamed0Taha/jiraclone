@@ -2,37 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\SubscriptionPlanService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-use Stripe\StripeClient;
 
 class BillingController extends Controller
 {
+    public function __construct(private SubscriptionPlanService $planService)
+    {
+    }
+
     public function show(Request $request)
     {
         $user = $request->user();
-        $plans = config('subscriptions.plans');
 
         $currentSubscription = $user->subscription('default');
         $isOnTrial = $currentSubscription && $currentSubscription->onTrial();
         $trialEndsAt = $currentSubscription?->trial_ends_at;
 
-        // Fetch live prices from Stripe
-        $plansWithPrices = collect($plans)->map(function ($plan, $key) {
-            $priceData = $this->getStripePriceData($plan['price_id']);
-
-            return [
-                'name' => $plan['name'],
-                'key' => $key, // Add the plan key for better identification
-                'price_id' => $plan['price_id'],
-                'features' => $plan['features'],
-                'trial_days' => $plan['trial_days'] ?? 0,
-                'price' => $priceData['price'] ?? 0,
-                'currency' => $priceData['currency'] ?? 'usd',
-                'interval' => $priceData['interval'] ?? 'month',
-            ];
-        })->values();
+        $plansWithPrices = $this->planService->allWithPricing();
 
         return Inertia::render('Billing/Overview', [
             'user' => $user,
@@ -52,32 +40,6 @@ class BillingController extends Controller
             ],
             'stripe_key' => config('cashier.key'),
         ]);
-    }
-
-    /**
-     * Fetch price data from Stripe API
-     */
-    private function getStripePriceData($priceId)
-    {
-        try {
-            if (! config('cashier.secret')) {
-                return ['price' => 0, 'currency' => 'usd', 'interval' => 'month'];
-            }
-
-            $stripe = new StripeClient(config('cashier.secret'));
-            $price = $stripe->prices->retrieve($priceId);
-
-            return [
-                'price' => $price->unit_amount / 100, // Convert from cents
-                'currency' => strtoupper($price->currency),
-                'interval' => $price->recurring->interval ?? 'month',
-            ];
-        } catch (\Exception $e) {
-            // Fallback to 0 if Stripe API fails
-            \Illuminate\Support\Facades\Log::error('Failed to fetch Stripe price for '.$priceId.': '.$e->getMessage());
-
-            return ['price' => 0, 'currency' => 'usd', 'interval' => 'month'];
-        }
     }
 
     public function createCheckout(Request $request)
@@ -110,16 +72,7 @@ class BillingController extends Controller
         }
 
         // Find the plan configuration to get trial days
-        $plans = config('subscriptions.plans');
-        $planConfig = null;
-        $planKey = null;
-        foreach ($plans as $key => $plan) {
-            if ($plan['price_id'] === $priceId) {
-                $planConfig = $plan;
-                $planKey = $key;
-                break;
-            }
-        }
+        $planConfig = $this->planService->findByPriceId($priceId);
 
         if (! $planConfig) {
             return back()->with('error', 'Invalid plan selected.');
@@ -142,7 +95,7 @@ class BillingController extends Controller
             // Mark trial as used and track which plan
             $user->update([
                 'trial_used' => true,
-                'trial_plan' => $planKey,
+                'trial_plan' => $planConfig['key'] ?? null,
             ]);
         }
 

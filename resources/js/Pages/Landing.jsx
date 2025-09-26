@@ -48,10 +48,24 @@ import {
 } from '@mui/icons-material';
 import ThemeToggle from '@/Components/ThemeToggle';
 import LanguageDropdown from '@/Components/LanguageDropdown';
+import { lighten, darken } from '@mui/material/styles';
 
-export default function Landing({ errors }) {
+export default function Landing({ errors, plans = [] }) {
     const theme = useTheme();
     const { t } = useTranslation();
+    const isDark = theme.palette.mode === 'dark';
+    const backgroundDefault = theme.palette.background.default;
+    const backgroundPaper = theme.palette.background.paper;
+    const textPrimary = theme.palette.text.primary;
+    const textSecondary = theme.palette.text.secondary;
+    const divider = theme.palette.divider;
+    const primaryMain = theme.palette.primary.main;
+    const primaryLight = theme.palette.primary.light || lighten(primaryMain, 0.2);
+    const primaryDark = theme.palette.primary.dark || darken(primaryMain, 0.2);
+    const primaryContrast = theme.palette.getContrastText
+        ? theme.palette.getContrastText(primaryMain)
+        : '#ffffff';
+    const accentPrimary = primaryMain;
 
     // Video autoplay handling – try to start with sound; if blocked, fallback to muted
     const videoRef = React.useRef(null);
@@ -166,6 +180,28 @@ export default function Landing({ errors }) {
         { name: 'SAFe', color: '#E53E3E' },
     ];
 
+    const pricingPlans = React.useMemo(() => (Array.isArray(plans) ? plans : []), [plans]);
+    const planAccentMap = React.useMemo(
+        () => ({
+            basic: '#2563eb',
+            pro: '#7C3AED',
+            business: '#F97316',
+        }),
+        []
+    );
+
+    const resolvePlanCta = (plan) => {
+        if (plan?.key === 'business') {
+            return { label: 'Talk to sales', href: '/contact' };
+        }
+
+        if (!plan || (plan.price ?? 0) === 0) {
+            return { label: 'Start for free', href: route('register') };
+        }
+
+        return { label: `Upgrade to ${plan.name}`, href: route('register') };
+    };
+
     return (
         <>
             <Head title={t('head.landing')}>
@@ -232,16 +268,16 @@ export default function Landing({ errors }) {
                 </script>
             </Head>
 
-            <Box sx={{ bgcolor: 'white', minHeight: '100vh' }}>
+            <Box sx={{ bgcolor: backgroundDefault, minHeight: '100vh' }}>
                 {/* Header/Navigation */}
                 <Box
                     sx={{
                         py: 2,
                         borderBottom: '1px solid',
-                        borderColor: 'grey.200',
+                        borderColor: divider,
                         position: 'sticky',
                         top: 0,
-                        bgcolor: 'white',
+                        bgcolor: backgroundPaper,
                         zIndex: 10,
                     }}
                 >
@@ -265,7 +301,7 @@ export default function Landing({ errors }) {
                                         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                                     }}
                                 />
-                                <Typography variant="h5" sx={{ fontWeight: 700, color: '#7C6AE8' }}>
+                                <Typography variant="h5" sx={{ fontWeight: 700, color: primaryMain }}>
                                     TaskPilot
                                 </Typography>
                             </Box>
@@ -277,22 +313,41 @@ export default function Landing({ errors }) {
                                 </Box>
 
                                 <Button
+                                    variant="text"
+                                    size="small"
+                                    sx={{
+                                        textTransform: 'none',
+                                        fontWeight: 600,
+                                        color: accentPrimary,
+                                        '&:hover': { color: isDark ? primaryLight : primaryDark },
+                                    }}
+                                    onClick={() => {
+                                        const section = document.getElementById('pricing');
+                                        if (section) {
+                                            section.scrollIntoView({ behavior: 'smooth' });
+                                        }
+                                    }}
+                                >
+                                    Pricing
+                                </Button>
+
+                                <Button
                                     variant="outlined"
                                     size="small"
                                     sx={{
                                         textTransform: 'none',
-                                        borderColor: '#4ECDC4',
-                                        color: '#4ECDC4',
+                                        borderColor: accentPrimary,
+                                        color: accentPrimary,
                                         borderWidth: 2,
                                         borderRadius: 2,
                                         px: 3,
                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                         '&:hover': {
-                                            borderColor: '#4ECDC4',
-                                            bgcolor: '#4ECDC4',
-                                            color: 'white',
+                                            borderColor: primaryDark,
+                                            bgcolor: accentPrimary,
+                                            color: primaryContrast,
                                             transform: 'translateY(-2px)',
-                                            boxShadow: '0 8px 20px rgba(78, 205, 196, 0.3)',
+                                            boxShadow: `0 8px 20px ${alpha(primaryMain, 0.25)}`,
                                         },
                                     }}
                                     onClick={() => {
@@ -330,7 +385,13 @@ export default function Landing({ errors }) {
                 </Box>
 
                 {/* Product Demo Video Section (moved to top) */}
-                <Box sx={{ pt: { xs: 4, md: 6 }, pb: { xs: 2, md: 4 }, bgcolor: '#F8F9FA' }}>
+                <Box
+                    sx={{
+                        pt: { xs: 4, md: 6 },
+                        pb: { xs: 2, md: 4 },
+                        bgcolor: isDark ? alpha(textPrimary, 0.08) : '#F8F9FA',
+                    }}
+                >
                     <Container maxWidth="lg">
                         <Box
                             sx={{
@@ -398,7 +459,7 @@ export default function Landing({ errors }) {
                 </Box>
 
                 {/* Hero Section */}
-                <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: 'white' }}>
+                <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: backgroundPaper }}>
                     <Container maxWidth="lg">
                         <Box sx={{ textAlign: 'center', mb: 8 }}>
                             <Typography
@@ -413,13 +474,13 @@ export default function Landing({ errors }) {
                                     fontWeight: 700,
                                     lineHeight: 1.1,
                                     mb: 4,
-                                    color: '#1a1a1a',
+                                    color: textPrimary,
                                     maxWidth: 900,
                                     mx: 'auto',
                                 }}
                             >
                                 {t('landing.heroTitle')}{' '}
-                                <Box component="span" sx={{ color: '#7C6AE8' }}>
+                                <Box component="span" sx={{ color: primaryMain }}>
                                     {t('landing.heroSubtitle')}
                                 </Box>
                             </Typography>
@@ -428,7 +489,7 @@ export default function Landing({ errors }) {
                                 variant="h5"
                                 sx={{
                                     mb: 6,
-                                    color: 'grey.700',
+                                    color: textSecondary,
                                     fontWeight: 400,
                                     maxWidth: 600,
                                     mx: 'auto',
@@ -473,7 +534,7 @@ export default function Landing({ errors }) {
                                 </Button>
                             </Stack>
 
-                            <Typography variant="body2" sx={{ color: 'grey.600', fontWeight: 500 }}>
+                            <Typography variant="body2" sx={{ color: textSecondary, fontWeight: 500 }}>
                                 {t('landing.productivityJourney')}
                             </Typography>
                         </Box>
@@ -482,7 +543,7 @@ export default function Landing({ errors }) {
                         <Box sx={{ textAlign: 'center', mb: 8 }}>
                             <Typography
                                 variant="body2"
-                                sx={{ mb: 4, color: 'grey.600', fontWeight: 500 }}
+                                sx={{ mb: 4, color: textSecondary, fontWeight: 500 }}
                             >
                                 {t('landing.methodologiesSupport')}
                             </Typography>
@@ -531,7 +592,7 @@ export default function Landing({ errors }) {
                 {/* (Video section moved above) */}
 
                 {/* Core Widgets Showcase */}
-                <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'white' }}>
+                <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: backgroundPaper }}>
                     <Container maxWidth="xl">
                         <Box sx={{ textAlign: 'center', mb: 12 }}>
                             <Typography
@@ -540,7 +601,7 @@ export default function Landing({ errors }) {
                                     fontSize: { xs: '2.5rem', md: '3.5rem' },
                                     fontWeight: 700,
                                     mb: 4,
-                                    color: '#1a1a1a',
+                                    color: textPrimary,
                                 }}
                             >
                                 Core Widgets & Features
@@ -548,7 +609,7 @@ export default function Landing({ errors }) {
                             <Typography
                                 variant="h5"
                                 sx={{
-                                    color: 'grey.700',
+                                    color: textSecondary,
                                     fontWeight: 400,
                                     maxWidth: 700,
                                     mx: 'auto',
@@ -579,9 +640,12 @@ export default function Landing({ errors }) {
                                         flex: 1,
                                         p: 3, // reduced from 4 to tighten outer padding
                                         borderRadius: 4,
-                                        border: '1px solid #D9E8F7',
-                                        background:
-                                            'linear-gradient(135deg, #F7FAFF 0%, #F2F6FE 55%, #EDF2FA 100%)',
+                                        border: isDark
+                                            ? `1px solid ${alpha(textPrimary, 0.18)}`
+                                            : '1px solid #D9E8F7',
+                                        background: isDark
+                                            ? `linear-gradient(135deg, ${alpha(textPrimary, 0.16)} 0%, ${alpha(textPrimary, 0.08)} 100%)`
+                                            : 'linear-gradient(135deg, #F7FAFF 0%, #F2F6FE 55%, #EDF2FA 100%)',
                                         position: 'relative',
                                         overflow: 'hidden',
                                         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)',
@@ -597,7 +661,7 @@ export default function Landing({ errors }) {
                                         sx={{
                                             mb: 4,
                                             fontWeight: 700,
-                                            color: '#4F46E5',
+                                            color: isDark ? primaryLight : '#4F46E5',
                                             fontSize: '1.3rem',
                                         }}
                                     >
@@ -654,8 +718,12 @@ export default function Landing({ errors }) {
                                                     sx={{
                                                         p: 2, // reduced from 3
                                                         borderRadius: 3,
-                                                        background: `linear-gradient(135deg, ${alpha(column.accent, 0.08)} 0%, ${alpha(column.accent, 0.04)} 100%)`,
-                                                        border: `1px solid ${alpha(column.accent, 0.18)}`,
+                                                        background: isDark
+                                                            ? `linear-gradient(135deg, ${alpha(textPrimary, 0.12)} 0%, ${alpha(textPrimary, 0.06)} 100%)`
+                                                            : `linear-gradient(135deg, ${alpha(column.accent, 0.08)} 0%, ${alpha(column.accent, 0.04)} 100%)`,
+                                                        border: isDark
+                                                            ? `1px solid ${alpha(column.accent, 0.45)}`
+                                                            : `1px solid ${alpha(column.accent, 0.18)}`,
                                                         minHeight: 350,
                                                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
                                                     }}
@@ -668,7 +736,9 @@ export default function Landing({ errors }) {
                                                             mb: 2.5,
                                                             p: 1.5, // reduced from 2
                                                             borderRadius: 2,
-                                                            background: 'rgba(255,255,255,0.8)',
+                                                            background: isDark
+                                                                ? alpha(textPrimary, 0.2)
+                                                                : 'rgba(255,255,255,0.8)',
                                                             backdropFilter: 'blur(8px)',
                                                         }}
                                                     >
@@ -694,7 +764,7 @@ export default function Landing({ errors }) {
                                                             variant="subtitle1"
                                                             sx={{
                                                                 fontWeight: 700,
-                                                                color: column.accent,
+                                                                color: isDark ? '#e2e8f0' : column.accent,
                                                                 fontSize: '0.9rem',
                                                                 textTransform: 'uppercase',
                                                                 letterSpacing: 0.5,
@@ -706,71 +776,65 @@ export default function Landing({ errors }) {
 
                                                     {/* Task Cards */}
                                                     <Stack spacing={2}>
-                                                        {column.tasks.map((task) => (
-                                                            <Box
-                                                                key={task.id}
-                                                                sx={{
-                                                                    p: 2.5,
-                                                                    bgcolor: 'white',
-                                                                    borderRadius: 3,
-                                                                    borderLeft: `4px solid ${column.accent}`,
-                                                                    boxShadow:
-                                                                        '0 4px 12px rgba(0,0,0,0.08)',
-                                                                    transition: 'all 0.2s ease',
-                                                                    cursor: 'pointer',
-                                                                    backdropFilter: 'blur(8px)',
-                                                                    '&:hover': {
-                                                                        transform:
-                                                                            'translateY(-3px)',
-                                                                        boxShadow:
-                                                                            '0 8px 20px rgba(0,0,0,0.12)',
-                                                                    },
-                                                                }}
-                                                            >
-                                                                <Typography
-                                                                    variant="body1"
+                                                        {column.tasks.map((task) => {
+                                                            const priorityColorMap = {
+                                                                urgent: '#d32f2f',
+                                                                high: '#f57c00',
+                                                                medium: '#1976d2',
+                                                                low: '#388e3c',
+                                                            };
+                                                            const priorityColor =
+                                                                priorityColorMap[task.priority] ?? column.accent;
+                                                            const chipBg = alpha(priorityColor, isDark ? 0.28 : 0.12);
+
+                                                            return (
+                                                                <Box
+                                                                    key={task.id}
                                                                     sx={{
-                                                                        fontWeight: 600,
-                                                                        mb: 1.5,
-                                                                        fontSize: '0.9rem',
-                                                                        lineHeight: 1.4,
+                                                                        p: 2.5,
+                                                                        bgcolor: isDark
+                                                                            ? alpha(textPrimary, 0.08)
+                                                                            : backgroundPaper,
+                                                                        borderRadius: 3,
+                                                                        borderLeft: `4px solid ${column.accent}`,
+                                                                        boxShadow:
+                                                                            '0 4px 12px rgba(0,0,0,0.08)',
+                                                                        transition: 'all 0.2s ease',
+                                                                        cursor: 'pointer',
+                                                                        backdropFilter: 'blur(8px)',
+                                                                        '&:hover': {
+                                                                            transform: 'translateY(-3px)',
+                                                                            boxShadow:
+                                                                                '0 8px 20px rgba(0,0,0,0.12)',
+                                                                        },
                                                                     }}
                                                                 >
-                                                                    {task.title}
-                                                                </Typography>
-                                                                <Chip
-                                                                    label={task.priority}
-                                                                    size="small"
-                                                                    sx={{
-                                                                        fontSize: '0.75rem',
-                                                                        height: 24,
-                                                                        fontWeight: 600,
-                                                                        bgcolor:
-                                                                            task.priority ===
-                                                                                'urgent'
-                                                                                ? '#ffebee'
-                                                                                : task.priority ===
-                                                                                    'high'
-                                                                                    ? '#fff3e0'
-                                                                                    : task.priority ===
-                                                                                        'medium'
-                                                                                        ? '#e3f2fd'
-                                                                                        : '#e8f5e8',
-                                                                        color:
-                                                                            task.priority ===
-                                                                                'urgent'
-                                                                                ? '#d32f2f'
-                                                                                : task.priority ===
-                                                                                    'high'
-                                                                                    ? '#f57c00'
-                                                                                    : task.priority ===
-                                                                                        'medium'
-                                                                                        ? '#1976d2'
-                                                                                        : '#388e3c',
-                                                                    }}
-                                                                />
-                                                            </Box>
-                                                        ))}
+                                                                    <Typography
+                                                                        variant="body1"
+                                                                        sx={{
+                                                                            fontWeight: 600,
+                                                                            mb: 1.5,
+                                                                            fontSize: '0.9rem',
+                                                                            lineHeight: 1.4,
+                                                                            color: textPrimary,
+                                                                        }}
+                                                                    >
+                                                                        {task.title}
+                                                                    </Typography>
+                                                                    <Chip
+                                                                        label={task.priority}
+                                                                        size="small"
+                                                                        sx={{
+                                                                            fontSize: '0.75rem',
+                                                                            height: 24,
+                                                                            fontWeight: 600,
+                                                                            bgcolor: chipBg,
+                                                                            color: isDark ? '#f8fafc' : priorityColor,
+                                                                        }}
+                                                                    />
+                                                                </Box>
+                                                            );
+                                                        })}
                                                     </Stack>
                                                 </Box>
                                             </Grid>
@@ -789,9 +853,12 @@ export default function Landing({ errors }) {
                                         flex: 1,
                                         p: 4,
                                         borderRadius: 4,
-                                        border: '1px solid #E5D5EF',
-                                        background:
-                                            'linear-gradient(135deg, #F9F3FF 0%, #E3D2FF 100%)',
+                                        border: isDark
+                                            ? `1px solid ${alpha(textPrimary, 0.18)}`
+                                            : '1px solid #E5D5EF',
+                                        background: isDark
+                                            ? `linear-gradient(135deg, ${alpha(textPrimary, 0.16)} 0%, ${alpha(textPrimary, 0.1)} 100%)`
+                                            : 'linear-gradient(135deg, #F9F3FF 0%, #E3D2FF 100%)',
                                         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)',
                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                         '&:hover': {
@@ -805,7 +872,7 @@ export default function Landing({ errors }) {
                                         sx={{
                                             mb: 4,
                                             fontWeight: 700,
-                                            color: '#7B1FA2',
+                                            color: isDark ? primaryLight : '#7B1FA2',
                                             fontSize: '1.3rem',
                                         }}
                                     >
@@ -843,7 +910,7 @@ export default function Landing({ errors }) {
                                                 <Box
                                                     sx={{
                                                         p: 3,
-                                                        bgcolor: 'white',
+                                                        bgcolor: backgroundPaper,
                                                         borderRadius: 3,
                                                         textAlign: 'center',
                                                         border: `1px solid ${alpha(stat.color, 0.2)}`,
@@ -859,7 +926,7 @@ export default function Landing({ errors }) {
                                                         variant="body1"
                                                         sx={{
                                                             fontSize: '0.85rem',
-                                                            color: 'grey.600',
+                                                            color: textSecondary,
                                                             mb: 1,
                                                             fontWeight: 600,
                                                         }}
@@ -884,7 +951,7 @@ export default function Landing({ errors }) {
                                     <Box
                                         sx={{
                                             p: 3,
-                                            bgcolor: 'white',
+                                            bgcolor: backgroundPaper,
                                             borderRadius: 3,
                                             mb: 3,
                                             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
@@ -929,7 +996,7 @@ export default function Landing({ errors }) {
                                     <Box
                                         sx={{
                                             p: 3,
-                                            bgcolor: 'white',
+                                            bgcolor: backgroundPaper,
                                             borderRadius: 3,
                                             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
                                         }}
@@ -964,7 +1031,7 @@ export default function Landing({ errors }) {
                                                 variant="body1"
                                                 sx={{
                                                     fontSize: '0.9rem',
-                                                    color: 'grey.700',
+                                                    color: textSecondary,
                                                     fontWeight: 600,
                                                 }}
                                             >
@@ -986,9 +1053,12 @@ export default function Landing({ errors }) {
                                     sx={{
                                         p: 5,
                                         borderRadius: 4,
-                                        border: '2px solid #E8F5E8',
-                                        background:
-                                            'linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 55%, #E7F5EE 100%)',
+                                        border: isDark
+                                            ? `1px solid ${alpha(textPrimary, 0.18)}`
+                                            : '2px solid #E8F5E8',
+                                        background: isDark
+                                            ? `linear-gradient(135deg, ${alpha(textPrimary, 0.14)} 0%, ${alpha(textPrimary, 0.08)} 100%)`
+                                            : 'linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 55%, #E7F5EE 100%)',
                                         minHeight: 450,
                                         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1003,7 +1073,7 @@ export default function Landing({ errors }) {
                                         sx={{
                                             mb: 4,
                                             fontWeight: 700,
-                                            color: '#22B36B',
+                                            color: isDark ? alpha('#a7f3d0', 0.9) : '#22B36B',
                                             fontSize: '1.3rem',
                                         }}
                                     >
@@ -1113,9 +1183,12 @@ export default function Landing({ errors }) {
                                     sx={{
                                         p: 5,
                                         borderRadius: 4,
-                                        border: '2px solid #FFF3E0',
-                                        background:
-                                            'linear-gradient(135deg, #FFF8EC 0%, #FFE2BC 100%)',
+                                        border: isDark
+                                            ? `1px solid ${alpha(textPrimary, 0.18)}`
+                                            : '2px solid #FFF3E0',
+                                        background: isDark
+                                            ? `linear-gradient(135deg, ${alpha(textPrimary, 0.14)} 0%, ${alpha(textPrimary, 0.07)} 100%)`
+                                            : 'linear-gradient(135deg, #FFF8EC 0%, #FFE2BC 100%)',
                                         minHeight: 450,
                                         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1130,7 +1203,7 @@ export default function Landing({ errors }) {
                                         sx={{
                                             mb: 4,
                                             fontWeight: 700,
-                                            color: '#E65100',
+                                            color: isDark ? alpha('#ffb26b', 0.9) : '#E65100',
                                             fontSize: '1.3rem',
                                         }}
                                     >
@@ -1148,11 +1221,14 @@ export default function Landing({ errors }) {
                                                 sx={{
                                                     maxWidth: '85%',
                                                     p: 3,
-                                                    bgcolor: '#E3F2FD',
+                                                    bgcolor: isDark
+                                                        ? alpha(primaryMain, 0.2)
+                                                        : '#E3F2FD',
                                                     borderRadius: '20px 20px 6px 20px',
                                                     fontSize: '0.95rem',
                                                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
                                                     fontWeight: 500,
+                                                    color: isDark ? '#f8fafc' : textPrimary,
                                                 }}
                                             >
                                                 "Can you help me optimize this project timeline?"
@@ -1190,11 +1266,12 @@ export default function Landing({ errors }) {
                                                 sx={{
                                                     maxWidth: '85%',
                                                     p: 3,
-                                                    bgcolor: 'white',
+                                                    bgcolor: isDark ? alpha(textPrimary, 0.12) : backgroundPaper,
                                                     borderRadius: '6px 20px 20px 20px',
                                                     fontSize: '0.95rem',
                                                     boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                                                     lineHeight: 1.5,
+                                                    color: textPrimary,
                                                 }}
                                             >
                                                 "I've analyzed your project and can reduce the
@@ -1235,7 +1312,7 @@ export default function Landing({ errors }) {
                                             <Box
                                                 sx={{
                                                     p: 3,
-                                                    bgcolor: 'white',
+                                                    bgcolor: isDark ? alpha(textPrimary, 0.12) : backgroundPaper,
                                                     borderRadius: '6px 20px 20px 20px',
                                                     fontSize: '0.95rem',
                                                     boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
@@ -1283,8 +1360,10 @@ export default function Landing({ errors }) {
                             sx={{
                                 p: 6,
                                 borderRadius: 4,
-                                border: '2px solid #E1F5FE',
-                                background: 'linear-gradient(135deg, #E1F5FE 0%, #F8F9FA 100%)',
+                                border: isDark ? `2px solid ${alpha(primaryMain, 0.2)}` : '2px solid #E1F5FE',
+                                background: isDark
+                                    ? `linear-gradient(135deg, ${alpha(primaryMain, 0.18)} 0%, ${alpha(primaryMain, 0.08)} 100%)`
+                                    : 'linear-gradient(135deg, #E1F5FE 0%, #F8F9FA 100%)',
                                 textAlign: 'center',
                                 mb: 8,
                                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
@@ -1295,14 +1374,23 @@ export default function Landing({ errors }) {
                                 sx={{
                                     mb: 5,
                                     fontWeight: 700,
-                                    color: '#0277BD',
+                                    color: isDark ? primaryLight : primaryMain,
                                     fontSize: '1.3rem',
                                 }}
                             >
                                 👥 Project Management Dashboard
                             </Typography>
 
-                            <Grid container spacing={5} sx={{ '--card-radius': '20px', '--card-border': '1px solid rgba(2,119,189,0.12)', }} >
+                        <Grid
+                            container
+                            spacing={5}
+                            sx={{
+                                '--card-radius': '20px',
+                                '--card-border': isDark
+                                    ? '1px solid rgba(255,255,255,0.08)'
+                                    : '1px solid rgba(2,119,189,0.12)',
+                            }}
+                        >
                                 {/* Shared card style helper */}
                                 {[
                                     {
@@ -1393,7 +1481,7 @@ export default function Landing({ errors }) {
                                                                 flex: 1,
                                                                 p: 1.5,
                                                                 borderRadius: 2,
-                                                                bgcolor: 'grey.50',
+                                                                bgcolor: isDark ? alpha(textPrimary, 0.08) : 'grey.50',
                                                             }}
                                                         >
                                                             <Typography
@@ -1401,7 +1489,7 @@ export default function Landing({ errors }) {
                                                                 sx={{
                                                                     textTransform: 'uppercase',
                                                                     fontWeight: 600,
-                                                                    color: 'grey.600',
+                                                                    color: textSecondary,
                                                                     letterSpacing: 0.5,
                                                                 }}
                                                             >
@@ -1609,7 +1697,7 @@ export default function Landing({ errors }) {
                                                 flexDirection: 'column',
                                                 gap: 2.5,
                                                 p: 3.5,
-                                                bgcolor: 'white',
+                                                bgcolor: backgroundPaper,
                                                 borderRadius: 'var(--card-radius)',
                                                 border: 'var(--card-border)',
                                                 boxShadow: '0 4px 14px rgba(0,0,0,0.05)',
@@ -1626,7 +1714,7 @@ export default function Landing({ errors }) {
                                                 variant="subtitle1"
                                                 sx={{
                                                     fontWeight: 700,
-                                                    color: '#0277BD',
+                                                    color: primaryMain,
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     gap: 1,
@@ -1647,7 +1735,12 @@ export default function Landing({ errors }) {
                 </Box>
 
                 {/* Features Section */}
-                <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: '#FAFBFC' }}>
+                <Box
+                    sx={{
+                        py: { xs: 8, md: 12 },
+                        bgcolor: isDark ? alpha(textPrimary, 0.05) : '#FAFBFC',
+                    }}
+                >
                     <Container maxWidth="lg">
                         <Box sx={{ textAlign: 'center', mb: 10 }}>
                             <Typography
@@ -1656,7 +1749,7 @@ export default function Landing({ errors }) {
                                     fontSize: { xs: '2rem', md: '3rem' },
                                     fontWeight: 700,
                                     mb: 3,
-                                    color: '#1a1a1a',
+                                    color: textPrimary,
                                 }}
                             >
                                 Everything your team is looking for
@@ -1664,7 +1757,7 @@ export default function Landing({ errors }) {
                             <Typography
                                 variant="h6"
                                 sx={{
-                                    color: 'grey.700',
+                                    color: textSecondary,
                                     fontWeight: 400,
                                     maxWidth: 600,
                                     mx: 'auto',
@@ -1716,7 +1809,7 @@ export default function Landing({ errors }) {
                                             sx={{
                                                 fontWeight: 600,
                                                 mb: 2,
-                                                color: '#1a1a1a',
+                                                color: textPrimary,
                                             }}
                                         >
                                             {feature.title}
@@ -1724,7 +1817,7 @@ export default function Landing({ errors }) {
                                         <Typography
                                             variant="body1"
                                             sx={{
-                                                color: 'grey.700',
+                                                color: textSecondary,
                                                 lineHeight: 1.6,
                                                 maxWidth: 300,
                                                 mx: 'auto',
@@ -1740,7 +1833,259 @@ export default function Landing({ errors }) {
                 </Box>
 
                 {/* Login Section */}
-                <Box id="login-form" sx={{ py: { xs: 8, md: 12 }, bgcolor: '#FAFBFC' }}>
+                <Box
+                    id="pricing"
+                    sx={{
+                        py: { xs: 8, md: 12 },
+                        bgcolor: backgroundPaper,
+                        borderTop: '1px solid',
+                        borderBottom: '1px solid',
+                        borderColor: divider,
+                    }}
+                >
+                    <Container maxWidth="lg">
+                        <Box sx={{ textAlign: 'center', mb: 8 }}>
+                            <Chip
+                                label="Pricing"
+                                sx={{
+                                    mb: 2.5,
+                                    px: 2,
+                                    fontWeight: 700,
+                                    backgroundColor: alpha(primaryMain, 0.12),
+                                    color: primaryMain,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: 1.4,
+                                }}
+                            />
+                            <Typography
+                                variant="h2"
+                                sx={{
+                                    fontSize: { xs: '2rem', md: '3rem' },
+                                    fontWeight: 700,
+                                    color: textPrimary,
+                                    mb: 2,
+                                }}
+                            >
+                                Simple pricing designed for teams of every size
+                            </Typography>
+                            <Typography
+                                variant="h6"
+                                sx={{
+                                    color: textSecondary,
+                                    maxWidth: 640,
+                                    mx: 'auto',
+                                    fontWeight: 400,
+                                }}
+                            >
+                                Every plan includes the Project Assistant, real-time dashboards, and secure cloud
+                                storage. Pick the AI credit pack that matches the pace of your projects.
+                            </Typography>
+                        </Box>
+
+                        <Grid container spacing={3} justifyContent="center">
+                            {pricingPlans.map((plan) => {
+                                const accentColor = planAccentMap[plan.key] ?? '#2563eb';
+                                const isHighlight = Boolean(plan.highlight);
+                                const priceValue = plan.price ?? 0;
+                                const intervalLabel = priceValue > 0 && plan.interval
+                                    ? `/${String(plan.interval).toLowerCase()}`
+                                    : '';
+                                const currencyLabel = priceValue > 0 && plan.currency
+                                    ? String(plan.currency).toUpperCase()
+                                    : 'USD';
+                                const cta = resolvePlanCta(plan);
+                                const cardBackground = isHighlight
+                                    ? `linear-gradient(140deg, ${alpha(accentColor, isDark ? 0.35 : 0.18)}, ${alpha(accentColor, isDark ? 0.18 : 0.05)})`
+                                    : isDark
+                                        ? alpha(textPrimary, 0.08)
+                                        : 'linear-gradient(180deg, #ffffff 0%, #f9fafb 100%)';
+                                const cardHoverBackground = isHighlight
+                                    ? `linear-gradient(135deg, ${alpha(accentColor, isDark ? 0.45 : 0.2)}, ${alpha(accentColor, isDark ? 0.22 : 0.08)})`
+                                    : isDark
+                                        ? alpha(textPrimary, 0.12)
+                                        : 'linear-gradient(180deg, #ffffff 0%, #eef2ff 100%)';
+                                const cardBorderColor = alpha(accentColor, isHighlight ? (isDark ? 0.6 : 0.45) : (isDark ? 0.28 : 0.18));
+                                const cardShadow = isHighlight
+                                    ? (isDark ? '0 22px 48px -16px rgba(78,205,196,0.35)' : '0 22px 48px -16px rgba(124,58,237,0.32)')
+                                    : (isDark ? '0 18px 42px -18px rgba(0,0,0,0.6)' : '0 14px 36px -20px rgba(15,23,42,0.25)');
+                                const cardHoverShadow = isHighlight
+                                    ? (isDark ? '0 32px 60px -16px rgba(78,205,196,0.4)' : '0 30px 56px -16px rgba(124,58,237,0.38)')
+                                    : (isDark ? '0 20px 48px -18px rgba(0,0,0,0.65)' : '0 20px 44px -18px rgba(15,23,42,0.28)');
+
+                                return (
+                                    <Grid size={{ xs: 12, md: 4 }} key={plan.key}>
+                                        <Box
+                                            sx={{
+                                                position: 'relative',
+                                                height: '100%',
+                                                p: 4,
+                                                borderRadius: 4,
+                                                background: cardBackground,
+                                                border: `1px solid ${cardBorderColor}`,
+                                                boxShadow: cardShadow,
+                                                transition: 'transform .25s ease, box-shadow .25s ease',
+                                                '&:hover': {
+                                                    transform: 'translateY(-6px)',
+                                                    boxShadow: cardHoverShadow,
+                                                    background: cardHoverBackground,
+                                                },
+                                            }}
+                                        >
+                                            {isHighlight && (
+                                                <Chip
+                                                    label="Most popular"
+                                                    color="secondary"
+                                                    size="small"
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 24,
+                                                        right: 24,
+                                                        fontWeight: 700,
+                                                        backgroundColor: primaryMain,
+                                                        color: 'white',
+                                                    }}
+                                                />
+                                            )}
+
+                                            <Stack spacing={2.5}>
+                                                <Box>
+                                                <Typography
+                                                    variant="h5"
+                                                    sx={{
+                                                        fontWeight: 700,
+                                                        color: textPrimary,
+                                                        letterSpacing: '-0.3px',
+                                                    }}
+                                                >
+                                                    {plan.name}
+                                                </Typography>
+                                                <Typography variant="body2" sx={{ color: textSecondary, mt: 0.5 }}>
+                                                    {plan.description}
+                                                </Typography>
+                                                </Box>
+
+                                                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                                                    {priceValue === 0 ? (
+                                                        <Typography
+                                                            variant="h3"
+                                                            sx={{ fontWeight: 800, color: accentColor }}
+                                                        >
+                                                            Free
+                                                        </Typography>
+                                                    ) : (
+                                                        <>
+                                                            <Typography
+                                                                variant="h3"
+                                                                sx={{ fontWeight: 800, color: accentColor }}
+                                                            >
+                                                                ${priceValue}
+                                                            </Typography>
+                                                            <Typography variant="body1" sx={{ color: textSecondary }}>
+                                                                {intervalLabel}
+                                                            </Typography>
+                                                        </>
+                                                    )}
+                                                </Box>
+
+                                                {priceValue > 0 && (
+                                                    <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 600 }}>
+                                                        Billed in {currencyLabel}
+                                                    </Typography>
+                                                )}
+
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        fontWeight: 600,
+                                                        color: alpha(accentColor, 0.85),
+                                                        backgroundColor: alpha(accentColor, 0.12),
+                                                        borderRadius: 2,
+                                                        px: 1.5,
+                                                        py: 0.75,
+                                                    }}
+                                                >
+                                                    {plan.ai_credits ?? 'Includes AI assistant automation'}
+                                                </Typography>
+
+                                                <Stack spacing={1.5} sx={{ mt: 1 }}>
+                                                    {(plan.features ?? []).map((feature) => (
+                                                        <Stack
+                                                            key={feature}
+                                                            direction="row"
+                                                            spacing={1}
+                                                            alignItems="flex-start"
+                                                        >
+                                                            <CheckCircle
+                                                                sx={{
+                                                                    fontSize: 20,
+                                                                    color: accentColor,
+                                                                    mt: 0.2,
+                                                                }}
+                                                            />
+                                                            <Typography variant="body2" sx={{ color: textSecondary }}>
+                                                                {feature}
+                                                            </Typography>
+                                                        </Stack>
+                                                    ))}
+                                                </Stack>
+
+                                                <Button
+                                                    href={cta.href}
+                                                    variant={isHighlight ? 'contained' : 'outlined'}
+                                                    size="large"
+                                                    sx={{
+                                                        mt: 2,
+                                                        textTransform: 'none',
+                                                        fontWeight: 700,
+                                                        borderRadius: 2,
+                                                        px: 3,
+                                                        background: isHighlight
+                                                            ? `linear-gradient(135deg, ${accentColor}, ${alpha(accentColor, 0.75)})`
+                                                            : 'transparent',
+                                                        color: isHighlight ? 'white' : accentColor,
+                                                        borderColor: alpha(accentColor, isHighlight ? 0 : 0.5),
+                                                        '&:hover': {
+                                                            background: isHighlight
+                                                                ? `linear-gradient(135deg, ${alpha(accentColor, 0.9)}, ${accentColor})`
+                                                                : alpha(accentColor, 0.1),
+                                                            borderColor: alpha(accentColor, 0.6),
+                                                            color: isHighlight ? 'white' : accentColor,
+                                                        },
+                                                    }}
+                                                >
+                                                    {cta.label}
+                                                </Button>
+                                            </Stack>
+                                        </Box>
+                                    </Grid>
+                                );
+                            })}
+                        </Grid>
+
+                        <Stack
+                            direction={{ xs: 'column', sm: 'row' }}
+                            spacing={2}
+                            justifyContent="center"
+                            alignItems="center"
+                            sx={{ mt: 6, color: textSecondary }}
+                        >
+                            <Typography variant="body2" sx={{ fontWeight: 500, color: textSecondary }}>
+                                Prices listed in USD. Cancel or switch plans anytime.
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 500, color: textSecondary }}>
+                                Need enterprise licensing? <Link href="/contact">Contact our team</Link> for a custom quote.
+                            </Typography>
+                        </Stack>
+                    </Container>
+                </Box>
+
+                <Box
+                    id="login-form"
+                    sx={{
+                        py: { xs: 8, md: 12 },
+                        bgcolor: isDark ? alpha(textPrimary, 0.06) : '#FAFBFC',
+                    }}
+                >
                     <Container maxWidth="sm">
                         <Paper
                             elevation={0}
@@ -1748,18 +2093,18 @@ export default function Landing({ errors }) {
                                 p: { xs: 4, sm: 6 },
                                 borderRadius: 3,
                                 border: '1px solid',
-                                borderColor: 'grey.200',
-                                bgcolor: 'white',
+                                borderColor: divider,
+                                bgcolor: backgroundPaper,
                             }}
                         >
                             <Box sx={{ textAlign: 'center', mb: 4 }}>
                                 <Typography
                                     variant="h4"
-                                    sx={{ fontWeight: 700, mb: 1, color: '#1a1a1a' }}
+                                    sx={{ fontWeight: 700, mb: 1, color: textPrimary }}
                                 >
                                     Welcome back
                                 </Typography>
-                                <Typography variant="body1" color="grey.600">
+                                <Typography variant="body1" sx={{ color: textSecondary }}>
                                     {t('landing.signInDescription')}
                                 </Typography>
                             </Box>
@@ -1776,11 +2121,11 @@ export default function Landing({ errors }) {
                                         fontSize: '1rem',
                                         fontWeight: 500,
                                         textTransform: 'none',
-                                        borderColor: 'grey.300',
-                                        color: 'grey.700',
+                                        borderColor: isDark ? alpha(textPrimary, 0.25) : 'grey.300',
+                                        color: textPrimary,
                                         '&:hover': {
-                                            borderColor: 'grey.400',
-                                            bgcolor: 'grey.50',
+                                            borderColor: isDark ? alpha(textPrimary, 0.35) : 'grey.400',
+                                            bgcolor: isDark ? alpha(textPrimary, 0.12) : 'grey.50',
                                         },
                                     }}
                                 >
@@ -1789,7 +2134,7 @@ export default function Landing({ errors }) {
 
                                 <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
                                     <Divider sx={{ flex: 1 }} />
-                                    <Typography variant="body2" sx={{ px: 2, color: 'grey.500' }}>
+                                    <Typography variant="body2" sx={{ px: 2, color: textSecondary }}>
                                         {t('common.or')}
                                     </Typography>
                                     <Divider sx={{ flex: 1 }} />
@@ -1816,10 +2161,10 @@ export default function Landing({ errors }) {
                                                     borderColor: 'grey.300',
                                                 },
                                                 '&:hover fieldset': {
-                                                    borderColor: '#7C6AE8',
+                                                    borderColor: primaryMain,
                                                 },
                                                 '&.Mui-focused fieldset': {
-                                                    borderColor: '#7C6AE8',
+                                                    borderColor: primaryMain,
                                                 },
                                             },
                                         }}
@@ -1843,10 +2188,10 @@ export default function Landing({ errors }) {
                                                     borderColor: 'grey.300',
                                                 },
                                                 '&:hover fieldset': {
-                                                    borderColor: '#7C6AE8',
+                                                    borderColor: primaryMain,
                                                 },
                                                 '&.Mui-focused fieldset': {
-                                                    borderColor: '#7C6AE8',
+                                                    borderColor: primaryMain,
                                                 },
                                             },
                                         }}
@@ -1890,8 +2235,8 @@ export default function Landing({ errors }) {
                                             underline="hover"
                                             sx={{
                                                 fontSize: 14,
-                                                color: '#7C6AE8',
-                                                '&:hover': { color: '#6B5CE6' },
+                                                color: primaryMain,
+                                                '&:hover': { color: primaryDark },
                                             }}
                                         >
                                             Forgot your password?
@@ -1900,8 +2245,7 @@ export default function Landing({ errors }) {
 
                                     <Typography
                                         variant="body2"
-                                        color="grey.600"
-                                        sx={{ textAlign: 'center' }}
+                                        sx={{ textAlign: 'center', color: textSecondary }}
                                     >
                                         Don't have an account?{' '}
                                         <Link
@@ -1909,8 +2253,8 @@ export default function Landing({ errors }) {
                                             underline="hover"
                                             sx={{
                                                 fontWeight: 600,
-                                                color: '#7C6AE8',
-                                                '&:hover': { color: '#6B5CE6' },
+                                                color: primaryMain,
+                                                '&:hover': { color: primaryDark },
                                             }}
                                         >
                                             {t('auth.signUpNow')}
@@ -1926,9 +2270,9 @@ export default function Landing({ errors }) {
                 <Box
                     sx={{
                         py: 6,
-                        bgcolor: 'white',
+                        bgcolor: backgroundPaper,
                         borderTop: '1px solid',
-                        borderColor: 'grey.200',
+                        borderColor: divider,
                     }}
                 >
                     <Container maxWidth="lg">
@@ -1944,11 +2288,11 @@ export default function Landing({ errors }) {
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                 <Typography
                                     variant="h6"
-                                    sx={{ fontWeight: 700, color: '#7C6AE8', mr: 2 }}
+                                    sx={{ fontWeight: 700, color: primaryMain, mr: 2 }}
                                 >
                                     TaskPilot
                                 </Typography>
-                                <Typography variant="body2" color="grey.600">
+                                <Typography variant="body2" sx={{ color: textSecondary }}>
                                     The everything app, for work.
                                 </Typography>
                             </Box>
@@ -1957,9 +2301,9 @@ export default function Landing({ errors }) {
                                 <Link
                                     href="/blog"
                                     sx={{
-                                        color: 'grey.600',
+                                        color: textSecondary,
                                         textDecoration: 'none',
-                                        '&:hover': { color: '#7C6AE8' },
+                                        '&:hover': { color: primaryMain },
                                     }}
                                 >
                                     Blog
@@ -1967,22 +2311,22 @@ export default function Landing({ errors }) {
                                 <InertiaLink
                                     href="/privacy_policy"
                                     style={{
-                                        color: '#6B7280',
+                                        color: textSecondary,
                                         textDecoration: 'none',
                                     }}
-                                    onMouseEnter={(e) => (e.target.style.color = '#7C6AE8')}
-                                    onMouseLeave={(e) => (e.target.style.color = '#6B7280')}
+                                    onMouseEnter={(e) => (e.target.style.color = primaryMain)}
+                                    onMouseLeave={(e) => (e.target.style.color = textSecondary)}
                                 >
                                     Privacy
                                 </InertiaLink>
                                 <InertiaLink
                                     href="/terms_of_service"
                                     style={{
-                                        color: '#6B7280',
+                                        color: textSecondary,
                                         textDecoration: 'none',
                                     }}
-                                    onMouseEnter={(e) => (e.target.style.color = '#7C6AE8')}
-                                    onMouseLeave={(e) => (e.target.style.color = '#6B7280')}
+                                    onMouseEnter={(e) => (e.target.style.color = primaryMain)}
+                                    onMouseLeave={(e) => (e.target.style.color = textSecondary)}
                                 >
                                     Terms
                                 </InertiaLink>

@@ -154,8 +154,20 @@ const sanitizeAssistantText = (text) => {
         .trim();
 };
 
+const stripClassifierFooter = (text) => {
+    if (!text) return '';
+
+    return text
+        .split(/\r?\n/)
+        .map((line) => line.trimEnd())
+        .filter((line) => !/^(intent|tool|rephrased|classification|confidence|intentions?)\s*:/i.test(line.trim()))
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+};
+
 const structureAssistantMessage = (text) => {
-    const sanitized = sanitizeAssistantText(text);
+    const sanitized = stripClassifierFooter(sanitizeAssistantText(text));
     if (!sanitized) {
         return [];
     }
@@ -175,6 +187,11 @@ const structureAssistantMessage = (text) => {
         const line = rawLine.trim();
         if (line === '') {
             flushList();
+            return;
+        }
+
+        if (/^(intent|tool|rephrased|classification|confidence|intentions?)\s*:/i.test(line)) {
+            // Skip classifier metadata the backend may include for debugging
             return;
         }
 
@@ -202,111 +219,159 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
     const theme = useTheme();
     const palette = useMemo(() => {
         const isDark = theme.palette.mode === 'dark';
-        const primary = theme.palette.primary?.main ?? '#1d4ed8';
+        const primary = theme.palette.primary?.main ?? '#2563eb';
         const primaryDark = theme.palette.primary?.dark ?? '#1e3a8a';
         const secondary = theme.palette.secondary?.main ?? '#0ea5e9';
         const secondaryDark = theme.palette.secondary?.dark ?? '#0369a1';
-        const success = theme.palette.success?.main ?? '#22c55e';
-        const warning = theme.palette.warning?.main ?? '#f59e0b';
-        const error = theme.palette.error?.main ?? '#ef4444';
-        const info = theme.palette.info?.main ?? '#60a5fa';
+        const success = theme.palette.success?.main ?? '#16a34a';
+        const warning = theme.palette.warning?.main ?? '#d97706';
+        const error = theme.palette.error?.main ?? '#dc2626';
+        const info = theme.palette.info?.main ?? '#2563eb';
         const grey = theme.palette.grey ?? {};
-        const surface = isDark ? alpha('#0b1220', 0.94) : '#ffffff';
 
-        return {
-            tone: {
-                primary,
-                primaryDark,
-                secondary,
-                secondaryDark,
-                success,
-                warning,
-                error,
-                info,
-                neutral: {
-                    50: grey[50] ?? '#f8fafc',
-                    100: grey[100] ?? '#f1f5f9',
-                    200: grey[200] ?? '#e2e8f0',
-                    300: grey[300] ?? '#cbd5f5',
-                    400: grey[400] ?? '#94a3b8',
-                    500: grey[500] ?? '#64748b',
-                    600: grey[600] ?? '#475569',
-                },
+        const tone = {
+            primary,
+            primaryDark,
+            secondary,
+            secondaryDark,
+            success,
+            warning,
+            error,
+            info,
+            neutral: {
+                50: grey[50] ?? '#f8fafc',
+                100: grey[100] ?? '#f1f5f9',
+                200: grey[200] ?? '#e2e8f0',
+                300: grey[300] ?? '#cbd5f5',
+                400: grey[400] ?? '#94a3b8',
+                500: grey[500] ?? '#64748b',
+                600: grey[600] ?? '#475569',
             },
-            appBg: isDark
-                ? 'radial-gradient(circle at 10% -10%, rgba(14,32,58,0.9) 0%, rgba(2,6,15,0.95) 55%, rgba(1,3,10,0.98) 100%)'
-                : 'radial-gradient(circle at 0% -20%, rgba(226,232,240,0.8) 0%, #f7f8fb 55%, #eef3f9 100%)',
-            panelBg: surface,
-            panelBorder: isDark ? 'rgba(148,163,184,0.14)' : 'rgba(15,23,42,0.08)',
-            panelShadow: isDark ? '0 32px 68px rgba(3,7,18,0.65)' : '0 32px 68px rgba(15,23,42,0.15)',
-            titleBg: isDark
-                ? 'linear-gradient(120deg, rgba(30,41,59,0.95), rgba(51,65,85,0.92))'
-                : 'linear-gradient(120deg, rgba(59,130,246,0.9), rgba(37,99,235,0.95))',
-            headerText: isDark ? '#f8fbff' : '#ffffff',
-            headerIcon: isDark ? 'rgba(226,232,240,0.9)' : 'rgba(255,255,255,0.95)',
-            projectChipBg: isDark ? 'rgba(148,163,184,0.12)' : 'rgba(255,255,255,0.15)',
-            projectChipBorder: isDark ? 'rgba(148,163,184,0.24)' : 'rgba(255,255,255,0.25)',
-            projectChipText: isDark ? '#f1f5f9' : '#ffffff',
-            ribbonBg: isDark ? 'rgba(8,14,24,0.88)' : 'rgba(248,250,252,0.92)',
-            ribbonBorder: isDark ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.06)',
-            ribbonLabel: isDark ? 'rgba(148,163,184,0.7)' : '#334155',
-            ribbonText: isDark ? 'rgba(226,232,240,0.92)' : '#1f2937',
-            ribbonTextMuted: isDark ? 'rgba(148,163,184,0.6)' : 'rgba(71,85,105,0.75)',
-            chipGold: isDark ? '#facc15' : primary,
-            chipGoldBg: isDark ? 'rgba(250,204,21,0.12)' : alpha(primary, 0.1),
-            chipGoldHover: isDark ? 'rgba(250,204,21,0.2)' : alpha(primary, 0.16),
-            chipGoldBorder: isDark ? 'rgba(250,204,21,0.3)' : alpha(primary, 0.22),
-            scrollbar: isDark ? 'rgba(148,163,184,0.45)' : 'rgba(148,163,184,0.6)',
-            scrollTrack: isDark ? 'rgba(14,20,32,0.55)' : 'rgba(226,232,240,0.7)',
-            asstBubble: isDark
-                ? 'linear-gradient(135deg, rgba(30,41,59,0.95), rgba(51,65,85,0.92))'
-                : 'linear-gradient(135deg, rgba(248,250,252,0.98), rgba(241,245,249,0.96))',
-            asstBubbleBorder: isDark ? 'rgba(148,163,184,0.25)' : 'rgba(203,213,225,0.3)',
-            assistantStripe: isDark
-                ? 'linear-gradient(90deg, rgba(56,189,248,0.28), rgba(59,130,246,0.2))'
-                : 'linear-gradient(90deg, rgba(59,130,246,0.25), rgba(14,165,233,0.2))',
-            stripeAsst: isDark
-                ? 'linear-gradient(90deg, rgba(56,189,248,0.28), rgba(59,130,246,0.2))'
-                : 'linear-gradient(90deg, rgba(59,130,246,0.25), rgba(14,165,233,0.2))',
-            assistantText: isDark ? 'rgba(241,245,249,0.95)' : '#374151',
-            userBubble: isDark
-                ? 'linear-gradient(135deg, rgba(59,130,246,0.9), rgba(37,99,235,0.85))'
-                : 'linear-gradient(135deg, rgba(59,130,246,0.95), rgba(37,99,235,0.9))',
-            userBubbleBorder: isDark ? 'rgba(96,165,250,0.3)' : 'rgba(147,197,253,0.4)',
-            userStripe: isDark
-                ? 'linear-gradient(90deg, rgba(250,204,21,0.32), rgba(148,163,184,0.2))'
-                : 'linear-gradient(90deg, rgba(148,163,184,0.22), rgba(203,213,225,0.16))',
-            stripeUser: isDark
-                ? 'linear-gradient(90deg, rgba(250,204,21,0.32), rgba(148,163,184,0.2))'
-                : 'linear-gradient(90deg, rgba(148,163,184,0.22), rgba(203,213,225,0.16))',
+        };
+
+        const lightPalette = {
+            tone,
+            appBg: 'linear-gradient(180deg, #f3f4f6 0%, #ffffff 80%)',
+            panelBg: '#ffffff',
+            panelBorder: 'rgba(148,163,184,0.18)',
+            panelShadow: '0 24px 48px rgba(15,23,42,0.12)',
+            titleBg: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+            headerText: '#ffffff',
+            headerIcon: 'rgba(255,255,255,0.92)',
+            projectChipBg: 'rgba(255,255,255,0.18)',
+            projectChipBorder: 'rgba(255,255,255,0.22)',
+            projectChipText: '#ffffff',
+            ribbonBg: 'rgba(255,255,255,0.92)',
+            ribbonBorder: 'rgba(148,163,184,0.25)',
+            ribbonLabel: '#1f2937',
+            ribbonText: '#334155',
+            ribbonTextMuted: '#64748b',
+            chipGold: '#1d4ed8',
+            chipGoldBg: '#dbeafe',
+            chipGoldHover: '#bfdbfe',
+            chipGoldBorder: '#bfdbfe',
+            scrollbar: 'rgba(148,163,184,0.55)',
+            scrollTrack: '#f1f5f9',
+            asstBubble: '#ffffff',
+            asstBubbleBorder: 'rgba(15,23,42,0.08)',
+            assistantStripe: 'linear-gradient(90deg, rgba(14,165,233,0.18), rgba(59,130,246,0.16))',
+            stripeAsst: 'linear-gradient(90deg, rgba(14,165,233,0.18), rgba(59,130,246,0.16))',
+            assistantText: '#1f2937',
+            userBubble: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+            userBubbleBorder: 'rgba(29,78,216,0.35)',
+            userStripe: 'linear-gradient(90deg, rgba(251,191,36,0.28), rgba(255,255,255,0))',
+            stripeUser: 'linear-gradient(90deg, rgba(251,191,36,0.28), rgba(255,255,255,0))',
             userText: '#ffffff',
-            metaCaption: isDark ? 'rgba(148,163,184,0.75)' : 'rgba(71,85,105,0.75)',
-            metaTime: isDark ? 'rgba(148,163,184,0.55)' : 'rgba(100,116,139,0.6)',
-            inputBg: isDark ? 'rgba(15,23,42,0.65)' : 'rgba(248,250,252,0.8)',
-            inputBgHover: isDark ? 'rgba(23,37,69,0.72)' : 'rgba(241,245,249,0.95)',
-            inputBgFocus: isDark ? 'rgba(30,41,59,0.8)' : 'rgba(226,232,240,0.95)',
-            inputOutline: isDark ? 'rgba(59,130,246,0.35)' : 'rgba(15,23,42,0.12)',
-            inputFocusRing: isDark ? '0 0 0 2px rgba(59,130,246,0.25)' : '0 0 0 2px rgba(59,130,246,0.12)',
-            sendGradient: `linear-gradient(135deg, ${secondary}, ${primary})`,
-            sendGradientHover: `linear-gradient(135deg, ${primary}, ${secondary})`,
-            sendShadow: isDark
-                ? `0 10px 28px rgba(15,23,42,0.65)`
-                : `0 10px 28px rgba(15,23,42,0.18)`,
-            sendShadowHover: isDark
-                ? `0 12px 30px rgba(15,23,42,0.7)`
-                : `0 12px 30px rgba(59,130,246,0.28)`,
-            successBg: isDark ? 'rgba(34,197,94,0.18)' : 'rgba(22,163,74,0.14)',
-            successText: success,
-            cancelBg: isDark ? 'rgba(248,113,113,0.12)' : 'rgba(248,113,113,0.16)',
-            cancelText: error,
-            dangerBg: isDark ? 'rgba(220,88,88,0.14)' : 'rgba(220,38,38,0.12)',
-            dangerBorder: isDark ? 'rgba(220,38,38,0.3)' : 'rgba(220,38,38,0.22)',
-            snapshotBg: isDark ? 'rgba(14,165,233,0.12)' : 'rgba(14,116,233,0.1)',
-            snapshotBorder: isDark ? 'rgba(56,189,248,0.28)' : 'rgba(59,130,246,0.18)',
-            badgeBg: isDark ? 'rgba(56,189,248,0.16)' : 'rgba(59,130,246,0.12)',
-            badgeText: isDark ? 'rgba(125,211,252,0.9)' : 'rgba(30,64,175,0.9)',
+            metaCaption: '#475569',
+            metaTime: '#64748b',
+            inputBg: '#ffffff',
+            inputBgHover: '#f8fafc',
+            inputBgFocus: '#f1f5f9',
+            inputOutline: 'rgba(148,163,184,0.45)',
+            inputFocusRing: '0 0 0 2px rgba(37,99,235,0.18)',
+            sendGradient: 'linear-gradient(135deg, #0ea5e9, #2563eb)',
+            sendGradientHover: 'linear-gradient(135deg, #2563eb, #0ea5e9)',
+            sendShadow: '0 14px 30px rgba(14,116,233,0.18)',
+            sendShadowHover: '0 16px 34px rgba(14,116,233,0.26)',
+            successBg: '#dcfce7',
+            successText: '#15803d',
+            cancelBg: '#fee2e2',
+            cancelText: '#dc2626',
+            dangerBg: '#fdecec',
+            dangerBorder: '#fca5a5',
+            commandPreviewBg: '#fef3c7',
+            commandPreviewBorder: '#facc15',
+            deletePreviewBg: '#fee2e2',
+            deletePreviewBorder: '#f87171',
+            snapshotBg: '#e0f2fe',
+            snapshotBorder: '#93c5fd',
+            badgeBg: '#e0f2fe',
+            badgeText: '#1d4ed8',
             isDark,
         };
+
+        const darkPalette = {
+            tone,
+            appBg: 'radial-gradient(circle at 10% -10%, rgba(14,32,58,0.9) 0%, rgba(2,6,15,0.95) 55%, rgba(1,3,10,0.98) 100%)',
+            panelBg: alpha('#0b1220', 0.94),
+            panelBorder: 'rgba(148,163,184,0.14)',
+            panelShadow: '0 32px 68px rgba(3,7,18,0.65)',
+            titleBg: 'linear-gradient(120deg, rgba(30,41,59,0.95), rgba(51,65,85,0.92))',
+            headerText: '#f8fbff',
+            headerIcon: 'rgba(226,232,240,0.9)',
+            projectChipBg: 'rgba(148,163,184,0.12)',
+            projectChipBorder: 'rgba(148,163,184,0.24)',
+            projectChipText: '#f1f5f9',
+            ribbonBg: 'rgba(8,14,24,0.88)',
+            ribbonBorder: 'rgba(148,163,184,0.18)',
+            ribbonLabel: 'rgba(148,163,184,0.7)',
+            ribbonText: 'rgba(226,232,240,0.92)',
+            ribbonTextMuted: 'rgba(148,163,184,0.6)',
+            chipGold: '#facc15',
+            chipGoldBg: 'rgba(250,204,21,0.12)',
+            chipGoldHover: 'rgba(250,204,21,0.2)',
+            chipGoldBorder: 'rgba(250,204,21,0.3)',
+            scrollbar: 'rgba(148,163,184,0.45)',
+            scrollTrack: 'rgba(14,20,32,0.55)',
+            asstBubble: 'linear-gradient(135deg, rgba(30,41,59,0.95), rgba(51,65,85,0.92))',
+            asstBubbleBorder: 'rgba(148,163,184,0.25)',
+            assistantStripe: 'linear-gradient(90deg, rgba(56,189,248,0.28), rgba(59,130,246,0.2))',
+            stripeAsst: 'linear-gradient(90deg, rgba(56,189,248,0.28), rgba(59,130,246,0.2))',
+            assistantText: 'rgba(241,245,249,0.95)',
+            userBubble: 'linear-gradient(135deg, rgba(59,130,246,0.9), rgba(37,99,235,0.85))',
+            userBubbleBorder: 'rgba(96,165,250,0.3)',
+            userStripe: 'linear-gradient(90deg, rgba(250,204,21,0.32), rgba(148,163,184,0.2))',
+            stripeUser: 'linear-gradient(90deg, rgba(250,204,21,0.32), rgba(148,163,184,0.2))',
+            userText: '#ffffff',
+            metaCaption: 'rgba(148,163,184,0.75)',
+            metaTime: 'rgba(148,163,184,0.55)',
+            inputBg: 'rgba(15,23,42,0.65)',
+            inputBgHover: 'rgba(23,37,69,0.72)',
+            inputBgFocus: 'rgba(30,41,59,0.8)',
+            inputOutline: 'rgba(59,130,246,0.35)',
+            inputFocusRing: '0 0 0 2px rgba(59,130,246,0.25)',
+            sendGradient: `linear-gradient(135deg, ${secondary}, ${primary})`,
+            sendGradientHover: `linear-gradient(135deg, ${primary}, ${secondary})`,
+            sendShadow: '0 10px 28px rgba(15,23,42,0.65)',
+            sendShadowHover: '0 12px 30px rgba(15,23,42,0.7)',
+            successBg: 'rgba(34,197,94,0.18)',
+            successText: success,
+            cancelBg: 'rgba(248,113,113,0.12)',
+            cancelText: error,
+            dangerBg: 'rgba(220,88,88,0.14)',
+            dangerBorder: 'rgba(220,38,38,0.3)',
+            commandPreviewBg: 'rgba(245,158,11,0.18)',
+            commandPreviewBorder: 'rgba(253,224,71,0.35)',
+            deletePreviewBg: 'rgba(239,68,68,0.18)',
+            deletePreviewBorder: 'rgba(248,113,113,0.42)',
+            snapshotBg: 'rgba(14,165,233,0.12)',
+            snapshotBorder: 'rgba(56,189,248,0.28)',
+            badgeBg: 'rgba(56,189,248,0.16)',
+            badgeText: 'rgba(125,211,252,0.9)',
+            isDark,
+        };
+
+        return isDark ? darkPalette : lightPalette;
     }, [theme]);
 
     const tone = palette.tone;
@@ -475,7 +540,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                 }
                 next.push({
                     role: 'assistant',
-                    text: data?.message || 'Command executed.',
+                    text: stripClassifierFooter(data?.message || 'Command executed.'),
                     response: data,
                     ts: Date.now(),
                 });
@@ -819,7 +884,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                             setGenerationProgress({ step: 4, total: 4, message: '🎉 Your custom application is ready!' });
                             const asstMsg = {
                                 role: 'assistant',
-                                text: evt.message || 'Generated your custom application!',
+                                text: stripClassifierFooter(evt.message || 'Generated your custom application!'),
                                 response: evt,
                                 ts: Date.now(),
                             };
@@ -864,7 +929,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
 
                 const asstMsg = {
                     role: 'assistant',
-                    text: data?.message || 'I need some clarification to provide you with the best solution.',
+                    text: stripClassifierFooter(data?.message || 'I need some clarification to provide you with the best solution.'),
                     response: data,
                     conversation_type: data?.response_type,
                     requires_response: data?.requires_user_response,
@@ -897,7 +962,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
 
                 const asstMsg = {
                     role: 'assistant',
-                    text: data?.message || 'Generated your custom application!',
+                    text: stripClassifierFooter(data?.message || 'Generated your custom application!'),
                     response: data,
                     ts: Date.now(),
                 };
@@ -935,7 +1000,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
 
             const asstMsg = {
                 role: 'assistant',
-                text: data?.message || data?.content || '',
+                text: stripClassifierFooter(data?.message || data?.content || ''),
                 response: data,
                 ts: Date.now(),
             };
@@ -1359,6 +1424,17 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                     const planSummary = summarizeCommandPlan(cmdData);
                     const planExpanded = expandedPlanIndex === idx;
                     const structuredContent = !isUser ? structureAssistantMessage(m?.text || '') : [];
+                    const previewBackground = isDeleteCommand
+                        ? (palette.deletePreviewBg ?? palette.dangerBg)
+                        : (palette.commandPreviewBg ?? alpha(tone.warning, 0.15));
+                    const previewBorder = isDeleteCommand
+                        ? (palette.deletePreviewBorder ?? palette.dangerBorder)
+                        : (palette.commandPreviewBorder ?? alpha(tone.warning, 0.45));
+                    const previewTitleColor = isDeleteCommand
+                        ? (isDarkMode ? '#fca5a5' : '#b91c1c')
+                        : (isDarkMode ? '#facc15' : '#b45309');
+                    const previewBodyColor = isDarkMode ? 'rgba(248,250,252,0.95)' : '#1f2937';
+                    const previewListColor = isDarkMode ? 'rgba(248,250,252,0.92)' : '#1f2937';
 
                     // Inline upgrade card
                     if (m.upgrade) {
@@ -1534,7 +1610,13 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                         <Typography
                                             variant="caption"
                                             component="span"
-                                            sx={{ color: alpha(palette.metaTime, 0.85) }}
+                                            sx={{
+                                                color: isUser
+                                                    ? (palette.isDark
+                                                        ? alpha(palette.userText, 0.8)
+                                                        : 'rgba(255,255,255,0.9)')
+                                                    : alpha(palette.metaTime, 0.85),
+                                            }}
                                         >
                                             {new Date(m?.ts || Date.now()).toLocaleTimeString([], {
                                                 hour: '2-digit',
@@ -1632,10 +1714,8 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                 mt: 1.8,
                                                 p: 1.8,
                                                 borderRadius: 2.5,
-                                                border: `1px dashed ${isDeleteCommand ? palette.dangerBorder : alpha(tone.warning, 0.45)}`,
-                                                background: isDeleteCommand
-                                                    ? palette.dangerBg
-                                                    : alpha(tone.warning, 0.15),
+                                                border: `1px solid ${previewBorder}`,
+                                                background: previewBackground,
                                             }}
                                         >
                                             <Typography
@@ -1645,9 +1725,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                     fontWeight: 900,
                                                     display: 'block',
                                                     mb: 0.8,
-                                                    color: isDeleteCommand
-                                                        ? '#ff4d6d'
-                                                        : palette.chipGold,
+                                                    color: previewTitleColor,
                                                 }}
                                             >
                                                 {isDeleteCommand
@@ -1659,11 +1737,11 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                 sx={{
                                                     mb: 1.5,
                                                     lineHeight: 1.6,
-                                                color: 'rgba(255,255,255,0.98)',
-                                            }}
-                                        >
-                                            {m?.response?.message}
-                                        </Typography>
+                                                    color: previewBodyColor,
+                                                }}
+                                            >
+                                                {m?.response?.message}
+                                            </Typography>
 
                                         {planSummary.length > 0 && (
                                             <Stack
@@ -1672,7 +1750,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                 sx={{
                                                     pl: 2,
                                                     mt: 1.2,
-                                                    color: 'rgba(255,255,255,0.92)',
+                                                    color: previewListColor,
                                                     listStyleType: 'disc',
                                                 }}
                                             >
@@ -1708,15 +1786,18 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                         fontWeight: 800,
                                                         borderRadius: 20,
                                                         px: 2,
-                                                        boxShadow: '0 8px 22px rgba(0,0,0,0.3)',
+                                                        boxShadow: isDeleteCommand
+                                                            ? '0 10px 24px rgba(239,68,68,0.35)'
+                                                            : '0 10px 24px rgba(22,163,74,0.32)',
                                                         background: isDeleteCommand
-                                                            ? 'linear-gradient(135deg, #ff6b6b, #ff8e53)'
-                                                            : 'linear-gradient(135deg, #34d399, #10b981)',
+                                                            ? 'linear-gradient(135deg, #ef4444, #f97316)'
+                                                            : 'linear-gradient(135deg, #22c55e, #16a34a)',
                                                         '&:hover': {
                                                             transform:
                                                                 'translateY(-1px) scale(1.03)',
-                                                            boxShadow:
-                                                                '0 10px 26px rgba(0,0,0,0.38)',
+                                                            boxShadow: isDeleteCommand
+                                                                ? '0 12px 28px rgba(239,68,68,0.42)'
+                                                                : '0 12px 28px rgba(22,163,74,0.38)',
                                                         },
                                                         transition: 'all 0.25s ease',
                                                     }}
@@ -1733,12 +1814,23 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                         textTransform: 'none',
                                                         borderRadius: 20,
                                                         px: 2,
-                                                        borderWidth: 1.8,
-                                                        color: 'white',
-                                                        borderColor: 'rgba(255,255,255,0.6)',
+                                                        borderWidth: 1.6,
+                                                        color: isDarkMode
+                                                            ? 'rgba(248,250,252,0.92)'
+                                                            : palette.cancelText,
+                                                        borderColor: isDarkMode
+                                                            ? 'rgba(248,250,252,0.42)'
+                                                            : alpha(palette.cancelText, 0.5),
+                                                        background: isDarkMode
+                                                            ? 'rgba(248,113,113,0.1)'
+                                                            : palette.cancelBg,
                                                         '&:hover': {
-                                                            background: 'rgba(255,255,255,0.15)',
-                                                            borderColor: 'rgba(255,255,255,0.9)',
+                                                            background: isDarkMode
+                                                                ? 'rgba(248,113,113,0.16)'
+                                                                : alpha(palette.cancelText, 0.12),
+                                                            borderColor: isDarkMode
+                                                                ? 'rgba(248,250,252,0.6)'
+                                                                : alpha(palette.cancelText, 0.65),
                                                         },
                                                     }}
                                                     aria-label={t('assistantChat.cancelCommand')}
@@ -1788,11 +1880,22 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                         textTransform: 'none',
                                                         borderRadius: 20,
                                                         fontWeight: 700,
-                                                        borderColor: 'rgba(255,255,255,0.5)',
-                                                        color: 'rgba(255,255,255,0.85)',
+                                                        borderColor: isDarkMode
+                                                            ? 'rgba(248,250,252,0.4)'
+                                                            : previewBorder,
+                                                        color: isDarkMode
+                                                            ? 'rgba(248,250,252,0.9)'
+                                                            : '#1f2937',
+                                                        background: isDarkMode
+                                                            ? 'rgba(15,23,42,0.25)'
+                                                            : '#ffffff',
                                                         '&:hover': {
-                                                            borderColor: 'rgba(255,255,255,0.8)',
-                                                            background: 'rgba(255,255,255,0.08)',
+                                                            borderColor: isDarkMode
+                                                                ? 'rgba(248,250,252,0.65)'
+                                                                : previewBorder,
+                                                            background: isDarkMode
+                                                                ? 'rgba(148,163,184,0.12)'
+                                                                : alpha(previewBorder, 0.12),
                                                         },
                                                     }}
                                                 >
@@ -1805,13 +1908,19 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                             mt: 1,
                                                             fontSize: '0.72rem',
                                                             whiteSpace: 'pre-wrap',
-                                                            background: 'rgba(15,23,42,0.35)',
+                                                            background: isDarkMode
+                                                                ? 'rgba(15,23,42,0.35)'
+                                                                : '#f8fafc',
                                                             borderRadius: 1.5,
                                                             p: 1.2,
-                                                            color: 'rgba(226,232,240,0.95)',
+                                                            color: isDarkMode
+                                                                ? 'rgba(226,232,240,0.95)'
+                                                                : '#0f172a',
                                                             maxHeight: 220,
                                                             overflow: 'auto',
-                                                            border: '1px solid rgba(148,163,184,0.2)',
+                                                            border: isDarkMode
+                                                                ? '1px solid rgba(148,163,184,0.2)'
+                                                                : `1px solid ${alpha(previewBorder, 0.45)}`,
                                                         }}
                                                     >
                                                         {JSON.stringify(cmdData, null, 2)}
@@ -1994,14 +2103,23 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                         <Typography
                                             variant="caption"
                                             component="span"
-                                            sx={{ fontWeight: 900, color: '#ecfeff' }}
+                                            sx={{
+                                                fontWeight: 900,
+                                                color: palette.isDark
+                                                    ? 'rgba(236,254,255,0.95)'
+                                                    : palette.assistantText,
+                                            }}
                                         >
                                             Assistant
                                         </Typography>
                                         <Typography
                                             variant="caption"
                                             component="span"
-                                            sx={{ color: 'rgba(255,255,255,0.95)' }}
+                                            sx={{
+                                                color: palette.isDark
+                                                    ? 'rgba(255,255,255,0.9)'
+                                                    : palette.metaTime,
+                                            }}
                                         >
                                             {new Date().toLocaleTimeString([], {
                                                 hour: '2-digit',
@@ -2015,7 +2133,13 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                         <Box sx={{ textAlign: 'left' }}>
                                             <Typography
                                                 variant="body2"
-                                                sx={{ fontWeight: 700, color: '#ecfeff', mb: 1 }}
+                                                sx={{
+                                                    fontWeight: 700,
+                                                    color: palette.isDark
+                                                        ? 'rgba(236,254,255,0.95)'
+                                                        : palette.assistantText,
+                                                    mb: 1,
+                                                }}
                                             >
                                                 {generationProgress.message}
                                             </Typography>
@@ -2024,7 +2148,9 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                     sx={{
                                                         width: '100%',
                                                         height: 4,
-                                                        backgroundColor: 'rgba(255,255,255,0.2)',
+                                                        backgroundColor: palette.isDark
+                                                            ? 'rgba(255,255,255,0.2)'
+                                                            : alpha(palette.assistantText, 0.12),
                                                         borderRadius: 2,
                                                         overflow: 'hidden',
                                                     }}
@@ -2041,7 +2167,12 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                 </Box>
                                                 <Typography
                                                     variant="caption"
-                                                    sx={{ color: 'rgba(255,255,255,0.9)', minWidth: '40px' }}
+                                                    sx={{
+                                                        color: palette.isDark
+                                                            ? 'rgba(255,255,255,0.9)'
+                                                            : palette.metaTime,
+                                                        minWidth: '40px',
+                                                    }}
                                                 >
                                                     {generationProgress.step}/{generationProgress.total}
                                                 </Typography>
@@ -2058,12 +2189,19 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                                     width: 60,
                                                     borderRadius: 1.5,
                                                     mr: 1.5,
-                                                    border: '1px solid rgba(255,255,255,0.4)',
+                                                    border: palette.isDark
+                                                        ? '1px solid rgba(255,255,255,0.35)'
+                                                        : `1px solid ${alpha(palette.assistantText, 0.2)}`,
                                                 }}
                                             />
                                             <Typography
                                                 variant="body2"
-                                                sx={{ fontWeight: 700, color: '#ecfeff' }}
+                                                sx={{
+                                                    fontWeight: 700,
+                                                    color: palette.isDark
+                                                        ? 'rgba(236,254,255,0.95)'
+                                                        : palette.assistantText,
+                                                }}
                                             >
                                                 Thinking...
                                             </Typography>
@@ -2114,21 +2252,23 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                                     '&:hover': { backgroundColor: palette.inputBgHover },
                                     '&.Mui-focused': {
                                         backgroundColor: palette.inputBgFocus,
-                                        boxShadow: palette.inputRing,
+                                        boxShadow: palette.inputFocusRing,
                                     },
                                 },
                                 '& .MuiOutlinedInput-input': {
                                     py: 1.25,
                                     px: 2,
-                                    color: 'white',
+                                    color: palette.isDark ? 'white' : '#1f2937',
                                     fontWeight: 500,
                                     '&::placeholder': {
-                                        color: 'rgba(255,255,255,0.85)',
+                                        color: palette.isDark
+                                            ? 'rgba(255,255,255,0.75)'
+                                            : alpha('#1f2937', 0.45),
                                     },
                                 },
                                 '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: palette.borderSoft,
-                                    borderWidth: 1.8,
+                                    borderColor: palette.inputOutline,
+                                    borderWidth: 1.6,
                                 },
                             }}
                         />

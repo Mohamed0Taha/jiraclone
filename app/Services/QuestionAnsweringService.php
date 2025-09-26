@@ -443,10 +443,26 @@ SYS;
                 return $this->createResponse('No tasks found in this project.');
             }
 
+            $methodology = $this->contextService->getCurrentMethodology($project);
+            $labels = $this->contextService->serverToMethodPhase($methodology);
+
             $response = "Task assignments:\n\n";
             foreach ($tasks as $task) {
                 $assignee = $task->assignee ? $task->assignee->name : 'Unassigned';
-                $response .= "• **Task #{$task->id}** ({$task->title}): {$assignee}\n";
+                $statusLabel = $labels[$task->status] ?? ucfirst($task->status);
+                $segments = [
+                    $statusLabel,
+                    ($task->priority ? strtolower($task->priority).' priority' : null),
+                    $assignee ? 'assigned to '.$assignee : null,
+                ];
+
+                $line = sprintf('• Task #%d — %s', $task->id, $task->title);
+                $details = array_filter($segments);
+                if (! empty($details)) {
+                    $line .= ' ('.implode(' · ', $details).')';
+                }
+
+                $response .= $line."\n";
             }
 
             return $this->createResponse($response);
@@ -638,26 +654,26 @@ SYS;
             $methodology = $this->contextService->getCurrentMethodology($project);
             $labels = $this->contextService->serverToMethodPhase($methodology);
 
-            $info = "**Task #{$task->id}**: {$task->title}\n";
-            $info .= "• Status: {$labels[$task->status]}\n";
-            $info .= "• Priority: {$task->priority}\n";
+            $info = "Task #{$task->id} — {$task->title}\n";
+            $info .= "- Status: {$labels[$task->status]}\n";
+            $info .= "- Priority: {$task->priority}\n";
 
             if ($task->assignee) {
-                $info .= "• Assigned to: {$task->assignee->name}\n";
+                $info .= "- Assigned to: {$task->assignee->name}\n";
             } else {
-                $info .= "• Assigned to: Unassigned\n";
+                $info .= "- Assigned to: Unassigned\n";
             }
 
             if ($task->end_date) {
-                $info .= "• Due: {$task->end_date->format('Y-m-d')}";
+                $info .= "- Due: {$task->end_date->format('Y-m-d')}";
                 if ($task->end_date->isPast() && $task->status !== 'done') {
-                    $info .= ' (OVERDUE)';
+                    $info .= ' (overdue)';
                 }
                 $info .= "\n";
             }
 
             if ($task->description) {
-                $info .= "• Description: {$task->description}\n";
+                $info .= "- Description: {$task->description}\n";
             }
 
             return $this->createResponse($info);
@@ -704,7 +720,7 @@ SYS;
             if ($count <= 10) {
                 $response = "Found {$count} {$taskWord}:\n\n";
                 foreach ($tasks as $task) {
-                    $response .= "• **Task #{$task->id}**: {$task->title}";
+                    $response .= "• Task #{$task->id} — {$task->title}";
                     $response .= " ({$labels[$task->status]}, {$task->priority} priority";
 
                     if ($task->assignee) {
@@ -714,7 +730,7 @@ SYS;
                     }
 
                     if ($task->end_date && $task->end_date->isPast() && $task->status !== 'done') {
-                        $response .= ', **OVERDUE**';
+                        $response .= ', overdue';
                     }
 
                     $response .= ")\n";
@@ -730,7 +746,7 @@ SYS;
                 $statusCounts = $tasks->groupBy('status')->map->count();
                 foreach ($statusCounts as $status => $statusCount) {
                     if (isset($labels[$status])) {
-                        $response .= "• {$labels[$status]}: {$statusCount}\n";
+                        $response .= "- {$labels[$status]}: {$statusCount}\n";
                     }
                 }
             }
@@ -847,23 +863,23 @@ SYS;
             $snap = $this->getSnapshotCached($project);
             $labels = $this->contextService->serverToMethodPhase($this->contextService->getCurrentMethodology($project));
 
-            $overview = "📊 **Project Overview**\n";
-            $overview .= "Total Tasks: {$snap['tasks']['total']}\n\n";
-            $overview .= "By Status:\n";
-            $overview .= "• {$labels['todo']}: {$snap['tasks']['by_status']['todo']}\n";
-            $overview .= "• {$labels['inprogress']}: {$snap['tasks']['by_status']['inprogress']}\n";
-            $overview .= "• {$labels['review']}: {$snap['tasks']['by_status']['review']}\n";
-            $overview .= "• {$labels['done']}: {$snap['tasks']['by_status']['done']}\n";
+            $overview = "📊 Project overview\n";
+            $overview .= "Total tasks: {$snap['tasks']['total']}\n\n";
+            $overview .= "By status:\n";
+            $overview .= "- {$labels['todo']}: {$snap['tasks']['by_status']['todo']}\n";
+            $overview .= "- {$labels['inprogress']}: {$snap['tasks']['by_status']['inprogress']}\n";
+            $overview .= "- {$labels['review']}: {$snap['tasks']['by_status']['review']}\n";
+            $overview .= "- {$labels['done']}: {$snap['tasks']['by_status']['done']}\n";
 
             // Add priority breakdown
-            $overview .= "\nBy Priority:\n";
-            $overview .= "• Low: {$snap['tasks']['by_priority']['low']}\n";
-            $overview .= "• Medium: {$snap['tasks']['by_priority']['medium']}\n";
-            $overview .= "• High: {$snap['tasks']['by_priority']['high']}\n";
-            $overview .= "• Urgent: {$snap['tasks']['by_priority']['urgent']}\n";
+            $overview .= "\nBy priority:\n";
+            $overview .= "- Low: {$snap['tasks']['by_priority']['low']}\n";
+            $overview .= "- Medium: {$snap['tasks']['by_priority']['medium']}\n";
+            $overview .= "- High: {$snap['tasks']['by_priority']['high']}\n";
+            $overview .= "- Urgent: {$snap['tasks']['by_priority']['urgent']}\n";
 
             if ($snap['tasks']['overdue'] > 0) {
-                $overview .= "\n⚠️ Overdue Tasks: {$snap['tasks']['overdue']}";
+                $overview .= "\n⚠️ Overdue tasks: {$snap['tasks']['overdue']}";
             }
 
             return $this->createResponse($overview);
@@ -878,17 +894,17 @@ SYS;
     public function provideHelp(Project $project): array
     {
         $message = "I can help you with questions and commands. Try:\n\n";
-        $message .= "**Questions:**\n";
-        $message .= "• 'How many tasks are done?'\n";
-        $message .= "• 'What are the task IDs?'\n";
-        $message .= "• 'Show all tasks'\n";
-        $message .= "• 'List overdue tasks'\n";
-        $message .= "• 'Who is the owner?'\n";
-        $message .= "• 'Show project overview'\n\n";
-        $message .= "**Commands:**\n";
-        $message .= "• 'Create task \"Fix login bug\"'\n";
-        $message .= "• 'Move #42 to done'\n";
-        $message .= "• 'Assign #42 to Alex'";
+        $message .= "Questions:\n";
+        $message .= "- 'How many tasks are done?'\n";
+        $message .= "- 'What are the task IDs?'\n";
+        $message .= "- 'Show all tasks'\n";
+        $message .= "- 'List overdue tasks'\n";
+        $message .= "- 'Who is the owner?'\n";
+        $message .= "- 'Show project overview'\n\n";
+        $message .= "Commands:\n";
+        $message .= "- 'Create task \"Fix login bug\"'\n";
+        $message .= "- 'Move #42 to done'\n";
+        $message .= "- 'Assign #42 to Alex'";
 
         return $this->createResponse($message);
     }
