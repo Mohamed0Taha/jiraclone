@@ -40,6 +40,7 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI', 'https://taskpilot.us/auth/google/callback'),
         'search_api_key' => env('GOOGLE_SEARCH_API_KEY'),
         'search_engine_id' => env('GOOGLE_SEARCH_ENGINE_ID'),
+        'calendar_scope_on_login' => env('GOOGLE_CALENDAR_SCOPE_ON_LOGIN', false),
     ],
 
     'imagekit' => [

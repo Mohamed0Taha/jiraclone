@@ -8,6 +8,7 @@ import HRLeave from './mini/HRLeave.jsx';
 import Slides from './mini/Slides.jsx';
 import Docs from './mini/Docs.jsx';
 import Calculator from './mini/Calculator.jsx';
+import Messaging from './mini/Messaging.jsx';
 
 const MicroApps = {
   Calendar,
@@ -20,6 +21,7 @@ const MicroApps = {
   Slides,
   Docs,
   Calculator,
+  Messaging,
 };
 
 export default MicroApps;

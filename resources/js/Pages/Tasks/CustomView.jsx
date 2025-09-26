@@ -40,6 +40,7 @@ import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
 import ChecklistRtlIcon from '@mui/icons-material/ChecklistRtl';
@@ -762,6 +763,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         { key: 'HRLeave', title: 'Leave', size: 'small', bg: 'linear-gradient(135deg,#0EA5E9,#38BDF8)', Icon: PeopleAltIcon },
         { key: 'Slides', title: 'Slides', size: 'wide', bg: 'linear-gradient(135deg,#0EA5E9,#6366F1)', Icon: SlideshowIcon },
         { key: 'Calculator', title: 'Calculator', size: 'small', bg: 'linear-gradient(135deg,#22C55E,#16A34A)', Icon: CalculateIcon },
+        { key: 'Messaging', title: 'Messaging', size: 'wide', bg: 'linear-gradient(135deg,#6366F1,#8B5CF6)', Icon: ChatBubbleOutlineIcon },
     ];
 
     const sizeToSpan = (size) => {

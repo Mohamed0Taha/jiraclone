@@ -12,15 +12,49 @@ use Laravel\Socialite\Facades\Socialite;
 
 class GoogleController extends Controller
 {
+    protected function googleDriver(?array $scopes = null)
+    {
+        $scopes = $scopes ?? $this->loginScopes();
+
+        $driver = Socialite::driver('google')
+            ->stateless()
+            ->scopes($scopes);
+
+        if ($this->requiresOfflineAccess($scopes)) {
+            $driver = $driver->with([
+                'access_type' => 'offline',
+                'prompt' => 'consent',
+            ]);
+        }
+
+        return $driver;
+    }
+
+    protected function loginScopes(): array
+    {
+        $scopes = ['openid', 'profile', 'email'];
+
+        if (config('services.google.calendar_scope_on_login')) {
+            $scopes[] = 'https://www.googleapis.com/auth/calendar';
+        }
+
+        return $scopes;
+    }
+
+    protected function requiresOfflineAccess(array $scopes): bool
+    {
+        return in_array('https://www.googleapis.com/auth/calendar', $scopes, true);
+    }
+
     public function redirectToGoogle()
     {
         // stateless() avoids CSRF/state issues behind proxies
-        return Socialite::driver('google')->stateless()->redirect();
+        return $this->googleDriver()->redirect();
     }
 
     public function handleGoogleCallback(Request $request)
     {
-        $g = Socialite::driver('google')->stateless()->user();
+        $g = $this->googleDriver()->user();
 
         $user = User::where('email', $g->getEmail())->first();
 

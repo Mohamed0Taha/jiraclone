@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BlogController;
@@ -176,6 +177,13 @@ Route::get('/projects/{project}/export/jira', [ProjectController::class, 'export
 */
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
+
+Route::middleware('auth')->group(function () {
+    Route::post('/integrations/google/calendar/sync', [GoogleCalendarController::class, 'sync'])->name('google.calendar.sync');
+    Route::get('/integrations/google/calendar/connect', [GoogleCalendarController::class, 'connect'])->name('google.calendar.connect');
+    Route::get('/integrations/google/calendar/callback', [GoogleCalendarController::class, 'callback'])->name('google.calendar.callback');
+    Route::get('/integrations/google/calendar/status', [GoogleCalendarController::class, 'status'])->name('google.calendar.status');
+});
 
 /*
 |--------------------------------------------------------------------------
