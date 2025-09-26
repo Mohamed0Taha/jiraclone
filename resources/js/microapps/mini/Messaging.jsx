@@ -22,8 +22,10 @@ import {
 } from '@mui/material';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { useTheme, alpha } from '@mui/material/styles';
 import { format } from 'date-fns';
+import { usePage } from '@inertiajs/react';
 
 import MicroAppWrapper from '../components/MicroAppWrapper';
 import { csrfFetch } from '@/utils/csrf';
@@ -105,9 +107,9 @@ const MessageBubble = ({ message, isOwn }) => {
           border: `1px solid ${alpha(isOwn ? theme.palette.primary.light : theme.palette.divider, 0.4)}`,
         }}
       >
-        {!isOwn && (
+        {!isOwn && message.displayName && (
           <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5, opacity: 0.9 }}>
-            {message.senderName || 'Unknown'}
+            {message.displayName}
           </Typography>
         )}
         <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -197,7 +199,10 @@ function ConversationListItem({
 }
 
 function MessagingApp({ projectId, viewName }) {
-  const [memberState, setMemberState] = useState({ loading: true, members: [], error: null });
+  const { props } = usePage();
+  const initialMembers = useMemo(() => (Array.isArray(props?.users) ? props.users : []), [props?.users]);
+
+  const [memberState, setMemberState] = useState({ loading: false, members: initialMembers, error: null });
   const [selectedRoomId, setSelectedRoomId] = useState(GENERAL_ROOM_ID);
   const [messageDraft, setMessageDraft] = useState('');
   const [notification, setNotification] = useState(null);
@@ -215,6 +220,7 @@ function MessagingApp({ projectId, viewName }) {
 
     const fetchMembers = async () => {
       if (!projectId) return;
+      setMemberState((prev) => ({ ...prev, loading: true }));
       try {
         const response = await csrfFetch(`/projects/${projectId}/members`, {
           method: 'GET',
@@ -226,11 +232,19 @@ function MessagingApp({ projectId, viewName }) {
           const members = Array.isArray(data?.members) ? data.members : [];
           setMemberState({ loading: false, members, error: null });
         } else {
-          setMemberState({ loading: false, members: [], error: data?.error || 'Failed to load members.' });
+          setMemberState((prev) => ({
+            loading: false,
+            members: prev.members?.length ? prev.members : initialMembers,
+            error: data?.error || 'Unable to load project members. Showing cached roster instead.',
+          }));
         }
       } catch (error) {
         if (!isMounted) return;
-        setMemberState({ loading: false, members: [], error: error.message || 'Unable to load members.' });
+        setMemberState((prev) => ({
+          loading: false,
+          members: prev.members?.length ? prev.members : initialMembers,
+          error: error.message || 'Unable to load project members. Showing cached roster instead.',
+        }));
       }
     };
 
@@ -239,7 +253,7 @@ function MessagingApp({ projectId, viewName }) {
     return () => {
       isMounted = false;
     };
-  }, [projectId]);
+  }, [projectId, initialMembers]);
 
   return (
     <MicroAppWrapper
@@ -269,6 +283,19 @@ function MessagingApp({ projectId, viewName }) {
           return map;
         }, [memberState.members, currentUser, currentUserId]);
 
+        const membersByEmail = useMemo(() => {
+          const map = new Map();
+          memberState.members.forEach((member) => {
+            if (member?.email) {
+              map.set(String(member.email).toLowerCase(), member);
+            }
+          });
+          if (currentUserEmail && !map.has(currentUserEmail)) {
+            map.set(currentUserEmail, currentUser);
+          }
+          return map;
+        }, [memberState.members, currentUser, currentUserEmail]);
+
         const otherMembers = useMemo(() => {
           return memberState.members.filter((member) => {
             const memberId = normalizeId(member?.id);
@@ -278,6 +305,27 @@ function MessagingApp({ projectId, viewName }) {
             return true;
           });
         }, [memberState.members, currentUserId, currentUserEmail]);
+
+        const resolveDisplayName = useMemo(() => {
+          return (message) => {
+            const normalizedSenderId = normalizeId(message?.senderId);
+            if (normalizedSenderId) {
+              const member = membersById.get(normalizedSenderId);
+              if (member?.name) return member.name;
+              if (member?.email) return member.email;
+            }
+            if (message?.senderEmail) {
+              const member = membersByEmail.get(String(message.senderEmail).toLowerCase());
+              if (member?.name) return member.name;
+              if (member?.email) return member.email;
+            }
+            if (message?.senderName) return message.senderName;
+            if (normalizedSenderId === currentUserId) {
+              return currentUser?.name || currentUser?.email || 'You';
+            }
+            return 'Unknown';
+          };
+        }, [membersById, membersByEmail, currentUserId, currentUser]);
 
         const selectedRoom = useMemo(() => {
           if (selectedRoomId === GENERAL_ROOM_ID) return roomsFromState[GENERAL_ROOM_ID];
@@ -293,14 +341,20 @@ function MessagingApp({ projectId, viewName }) {
           return otherId ? (membersById.get(otherId) || null) : null;
         }, [selectedRoomId, membersById, currentUserId]);
 
-        const messages = selectedRoom?.messages || [];
+        const messages = useMemo(() => {
+          return (selectedRoom?.messages || []).map((message) => ({
+            ...message,
+            displayName: resolveDisplayName(message),
+          }));
+        }, [selectedRoom?.messages, resolveDisplayName]);
 
-        const generalSubtitle = (() => {
+        const generalSubtitle = useMemo(() => {
           const generalMessages = roomsFromState[GENERAL_ROOM_ID].messages || [];
           if (!generalMessages.length) return 'No messages yet';
           const last = generalMessages[generalMessages.length - 1];
-          return `${last.senderName || 'Unknown'}: ${last.content.slice(0, 32)}${last.content.length > 32 ? '…' : ''}`;
-        })();
+          const displayName = resolveDisplayName(last);
+          return `${displayName}: ${last.content.slice(0, 32)}${last.content.length > 32 ? '…' : ''}`;
+        }, [roomsFromState, resolveDisplayName]);
 
         const directRoomsMeta = useMemo(() => {
           if (!currentUserId) return [];
@@ -322,11 +376,16 @@ function MessagingApp({ projectId, viewName }) {
                 member,
                 unread,
                 lastMessageSnippet: lastMsg
-                  ? `${normalizeId(lastMsg.senderId) === currentUserId ? 'You' : lastMsg.senderName || 'Unknown'}: ${lastMsg.content.slice(0, 32)}${lastMsg.content.length > 32 ? '…' : ''}`
+                  ? `${normalizeId(lastMsg.senderId) === currentUserId ? 'You' : resolveDisplayName(lastMsg)}: ${lastMsg.content.slice(0, 32)}${lastMsg.content.length > 32 ? '…' : ''}`
                   : 'No messages yet',
               };
+            })
+            .sort((a, b) => {
+              const labelA = a.member?.name || a.member?.email || '';
+              const labelB = b.member?.name || b.member?.email || '';
+              return labelA.localeCompare(labelB);
             });
-        }, [otherMembers, roomsFromState, currentUserId, lastRead]);
+        }, [otherMembers, roomsFromState, currentUserId, lastRead, resolveDisplayName]);
 
         const unreadGeneral = useMemo(() => {
           const generalMessages = roomsFromState[GENERAL_ROOM_ID].messages || [];
@@ -455,6 +514,7 @@ function MessagingApp({ projectId, viewName }) {
             roomId: activeRoomId,
             senderId: currentUserId,
             senderName: currentUser.name || currentUser.email || 'You',
+            senderEmail: currentUser?.email || null,
             content: trimmed,
             createdAt: now,
             participants,
@@ -552,26 +612,27 @@ function MessagingApp({ projectId, viewName }) {
                     onClick={() => markRoomRead(GENERAL_ROOM_ID)}
                     highlight={unreadGeneral > 0 ? `${unreadGeneral} new message${unreadGeneral > 1 ? 's' : ''}` : null}
                   />
-                  <Divider textAlign="left" sx={{ my: 2, color: 'text.secondary', fontSize: 12 }}>Direct Messages</Divider>
-                  {memberState.loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                      <CircularProgress size={24} />
-                    </Box>
-                  ) : memberState.error ? (
-                    <Typography variant="body2" color="error" sx={{ px: 2 }}>
-                      {memberState.error}
-                    </Typography>
-                  ) : otherMembers.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
-                      No other members yet.
-                    </Typography>
-                  ) : (
+              <Divider textAlign="left" sx={{ my: 2, color: 'text.secondary', fontSize: 12 }}>Direct Messages</Divider>
+              {memberState.error && (
+                <Alert severity="warning" variant="outlined" sx={{ mx: 1.5, mb: 1.5 }}>
+                  {memberState.error}
+                </Alert>
+              )}
+              {memberState.loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : otherMembers.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
+                  No other members yet.
+                </Typography>
+              ) : (
                     directRoomsMeta.map(({ roomId, member, unread, lastMessageSnippet }) => (
                       <ConversationListItem
                         key={roomId}
                         active={selectedRoomId === roomId}
                         unread={unread}
-                        title={member.name || member.email}
+                        title={member.name || member.email || 'Team member'}
                         subtitle={lastMessageSnippet}
                         avatar={
                           <Avatar src={member.profile_photo_url || undefined} sx={{ bgcolor: theme.palette.secondary.main }}>
@@ -600,9 +661,29 @@ function MessagingApp({ projectId, viewName }) {
               }}
             >
               <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.4)}` }}>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  {selectedRoomId === GENERAL_ROOM_ID ? 'General Chat' : (selectedDirectParticipant?.name || selectedRoom?.name || 'Direct Message')}
-                </Typography>
+                <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Avatar
+                    src={selectedRoomId === GENERAL_ROOM_ID ? undefined : selectedDirectParticipant?.profile_photo_url}
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      bgcolor: selectedRoomId === GENERAL_ROOM_ID
+                        ? theme.palette.primary.main
+                        : theme.palette.secondary.main,
+                    }}
+                  >
+                    {selectedRoomId === GENERAL_ROOM_ID ? (
+                      <ForumOutlinedIcon fontSize="small" />
+                    ) : (
+                      (selectedDirectParticipant?.name || selectedDirectParticipant?.email || '?').slice(0, 1).toUpperCase()
+                    )}
+                  </Avatar>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    {selectedRoomId === GENERAL_ROOM_ID
+                      ? 'General Chat'
+                      : selectedDirectParticipant?.name || selectedDirectParticipant?.email || 'Direct Message'}
+                  </Typography>
+                </Stack>
                 <Typography variant="body2" color="text.secondary">
                   {selectedRoomId === GENERAL_ROOM_ID
                     ? 'Messages are visible to everyone on this project.'
