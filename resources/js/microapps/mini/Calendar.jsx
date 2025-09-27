@@ -90,7 +90,7 @@ const CalendarToolbar = ({
   };
 
   const resolvedConnected = isConnected === true;
-  const syncHandler = resolvedConnected ? onSync : onConnect;
+  const syncHandler = resolvedConnected ? () => onSync(true) : onConnect;
   const hasSyncAction = typeof syncHandler === 'function';
   const disabled = checkingConnection || (resolvedConnected && syncing);
   const syncLabel = checkingConnection
@@ -273,7 +273,13 @@ function CalendarBody({
     );
   }, [setIsConnected, setSyncFeedback]);
 
-  const handleGoogleSync = useCallback(async () => {
+  const handleGoogleSync = useCallback(async (isUserInitiated = false) => {
+    // Prevent automatic sync calls - only allow user-initiated syncs
+    if (!isUserInitiated) {
+      console.warn('[Calendar] Automatic sync prevented. Sync must be user-initiated.');
+      return;
+    }
+    
     if (syncing) return;
     if (isConnected === false) {
       setSyncFeedback({
@@ -346,7 +352,7 @@ function CalendarBody({
     } finally {
       setSyncing(false);
     }
-  }, [currentEvents, syncing, setSyncing, setState, setSyncFeedback, setIsConnected]);
+  }, [currentEvents, syncing, setSyncing, setState, setSyncFeedback, setIsConnected, isConnected, checkingConnection]);
 
   const eventsForCalendar = currentEvents.map((event) => ({
     ...event,
