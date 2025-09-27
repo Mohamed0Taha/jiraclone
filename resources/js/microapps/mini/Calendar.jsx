@@ -274,13 +274,18 @@ function CalendarBody({
   }, [setIsConnected, setSyncFeedback]);
 
   const handleGoogleSync = useCallback(async () => {
-    console.log('[Calendar] handleGoogleSync called', { syncing, isConnected, checkingConnection });
-    
     if (syncing) return;
     if (isConnected === false) {
       setSyncFeedback({
         severity: 'info',
         message: 'Please connect your Google account first.',
+      });
+      return;
+    }
+    if (checkingConnection) {
+      setSyncFeedback({
+        severity: 'info',
+        message: 'Checking connection status...',
       });
       return;
     }
