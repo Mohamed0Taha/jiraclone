@@ -14,6 +14,39 @@ class GoogleCalendarService
     private const GOOGLE_CALENDAR_BASE = 'https://www.googleapis.com/calendar/v3';
     private const CALENDAR_ID = 'primary';
 
+    private function calendarScopes(): array
+    {
+        $configured = config('services.google.calendar_scopes');
+
+        if (empty($configured)) {
+            return ['https://www.googleapis.com/auth/calendar'];
+        }
+
+        if (is_array($configured)) {
+            return array_values(array_filter(array_map('trim', $configured)));
+        }
+
+        return array_values(array_filter(array_map('trim', explode(',', $configured))));
+    }
+
+    private function allowsWriteOperations(): bool
+    {
+        $scopes = $this->calendarScopes();
+
+        $writeScopes = [
+            'https://www.googleapis.com/auth/calendar',
+            'https://www.googleapis.com/auth/calendar.events',
+        ];
+
+        foreach ($writeScopes as $scope) {
+            if (in_array($scope, $scopes, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Synchronise local events with Google Calendar. Returns an array containing
      * the merged event list or instructions to authorise Google access.
@@ -55,36 +88,38 @@ class GoogleCalendarService
             ];
         });
 
-        // Push new local events to Google
         $createdEvents = collect();
-        $unsynced = $normalizedLocal->filter(fn ($event) => empty($event['google_event_id']));
 
-        foreach ($unsynced as $event) {
-            $payload = $this->formatGoogleEventPayload($event);
-            $response = $this->makeRequest($user, 'POST', self::GOOGLE_CALENDAR_BASE.'/calendars/'.self::CALENDAR_ID.'/events', [
-                'body' => $payload,
-            ]);
+        if ($this->allowsWriteOperations()) {
+            $unsynced = $normalizedLocal->filter(fn ($event) => empty($event['google_event_id']));
 
-            if (! $response || ! $response->successful()) {
-                Log::warning('[GoogleCalendarService] Failed to push event to Google', [
-                    'user_id' => $user->id,
-                    'status' => optional($response)->status(),
-                    'body' => optional($response)->json(),
+            foreach ($unsynced as $event) {
+                $payload = $this->formatGoogleEventPayload($event);
+                $response = $this->makeRequest($user, 'POST', self::GOOGLE_CALENDAR_BASE.'/calendars/'.self::CALENDAR_ID.'/events', [
+                    'body' => $payload,
                 ]);
-                continue;
+
+                if (! $response || ! $response->successful()) {
+                    Log::warning('[GoogleCalendarService] Failed to push event to Google', [
+                        'user_id' => $user->id,
+                        'status' => optional($response)->status(),
+                        'body' => optional($response)->json(),
+                    ]);
+                    continue;
+                }
+
+                $createdEvents->push($response->json());
             }
 
-            $createdEvents->push($response->json());
-        }
+            if ($createdEvents->isNotEmpty()) {
+                $normalizedLocal = $normalizedLocal->map(function ($event) use ($createdEvents) {
+                    $match = $createdEvents->first(function ($created) use ($event) {
+                        return (string) Arr::get($created, 'extendedProperties.private.local_id') === (string) ($event['id'] ?? '');
+                    });
 
-        if ($createdEvents->isNotEmpty()) {
-            $normalizedLocal = $normalizedLocal->map(function ($event) use ($createdEvents) {
-                $match = $createdEvents->first(function ($created) use ($event) {
-                    return (string) Arr::get($created, 'extendedProperties.private.local_id') === (string) ($event['id'] ?? '');
+                    return $match ? $this->mapGoogleEvent($match) : $event;
                 });
-
-                return $match ? $this->mapGoogleEvent($match) : $event;
-            });
+            }
         }
 
         // Fetch remote events

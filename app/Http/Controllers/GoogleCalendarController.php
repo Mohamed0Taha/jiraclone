@@ -51,13 +51,29 @@ class GoogleCalendarController extends Controller
         return $request->getSchemeAndHttpHost().$relative;
     }
 
+    protected function calendarScopes(): array
+    {
+        $configured = config('services.google.calendar_scopes');
+
+        if (empty($configured)) {
+            return ['https://www.googleapis.com/auth/calendar'];
+        }
+
+        if (is_array($configured)) {
+            return array_values(array_filter(array_map('trim', $configured)));
+        }
+
+        return array_values(array_filter(array_map('trim', explode(',', $configured))));
+    }
+
     public function connect(Request $request)
     {
         $redirectUrl = $this->calendarRedirectUrl($request);
+        $scopes = $this->calendarScopes();
 
         return Socialite::driver('google')
             ->stateless()
-            ->scopes(['https://www.googleapis.com/auth/calendar'])
+            ->scopes($scopes)
             ->with([
                 'access_type' => 'offline',
                 'prompt' => 'consent',
@@ -76,10 +92,11 @@ class GoogleCalendarController extends Controller
         }
 
         $redirectUrl = $this->calendarRedirectUrl($request);
+        $scopes = $this->calendarScopes();
 
         $googleUser = Socialite::driver('google')
             ->stateless()
-            ->scopes(['https://www.googleapis.com/auth/calendar'])
+            ->scopes($scopes)
             ->redirectUrl($redirectUrl)
             ->with([
                 'access_type' => 'offline',
