@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Box, Paper, CircularProgress, Snackbar, Alert, Popover, Typography, IconButton } from '@mui/material';
+import { Box, Paper, CircularProgress, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from '@mui/material';
 import { Calendar as BigCalendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
@@ -7,6 +7,7 @@ import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import MicroAppWrapper from '../components/MicroAppWrapper';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import InputModal from '../components/InputModal';
 import { csrfFetch, withCsrf } from '@/utils/csrf';
 
@@ -186,7 +187,6 @@ function CalendarBody({
 }) {
   const currentEvents = Array.isArray(state?.events) ? state.events : [];
   const [detailsEvent, setDetailsEvent] = useState(null);
-  const [detailsAnchorEl, setDetailsAnchorEl] = useState(null);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -217,16 +217,27 @@ function CalendarBody({
     setModalOpen(true);
   }, [setModalOpen, setSelectedSlot]);
 
-  const handleSelectEvent = useCallback((event, nativeEvent) => {
-    // Open a card-like popover with event details
+  const handleSelectEvent = useCallback((event) => {
+    // Open a centered dialog with event details
     setDetailsEvent(event);
-    setDetailsAnchorEl(nativeEvent?.currentTarget || nativeEvent?.target || null);
   }, []);
 
   const handleCloseDetails = useCallback(() => {
     setDetailsEvent(null);
-    setDetailsAnchorEl(null);
   }, []);
+
+  const handleDeleteEvent = useCallback(() => {
+    if (!detailsEvent) return;
+    const idToRemove = detailsEvent.id ?? detailsEvent.google_event_id;
+    setState((prev) => {
+      const baseline = (prev && typeof prev === 'object') ? prev : {};
+      const prevEvents = Array.isArray(baseline.events) ? baseline.events : [];
+      const nextEvents = prevEvents.filter((e) => (e.id ?? e.google_event_id) !== idToRemove);
+      return { ...baseline, events: nextEvents };
+    });
+    setDetailsEvent(null);
+    setSyncFeedback({ severity: 'success', message: 'Event removed.' });
+  }, [detailsEvent, setState, setSyncFeedback]);
 
   const handleAddEvent = useCallback((values) => {
     if (!values.title || !values.date) return;
@@ -489,46 +500,69 @@ function CalendarBody({
           />
         )}
 
-        {/* Event details popover */}
-        <Popover
-          open={Boolean(detailsEvent) && Boolean(detailsAnchorEl)}
-          anchorEl={detailsAnchorEl}
-          onClose={handleCloseDetails}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-          disableRestoreFocus
-        >
-          <Box sx={{ p: 2, maxWidth: 340 }}>
-            <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-              {detailsEvent?.title || 'Event'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {(() => {
-                try {
-                  const start = new Date(detailsEvent?.start);
-                  const end = detailsEvent?.end ? new Date(detailsEvent.end) : null;
-                  const range = end ? `${format(start, 'EEE, MMM d, p')} – ${format(end, 'p')}` : `${format(start, 'EEE, MMM d, p')}`;
-                  return detailsEvent?.allDay ? `${format(start, 'EEE, MMM d')} · All day` : range;
-                } catch (_) {
-                  return '';
-                }
-              })()}
-            </Typography>
-            {(detailsEvent?.desc || detailsEvent?.description) && (
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                {detailsEvent?.desc || detailsEvent?.description}
+        {/* Event details dialog (centered) */}
+        <Dialog open={Boolean(detailsEvent)} onClose={handleCloseDetails} maxWidth="xs" fullWidth>
+          <DialogTitle>
+            {detailsEvent?.title || 'Event'}
+          </DialogTitle>
+          <DialogContent dividers>
+            <Box sx={{ display: 'grid', rowGap: 0.75 }}>
+              <Typography variant="body2" color="text.secondary">
+                {(() => {
+                  try {
+                    const start = detailsEvent?.start ? new Date(detailsEvent.start) : null;
+                    const end = detailsEvent?.end ? new Date(detailsEvent.end) : null;
+                    if (!start) return '';
+                    const range = end ? `${format(start, 'EEE, MMM d, p')} – ${format(end, 'p')}` : `${format(start, 'EEE, MMM d, p')}`;
+                    return detailsEvent?.allDay ? `${format(start, 'EEE, MMM d')} · All day` : range;
+                  } catch (_) {
+                    return '';
+                  }
+                })()}
               </Typography>
-            )}
-            {detailsEvent?.htmlLink && (
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                <a href={detailsEvent.htmlLink} target="_blank" rel="noopener noreferrer">Open in Google Calendar</a>
-              </Typography>
-            )}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-              <IconButton size="small" onClick={handleCloseDetails} aria-label="Close details">✕</IconButton>
+
+              <Typography variant="caption" color="text.secondary">Start</Typography>
+              <Typography variant="body2">{(() => { try { return detailsEvent?.start ? format(new Date(detailsEvent.start), 'EEE, MMM d, p') : '-'; } catch(_) { return '-'; } })()}</Typography>
+
+              <Typography variant="caption" color="text.secondary">End</Typography>
+              <Typography variant="body2">{(() => { try { return detailsEvent?.end ? format(new Date(detailsEvent.end), 'EEE, MMM d, p') : '-'; } catch(_) { return '-'; } })()}</Typography>
+
+              <Typography variant="caption" color="text.secondary">All day</Typography>
+              <Typography variant="body2">{detailsEvent?.allDay ? 'Yes' : 'No'}</Typography>
+
+              {detailsEvent?.source && (
+                <>
+                  <Typography variant="caption" color="text.secondary">Source</Typography>
+                  <Typography variant="body2">{String(detailsEvent.source)}</Typography>
+                </>
+              )}
+
+              {detailsEvent?.google_event_id && (
+                <>
+                  <Typography variant="caption" color="text.secondary">Google Event ID</Typography>
+                  <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>{detailsEvent.google_event_id}</Typography>
+                </>
+              )}
+
+              {(detailsEvent?.desc || detailsEvent?.description) && (
+                <>
+                  <Typography variant="caption" color="text.secondary">Description</Typography>
+                  <Typography variant="body2">{detailsEvent?.desc || detailsEvent?.description}</Typography>
+                </>
+              )}
+
+              {detailsEvent?.htmlLink && (
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  <a href={detailsEvent.htmlLink} target="_blank" rel="noopener noreferrer">Open in Google Calendar</a>
+                </Typography>
+              )}
             </Box>
-          </Box>
-        </Popover>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleDeleteEvent} color="error" startIcon={<DeleteOutlineIcon />}>Delete</Button>
+            <Button onClick={handleCloseDetails}>Close</Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Bottom-right snackbar for success/error messages */}
         <Snackbar
