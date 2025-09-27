@@ -125,7 +125,9 @@ class GoogleCalendarService
         // Fetch remote events
         $remoteResponse = $this->makeRequest($user, 'GET', self::GOOGLE_CALENDAR_BASE.'/calendars/'.self::CALENDAR_ID.'/events', [
             'query' => [
-                'singleEvents' => true,
+                // Use literal 'true' to avoid PHP converting boolean true to '1',
+                // which Google rejects with: "Invalid boolean value: '1'."
+                'singleEvents' => 'true',
                 'orderBy' => 'startTime',
                 'timeMin' => Carbon::now()->subMonths(6)->toRfc3339String(),
                 'timeMax' => Carbon::now()->addMonths(12)->toRfc3339String(),
