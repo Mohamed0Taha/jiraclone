@@ -111,6 +111,15 @@ export async function csrfFetch(url, options = {}) {
         }
 
         if (!response.ok) {
+            // Special-case: allow callers of Google Calendar sync to inspect
+            // the JSON body (e.g., { requires_auth, authorize_url }) without
+            // throwing here, so they can open the OAuth popup.
+            try {
+                if (typeof url === 'string' && url.includes('/integrations/google/calendar/sync')) {
+                    return response;
+                }
+            } catch (_) {}
+
             const errorData = await response.json().catch(() => ({}));
             console.error('API Error:', {
                 status: response.status,

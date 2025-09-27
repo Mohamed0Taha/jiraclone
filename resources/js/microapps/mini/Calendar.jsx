@@ -8,7 +8,7 @@ import getDay from 'date-fns/getDay';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import MicroAppWrapper from '../components/MicroAppWrapper';
 import InputModal from '../components/InputModal';
-import { csrfFetch } from '@/utils/csrf';
+import { csrfFetch, withCsrf } from '@/utils/csrf';
 
 const toIsoString = (value) => {
   try {
@@ -302,12 +302,27 @@ function CalendarBody({
     setSyncing(true);
     setSyncFeedback(null);
 
+    // Pre-open an auth window on the user gesture to avoid popup blockers.
+    // We'll only navigate it if auth is required.
+    let authWin = null;
+    try {
+      authWin = window.open('', '_blank', 'width=520,height=620');
+      if (authWin) {
+        // Write a tiny placeholder so the window is visible quickly.
+        authWin.document.write('<p style="font-family:sans-serif;padding:12px;">Preparing Google authorization…</p>');
+      }
+    } catch (_) {
+      // Ignore if blocked; we'll fallback to normal window.open later.
+    }
+
     const payload = {
       events: currentEvents.map((event) => sanitizeEventForStorage(event)),
     };
 
     try {
-      const response = await csrfFetch('/integrations/google/calendar/sync', {
+      // Use withCsrf + fetch directly to avoid throwing on non-2xx so we can
+      // inspect the JSON body for requires_auth and open the OAuth popup.
+      const fetchOptions = withCsrf({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -317,17 +332,29 @@ function CalendarBody({
         body: JSON.stringify(payload),
       });
 
+      const response = await fetch('/integrations/google/calendar/sync', fetchOptions);
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         if (data?.requires_auth && data?.authorize_url) {
-          window.open(data.authorize_url, '_blank', 'width=520,height=620');
+          // If we were able to pre-open a window, reuse it. Otherwise, open a new one.
+          try {
+            if (authWin && !authWin.closed) {
+              authWin.location.href = data.authorize_url;
+            } else {
+              window.open(data.authorize_url, '_blank', 'width=520,height=620');
+            }
+          } catch (_) {
+            window.open(data.authorize_url, '_blank', 'width=520,height=620');
+          }
           setIsConnected(false);
           setSyncFeedback({
             severity: 'info',
             message: 'Authorize Google Calendar in the new window, then click sync again.',
           });
         } else {
+          // Close any pre-opened window if not needed.
+          try { if (authWin && !authWin.closed) authWin.close(); } catch (_) {}
           throw new Error(data?.message || 'Failed to sync with Google Calendar.');
         }
         return;
@@ -350,6 +377,8 @@ function CalendarBody({
         message: data.message || 'Google Calendar synced.',
       });
     } catch (error) {
+      // Close any pre-opened window on error (not needed)
+      try { if (authWin && !authWin.closed) authWin.close(); } catch (_) {}
       setSyncFeedback({
         severity: 'error',
         message: error.message || 'Failed to sync Google Calendar.',
