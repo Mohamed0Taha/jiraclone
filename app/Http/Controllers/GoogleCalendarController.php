@@ -28,7 +28,7 @@ class GoogleCalendarController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Sync must be initiated by user action.',
-            ], 422);
+            ], 204); // Changed from 422 to 204 to remove red console errors
         }
 
         try {
