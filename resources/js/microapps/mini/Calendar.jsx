@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Box, Paper, CircularProgress, Alert } from '@mui/material';
+import { Box, Paper, CircularProgress, Snackbar, Alert, Popover, Typography, IconButton } from '@mui/material';
 import { Calendar as BigCalendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
@@ -163,7 +163,7 @@ const locales = {
 const localizer = dateFnsLocalizer({
   format,
   parse,
-  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }), // Start week on Monday
+  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
   getDay,
   locales,
 });
@@ -185,10 +185,11 @@ function CalendarBody({
   checkingConnection,
 }) {
   const currentEvents = Array.isArray(state?.events) ? state.events : [];
+  const [detailsEvent, setDetailsEvent] = useState(null);
+  const [detailsAnchorEl, setDetailsAnchorEl] = useState(null);
 
   useEffect(() => {
     if (!isLoaded) return;
-
     const needsNormalization = currentEvents.some((event) => {
       const hasDateObjects = event?.start instanceof Date || event?.end instanceof Date;
       const missingGoogleField = typeof event?.google_event_id === 'undefined';
@@ -216,8 +217,15 @@ function CalendarBody({
     setModalOpen(true);
   }, [setModalOpen, setSelectedSlot]);
 
-  const handleSelectEvent = useCallback((event) => {
-    console.log('Event selected:', event);
+  const handleSelectEvent = useCallback((event, nativeEvent) => {
+    // Open a card-like popover with event details
+    setDetailsEvent(event);
+    setDetailsAnchorEl(nativeEvent?.currentTarget || nativeEvent?.target || null);
+  }, []);
+
+  const handleCloseDetails = useCallback(() => {
+    setDetailsEvent(null);
+    setDetailsAnchorEl(null);
   }, []);
 
   const handleAddEvent = useCallback((values) => {
@@ -421,15 +429,7 @@ function CalendarBody({
           boxShadow: (theme) => theme.palette.mode === 'dark' ? 0 : 1,
         }}
       >
-        {syncFeedback && (
-          <Alert
-            severity={syncFeedback.severity}
-            onClose={() => setSyncFeedback(null)}
-            sx={{ mb: 1 }}
-          >
-            {syncFeedback.message}
-          </Alert>
-        )}
+        {/* Inline alert removed to prevent layout shift. We use a Snackbar instead. */}
         {!isLoaded ? (
           <Box display="flex" alignItems="center" justifyContent="center" height="100%">
             <CircularProgress />
@@ -444,7 +444,6 @@ function CalendarBody({
             defaultView={Views.MONTH}
             views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
             onSelectSlot={handleSelectSlot}
-            onSelectEvent={handleSelectEvent}
             selectable
             popup
             eventPropGetter={(event) => {
@@ -478,7 +477,7 @@ function CalendarBody({
                 />
               ),
               event: ({ event }) => (
-                <div>
+                <div onClick={(e) => handleSelectEvent(event, e)} style={{ cursor: 'pointer' }}>
                   <strong>{event.title}</strong>
                   {(event.desc || event.description) && (
                     <div style={{ fontSize: '0.8em' }}>{event.desc || event.description}</div>
@@ -489,6 +488,66 @@ function CalendarBody({
             className="calendar-container"
           />
         )}
+
+        {/* Event details popover */}
+        <Popover
+          open={Boolean(detailsEvent) && Boolean(detailsAnchorEl)}
+          anchorEl={detailsAnchorEl}
+          onClose={handleCloseDetails}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          disableRestoreFocus
+        >
+          <Box sx={{ p: 2, maxWidth: 340 }}>
+            <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+              {detailsEvent?.title || 'Event'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {(() => {
+                try {
+                  const start = new Date(detailsEvent?.start);
+                  const end = detailsEvent?.end ? new Date(detailsEvent.end) : null;
+                  const range = end ? `${format(start, 'EEE, MMM d, p')} – ${format(end, 'p')}` : `${format(start, 'EEE, MMM d, p')}`;
+                  return detailsEvent?.allDay ? `${format(start, 'EEE, MMM d')} · All day` : range;
+                } catch (_) {
+                  return '';
+                }
+              })()}
+            </Typography>
+            {(detailsEvent?.desc || detailsEvent?.description) && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                {detailsEvent?.desc || detailsEvent?.description}
+              </Typography>
+            )}
+            {detailsEvent?.htmlLink && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                <a href={detailsEvent.htmlLink} target="_blank" rel="noopener noreferrer">Open in Google Calendar</a>
+              </Typography>
+            )}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+              <IconButton size="small" onClick={handleCloseDetails} aria-label="Close details">✕</IconButton>
+            </Box>
+          </Box>
+        </Popover>
+
+        {/* Bottom-right snackbar for success/error messages */}
+        <Snackbar
+          open={Boolean(syncFeedback)}
+          autoHideDuration={4000}
+          onClose={() => setSyncFeedback(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          {syncFeedback ? (
+            <Alert
+              onClose={() => setSyncFeedback(null)}
+              severity={syncFeedback.severity}
+              variant="filled"
+              sx={{ width: '100%' }}
+            >
+              {syncFeedback.message}
+            </Alert>
+          ) : null}
+        </Snackbar>
       </Paper>
 
       <InputModal
