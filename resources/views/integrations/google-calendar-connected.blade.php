@@ -58,6 +58,11 @@
         if (window.opener) {
             window.opener.postMessage({ type: 'google-calendar-connected' }, '*');
         }
+        // Auto-close the popup shortly after notifying the opener.
+        // Keep the Close button as a fallback in case browsers block self-close.
+        setTimeout(() => {
+            try { window.close(); } catch (e) {}
+        }, 400);
     </script>
 </body>
 </html>

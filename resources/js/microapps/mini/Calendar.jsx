@@ -308,6 +308,8 @@ function CalendarBody({
     try {
       authWin = window.open('', '_blank', 'width=520,height=620');
       if (authWin) {
+        // Keep a global reference so we can close it from the postMessage handler.
+        try { window.__googleAuthWin = authWin; } catch (_) {}
         // Write a tiny placeholder so the window is visible quickly.
         authWin.document.write('<p style="font-family:sans-serif;padding:12px;">Preparing Google authorization…</p>');
       }
@@ -345,6 +347,9 @@ function CalendarBody({
               window.open(data.authorize_url, '_blank', 'width=520,height=620');
             }
           } catch (_) {
+            // If reusing the pre-opened window failed, close it and open a fresh one
+            try { if (authWin && !authWin.closed) authWin.close(); } catch (_) {}
+            try { if (window.__googleAuthWin && !window.__googleAuthWin.closed) window.__googleAuthWin.close(); } catch (_) {}
             window.open(data.authorize_url, '_blank', 'width=520,height=620');
           }
           setIsConnected(false);
@@ -355,10 +360,15 @@ function CalendarBody({
         } else {
           // Close any pre-opened window if not needed.
           try { if (authWin && !authWin.closed) authWin.close(); } catch (_) {}
+          try { if (window.__googleAuthWin && !window.__googleAuthWin.closed) window.__googleAuthWin.close(); } catch (_) {}
           throw new Error(data?.message || 'Failed to sync with Google Calendar.');
         }
         return;
       }
+
+      // Success path: close any placeholder auth window since auth was not required.
+      try { if (authWin && !authWin.closed) authWin.close(); } catch (_) {}
+      try { if (window.__googleAuthWin && !window.__googleAuthWin.closed) window.__googleAuthWin.close(); } catch (_) {}
 
       const mergedEvents = Array.isArray(data.events) ? data.events.map(sanitizeEventForStorage) : [];
       setState((prev) => {
@@ -379,6 +389,7 @@ function CalendarBody({
     } catch (error) {
       // Close any pre-opened window on error (not needed)
       try { if (authWin && !authWin.closed) authWin.close(); } catch (_) {}
+      try { if (window.__googleAuthWin && !window.__googleAuthWin.closed) window.__googleAuthWin.close(); } catch (_) {}
       setSyncFeedback({
         severity: 'error',
         message: error.message || 'Failed to sync Google Calendar.',
@@ -539,6 +550,10 @@ export default function Calendar({ projectId, viewName }) {
           severity: 'success',
           message: 'Google account connected. Click sync to import calendar events.',
         });
+        // Close any pre-opened auth window and refocus the app
+        try { if (window.__googleAuthWin && !window.__googleAuthWin.closed) window.__googleAuthWin.close(); } catch (_) {}
+        try { window.__googleAuthWin = null; } catch (_) {}
+        try { window.focus(); } catch (_) {}
       }
     };
 
