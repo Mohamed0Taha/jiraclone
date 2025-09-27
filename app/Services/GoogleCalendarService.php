@@ -104,6 +104,15 @@ class GoogleCalendarService
                 'body' => optional($remoteResponse)->json(),
             ]);
 
+            if ($remoteResponse && $remoteResponse->status() === 403) {
+                return [
+                    'success' => false,
+                    'requires_auth' => true,
+                    'authorize_url' => route('google.calendar.connect'),
+                    'message' => 'Google rejected the request. Please reconnect your Google Calendar.',
+                ];
+            }
+
             return [
                 'success' => false,
                 'message' => 'Unable to fetch Google Calendar events.',

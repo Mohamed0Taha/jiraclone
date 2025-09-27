@@ -61,6 +61,7 @@ class GoogleCalendarController extends Controller
             ->with([
                 'access_type' => 'offline',
                 'prompt' => 'consent',
+                'include_granted_scopes' => 'true',
             ])
             ->redirectUrl($redirectUrl)
             ->redirect();
@@ -80,6 +81,11 @@ class GoogleCalendarController extends Controller
             ->stateless()
             ->scopes(['https://www.googleapis.com/auth/calendar'])
             ->redirectUrl($redirectUrl)
+            ->with([
+                'access_type' => 'offline',
+                'prompt' => 'consent',
+                'include_granted_scopes' => 'true',
+            ])
             ->user();
 
         $user->forceFill([
