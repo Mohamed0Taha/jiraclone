@@ -276,7 +276,11 @@ function CalendarBody({
   const handleGoogleSync = useCallback(async (isUserInitiated = false) => {
     // Prevent automatic sync calls - only allow user-initiated syncs
     if (!isUserInitiated) {
-      console.warn('[Calendar] Automatic sync prevented. Sync must be user-initiated.');
+      console.warn('[Calendar] Automatic sync prevented. Sync must be user-initiated.', new Error().stack);
+      setSyncFeedback({
+        severity: 'info',
+        message: 'Click the "Sync Google" button to sync your calendar events.',
+      });
       return;
     }
     
