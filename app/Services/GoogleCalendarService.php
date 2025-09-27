@@ -164,13 +164,30 @@ class GoogleCalendarService
                 ],
             ]);
 
-            if ($remoteResponse && $remoteResponse->status() === 403) {
+            $status = optional($remoteResponse)->status();
+
+            // If unauthorized or forbidden, prompt re-authorization.
+            if ($remoteResponse && in_array($status, [401, 403], true)) {
                 return [
                     'success' => false,
                     'requires_auth' => true,
                     'authorize_url' => route('google.calendar.connect'),
                     'message' => 'Google rejected the request. Please reconnect your Google Calendar.',
                 ];
+            }
+
+            // If Google explicitly reports invalid_grant / invalid_request, prompt re-authorization as well.
+            if ($remoteResponse && $status === 400) {
+                $errorData = $remoteResponse->json();
+                $errorCode = $errorData['error'] ?? ($errorData['error_description'] ?? null);
+                if (is_string($errorCode) && (str_contains($errorCode, 'invalid_grant') || str_contains($errorCode, 'invalid_request'))) {
+                    return [
+                        'success' => false,
+                        'requires_auth' => true,
+                        'authorize_url' => route('google.calendar.connect'),
+                        'message' => 'Google authorization expired. Please reconnect your Google Calendar.',
+                    ];
+                }
             }
 
             return [
