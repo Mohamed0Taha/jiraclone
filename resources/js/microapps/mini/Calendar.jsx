@@ -311,6 +311,7 @@ function CalendarBody({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-User-Initiated': 'true',
           Accept: 'application/json',
         },
         body: JSON.stringify(payload),

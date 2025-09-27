@@ -13,11 +13,23 @@ class GoogleCalendarController extends Controller
     {
         $this->middleware('auth');
     }
-
     public function sync(Request $request)
     {
         $user = $request->user();
         $events = $request->input('events', []);
+
+        // Add a header check to prevent automatic sync calls
+        if (!$request->hasHeader('X-User-Initiated') || $request->header('X-User-Initiated') !== 'true') {
+            \Log::warning('[GoogleCalendarController] Automatic sync attempt blocked', [
+                'user_id' => $user->id,
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Sync must be initiated by user action.',
+            ], 422);
+        }
 
         try {
             $result = $this->calendarService->sync($user, is_array($events) ? $events : []);
