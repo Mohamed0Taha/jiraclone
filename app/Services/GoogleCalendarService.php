@@ -132,11 +132,36 @@ class GoogleCalendarService
             ],
         ]);
 
-        if (! $remoteResponse || ! $remoteResponse->successful()) {
+        if (! $remoteResponse) {
+            Log::warning('[GoogleCalendarService] No access token available for Google Calendar API', [
+                'user_id' => $user->id,
+                'has_google_token' => !empty($user->google_token),
+                'has_refresh_token' => !empty($user->google_refresh_token),
+            ]);
+
+            return [
+                'success' => false,
+                'requires_auth' => true,
+                'authorize_url' => route('google.calendar.connect'),
+                'message' => 'Google Calendar access token is missing. Please reconnect your Google account.',
+            ];
+        }
+
+        if (! $remoteResponse->successful()) {
             Log::error('[GoogleCalendarService] Failed to fetch Google Calendar events', [
                 'user_id' => $user->id,
                 'status' => optional($remoteResponse)->status(),
                 'body' => optional($remoteResponse)->json(),
+                'headers' => optional($remoteResponse)->headers(),
+                'has_google_token' => !empty($user->google_token),
+                'has_refresh_token' => !empty($user->google_refresh_token),
+                'request_url' => self::GOOGLE_CALENDAR_BASE.'/calendars/'.self::CALENDAR_ID.'/events',
+                'query_params' => [
+                    'singleEvents' => true,
+                    'orderBy' => 'startTime',
+                    'timeMin' => Carbon::now()->subMonths(6)->toRfc3339String(),
+                    'timeMax' => Carbon::now()->addMonths(12)->toRfc3339String(),
+                ],
             ]);
 
             if ($remoteResponse && $remoteResponse->status() === 403) {
@@ -173,7 +198,16 @@ class GoogleCalendarService
 
     public function hasCalendarConnection(User $user): bool
     {
-        return ! empty($user->google_refresh_token);
+        $hasConnection = ! empty($user->google_refresh_token);
+        
+        Log::info('[GoogleCalendarService] Checking calendar connection', [
+            'user_id' => $user->id,
+            'has_refresh_token' => !empty($user->google_refresh_token),
+            'has_google_token' => !empty($user->google_token),
+            'has_connection' => $hasConnection,
+        ]);
+        
+        return $hasConnection;
     }
 
     private function makeRequest(User $user, string $method, string $url, array $options = [])
@@ -217,6 +251,12 @@ class GoogleCalendarService
 
     private function retrieveAccessToken(User $user): ?string
     {
+        Log::info('[GoogleCalendarService] Retrieving access token', [
+            'user_id' => $user->id,
+            'has_existing_token' => !empty($user->google_token),
+            'has_refresh_token' => !empty($user->google_refresh_token),
+        ]);
+        
         if (! empty($user->google_token)) {
             return $user->google_token;
         }
@@ -243,6 +283,22 @@ class GoogleCalendarService
                 'status' => $response->status(),
                 'body' => $response->json(),
             ]);
+
+            // If refresh token is invalid, clear the stored tokens
+            if ($response->status() === 400) {
+                $errorData = $response->json();
+                if (isset($errorData['error']) && in_array($errorData['error'], ['invalid_grant', 'invalid_request'])) {
+                    Log::info('[GoogleCalendarService] Clearing invalid Google tokens for user', [
+                        'user_id' => $user->id,
+                        'error' => $errorData['error'],
+                    ]);
+                    
+                    $user->forceFill([
+                        'google_token' => null,
+                        'google_refresh_token' => null,
+                    ])->save();
+                }
+            }
 
             return null;
         }

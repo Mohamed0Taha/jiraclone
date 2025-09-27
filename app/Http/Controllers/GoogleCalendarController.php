@@ -34,7 +34,7 @@ class GoogleCalendarController extends Controller
         }
 
         if (($result['requires_auth'] ?? false) === true) {
-            return response()->json($result, 403);
+            return response()->json($result, 401);
         }
 
         if (! ($result['success'] ?? false)) {
