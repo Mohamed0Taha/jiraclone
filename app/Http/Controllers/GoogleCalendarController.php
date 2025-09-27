@@ -44,8 +44,17 @@ class GoogleCalendarController extends Controller
         return response()->json($result);
     }
 
-    public function connect()
+    protected function calendarRedirectUrl(Request $request): string
     {
+        $relative = route('google.calendar.callback', [], false);
+
+        return $request->getSchemeAndHttpHost().$relative;
+    }
+
+    public function connect(Request $request)
+    {
+        $redirectUrl = $this->calendarRedirectUrl($request);
+
         return Socialite::driver('google')
             ->stateless()
             ->scopes(['https://www.googleapis.com/auth/calendar'])
@@ -53,7 +62,7 @@ class GoogleCalendarController extends Controller
                 'access_type' => 'offline',
                 'prompt' => 'consent',
             ])
-            ->redirectUrl(route('google.calendar.callback'))
+            ->redirectUrl($redirectUrl)
             ->redirect();
     }
 
@@ -65,10 +74,12 @@ class GoogleCalendarController extends Controller
             return redirect()->route('login')->with('error', 'Please log in to connect Google Calendar.');
         }
 
+        $redirectUrl = $this->calendarRedirectUrl($request);
+
         $googleUser = Socialite::driver('google')
             ->stateless()
             ->scopes(['https://www.googleapis.com/auth/calendar'])
-            ->redirectUrl(route('google.calendar.callback'))
+            ->redirectUrl($redirectUrl)
             ->user();
 
         $user->forceFill([
