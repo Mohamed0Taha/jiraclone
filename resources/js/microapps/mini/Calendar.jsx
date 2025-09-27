@@ -23,6 +23,24 @@ const toIsoString = (value) => {
   }
 };
 
+// Generate a stable color from event identity for distinct coloring
+const getEventColor = (event, isDark) => {
+  try {
+    const key = String(event?.google_event_id ?? event?.id ?? event?.title ?? 'event');
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = ((hash << 5) - hash) + key.charCodeAt(i);
+      hash |= 0; // Convert to 32bit int
+    }
+    const hue = Math.abs(hash) % 360;
+    const sat = 70; // vibrant
+    const light = isDark ? 40 : 55; // maintain contrast across themes
+    return `hsl(${hue}, ${sat}%, ${light}%)`;
+  } catch (_) {
+    return isDark ? '#394b59' : '#1976d2';
+  }
+};
+
 const sanitizeEventForStorage = (event) => {
   const startIso = toIsoString(event?.start ?? Date.now());
   const endIso = toIsoString(event?.end ?? event?.start ?? Date.now());
@@ -459,19 +477,24 @@ function CalendarBody({
             popup
             eventPropGetter={(event) => {
               const isDark = document.body.getAttribute('data-theme') === 'dark';
-              const gradient = isDark
-                ? 'linear-gradient(135deg, #1f2a36, #2d3b4a)'
-                : 'linear-gradient(135deg, #1976d2, #42a5f5)';
+              const bg = getEventColor(event, isDark);
+              const border = isDark ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(0,0,0,0.12)';
               return {
                 style: {
-                  backgroundImage: gradient,
-                  borderRadius: 8,
-                  opacity: 0.95,
-                  color: isDark ? '#f5f7fa' : '#ffffff',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  backgroundColor: bg,
+                  border,
+                  borderRadius: 0,
+                  color: '#ffffff',
                   display: 'block',
                   fontWeight: 600,
-                  boxShadow: isDark ? '0 2px 6px rgba(0,0,0,0.4)' : '0 2px 6px rgba(0,0,0,0.12)'
+                  fontSize: '0.72rem',
+                  lineHeight: 1.1,
+                  padding: '1px 5px',
+                  margin: '1px 2px',
+                  boxShadow: 'none',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
                 },
               };
             }}
@@ -490,9 +513,6 @@ function CalendarBody({
               event: ({ event }) => (
                 <div onClick={(e) => handleSelectEvent(event, e)} style={{ cursor: 'pointer' }}>
                   <strong>{event.title}</strong>
-                  {(event.desc || event.description) && (
-                    <div style={{ fontSize: '0.8em' }}>{event.desc || event.description}</div>
-                  )}
                 </div>
               ),
             }}
@@ -530,31 +550,11 @@ function CalendarBody({
               <Typography variant="caption" color="text.secondary">All day</Typography>
               <Typography variant="body2">{detailsEvent?.allDay ? 'Yes' : 'No'}</Typography>
 
-              {detailsEvent?.source && (
-                <>
-                  <Typography variant="caption" color="text.secondary">Source</Typography>
-                  <Typography variant="body2">{String(detailsEvent.source)}</Typography>
-                </>
-              )}
-
-              {detailsEvent?.google_event_id && (
-                <>
-                  <Typography variant="caption" color="text.secondary">Google Event ID</Typography>
-                  <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>{detailsEvent.google_event_id}</Typography>
-                </>
-              )}
-
               {(detailsEvent?.desc || detailsEvent?.description) && (
                 <>
                   <Typography variant="caption" color="text.secondary">Description</Typography>
                   <Typography variant="body2">{detailsEvent?.desc || detailsEvent?.description}</Typography>
                 </>
-              )}
-
-              {detailsEvent?.htmlLink && (
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  <a href={detailsEvent.htmlLink} target="_blank" rel="noopener noreferrer">Open in Google Calendar</a>
-                </Typography>
               )}
             </Box>
           </DialogContent>
