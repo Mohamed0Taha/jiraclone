@@ -394,4 +394,78 @@ class ProjectViewsController extends Controller
             ], 500);
         }
     }
+
+    public function pinMicroApp(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $validated = $request->validate([
+            'view_name' => 'required|string|max:255',
+            'original_name' => 'nullable|string|max:255',
+            'app_key' => 'required|string|max:255',
+            'state' => 'nullable',
+        ]);
+
+        $meta = $project->meta ?? [];
+        $pins = $meta['custom_view_pins'] ?? [];
+
+        if (!empty($validated['original_name']) && $validated['original_name'] !== $validated['view_name']) {
+            unset($pins[$validated['original_name']]);
+        }
+
+        $pins[$validated['view_name']] = [
+            'app_key' => $validated['app_key'],
+            'state' => $validated['state'] ?? null,
+            'updated_at' => now()->toIso8601String(),
+            'updated_by' => auth()->id(),
+        ];
+
+        $meta['custom_view_pins'] = $pins;
+        $project->meta = $meta;
+        $project->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Micro app pinned successfully.',
+            'pins' => $pins,
+        ]);
+    }
+
+    public function unpinMicroApp(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $validated = $request->validate([
+            'view_name' => 'required|string|max:255',
+            'original_name' => 'nullable|string|max:255',
+        ]);
+
+        $meta = $project->meta ?? [];
+        $pins = $meta['custom_view_pins'] ?? [];
+
+        $keysToRemove = array_unique(array_filter([
+            $validated['view_name'],
+            $validated['original_name'] ?? null,
+        ]));
+
+        $changed = false;
+        foreach ($keysToRemove as $key) {
+            if (array_key_exists($key, $pins)) {
+                unset($pins[$key]);
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
+            $meta['custom_view_pins'] = $pins;
+            $project->meta = $meta;
+            $project->save();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Micro app unpinned successfully.',
+            'pins' => $pins,
+        ]);
+    }
 }

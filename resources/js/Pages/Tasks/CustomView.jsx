@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import { useChat } from '@ai-sdk/react';
 import { useTranslation } from 'react-i18next';
@@ -142,12 +142,17 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     const [selectedAppKey, setSelectedAppKey] = useState(null);
     const [customViewId, setCustomViewId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [tileGridEnabled, setTileGridEnabled] = useState(false);
+    const [pinnedMicroApps, setPinnedMicroApps] = useState(() => project?.meta?.custom_view_pins ?? {});
+    const [pinnedSuppressed, setPinnedSuppressed] = useState(false);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [componentError, setComponentError] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
     const [generationProgress, setGenerationProgress] = useState(null);
+    const viewKeyRef = useRef(null);
+    const userSelectedMicroAppRef = useRef(false);
     const isScaffoldHTML = useCallback((html) => {
         const s = String(html || '');
         if (!s.trim()) return false;
@@ -157,14 +162,6 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         return false;
     }, []);
 
-    const encodeSelectedMarker = useCallback((appKey, state) => {
-        try {
-            const payload = { type: 'builtin_microapp', appKey: String(appKey || ''), version: 1, state: state ?? null };
-            return `/* MICROAPP_SELECTED_START */${JSON.stringify(payload)}/* MICROAPP_SELECTED_END */`;
-        } catch (_) {
-            return `/* MICROAPP_SELECTED_START */{"type":"builtin_microapp","appKey":"${String(appKey||'')}","state":null}/* MICROAPP_SELECTED_END */`;
-        }
-    }, []);
     const decodeSelectedMarker = useCallback((html) => {
         const s = String(html || '');
         const m = /\/\*\s*MICROAPP_SELECTED_START\s*\*\/([\s\S]*?)\/\*\s*MICROAPP_SELECTED_END\s*\*\//.exec(s);
@@ -206,6 +203,66 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
     const memoizedComponentCode = useMemo(() => {
         return componentCode && componentCode.trim() ? componentCode : null;
     }, [componentCode]);
+
+    useEffect(() => {
+        if (selectedAppKey || memoizedComponentCode) {
+            setTileGridEnabled(false);
+        }
+    }, [selectedAppKey, memoizedComponentCode]);
+
+    useEffect(() => {
+        if (!isLoading && !selectedAppKey && !memoizedComponentCode && !componentError && !isPersisted) {
+            setTileGridEnabled(true);
+        }
+    }, [isLoading, selectedAppKey, memoizedComponentCode, componentError, isPersisted]);
+
+    useEffect(() => {
+        const pinnedEntry = pinnedMicroApps?.[viewName] ?? pinnedMicroApps?.[originalViewName];
+        if (pinnedEntry?.app_key && !pinnedSuppressed) {
+            const appKey = pinnedEntry.app_key;
+            if (!memoizedComponentCode) {
+                if (pinnedEntry.state !== undefined && pinnedEntry.state !== null) {
+                    try {
+                        writeLocalAppState(appKey, pinnedEntry.state);
+                    } catch (_) {}
+                }
+                if (selectedAppKey !== appKey) {
+                    setSelectedAppKey(appKey);
+                }
+                setIsPersisted(true);
+                setTileGridEnabled(false);
+                setIsLoading(false);
+                userSelectedMicroAppRef.current = true;
+                setPinnedSuppressed(false);
+            }
+        } else if (!memoizedComponentCode && selectedAppKey && !isLoading && (!userSelectedMicroAppRef.current || pinnedSuppressed)) {
+            setSelectedAppKey(null);
+            setIsPersisted(false);
+            setTileGridEnabled(true);
+            userSelectedMicroAppRef.current = false;
+        }
+    }, [pinnedMicroApps, viewName, originalViewName, selectedAppKey, memoizedComponentCode, isLoading, writeLocalAppState, pinnedSuppressed]);
+
+    useEffect(() => {
+        const viewKey = `${project?.id || 'unknown'}-${viewName || 'default'}`;
+        if (viewKeyRef.current !== viewKey) {
+            viewKeyRef.current = viewKey;
+            setTileGridEnabled(false);
+            setIsLoading(true);
+            setSelectedAppKey(null);
+            setComponentCode('');
+            setComponentError(null);
+            setIsPersisted(false);
+            setIsLocked(true);
+            userSelectedMicroAppRef.current = false;
+            setPinnedSuppressed(false);
+        }
+    }, [project?.id, viewName, originalViewName]);
+
+    useEffect(() => {
+        setPinnedMicroApps(project?.meta?.custom_view_pins ?? {});
+        setPinnedSuppressed(false);
+    }, [project?.meta?.custom_view_pins]);
 
     const {
         messages,
@@ -370,21 +427,44 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         if (!hasCode && !hasSelection) return;
         setIsSaving(true);
         try {
-            const response = await csrfFetch(`/projects/${project.id}/custom-views/save`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    view_name: originalViewName,
-                    component_code: hasCode ? componentCode : encodeSelectedMarker(selectedAppKey, readLatestAppState(selectedAppKey)),
-                    custom_view_id: customViewId
-                }),
-            });
-            if (response.ok) {
+            if (hasCode) {
+                const response = await csrfFetch(`/projects/${project.id}/custom-views/save`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        view_name: originalViewName,
+                        component_code: componentCode,
+                        custom_view_id: customViewId
+                    }),
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setCustomViewId(data.customViewId);
+                    setIsPersisted(true);
+                    showSnackbar(t('customViews.saveSuccess'), 'success');
+                    userSelectedMicroAppRef.current = false;
+                } else {
+                    throw new Error('Save failed');
+                }
+            } else if (hasSelection) {
+                const latestState = readLatestAppState(selectedAppKey);
+                const response = await csrfFetch(`/projects/${project.id}/custom-views/pin`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        view_name: viewName,
+                        original_name: originalViewName,
+                        app_key: selectedAppKey,
+                        state: latestState ?? null,
+                    }),
+                });
                 const data = await response.json();
-                setCustomViewId(data.customViewId);
+                setPinnedMicroApps(data.pins || {});
+                setCustomViewId(null);
+                setComponentCode('');
                 setIsPersisted(true);
-                showSnackbar(hasCode ? t('customViews.saveSuccess') : 'Micro app pinned to this view', 'success');
-            } else {
-                throw new Error('Save failed');
+                setIsLocked(true);
+                setTileGridEnabled(false);
+                userSelectedMicroAppRef.current = true;
+                showSnackbar('Micro app pinned to this view', 'success');
             }
         } catch (_e) {
             showSnackbar('Failed to save. Please try again.', 'error');
@@ -459,26 +539,37 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         setSelectedAppKey(decoded.appKey);
                         setCustomViewId(data.customViewId || data.custom_view_id || null);
                         setIsPersisted(true);
-                        showSnackbar('Micro app loaded successfully', 'success');
+                        setTileGridEnabled(false);
+                        const existingPinned = pinnedMicroApps?.[viewName] ?? pinnedMicroApps?.[originalViewName];
+                        if (!existingPinned || existingPinned.app_key !== decoded.appKey) {
+                            try {
+                                const migrateResponse = await csrfFetch(`/projects/${project.id}/custom-views/pin`, {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        view_name: viewName,
+                                        original_name: originalViewName,
+                                        app_key: decoded.appKey,
+                                        state: decoded.state ?? null,
+                                    }),
+                                });
+                                const migrateData = await migrateResponse.json();
+                                setPinnedMicroApps(migrateData.pins || {});
+                            } catch (_) {}
+                        }
+                        console.log('[CustomView] Micro app preloaded from saved view', decoded.appKey);
+                        userSelectedMicroAppRef.current = true;
                     } else {
                         setComponentCode(data.html);
                         setSelectedAppKey(null);
                         setCustomViewId(data.customViewId || data.custom_view_id || null);
                         setIsPersisted(true);
-                        showSnackbar('Micro-application loaded successfully', 'success');
+                        setTileGridEnabled(false);
+                        userSelectedMicroAppRef.current = false;
+                        console.log('[CustomView] Component code loaded from saved view');
                     }
                 } else {
                     setComponentCode('');
-                    try {
-                        const selKey = `microapp-selected-${project.id}-${originalViewName}`;
-                        const saved = localStorage.getItem(selKey);
-                        const parsed = saved ? JSON.parse(saved) : null;
-                        if (parsed && MicroApps && Object.prototype.hasOwnProperty.call(MicroApps, parsed)) {
-                            setSelectedAppKey(parsed);
-                        } else {
-                            setSelectedAppKey(null);
-                        }
-                    } catch (_) {
+                    if (!userSelectedMicroAppRef.current) {
                         setSelectedAppKey(null);
                     }
                     setCustomViewId(null);
@@ -486,6 +577,8 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     setIsLocked(true);
                     const backupKey = `microapp-backup-${project.id}-${originalViewName}`;
                     localStorage.removeItem(backupKey);
+                    const pinnedEntry = pinnedMicroApps?.[viewName] ?? pinnedMicroApps?.[originalViewName];
+                    setTileGridEnabled(!pinnedEntry);
                     const msg = (data.message || '').toLowerCase();
                     const isNotFound = msg.includes('no custom view') || msg.includes('not found');
                     showSnackbar(isNotFound ? 'No saved micro-app exists yet. Click Create with AI to generate one.' : (data.message || 'Could not load micro-application.'), 'info');
@@ -499,11 +592,33 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         setComponentCode(backupData.componentCode || '');
                         setCustomViewId(backupData.customViewId);
                         setIsPersisted(false);
+                        const hasBackupCode = Boolean(backupData.componentCode && String(backupData.componentCode).trim());
+                        setTileGridEnabled(!hasBackupCode);
+                        userSelectedMicroAppRef.current = false;
                     } catch (_err) {
                         setComponentCode('');
                         setIsPersisted(false);
+                        setTileGridEnabled(true);
+                        userSelectedMicroAppRef.current = false;
                     }
                 } else {
+                    const pinnedEntry = pinnedMicroApps?.[viewName] ?? pinnedMicroApps?.[originalViewName];
+                    if (pinnedEntry?.app_key) {
+                        setComponentCode('');
+                        setSelectedAppKey(pinnedEntry.app_key);
+                        setIsPersisted(true);
+                        setIsLocked(true);
+                        setTileGridEnabled(false);
+                        setIsLoading(false);
+                        userSelectedMicroAppRef.current = true;
+                        if (pinnedEntry.state !== undefined && pinnedEntry.state !== null) {
+                            try {
+                                writeLocalAppState(pinnedEntry.app_key, pinnedEntry.state);
+                            } catch (_) {}
+                        }
+                        return;
+                    }
+
                     const defaultScaffold = `export default function HelloMicroApp() {
   const [message, setMessage] = React.useState('');
   return (
@@ -519,22 +634,15 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     setComponentCode(defaultScaffold);
                     setIsLocked(false);
                     setIsPersisted(false);
+                    setTileGridEnabled(false);
+                    userSelectedMicroAppRef.current = false;
                 }
             } finally {
                 setIsLoading(false);
             }
         };
         loadCustomView();
-    }, [project?.id, originalViewName, decodeSelectedMarker, isScaffoldHTML, writeLocalAppState]);
-
-    useEffect(() => {
-        if (!project?.id || !originalViewName) return;
-        const key = `microapp-selected-${project.id}-${originalViewName}`;
-        try {
-            if (selectedAppKey) localStorage.setItem(key, JSON.stringify(selectedAppKey));
-            else localStorage.removeItem(key);
-        } catch (_) {}
-    }, [selectedAppKey, project?.id, originalViewName]);
+    }, [project?.id, originalViewName, viewName, decodeSelectedMarker, isScaffoldHTML, writeLocalAppState, pinnedMicroApps]);
 
     useEffect(() => {
         if (!project?.id || !originalViewName) return;
@@ -583,10 +691,14 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                         const data = await response.json();
                         if (data.success && data.html && data.html.trim() && !isScaffoldHTML(data.html)) {
                             setComponentCode(data.html);
+                            setSelectedAppKey(null);
+                            setTileGridEnabled(false);
                             showSnackbar(`Component updated by ${evt.user?.name || 'another user'}`, 'info');
                         } else {
                             setComponentCode('');
                             setIsPersisted(false);
+                            setSelectedAppKey(null);
+                            setTileGridEnabled(true);
                             showSnackbar(`Component removed or unavailable${evt.user?.name ? ' (by ' + evt.user.name + ')' : ''}`, 'info');
                         }
                     } catch (_e) {}
@@ -613,6 +725,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             setGenerationProgress(null);
             showSnackbar('Micro-application generated successfully!', 'success');
             setIsLocked(false);
+            setTileGridEnabled(false);
             return;
         }
         if (payload && payload.component_code) {
@@ -622,6 +735,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             setGenerationProgress(null);
             showSnackbar('Micro-application generated successfully!', 'success');
             setIsLocked(false);
+            setTileGridEnabled(false);
             return;
         }
         if (payload && payload.html) {
@@ -631,6 +745,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             setGenerationProgress(null);
             showSnackbar('Micro-application generated successfully!', 'success');
             setIsLocked(false);
+            setTileGridEnabled(false);
             return;
         }
         setGenerationProgress(null);
@@ -650,6 +765,22 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             if (key && (key.includes(`microapp-`) || key.includes(`${project?.id}-${originalViewName}`))) keysToRemove.push(key);
         }
         keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        if (selectedAppKey && isPersisted && !memoizedComponentCode) {
+            try {
+                const response = await csrfFetch(`/projects/${project.id}/custom-views/pin`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({ view_name: viewName, original_name: originalViewName }),
+                });
+                const data = await response.json();
+                setPinnedMicroApps(data.pins || {});
+                showSnackbar('Micro app unpinned from this view', 'success');
+            } catch (error) {
+                console.error('Failed to unpin micro app', error);
+                showSnackbar('Failed to unpin micro app. Local state cleared.', 'warning');
+            }
+        }
+
         try {
             const response = await csrfFetch(`/projects/${project.id}/custom-views/delete`, {
                 method: 'DELETE',
@@ -671,6 +802,9 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         setIsLocked(true);
         setDeleteConfirmOpen(false);
         setSelectedAppKey(null);
+        setTileGridEnabled(true);
+        userSelectedMicroAppRef.current = false;
+        setPinnedSuppressed(false);
         try {
             const prefix = `microapp-${project?.id}-${originalViewName}-`;
             const toRemove = [];
@@ -679,8 +813,6 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                 if (key && key.startsWith(prefix)) toRemove.push(key);
             }
             toRemove.forEach((k) => localStorage.removeItem(k));
-            const selKey = `microapp-selected-${project?.id}-${originalViewName}`;
-            localStorage.removeItem(selKey);
         } catch (_) {}
     };
 
@@ -700,6 +832,9 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             setComponentCode('');
             setIsLocked(true);
             setIsPersisted(false);
+            setTileGridEnabled(false);
+            setIsLoading(false);
+            userSelectedMicroAppRef.current = true;
             showSnackbar(`${key} loaded.`, 'success');
             return;
         }
@@ -709,15 +844,19 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         setComponentCode(code);
         setIsLocked(false);
         setIsPersisted(false);
+        setTileGridEnabled(false);
+        setIsLoading(false);
+        userSelectedMicroAppRef.current = false;
         showSnackbar(`${key} created. You can customize and save.`, 'success');
     }, [buildTemplateCode]);
 
-    const handleEmergencyReset = useCallback(() => {
+    const handleEmergencyReset = useCallback(async () => {
         setComponentCode('');
         setCustomViewId(null);
         setComponentError(null);
         setIsPersisted(false);
         setIsLocked(true);
+        setTileGridEnabled(true);
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -725,7 +864,39 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         }
         keysToRemove.forEach(key => localStorage.removeItem(key));
         showSnackbar('Component reset. You can now generate a new micro-application.', 'info');
-    }, [project?.id, originalViewName]);
+        if (selectedAppKey && !memoizedComponentCode) {
+            try {
+                if (!project?.meta || Object.keys(project.meta).length === 0) {
+                    const response = await csrfFetch(`/projects/${project.id}/custom-views/pin`, {
+                        method: 'DELETE',
+                        body: JSON.stringify({ view_name: viewName, original_name: originalViewName }),
+                    });
+                    const data = await response.json();
+                    setPinnedMicroApps(data.pins || {});
+                }
+            } catch (error) {
+                console.error('Failed to unpin during emergency reset', error);
+            }
+            setSelectedAppKey(null);
+            userSelectedMicroAppRef.current = false;
+        }
+    }, [project?.id, originalViewName, selectedAppKey, memoizedComponentCode, viewName]);
+
+    const handleBackClick = useCallback(() => {
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+            window.history.back();
+            return;
+        }
+
+        setSelectedAppKey(null);
+        setTileGridEnabled(true);
+        setComponentCode('');
+        setIsLocked(true);
+        setIsPersisted(false);
+        setCustomViewId(null);
+        userSelectedMicroAppRef.current = false;
+        setPinnedSuppressed(true);
+    }, [setSelectedAppKey, setTileGridEnabled, setComponentCode, setIsLocked, setIsPersisted, setCustomViewId, setPinnedSuppressed]);
 
     const handleComponentError = (error) => {
         setComponentError(error);
@@ -736,6 +907,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
             setTimeout(() => {
                 setComponentCode('');
                 setComponentError(null);
+                setTileGridEnabled(true);
                 showSnackbar('Component cleared due to critical error (e.g., Babel/preset/filename). Please regenerate.', 'warning');
             }, 250);
         }
@@ -1060,10 +1232,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, mr: 10 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <IconButton
-                                onClick={() => {
-                                    if (isPersisted) window.location.href = `/projects/${project.id}`;
-                                    else setSelectedAppKey(null);
-                                }}
+                                onClick={handleBackClick}
                                 sx={{
                                     backgroundColor: (theme) => alpha(theme.palette.background.paper, 0.9),
                                     color: theme.palette.text.primary,
@@ -1113,10 +1282,10 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                 );
                             })()}
                         </Box>
-                    ) : componentCode && componentCode.trim() && !componentError ? (
+                    ) : memoizedComponentCode && !componentError ? (
                         <Box sx={{ position: 'relative' }}>
                             <ReactComponentRenderer
-                                componentCode={componentCode}
+                                componentCode={memoizedComponentCode}
                                 project={project}
                                 auth={currentAuth}
                                 viewName={originalViewName}
@@ -1127,37 +1296,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                                 methodology={methodology}
                             />
                         </Box>
-                    ) : isLoading ? (
-                        <Box sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            height: 'calc(100vh - 200px)',
-                            color: 'text.secondary',
-                        }}>
-                            <Box sx={{
-                                width: 60,
-                                height: 60,
-                                borderRadius: '50%',
-                                background: designTokens.gradients.accent,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                mb: 3,
-                                animation: `${shimmer} 1.5s infinite linear`,
-                            }}>
-                                <AutoAwesomeIcon fontSize="large" />
-                            </Box>
-                            <Typography variant="h6" fontWeight="500" mb={1}>
-                                {t('customViews.loadingStudio')}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                {t('customViews.preparingEnvironment')}
-                            </Typography>
-                        </Box>
-                    ) : (
+                    ) : (tileGridEnabled && !isLoading && !selectedAppKey && !memoizedComponentCode && !componentError) ? (
                         <Box sx={{
                             display: 'flex',
                             flexDirection: 'column',
@@ -1194,6 +1333,36 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
                             >
                                 Create with AI
                             </Button>
+                        </Box>
+                    ) : (
+                        <Box sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: 'calc(100vh - 200px)',
+                            color: 'text.secondary',
+                        }}>
+                            <Box sx={{
+                                width: 60,
+                                height: 60,
+                                borderRadius: '50%',
+                                background: designTokens.gradients.accent,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                mb: 3,
+                                animation: `${shimmer} 1.5s infinite linear`,
+                            }}>
+                                <AutoAwesomeIcon fontSize="large" />
+                            </Box>
+                            <Typography variant="h6" fontWeight="500" mb={1}>
+                                {isLoading ? t('customViews.loadingStudio') : 'Preparing your workspace...'}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                {isLoading ? t('customViews.preparingEnvironment') : 'Please hold on while we finalize this view.'}
+                            </Typography>
                         </Box>
                     )}
                 </Paper>

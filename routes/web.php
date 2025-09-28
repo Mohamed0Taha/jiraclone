@@ -577,6 +577,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/custom-views/delete', [ProjectViewsController::class, 'deleteCustomView'])->name('custom-views.delete');
 
         Route::post('/custom-views/save', [ProjectViewsController::class, 'saveCustomView'])->name('custom-views.save');
+        Route::post('/custom-views/pin', [ProjectViewsController::class, 'pinMicroApp'])->name('custom-views.pin');
+        Route::delete('/custom-views/pin', [ProjectViewsController::class, 'unpinMicroApp'])->name('custom-views.unpin');
 
         Route::post('/custom-views/save-data', [ProjectViewsController::class, 'saveComponentData'])->name('custom-views.save-data');
 
