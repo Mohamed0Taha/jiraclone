@@ -894,6 +894,7 @@ export default function CustomView({ auth, project, tasks, allTasks, users, meth
         setIsLocked(true);
         setIsPersisted(false);
         setCustomViewId(null);
+        setIsLoading(false);
         userSelectedMicroAppRef.current = false;
         setPinnedSuppressed(true);
     }, [setSelectedAppKey, setTileGridEnabled, setComponentCode, setIsLocked, setIsPersisted, setCustomViewId, setPinnedSuppressed]);

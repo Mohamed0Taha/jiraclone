@@ -37,6 +37,53 @@ import { METHODOLOGIES, DEFAULT_METHOD, getStatusMeta, getStatusOrder } from '@/
 import { usePage, router } from '@inertiajs/react';
 import { route } from 'ziggy-js';
 
+const computeMaxOverlap = (groupItems = []) => {
+    if (!groupItems.length) return 0;
+
+    const events = [];
+    groupItems.forEach((item) => {
+        events.push({ time: item.start_time, type: 'start' });
+        events.push({ time: item.end_time, type: 'end' });
+    });
+
+    events.sort((a, b) => {
+        if (a.time === b.time) {
+            if (a.type === b.type) return 0;
+            return a.type === 'end' ? -1 : 1;
+        }
+        return a.time - b.time;
+    });
+
+    let current = 0;
+    let max = 0;
+    events.forEach((event) => {
+        if (event.type === 'start') {
+            current += 1;
+            if (current > max) max = current;
+        } else {
+            current = Math.max(0, current - 1);
+        }
+    });
+
+    return max;
+};
+
+const buildOverlapMap = (itemList = [], statuses = []) => {
+    const grouped = itemList.reduce((acc, item) => {
+        if (!acc[item.group]) acc[item.group] = [];
+        acc[item.group].push(item);
+        return acc;
+    }, {});
+
+    const result = {};
+    statuses.forEach((status) => {
+        const groupItems = grouped[status] || [];
+        result[status] = computeMaxOverlap(groupItems);
+    });
+
+    return result;
+};
+
 export default function TimelinePage({ auth, project = {}, tasks = {}, users = [] }) {
     const { props } = usePage();
     const authenticatedUser = auth || props?.auth || {};
@@ -50,13 +97,11 @@ export default function TimelinePage({ auth, project = {}, tasks = {}, users = [
 
     const EMPTY_GROUP_HEIGHT = 44;
     const SINGLE_TASK_HEIGHT = 68;
-    const STACKED_TASK_OFFSET = 28;
 
-    const computeGroupHeight = useCallback((taskCount = 0) => {
-        if (taskCount <= 0) return EMPTY_GROUP_HEIGHT;
-        if (taskCount === 1) return SINGLE_TASK_HEIGHT;
-        return SINGLE_TASK_HEIGHT + (taskCount - 1) * STACKED_TASK_OFFSET;
-    }, [EMPTY_GROUP_HEIGHT, SINGLE_TASK_HEIGHT, STACKED_TASK_OFFSET]);
+    const computeGroupHeight = useCallback((laneCount = 0) => {
+        if (laneCount <= 0) return EMPTY_GROUP_HEIGHT;
+        return Math.max(EMPTY_GROUP_HEIGHT, laneCount * SINGLE_TASK_HEIGHT);
+    }, [EMPTY_GROUP_HEIGHT, SINGLE_TASK_HEIGHT]);
     
     // Get project methodology (same logic as Board.jsx)
     const initialMethod = (() => {
@@ -184,42 +229,16 @@ export default function TimelinePage({ auth, project = {}, tasks = {}, users = [
     }
 
     // Dynamic groups that update based on current task distribution
-    const [groups, setGroups] = useState(() => 
-        STATUS_ORDER.map((status) => {
-            const meta = STATUS_META[status];
-            const taskCount = tasksByStatus[status]?.length || 0;
-            return {
-                id: status,
-                title: meta?.title || status,
-                rightTitle: '',
-                stackItems: true,
-                height: computeGroupHeight(taskCount)
-            };
-        })
-    );
-
     // Function to calculate optimal height for a status group
-    const calculateGroupHeight = useCallback((statusId, taskCount) => computeGroupHeight(taskCount), [computeGroupHeight]);
-
     // Function to update group heights dynamically
     const updateGroupHeights = useCallback((currentItems) => {
-        // Count tasks per group from current items
-        const taskCounts = {};
-        STATUS_ORDER.forEach(status => {
-            taskCounts[status] = 0;
-        });
-        
-        currentItems.forEach(item => {
-            if (taskCounts.hasOwnProperty(item.group)) {
-                taskCounts[item.group]++;
-            }
-        });
+        const overlapMap = buildOverlapMap(currentItems, STATUS_ORDER);
 
-        // Update groups with new heights
         setGroups(prevGroups => {
             let changed = false;
             const nextGroups = prevGroups.map(group => {
-                const nextHeight = calculateGroupHeight(group.id, taskCounts[group.id] || 0);
+                const lanes = overlapMap[group.id] || 0;
+                const nextHeight = computeGroupHeight(lanes);
                 if (group.height === nextHeight) {
                     return group;
                 }
@@ -228,7 +247,7 @@ export default function TimelinePage({ auth, project = {}, tasks = {}, users = [
             });
             return changed ? nextGroups : prevGroups;
         });
-    }, [calculateGroupHeight, STATUS_ORDER]);
+    }, [STATUS_ORDER, computeGroupHeight]);
     // Get status color based on methodology
     function getStatusColor(status) {
         const meta = STATUS_META[status];
@@ -301,6 +320,21 @@ export default function TimelinePage({ auth, project = {}, tasks = {}, users = [
         })
     );
 
+    const [groups, setGroups] = useState(() => {
+        const overlapMap = buildOverlapMap(items, STATUS_ORDER);
+        return STATUS_ORDER.map((status) => {
+            const meta = STATUS_META[status];
+            const laneCount = overlapMap[status] || (tasksByStatus[status]?.length ? 1 : 0);
+            return {
+                id: status,
+                title: meta?.title || status,
+                rightTitle: '',
+                stackItems: true,
+                height: computeGroupHeight(laneCount),
+            };
+        });
+    });
+
     const groupHeights = useMemo(
         () => groups.map(group => group.height ?? computeGroupHeight(0)),
         [groups, computeGroupHeight]
@@ -319,25 +353,28 @@ export default function TimelinePage({ auth, project = {}, tasks = {}, users = [
         if (!targetGroupId) return;
 
         const movingItem = items.find((candidate) => candidate.id === itemId);
-        const counts = items.reduce((acc, current) => {
-            acc[current.group] = (acc[current.group] || 0) + 1;
-            return acc;
-        }, {});
-        const countsForPreview = { ...counts };
-        if (movingItem && movingItem.group && movingItem.group !== targetGroupId) {
-            countsForPreview[movingItem.group] = Math.max((countsForPreview[movingItem.group] || 0) - 1, 0);
-        }
-        const anticipatedCount = movingItem?.group === targetGroupId
-            ? (countsForPreview[targetGroupId] || 0)
-            : (countsForPreview[targetGroupId] || 0) + 1;
+        if (!movingItem) return;
+
+        const duration = movingItem.end_time - movingItem.start_time;
+        const simulatedItems = items.map((item) => {
+            if (item.id === itemId) {
+                return {
+                    ...item,
+                    group: targetGroupId,
+                    start_time: dragTime,
+                    end_time: dragTime + duration,
+                };
+            }
+            return item;
+        });
+
+        const overlapMap = buildOverlapMap(simulatedItems, STATUS_ORDER);
 
         setGroups(prevGroups => {
             let changed = false;
             const nextGroups = prevGroups.map(group => {
-                const currentCount = countsForPreview[group.id] || 0;
-                const targetHeight = group.id === targetGroupId
-                    ? calculateGroupHeight(group.id, anticipatedCount)
-                    : calculateGroupHeight(group.id, currentCount);
+                const lanes = overlapMap[group.id] || 0;
+                const targetHeight = computeGroupHeight(lanes);
                 if (group.height === targetHeight) {
                     return group;
                 }
@@ -346,7 +383,7 @@ export default function TimelinePage({ auth, project = {}, tasks = {}, users = [
             });
             return changed ? nextGroups : prevGroups;
         });
-    }, [isLocked, isDragging, groups, items, calculateGroupHeight]);
+    }, [isLocked, isDragging, groups, items, STATUS_ORDER, computeGroupHeight]);
 
     // View mode handlers
     const handleViewModeChange = useCallback((mode) => {
