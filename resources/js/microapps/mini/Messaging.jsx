@@ -11,7 +11,6 @@ import {
   ListItemButton,
   ListItemText,
   Paper,
-  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -19,6 +18,7 @@ import {
   Button,
   CircularProgress,
   Tooltip,
+  Chip,
 } from '@mui/material';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
@@ -154,14 +154,27 @@ function ConversationListItem({
         borderRadius: 2,
         mb: 0.5,
         alignItems: 'center',
-        border: active ? `1px solid ${alpha(theme.palette.primary.main, 0.35)}` : `1px solid ${alpha(theme.palette.divider, 0.4)}`,
+        position: 'relative',
+        border: active
+          ? `1px solid ${alpha(theme.palette.primary.main, 0.4)}`
+          : highlight
+            ? `1px solid ${alpha(theme.palette.secondary.main, 0.5)}`
+            : `1px solid ${alpha(theme.palette.divider, 0.4)}`,
+        boxShadow: highlight
+          ? `0 0 0 2px ${alpha(theme.palette.secondary.main, 0.2)}`
+          : active
+            ? `0 0 0 2px ${alpha(theme.palette.primary.main, 0.12)}`
+            : 'none',
         backgroundColor: active
           ? alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.2 : 0.08)
           : alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.2 : 0.5),
-        transition: 'all 0.2s ease',
+        transition: 'all 0.22s ease',
         '&:hover': {
           backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.25 : 0.12),
           transform: 'translateY(-1px)',
+          boxShadow: highlight
+            ? `0 0 0 3px ${alpha(theme.palette.secondary.main, 0.25)}`
+            : `0 4px 16px ${alpha(theme.palette.common.black, 0.08)}`,
         },
       }}
     >
@@ -192,7 +205,19 @@ function ConversationListItem({
         }}
       />
       {unread > 0 && (
-        <Badge color="primary" badgeContent={unread} sx={{ mr: 1 }} />
+        <Badge
+          color="error"
+          badgeContent={unread}
+          sx={{
+            mr: 1,
+            '& .MuiBadge-badge': {
+              fontWeight: 700,
+              minWidth: 22,
+              height: 22,
+              borderRadius: '999px',
+            },
+          }}
+        />
       )}
     </ListItemButton>
   );
@@ -205,7 +230,6 @@ function MessagingApp({ projectId, viewName }) {
   const [memberState, setMemberState] = useState({ loading: false, members: initialMembers, error: null });
   const [selectedRoomId, setSelectedRoomId] = useState(GENERAL_ROOM_ID);
   const [messageDraft, setMessageDraft] = useState('');
-  const [notification, setNotification] = useState(null);
   const seenMessagesRef = useRef(new Set());
   const initialisedRef = useRef(false);
   const messageListRef = useRef(null);
@@ -266,8 +290,60 @@ function MessagingApp({ projectId, viewName }) {
       defaultShared
     >
       {({ state, setState, isLoaded }) => {
-        const roomsFromState = ensureGeneralRoom(state?.rooms || {});
-        const lastRead = state?.lastRead || {};
+        const roomsFromState = useMemo(
+          () => ensureGeneralRoom(state?.rooms || {}),
+          [state?.rooms]
+        );
+
+        const userKey = useMemo(() => {
+          if (currentUserId) return `id:${currentUserId}`;
+          if (currentUserEmail) return `email:${currentUserEmail}`;
+          return 'anonymous';
+        }, [currentUserId, currentUserEmail]);
+
+        const { lastReadByUser, isLegacyLastRead } = useMemo(() => {
+          const safeKey = userKey || 'anonymous';
+          const raw = state?.lastRead;
+          if (!raw || typeof raw !== 'object') {
+            return { lastReadByUser: { [safeKey]: {} }, isLegacyLastRead: Boolean(raw && Object.keys(raw).length) };
+          }
+
+          const entries = Object.entries(raw);
+          const isNested = entries.some(([, value]) => value && typeof value === 'object' && !Array.isArray(value));
+
+          if (isNested) {
+            const normalized = entries.reduce((acc, [key, value]) => {
+              if (value && typeof value === 'object' && !Array.isArray(value)) {
+                acc[key] = { ...value };
+              }
+              return acc;
+            }, {});
+            if (!normalized[safeKey]) {
+              normalized[safeKey] = {};
+            }
+            return { lastReadByUser: normalized, isLegacyLastRead: false };
+          }
+
+          return { lastReadByUser: { [safeKey]: { ...raw } }, isLegacyLastRead: true };
+        }, [state?.lastRead, userKey]);
+
+        const userLastRead = useMemo(() => ({ ...lastReadByUser[userKey] }), [lastReadByUser, userKey]);
+
+        useEffect(() => {
+          if (!isLoaded) return;
+          if (!state) return;
+          if (!isLegacyLastRead) return;
+          // Upgrade legacy shared lastRead structure (flat map) to per-user map once
+          const migrated = Object.keys(lastReadByUser).reduce((acc, key) => {
+            acc[key] = { ...lastReadByUser[key] };
+            return acc;
+          }, {});
+
+          setState({
+            ...(state || {}),
+            lastRead: migrated,
+          }, { force: true, immediate: true });
+        }, [isLoaded, state, isLegacyLastRead, lastReadByUser, setState]);
 
         const membersById = useMemo(() => {
           const map = new Map();
@@ -296,16 +372,6 @@ function MessagingApp({ projectId, viewName }) {
           return map;
         }, [memberState.members, currentUser, currentUserEmail]);
 
-        const otherMembers = useMemo(() => {
-          return memberState.members.filter((member) => {
-            const memberId = normalizeId(member?.id);
-            if (currentUserId && memberId && memberId === currentUserId) return false;
-            const memberEmail = member?.email ? String(member.email).toLowerCase() : null;
-            if (currentUserEmail && memberEmail && memberEmail === currentUserEmail) return false;
-            return true;
-          });
-        }, [memberState.members, currentUserId, currentUserEmail]);
-
         const resolveDisplayName = useMemo(() => {
           return (message) => {
             const normalizedSenderId = normalizeId(message?.senderId);
@@ -332,14 +398,117 @@ function MessagingApp({ projectId, viewName }) {
           return roomsFromState[selectedRoomId] || null;
         }, [roomsFromState, selectedRoomId]);
 
-        const selectedDirectParticipant = useMemo(() => {
+        const directRoomsMeta = useMemo(() => {
+          const entries = [];
+          Object.entries(roomsFromState).forEach(([roomId, room]) => {
+            if (!roomId.startsWith('dm:')) return;
+
+            const roomMessages = room?.messages || [];
+            const lastMsg = roomMessages[roomMessages.length - 1];
+
+            const participantsRaw = Array.isArray(room?.participants) && room.participants.length
+              ? room.participants
+              : parseDirectRoom(roomId);
+            const normalizedParticipants = participantsRaw
+              .map((value) => normalizeId(value))
+              .filter(Boolean);
+
+            let counterpartId = normalizedParticipants.find((id) => id !== currentUserId) || null;
+            if (!counterpartId && lastMsg) {
+              const senderId = normalizeId(lastMsg.senderId);
+              if (senderId && senderId !== currentUserId) {
+                counterpartId = senderId;
+              }
+            }
+
+            const counterpartMember = counterpartId ? membersById.get(counterpartId) || null : null;
+
+            const fallbackName = (() => {
+              if (counterpartMember?.name) return counterpartMember.name;
+              if (counterpartMember?.email) return counterpartMember.email;
+              if (lastMsg && normalizeId(lastMsg.senderId) !== currentUserId) {
+                return lastMsg.displayName || lastMsg.senderName || lastMsg.senderEmail || 'Teammate';
+              }
+              const participantCandidate = normalizedParticipants.find((id) => id && id !== currentUserId);
+              const participantMember = participantCandidate ? membersById.get(participantCandidate) : null;
+              if (participantMember?.name) return participantMember.name;
+              if (participantMember?.email) return participantMember.email;
+              if (room?.name && room.name !== 'Direct Message') return room.name;
+              return 'Direct Message';
+            })();
+
+            const unread = roomMessages.filter((msg) => {
+              if (normalizeId(msg.senderId) === currentUserId) return false;
+              const lastReadAt = userLastRead?.[roomId];
+              if (!lastReadAt) return true;
+              return new Date(msg.createdAt) > new Date(lastReadAt);
+            }).length;
+
+            const lastMessageSnippet = lastMsg
+              ? `${normalizeId(lastMsg.senderId) === currentUserId ? 'You' : (resolveDisplayName(lastMsg) || fallbackName)}: ${lastMsg.content.slice(0, 32)}${lastMsg.content.length > 32 ? '…' : ''}`
+              : 'No messages yet';
+
+            entries.push({
+              roomId,
+              unread,
+              lastMessageSnippet,
+              counterpartId,
+              member: counterpartMember || (counterpartId ? {
+                id: counterpartId,
+                name: fallbackName,
+                email: null,
+                profile_photo_url: null,
+              } : null),
+              displayName: fallbackName,
+              avatarUrl: counterpartMember?.profile_photo_url || null,
+            });
+          });
+
+          if (currentUserId) {
+            const existingCounterparts = new Set(entries.map((entry) => entry.counterpartId).filter(Boolean));
+            memberState.members.forEach((member) => {
+              const memberId = normalizeId(member?.id);
+              if (!memberId || memberId === currentUserId) return;
+              if (existingCounterparts.has(memberId)) return;
+              const memberEmail = member?.email ? String(member.email).toLowerCase() : null;
+              if (currentUserEmail && memberEmail && memberEmail === currentUserEmail) return;
+
+              const roomId = buildDirectRoomId(currentUserId, memberId);
+              entries.push({
+                roomId,
+                unread: 0,
+                lastMessageSnippet: 'No messages yet',
+                counterpartId: memberId,
+                member,
+                displayName: member?.name || member?.email || 'Team member',
+                avatarUrl: member?.profile_photo_url || null,
+              });
+            });
+          }
+
+          entries.sort((a, b) => {
+            const labelA = (a.displayName || '').toLowerCase();
+            const labelB = (b.displayName || '').toLowerCase();
+            return labelA.localeCompare(labelB);
+          });
+
+          return entries;
+        }, [roomsFromState, currentUserId, userLastRead, membersById, resolveDisplayName, memberState.members, currentUserEmail]);
+
+        const directRoomMap = useMemo(() => {
+          const map = new Map();
+          directRoomsMeta.forEach((meta) => {
+            map.set(meta.roomId, meta);
+          });
+          return map;
+        }, [directRoomsMeta]);
+
+        const selectedDirectMeta = useMemo(() => {
           if (!selectedRoomId.startsWith('dm:')) return null;
-          const [idA, idB] = parseDirectRoom(selectedRoomId);
-          const normalizedA = normalizeId(idA);
-          const normalizedB = normalizeId(idB);
-          const otherId = normalizedA === currentUserId ? normalizedB : normalizedA;
-          return otherId ? (membersById.get(otherId) || null) : null;
-        }, [selectedRoomId, membersById, currentUserId]);
+          return directRoomMap.get(selectedRoomId) || null;
+        }, [selectedRoomId, directRoomMap]);
+
+        const selectedDirectParticipant = selectedDirectMeta?.member || null;
 
         const messages = useMemo(() => {
           return (selectedRoom?.messages || []).map((message) => ({
@@ -356,46 +525,20 @@ function MessagingApp({ projectId, viewName }) {
           return `${displayName}: ${last.content.slice(0, 32)}${last.content.length > 32 ? '…' : ''}`;
         }, [roomsFromState, resolveDisplayName]);
 
-        const directRoomsMeta = useMemo(() => {
-          if (!currentUserId) return [];
-          return otherMembers
-            .map((member) => {
-              const memberId = normalizeId(member?.id);
-              const roomId = buildDirectRoomId(currentUserId, memberId);
-              const storedRoom = roomsFromState[roomId];
-              const roomMessages = storedRoom?.messages || [];
-              const lastMsg = roomMessages[roomMessages.length - 1];
-              const lastReadAt = lastRead?.[roomId];
-              const unread = roomMessages.filter((msg) => {
-                if (normalizeId(msg.senderId) === currentUserId) return false;
-                if (!lastReadAt) return true;
-                return new Date(msg.createdAt) > new Date(lastReadAt);
-              }).length;
-              return {
-                roomId,
-                member,
-                unread,
-                lastMessageSnippet: lastMsg
-                  ? `${normalizeId(lastMsg.senderId) === currentUserId ? 'You' : resolveDisplayName(lastMsg)}: ${lastMsg.content.slice(0, 32)}${lastMsg.content.length > 32 ? '…' : ''}`
-                  : 'No messages yet',
-              };
-            })
-            .sort((a, b) => {
-              const labelA = a.member?.name || a.member?.email || '';
-              const labelB = b.member?.name || b.member?.email || '';
-              return labelA.localeCompare(labelB);
-            });
-        }, [otherMembers, roomsFromState, currentUserId, lastRead, resolveDisplayName]);
-
         const unreadGeneral = useMemo(() => {
           const generalMessages = roomsFromState[GENERAL_ROOM_ID].messages || [];
-          const lastReadAt = lastRead?.[GENERAL_ROOM_ID];
+          const lastReadAt = userLastRead?.[GENERAL_ROOM_ID];
           return generalMessages.filter((msg) => {
             if (normalizeId(msg.senderId) === currentUserId) return false;
             if (!lastReadAt) return generalMessages.length > 0;
             return new Date(msg.createdAt) > new Date(lastReadAt);
           }).length;
-        }, [roomsFromState, lastRead, currentUserId]);
+        }, [roomsFromState, userLastRead, currentUserId]);
+
+        const totalUnread = useMemo(() => {
+          const directUnread = directRoomsMeta.reduce((sum, room) => sum + room.unread, 0);
+          return unreadGeneral + directUnread;
+        }, [unreadGeneral, directRoomsMeta]);
 
         useEffect(() => {
           if (!messageListRef.current) return;
@@ -422,55 +565,48 @@ function MessagingApp({ projectId, viewName }) {
           if (incoming.length) {
             const latest = incoming[incoming.length - 1];
             const isActiveRoom = latest.roomId === selectedRoomId;
-            const targetMember = latest.roomId === GENERAL_ROOM_ID
-              ? null
-              : (() => {
-                  const ids = parseDirectRoom(latest.roomId);
-                  const otherId = ids.find((id) => normalizeId(id) !== currentUserId);
-                  return otherId ? membersById.get(normalizeId(otherId)) : null;
-                })();
-            setNotification({
-              open: !isActiveRoom,
-              roomId: latest.roomId,
-              message: latest.content,
-              sender: latest.senderName || 'Someone',
-              directTarget: targetMember?.name || null,
-            });
-            if (isActiveRoom) {
-              const updatedLastRead = {
-                ...(state?.lastRead || {}),
-                [latest.roomId]: latest.createdAt,
+          if (isActiveRoom) {
+            const mergedLastRead = {
+                ...lastReadByUser,
+                [userKey]: {
+                  ...userLastRead,
+                  [latest.roomId]: latest.createdAt,
+                },
               };
+
               setState({
                 ...(state || {}),
                 rooms: roomsFromState,
-                lastRead: updatedLastRead,
+                lastRead: mergedLastRead,
                 updatedAt: new Date().toISOString(),
               }, { immediate: true });
             }
           }
-        }, [roomsFromState, currentUser, membersById, selectedRoomId, setState, state]);
+        }, [roomsFromState, selectedRoomId, setState, state, lastReadByUser, userLastRead, userKey, currentUserId]);
 
         useEffect(() => {
           if (!isLoaded) return;
           const generalMessages = roomsFromState[GENERAL_ROOM_ID]?.messages || [];
           if (selectedRoomId !== GENERAL_ROOM_ID || generalMessages.length === 0) return;
           const latest = generalMessages[generalMessages.length - 1].createdAt;
-          const lastReadAt = lastRead?.[GENERAL_ROOM_ID];
+          const lastReadAt = userLastRead?.[GENERAL_ROOM_ID];
           if (lastReadAt && new Date(lastReadAt) >= new Date(latest)) return;
 
-          const nextState = {
-            ...(state || {}),
-            rooms: roomsFromState,
-            lastRead: {
-              ...(state?.lastRead || {}),
+          const mergedLastRead = {
+            ...lastReadByUser,
+            [userKey]: {
+              ...userLastRead,
               [GENERAL_ROOM_ID]: latest,
             },
-            updatedAt: new Date().toISOString(),
           };
 
-          setState(nextState, { immediate: true });
-        }, [isLoaded, selectedRoomId, roomsFromState, lastRead, setState, state]);
+          setState({
+            ...(state || {}),
+            rooms: roomsFromState,
+            lastRead: mergedLastRead,
+            updatedAt: new Date().toISOString(),
+          }, { immediate: true });
+        }, [isLoaded, selectedRoomId, roomsFromState, lastReadByUser, userLastRead, userKey, setState, state]);
 
         const markRoomRead = (roomId) => {
           const roomMessages = roomsFromState[roomId]?.messages || [];
@@ -479,13 +615,17 @@ function MessagingApp({ projectId, viewName }) {
             return;
           }
           const latest = roomMessages[roomMessages.length - 1].createdAt;
+          const mergedLastRead = {
+            ...lastReadByUser,
+            [userKey]: {
+              ...userLastRead,
+              [roomId]: latest,
+            },
+          };
           const nextState = {
             ...(state || {}),
             rooms: roomsFromState,
-            lastRead: {
-              ...(state?.lastRead || {}),
-              [roomId]: latest,
-            },
+            lastRead: mergedLastRead,
             updatedAt: new Date().toISOString(),
           };
           setSelectedRoomId(roomId);
@@ -504,10 +644,15 @@ function MessagingApp({ projectId, viewName }) {
             : parseDirectRoom(activeRoomId);
 
           const recipient = activeRoomId === GENERAL_ROOM_ID ? null : selectedDirectParticipant;
+          const recipientDisplayName = activeRoomId === GENERAL_ROOM_ID ? null : selectedDirectMeta?.displayName;
 
           const roomName = activeRoomId === GENERAL_ROOM_ID
             ? 'General'
-            : recipient?.name || existingRoom?.name || 'Direct Message';
+            : recipientDisplayName
+              || recipient?.name
+              || recipient?.email
+              || existingRoom?.name
+              || 'Direct Message';
 
           const newMessage = {
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -537,13 +682,18 @@ function MessagingApp({ projectId, viewName }) {
             [activeRoomId]: updatedRoom,
           });
 
+          const mergedLastRead = {
+            ...lastReadByUser,
+            [userKey]: {
+              ...userLastRead,
+              [activeRoomId]: now,
+            },
+          };
+
           const nextState = {
             ...(state || {}),
             rooms: nextRooms,
-            lastRead: {
-              ...(state?.lastRead || {}),
-              [activeRoomId]: now,
-            },
+            lastRead: mergedLastRead,
             updatedAt: now,
           };
 
@@ -558,21 +708,6 @@ function MessagingApp({ projectId, viewName }) {
           }
         };
 
-        const notificationAction = notification?.roomId
-          ? (
-              <Button
-                color="inherit"
-                size="small"
-                onClick={() => {
-                  setNotification(null);
-                  markRoomRead(notification.roomId);
-                }}
-              >
-                Open
-              </Button>
-            )
-          : null;
-
         return (
           <Box sx={{ display: 'flex', height: '100%', minHeight: 'calc(100vh - 160px)', gap: 2, p: 2 }}>
             <Paper
@@ -580,6 +715,8 @@ function MessagingApp({ projectId, viewName }) {
               sx={{
                 width: 280,
                 flex: '0 0 280px',
+                maxHeight: 'calc(100vh - 220px)',
+                overflow: 'hidden',
                 borderRadius: 3,
                 border: `1px solid ${alpha(theme.palette.divider, theme.palette.mode === 'dark' ? 0.4 : 0.7)}`,
                 background: alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.3 : 0.85),
@@ -589,15 +726,44 @@ function MessagingApp({ projectId, viewName }) {
               }}
             >
               <Box sx={{ px: 2.5, py: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  Conversations
-                </Typography>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Conversations
+                  </Typography>
+                  {totalUnread > 0 && (
+                    <Chip
+                      color="secondary"
+                      size="small"
+                      label={`${totalUnread} new`}
+                      sx={{
+                        fontWeight: 600,
+                        letterSpacing: 0.3,
+                        px: 1,
+                        height: 24,
+                        borderRadius: 2,
+                      }}
+                    />
+                  )}
+                </Stack>
                 <Typography variant="body2" color="text.secondary">
                   Chat with your team or send private messages.
                 </Typography>
               </Box>
               <Divider sx={{ borderColor: alpha(theme.palette.divider, 0.4) }} />
-              <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5, py: 1.5 }}>
+              <Box
+                sx={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  px: 1.5,
+                  py: 1.5,
+                  pr: 1.2,
+                  '&::-webkit-scrollbar': { width: 6 },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: alpha(theme.palette.text.primary, 0.25),
+                    borderRadius: 999,
+                  },
+                }}
+              >
                 <List disablePadding>
                   <ConversationListItem
                     active={selectedRoomId === GENERAL_ROOM_ID}
@@ -610,7 +776,7 @@ function MessagingApp({ projectId, viewName }) {
                       </Avatar>
                     }
                     onClick={() => markRoomRead(GENERAL_ROOM_ID)}
-                    highlight={unreadGeneral > 0 ? `${unreadGeneral} new message${unreadGeneral > 1 ? 's' : ''}` : null}
+                    highlight={unreadGeneral > 0 ? `${unreadGeneral} unread message${unreadGeneral > 1 ? 's' : ''}` : null}
                   />
               <Divider textAlign="left" sx={{ my: 2, color: 'text.secondary', fontSize: 12 }}>Direct Messages</Divider>
               {memberState.error && (
@@ -622,25 +788,25 @@ function MessagingApp({ projectId, viewName }) {
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
                   <CircularProgress size={24} />
                 </Box>
-              ) : otherMembers.length === 0 ? (
+              ) : directRoomsMeta.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
-                  No other members yet.
+                  No direct conversations yet.
                 </Typography>
               ) : (
-                    directRoomsMeta.map(({ roomId, member, unread, lastMessageSnippet }) => (
+                    directRoomsMeta.map(({ roomId, member, unread, lastMessageSnippet, displayName, avatarUrl }) => (
                       <ConversationListItem
                         key={roomId}
                         active={selectedRoomId === roomId}
                         unread={unread}
-                        title={member.name || member.email || 'Team member'}
+                        title={displayName || member?.name || member?.email || 'Direct Message'}
                         subtitle={lastMessageSnippet}
                         avatar={
-                          <Avatar src={member.profile_photo_url || undefined} sx={{ bgcolor: theme.palette.secondary.main }}>
-                            {(member.name || member.email || '?').slice(0, 1).toUpperCase()}
+                          <Avatar src={avatarUrl || member?.profile_photo_url || undefined} sx={{ bgcolor: theme.palette.secondary.main }}>
+                            {(displayName || member?.name || member?.email || '?').slice(0, 1).toUpperCase()}
                           </Avatar>
                         }
                         onClick={() => markRoomRead(roomId)}
-                        highlight={unread > 0 ? `${unread} new message${unread > 1 ? 's' : ''}` : null}
+                        highlight={unread > 0 ? `${unread} unread message${unread > 1 ? 's' : ''}` : null}
                       />
                     ))
                   )}
@@ -663,7 +829,7 @@ function MessagingApp({ projectId, viewName }) {
               <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.4)}` }}>
                 <Stack direction="row" alignItems="center" spacing={1.5}>
                   <Avatar
-                    src={selectedRoomId === GENERAL_ROOM_ID ? undefined : selectedDirectParticipant?.profile_photo_url}
+                    src={selectedRoomId === GENERAL_ROOM_ID ? undefined : selectedDirectMeta?.avatarUrl || selectedDirectParticipant?.profile_photo_url || undefined}
                     sx={{
                       width: 36,
                       height: 36,
@@ -675,13 +841,13 @@ function MessagingApp({ projectId, viewName }) {
                     {selectedRoomId === GENERAL_ROOM_ID ? (
                       <ForumOutlinedIcon fontSize="small" />
                     ) : (
-                      (selectedDirectParticipant?.name || selectedDirectParticipant?.email || '?').slice(0, 1).toUpperCase()
+                      (selectedDirectMeta?.displayName || selectedDirectParticipant?.name || selectedDirectParticipant?.email || '?').slice(0, 1).toUpperCase()
                     )}
                   </Avatar>
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>
                     {selectedRoomId === GENERAL_ROOM_ID
                       ? 'General Chat'
-                      : selectedDirectParticipant?.name || selectedDirectParticipant?.email || 'Direct Message'}
+                      : selectedDirectMeta?.displayName || selectedDirectParticipant?.name || selectedDirectParticipant?.email || 'Direct Message'}
                   </Typography>
                 </Stack>
                 <Typography variant="body2" color="text.secondary">
@@ -766,28 +932,6 @@ function MessagingApp({ projectId, viewName }) {
                 />
               </Box>
             </Paper>
-
-            <Snackbar
-              open={Boolean(notification?.open)}
-              autoHideDuration={5000}
-              onClose={() => setNotification(null)}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            >
-              <Alert
-                severity="info"
-                onClose={() => setNotification(null)}
-                action={notificationAction}
-                sx={{ alignItems: 'center' }}
-              >
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  {notification?.sender || 'New message'}
-                  {notification?.directTarget ? ` → ${notification.directTarget}` : ''}
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 0.5, maxWidth: 280 }}>
-                  {notification?.message}
-                </Typography>
-              </Alert>
-            </Snackbar>
           </Box>
         );
       }}
