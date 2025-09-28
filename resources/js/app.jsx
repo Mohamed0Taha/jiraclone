@@ -12,6 +12,18 @@ import { CircularProgress, Box, Typography } from '@mui/material';
 import { ThemeProvider } from './contexts/ThemeContext';
 import './i18n';
 
+// Suppress React Beautiful DND defaultProps warning in development
+if (import.meta.env.DEV) {
+    const originalWarn = console.warn;
+    console.warn = (...args) => {
+        if (args[0]?.includes?.('Support for defaultProps will be removed from memo components') && 
+            args[0]?.includes?.('react-beautiful-dnd')) {
+            return; // Suppress this specific warning
+        }
+        originalWarn.apply(console, args);
+    };
+}
+
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 // Enhanced loading component for Suspense
