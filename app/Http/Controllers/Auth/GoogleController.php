@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -54,7 +55,31 @@ class GoogleController extends Controller
 
     public function handleGoogleCallback(Request $request)
     {
-        $g = $this->googleDriver()->user();
+        if (! $request->has('code')) {
+            if ($request->has('error')) {
+                $message = $request->get('error_description') ?? 'Google sign-in was cancelled.';
+                return redirect()->route('login')->withErrors(['google' => $message]);
+            }
+
+            Log::info('[Google OAuth] Callback hit without authorization code', [
+                'query' => $request->query(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response('Missing authorization code.', 200);
+        }
+
+        try {
+            $g = $this->googleDriver()->user();
+        } catch (\Throwable $exception) {
+            Log::warning('[Google OAuth] Failed to exchange authorization code', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            return redirect()->route('login')->withErrors([
+                'google' => 'We could not complete Google sign-in. Please try again.',
+            ]);
+        }
 
         $user = User::where('email', $g->getEmail())->first();
 

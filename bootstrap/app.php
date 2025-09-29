@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ForceCanonicalDomain;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
@@ -31,8 +32,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
 
-        // TEMP: Disable RestrictCookieHeader (was causing redirect loop at ~3KB)
+        // Force canonical scheme/host before everything else.
         $middleware->web(prepend: [
+            ForceCanonicalDomain::class,
             // \App\Http\Middleware\RestrictCookieHeader::class,
         ]);
 

@@ -7,6 +7,13 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="app-url" content="{{ rtrim(config('app.url'), '/') }}">
 
+    @php
+        $baseUrl = rtrim(config('app.url'), '/');
+        $path = '/'.ltrim(request()->path(), '/');
+        $canonical = $baseUrl.($path === '/' ? '' : $path);
+    @endphp
+    <link rel="canonical" href="{{ $canonical }}">
+
     <title inertia>{{ config('app.name', 'TaskPilot') }}</title>
 
     <!-- TaskPilot Favicon -->
