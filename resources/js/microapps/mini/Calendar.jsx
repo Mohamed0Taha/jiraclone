@@ -11,6 +11,98 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import InputModal from '../components/InputModal';
 import { csrfFetch, withCsrf } from '@/utils/csrf';
 
+// Enhanced calendar styles
+const calendarStyles = `
+  .calendar-container .rbc-month-view {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .calendar-container .rbc-header {
+    padding: 12px 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-bottom: 2px solid;
+  }
+  
+  [data-theme="dark"] .calendar-container .rbc-header {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+  }
+  
+  [data-theme="light"] .calendar-container .rbc-header {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #424242;
+  }
+  
+  .calendar-container .rbc-today {
+    background-color: rgba(102, 126, 234, 0.08);
+  }
+  
+  [data-theme="dark"] .calendar-container .rbc-today {
+    background-color: rgba(102, 126, 234, 0.12);
+  }
+  
+  .calendar-container .rbc-off-range-bg {
+    opacity: 0.3;
+  }
+  
+  .calendar-container .rbc-event {
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .calendar-container .rbc-event:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+  }
+  
+  .calendar-container .rbc-day-bg:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+  }
+  
+  [data-theme="dark"] .calendar-container .rbc-day-bg:hover {
+    background-color: rgba(102, 126, 234, 0.08);
+  }
+  
+  .calendar-container .rbc-date-cell {
+    padding: 6px;
+    font-weight: 500;
+  }
+  
+  .calendar-container .rbc-current {
+    color: #667eea;
+    font-weight: 700;
+  }
+  
+  .calendar-container .rbc-agenda-view {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .calendar-container .rbc-agenda-table {
+    border-radius: 8px;
+  }
+  
+  [data-theme="dark"] .calendar-container .rbc-agenda-date-cell,
+  [data-theme="dark"] .calendar-container .rbc-agenda-time-cell {
+    background: rgba(255, 255, 255, 0.05);
+  }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleId = 'calendar-enhanced-styles';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = calendarStyles;
+    document.head.appendChild(style);
+  }
+}
+
 const toIsoString = (value) => {
   try {
     const date = value instanceof Date ? value : new Date(value);
@@ -33,8 +125,8 @@ const getEventColor = (event, isDark) => {
       hash |= 0; // Convert to 32bit int
     }
     const hue = Math.abs(hash) % 360;
-    const sat = 70; // vibrant
-    const light = isDark ? 40 : 55; // maintain contrast across themes
+    const sat = isDark ? 65 : 75; // More vibrant
+    const light = isDark ? 45 : 50; // Better contrast
     return `hsl(${hue}, ${sat}%, ${light}%)`;
   } catch (_) {
     return isDark ? '#394b59' : '#1976d2';
@@ -59,7 +151,7 @@ const sanitizeEventForStorage = (event) => {
     desc,
   };
 };
-// Custom toolbar component with gold text in dark mode and add event button
+// Custom toolbar component with modern styling
 const CalendarToolbar = ({
   label,
   onNavigate,
@@ -74,38 +166,58 @@ const CalendarToolbar = ({
 }) => {
   const isDark = document.body.getAttribute('data-theme') === 'dark';
   const buttonStyle = {
-    color: isDark ? '#FFD700' : 'inherit',
-    backgroundColor: 'transparent',
-    border: '1px solid transparent',
-    margin: '0 3px',
-    padding: '4px 10px',
-    borderRadius: '4px',
+    color: isDark ? '#e0e0e0' : '#424242',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+    border: '1px solid',
+    borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+    margin: '0 4px',
+    padding: '6px 14px',
+    borderRadius: '8px',
     cursor: 'pointer',
+    fontWeight: 500,
+    fontSize: '0.875rem',
+    transition: 'all 0.2s ease',
   };
   const activeStyle = {
     ...buttonStyle,
-    color: isDark ? '#FFA500' : 'inherit',
-    borderColor: isDark ? '#FFA500' : 'inherit',
-    fontWeight: 'bold',
+    background: isDark 
+      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: '#ffffff',
+    borderColor: 'transparent',
+    fontWeight: 600,
+    boxShadow: isDark
+      ? '0 4px 12px rgba(102, 126, 234, 0.4)'
+      : '0 4px 12px rgba(102, 126, 234, 0.3)',
   };
   const addButtonStyle = {
     ...buttonStyle,
-    backgroundColor: isDark ? '#1976d2' : '#2196f3',
+    background: isDark
+      ? 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
+      : 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
     color: '#ffffff',
-    border: '1px solid transparent',
-    fontWeight: 'bold',
-    padding: '6px 12px',
-    marginLeft: '10px',
+    borderColor: 'transparent',
+    fontWeight: 600,
+    padding: '8px 16px',
+    marginLeft: '12px',
+    boxShadow: isDark
+      ? '0 4px 12px rgba(17, 153, 142, 0.4)'
+      : '0 4px 12px rgba(17, 153, 142, 0.3)',
   };
 
   const syncButtonStyle = {
     ...buttonStyle,
-    borderColor: isDark ? '#60a5fa' : '#1a73e8',
-    color: isDark ? '#60a5fa' : '#1a73e8',
+    background: isDark
+      ? 'linear-gradient(135deg, #4285f4 0%, #34a853 100%)'
+      : 'linear-gradient(135deg, #4285f4 0%, #34a853 100%)',
+    color: '#ffffff',
+    borderColor: 'transparent',
     fontWeight: 600,
-    padding: '6px 12px',
-    marginLeft: '10px',
-    backgroundColor: isDark ? 'rgba(96,165,250,0.12)' : 'rgba(26,115,232,0.12)',
+    padding: '8px 16px',
+    marginLeft: '12px',
+    boxShadow: isDark
+      ? '0 4px 12px rgba(66, 133, 244, 0.4)'
+      : '0 4px 12px rgba(66, 133, 244, 0.3)',
   };
 
   const resolvedConnected = isConnected === true;
@@ -123,8 +235,14 @@ const CalendarToolbar = ({
       display: 'flex', 
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: '10px',
-      color: isDark ? '#FFD700' : 'inherit'
+      marginBottom: '16px',
+      padding: '12px 16px',
+      background: isDark 
+        ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
+        : 'linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.01) 100%)',
+      borderRadius: '12px',
+      border: '1px solid',
+      borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <button type="button" onClick={() => onNavigate('TODAY')} style={buttonStyle}>
@@ -154,7 +272,16 @@ const CalendarToolbar = ({
           </button>
         )}
       </div>
-      <span style={{ fontWeight: 'bold' }}>{label}</span>
+      <span style={{ 
+        fontWeight: 700,
+        fontSize: '1.125rem',
+        background: isDark
+          ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+      }}>{label}</span>
       <div>
         {['month', 'week', 'day', 'agenda'].map((name) => (
           <button
@@ -247,14 +374,29 @@ function CalendarBody({
   const handleDeleteEvent = useCallback(() => {
     if (!detailsEvent) return;
     const idToRemove = detailsEvent.id ?? detailsEvent.google_event_id;
+    
+    // Track if this was a Google event for deletion sync
+    const isGoogleEvent = detailsEvent.source === 'google' && detailsEvent.google_event_id;
+    
     setState((prev) => {
       const baseline = (prev && typeof prev === 'object') ? prev : {};
       const prevEvents = Array.isArray(baseline.events) ? baseline.events : [];
       const nextEvents = prevEvents.filter((e) => (e.id ?? e.google_event_id) !== idToRemove);
-      return { ...baseline, events: nextEvents };
+      
+      // Track deleted Google events for sync
+      const deletedGoogleEvents = baseline.deletedGoogleEvents || [];
+      if (isGoogleEvent) {
+        deletedGoogleEvents.push(detailsEvent.google_event_id);
+      }
+      
+      return { 
+        ...baseline, 
+        events: nextEvents,
+        deletedGoogleEvents: isGoogleEvent ? deletedGoogleEvents : baseline.deletedGoogleEvents,
+      };
     });
     setDetailsEvent(null);
-    setSyncFeedback({ severity: 'success', message: 'Event removed.' });
+    setSyncFeedback({ severity: 'success', message: 'Event removed. Sync to update Google Calendar.' });
   }, [detailsEvent, setState, setSyncFeedback]);
 
   const handleAddEvent = useCallback((values) => {
@@ -356,6 +498,7 @@ function CalendarBody({
 
     const payload = {
       events: currentEvents.map((event) => sanitizeEventForStorage(event)),
+      deletedGoogleEvents: state?.deletedGoogleEvents || [],
     };
 
     try {
@@ -414,6 +557,7 @@ function CalendarBody({
           ...baseline,
           events: mergedEvents,
           lastSyncedAt: data.last_synced_at || new Date().toISOString(),
+          deletedGoogleEvents: [], // Clear deleted events after successful sync
         };
       });
 
@@ -443,19 +587,22 @@ function CalendarBody({
   }));
 
   return (
-    <Box sx={{ height: 'calc(100vh - 120px)', p: 1 }}>
+    <Box sx={{ height: 'calc(100vh - 120px)', p: 2 }}>
       <Paper
         variant="outlined"
         sx={{
           height: '100%',
-          p: 1.5,
-          borderRadius: 2.5,
+          p: 2.5,
+          borderRadius: 3,
           border: '1px solid',
           borderColor: 'divider',
           background: (theme) => theme.palette.mode === 'dark'
-            ? 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))'
-            : 'linear-gradient(180deg, #ffffff, #fbfbfd)',
-          boxShadow: (theme) => theme.palette.mode === 'dark' ? 0 : 1,
+            ? 'linear-gradient(135deg, rgba(30,30,50,0.95) 0%, rgba(20,20,35,0.95) 100%)'
+            : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+          boxShadow: (theme) => theme.palette.mode === 'dark' 
+            ? '0 8px 32px rgba(0,0,0,0.4)'
+            : '0 8px 32px rgba(0,0,0,0.08)',
+          overflow: 'hidden',
         }}
       >
         {/* Inline alert removed to prevent layout shift. We use a Snackbar instead. */}
@@ -478,23 +625,26 @@ function CalendarBody({
             eventPropGetter={(event) => {
               const isDark = document.body.getAttribute('data-theme') === 'dark';
               const bg = getEventColor(event, isDark);
-              const border = isDark ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(0,0,0,0.12)';
               return {
                 style: {
-                  backgroundColor: bg,
-                  border,
-                  borderRadius: 0,
+                  background: bg,
+                  border: 'none',
+                  borderRadius: '6px',
+                  borderLeft: `3px solid ${isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'}`,
                   color: '#ffffff',
                   display: 'block',
                   fontWeight: 600,
-                  fontSize: '0.72rem',
-                  lineHeight: 1.1,
-                  padding: '1px 5px',
-                  margin: '1px 2px',
-                  boxShadow: 'none',
+                  fontSize: '0.75rem',
+                  lineHeight: 1.3,
+                  padding: '3px 8px',
+                  margin: '2px 3px',
+                  boxShadow: isDark
+                    ? '0 2px 8px rgba(0,0,0,0.3)'
+                    : '0 2px 8px rgba(0,0,0,0.15)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
                 },
               };
             }}

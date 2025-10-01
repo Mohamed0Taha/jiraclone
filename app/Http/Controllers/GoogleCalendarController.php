@@ -17,6 +17,7 @@ class GoogleCalendarController extends Controller
     {
         $user = $request->user();
         $events = $request->input('events', []);
+        $deletedGoogleEvents = $request->input('deletedGoogleEvents', []);
 
         // Add a header check to prevent automatic sync calls
         if (!$request->hasHeader('X-User-Initiated') || $request->header('X-User-Initiated') !== 'true') {
@@ -32,7 +33,11 @@ class GoogleCalendarController extends Controller
         }
 
         try {
-            $result = $this->calendarService->sync($user, is_array($events) ? $events : []);
+            $result = $this->calendarService->sync(
+                $user, 
+                is_array($events) ? $events : [],
+                is_array($deletedGoogleEvents) ? $deletedGoogleEvents : []
+            );
         } catch (\Throwable $e) {
             Log::error('Google Calendar sync failed', [
                 'user_id' => $user->id,

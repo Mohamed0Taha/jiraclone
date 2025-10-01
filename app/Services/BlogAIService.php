@@ -395,41 +395,429 @@ Focus on practical value and clear instructions.";
      */
     protected function buildImagePrompt($topic, $title, $excerpt)
     {
-        return "Create a high-quality, photorealistic image for a blog post about: {$topic}
+        // Extract key themes from the topic and title to create variety
+        $topicLower = strtolower($topic . ' ' . $title . ' ' . $excerpt);
+        
+        // Determine the visual style - use different approaches for variety
+        $visualStyles = [
+            'abstract' => $this->buildAbstractPrompt($title, $topic, $topicLower),
+            'metaphor' => $this->buildMetaphorPrompt($title, $topic, $topicLower),
+            'illustration' => $this->buildIllustrationPrompt($title, $topic, $topicLower),
+            'interface' => $this->buildInterfacePrompt($title, $topic, $topicLower),
+            'conceptual' => $this->buildConceptualPrompt($title, $topic, $topicLower),
+        ];
+        
+        // Rotate through styles based on title hash for consistency but variety
+        $styleKeys = array_keys($visualStyles);
+        $styleIndex = hexdec(substr(md5($title), 0, 2)) % count($styleKeys);
+        $selectedStyle = $styleKeys[$styleIndex];
+        
+        return $visualStyles[$selectedStyle];
+    }
+    
+    /**
+     * Build abstract/geometric style prompt
+     */
+    private function buildAbstractPrompt($title, $topic, $content)
+    {
+        $colors = $this->extractColorScheme($content);
+        $shapes = ['interconnected nodes', 'flowing lines', 'geometric patterns', 'layered shapes', 'gradient waves'];
+        $shape = $shapes[array_rand($shapes)];
+        
+        return "Create a modern abstract geometric illustration for: \"{$title}\"
 
-Title: {$title}
-Description: {$excerpt}
+Style: Clean, minimal abstract design with {$shape}
+Colors: {$colors}
+Composition: {$shape} representing {$topic}
+Elements: Abstract shapes, gradients, modern geometric forms
+Mood: Professional, contemporary, tech-forward
+Format: Wide banner (1792x1024), high contrast, bold composition
 
-STOCK PHOTOGRAPHY REQUIREMENTS:
-- **Style Reference**: Image should be indistinguishable from premium Shutterstock, Getty Images, or Unsplash business photography
-- **Human Authenticity**: Real-looking people with natural features, diverse ethnicities, genuine facial expressions
-- **Professional Environment**: Authentic modern office spaces, coworking areas, or business settings with realistic wear and details
-- **Natural Photography**: Shot with professional DSLR camera, natural depth of field, realistic lighting conditions
+NO people, NO laptops, NO office scenes. Pure abstract visual representation.";
+    }
+    
+    /**
+     * Build visual metaphor prompt
+     */
+    private function buildMetaphorPrompt($title, $topic, $content)
+    {
+        $metaphors = [
+            'automation|ai' => 'interconnected gears and circuits flowing with energy',
+            'team|collaboration' => 'puzzle pieces connecting together in perfect harmony',
+            'growth|scale' => 'ascending staircase made of building blocks reaching skyward',
+            'planning|strategy' => 'chess pieces on a strategic board with glowing paths',
+            'productivity|efficiency' => 'streamlined arrows flowing through organized channels',
+            'timeline|schedule' => 'flowing river with milestone markers along the banks',
+            'dashboard|analytics' => 'glowing data streams forming patterns in space',
+            'communication' => 'network of glowing connection points spreading outward',
+            'innovation|creative' => 'lightbulb exploding with colorful creative energy',
+            'success|achieve' => 'mountain peak with flag at summit, golden light',
+        ];
+        
+        $metaphor = 'interconnected pathways leading to a bright destination';
+        foreach ($metaphors as $pattern => $visual) {
+            if (preg_match("/$pattern/i", $content)) {
+                $metaphor = $visual;
+                break;
+            }
+        }
+        
+        return "Create a powerful visual metaphor for: \"{$title}\"
 
-COMPOSITION ELEMENTS:
-- Business professionals in natural work scenarios (meetings, collaboration, individual focus work)
-- Realistic office environments with lived-in details (papers, coffee, personal items)
-- Authentic technology interaction (natural hand positions on laptops, realistic screen angles)
-- Genuine human expressions and body language during work activities
-- Modern but not sterile workspace with natural lighting
+Central Metaphor: {$metaphor}
+Style: Conceptual photography or 3D render
+Lighting: Dramatic, focused lighting highlighting the metaphor
+Colors: Bold, saturated colors that pop
+Composition: The metaphor is the hero element, centered and prominent
+Mood: Inspiring, aspirational, forward-thinking
 
-TECHNICAL SPECIFICATIONS:
-- Resolution: High definition (1792x1024)
-- Photography style: Commercial stock photo quality with realistic imperfections
-- Lighting: Natural office lighting with some shadows and depth
-- Color palette: Realistic business environment colors, not overly saturated
-- Composition: Professional but candid, showing real work in progress
-- Quality: Publishable stock photography standard
+NO generic office workers, NO people at laptops. Focus entirely on the metaphorical representation.";
+    }
+    
+    /**
+     * Build illustration style prompt
+     */
+    private function buildIllustrationPrompt($title, $topic, $content)
+    {
+        $styles = ['flat design', 'isometric', 'line art', 'gradient mesh', 'duotone'];
+        $style = $styles[array_rand($styles)];
+        
+        $elements = $this->extractVisualKeywords($title, '');
+        
+        return "Create a modern {$style} illustration for: \"{$title}\"
 
-AUTHENTICITY REQUIREMENTS:
-- Natural skin textures and realistic facial features
-- Clothing with natural wrinkles and realistic fit
-- Environmental authenticity (real office supplies, natural desk organization)
-- Realistic technology usage and screen positioning
-- Genuine work scenarios that businesses can relate to
-- Diverse representation reflecting real workplace demographics
+Illustration Style: {$style} with clean lines and bold shapes
+Subject: Visual representation of {$topic}
+Elements: {$elements} shown as illustrated icons/graphics
+Color Palette: Vibrant, modern color scheme with 3-4 main colors
+Composition: Balanced layout with clear visual hierarchy
+Details: Icons, symbols, and graphics that represent {$topic}
 
-The final image must look like premium stock photography that could be licensed for commercial use, showing real people in authentic business scenarios.";
+NO photorealistic people, NO stock photos. Pure illustration/graphic design approach.";
+    }
+    
+    /**
+     * Build interface/dashboard style prompt
+     */
+    private function buildInterfacePrompt($title, $topic, $content)
+    {
+        $interfaceTypes = [
+            'dashboard' => 'modern analytics dashboard with charts and metrics',
+            'kanban' => 'kanban board with colorful cards and columns',
+            'timeline' => 'project timeline with milestones and progress bars',
+            'calendar' => 'calendar interface with events and schedules',
+            'analytics' => 'data visualization with graphs and statistics',
+        ];
+        
+        $interface = 'sleek project management interface';
+        foreach ($interfaceTypes as $pattern => $visual) {
+            if (preg_match("/$pattern/i", $content)) {
+                $interface = $visual;
+                break;
+            }
+        }
+        
+        return "Create a clean UI/interface screenshot for: \"{$title}\"
+
+Interface Type: {$interface}
+Style: Modern, minimal UI design with glassmorphism effects
+Colors: Professional color scheme with accent colors
+Elements: Charts, cards, progress indicators, data visualizations
+Layout: Clean grid layout with clear information hierarchy
+Details: Realistic UI elements, buttons, icons, typography
+Lighting: Soft glow effects, subtle shadows
+
+Show the INTERFACE/SCREEN only. NO people, NO hands, NO office environment.";
+    }
+    
+    /**
+     * Build conceptual/artistic prompt
+     */
+    private function buildConceptualPrompt($title, $topic, $content)
+    {
+        $concepts = [
+            'automation' => 'robotic arms assembling glowing digital elements',
+            'collaboration' => 'hands from different directions connecting puzzle pieces',
+            'planning' => 'architect\'s hands drawing glowing blueprint in the air',
+            'productivity' => 'clock gears interwoven with growing plants',
+            'analytics' => 'floating holographic data charts in dark space',
+            'communication' => 'speech bubbles transforming into connected nodes',
+            'innovation' => 'hands holding glowing sphere of creative energy',
+            'strategy' => 'chess board with pieces casting long strategic shadows',
+        ];
+        
+        $concept = 'hands arranging glowing elements into organized patterns';
+        foreach ($concepts as $pattern => $visual) {
+            if (preg_match("/$pattern/i", $content)) {
+                $concept = $visual;
+                break;
+            }
+        }
+        
+        return "Create a conceptual artistic image for: \"{$title}\"
+
+Concept: {$concept}
+Style: Artistic, slightly surreal, professional photography
+Lighting: Dramatic lighting with strong contrasts and glows
+Colors: Rich, saturated colors with dramatic shadows
+Composition: Close-up, focused on the conceptual element
+Mood: Inspiring, thought-provoking, visually striking
+Details: Sharp focus on main element, artistic blur on background
+
+Focus on HANDS and OBJECTS only. NO faces, NO full people, NO office scenes.";
+    }
+    
+    /**
+     * Extract color scheme based on content
+     */
+    private function extractColorScheme($content)
+    {
+        $schemes = [
+            'technology|digital|ai' => 'electric blue, cyan, and purple gradients',
+            'creative|innovation|design' => 'vibrant orange, pink, and yellow',
+            'growth|success|achieve' => 'emerald green, gold, and teal',
+            'analytics|data|metrics' => 'deep blue, turquoise, and white',
+            'team|collaboration|social' => 'warm coral, orange, and yellow',
+            'productivity|efficiency' => 'mint green, blue, and white',
+            'strategy|planning' => 'navy blue, gold, and gray',
+            'automation|workflow' => 'purple, blue, and electric cyan',
+        ];
+        
+        foreach ($schemes as $pattern => $colors) {
+            if (preg_match("/$pattern/i", $content)) {
+                return $colors;
+            }
+        }
+        
+        return 'professional blue, teal, and white';
+    }
+
+    /**
+     * Extract specific visual keywords from title and excerpt for unique image generation
+     */
+    private function extractVisualKeywords($title, $excerpt)
+    {
+        $text = strtolower($title . ' ' . $excerpt);
+        $visualElements = [];
+        
+        // Extract action verbs and activities
+        $actions = [
+            'automate|automation' => 'automation workflows and systems',
+            'collaborate|collaboration' => 'team collaboration and interaction',
+            'plan|planning' => 'planning boards and roadmaps',
+            'track|tracking' => 'progress tracking dashboards',
+            'manage|management' => 'management activities and oversight',
+            'organize|organizing' => 'organized systems and structures',
+            'communicate|communication' => 'communication tools and interactions',
+            'analyze|analytics' => 'data analysis and charts',
+            'report|reporting' => 'reports and documentation',
+            'schedule|scheduling' => 'calendars and timelines',
+            'delegate|delegating' => 'task assignment and distribution',
+            'prioritize|priority' => 'priority indicators and sorting',
+            'optimize|optimization' => 'optimization processes and improvements',
+            'integrate|integration' => 'connected systems and integrations',
+            'monitor|monitoring' => 'monitoring screens and alerts',
+        ];
+        
+        foreach ($actions as $pattern => $visual) {
+            if (preg_match("/$pattern/i", $text)) {
+                $visualElements[] = $visual;
+            }
+        }
+        
+        // Extract specific tools and objects
+        $objects = [
+            'dashboard' => 'digital dashboards with metrics',
+            'kanban' => 'kanban boards with cards',
+            'gantt' => 'gantt charts and timelines',
+            'calendar' => 'calendars and schedules',
+            'checklist' => 'checklists and task lists',
+            'timeline' => 'project timelines',
+            'chart|graph' => 'charts and graphs',
+            'spreadsheet' => 'spreadsheets and data',
+            'document' => 'documents and files',
+            'email' => 'email interfaces',
+            'chat|message' => 'chat and messaging',
+            'video|meeting' => 'video conferencing',
+            'mobile|app' => 'mobile devices and apps',
+            'laptop|computer' => 'laptops and computers',
+            'whiteboard' => 'whiteboards with diagrams',
+            'sticky note|post-it' => 'sticky notes and planning',
+            'clock|time' => 'clocks and time management',
+            'notification|alert' => 'notifications and alerts',
+        ];
+        
+        foreach ($objects as $pattern => $visual) {
+            if (preg_match("/$pattern/i", $text)) {
+                $visualElements[] = $visual;
+            }
+        }
+        
+        // Extract people and roles
+        $roles = [
+            'team|teams' => 'diverse team members',
+            'manager|managers' => 'managers and leaders',
+            'developer|developers' => 'developers at work',
+            'designer|designers' => 'designers creating',
+            'executive|ceo|cto' => 'executives in discussion',
+            'freelancer|contractor' => 'independent professionals',
+            'remote|distributed' => 'remote workers',
+            'client|customer' => 'client interactions',
+        ];
+        
+        foreach ($roles as $pattern => $visual) {
+            if (preg_match("/$pattern/i", $text)) {
+                $visualElements[] = $visual;
+            }
+        }
+        
+        // Extract concepts and metaphors
+        $concepts = [
+            'agile|scrum|sprint' => 'agile methodology artifacts',
+            'deadline|due date' => 'deadline pressure and urgency',
+            'milestone' => 'milestone celebrations',
+            'bottleneck|blocker' => 'workflow obstacles',
+            'efficiency|productive' => 'efficient workflows',
+            'growth|scale' => 'growth indicators and expansion',
+            'success|achieve' => 'success celebrations',
+            'challenge|problem' => 'problem-solving activities',
+            'innovation|creative' => 'creative brainstorming',
+            'strategy|strategic' => 'strategic planning sessions',
+        ];
+        
+        foreach ($concepts as $pattern => $visual) {
+            if (preg_match("/$pattern/i", $text)) {
+                $visualElements[] = $visual;
+            }
+        }
+        
+        // Extract numbers and timeframes for visual emphasis
+        if (preg_match('/(\d+)\s*(step|way|tip|method|strategy|hour|day|week|minute)/i', $text, $matches)) {
+            $visualElements[] = $matches[1] . ' distinct visual elements';
+        }
+        
+        // If no specific elements found, extract key nouns from title
+        if (empty($visualElements)) {
+            // Remove common words and extract meaningful terms
+            $words = preg_split('/\s+/', $title);
+            $stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'how', 'what', 'why', 'when', 'where'];
+            $keywords = array_filter($words, function($word) use ($stopWords) {
+                return strlen($word) > 3 && !in_array(strtolower($word), $stopWords);
+            });
+            
+            if (!empty($keywords)) {
+                $visualElements[] = 'visual representation of ' . implode(', ', array_slice($keywords, 0, 3));
+            } else {
+                $visualElements[] = 'project management scenario';
+            }
+        }
+        
+        // Limit to top 3-4 most relevant elements to keep prompt focused
+        $visualElements = array_slice(array_unique($visualElements), 0, 4);
+        
+        return implode(', ', $visualElements);
+    }
+
+    /**
+     * Determine visual theme based on blog content
+     */
+    private function determineVisualTheme($content)
+    {
+        $themes = [
+            'collaboration|team|meeting|communication' => 'Team collaboration and communication',
+            'automation|ai|technology|digital|software' => 'Technology and automation in action',
+            'planning|strategy|roadmap|goals' => 'Strategic planning and goal setting',
+            'productivity|efficiency|workflow|process' => 'Productivity and workflow optimization',
+            'leadership|management|decision' => 'Leadership and management',
+            'analytics|data|metrics|reporting' => 'Data analytics and insights',
+            'remote|distributed|virtual|hybrid' => 'Remote and distributed work',
+            'agile|scrum|sprint|kanban' => 'Agile methodology and frameworks',
+            'innovation|creative|brainstorm' => 'Innovation and creative thinking',
+            'growth|scale|expansion' => 'Business growth and scaling',
+        ];
+
+        foreach ($themes as $pattern => $theme) {
+            if (preg_match("/$pattern/i", $content)) {
+                return $theme;
+            }
+        }
+
+        return 'Professional business environment';
+    }
+
+    /**
+     * Determine color palette based on blog content
+     */
+    private function determineColorPalette($content)
+    {
+        $palettes = [
+            'technology|digital|ai|automation' => 'Cool blues and teals with modern tech aesthetics',
+            'creative|innovation|design' => 'Vibrant colors with creative energy',
+            'productivity|efficiency|focus' => 'Clean whites and organized neutrals with accent colors',
+            'leadership|executive|strategy' => 'Professional grays and navy blues',
+            'growth|success|achievement' => 'Warm greens and golds suggesting growth',
+            'collaboration|team|social' => 'Warm oranges and friendly tones',
+            'analytics|data|metrics' => 'Cool blues with data visualization elements',
+            'remote|flexible|modern' => 'Bright, airy spaces with natural light',
+        ];
+
+        foreach ($palettes as $pattern => $palette) {
+            if (preg_match("/$pattern/i", $content)) {
+                return $palette;
+            }
+        }
+
+        return 'Professional business colors with balanced warmth';
+    }
+
+    /**
+     * Determine scene type based on blog content
+     */
+    private function determineSceneType($content)
+    {
+        $scenes = [
+            'meeting|collaboration|discussion' => 'Team meeting or collaborative workspace',
+            'individual|focus|productivity|solo' => 'Individual focused work environment',
+            'presentation|demo|training' => 'Presentation or training scenario',
+            'brainstorm|creative|innovation' => 'Creative brainstorming session',
+            'remote|virtual|video|online' => 'Remote work setup with video conferencing',
+            'planning|strategy|roadmap' => 'Strategic planning session with visual aids',
+            'analytics|dashboard|data' => 'Data analysis with screens and charts',
+            'mobile|app|device' => 'Mobile device usage in professional setting',
+            'workshop|training|learning' => 'Workshop or training environment',
+        ];
+
+        foreach ($scenes as $pattern => $scene) {
+            if (preg_match("/$pattern/i", $content)) {
+                return $scene;
+            }
+        }
+
+        return 'Modern professional workspace';
+    }
+
+    /**
+     * Determine mood based on blog content
+     */
+    private function determineMood($content)
+    {
+        $moods = [
+            'success|achievement|win|celebrate' => 'Energetic and celebratory',
+            'challenge|problem|solve|overcome' => 'Focused and determined',
+            'innovation|future|transform' => 'Forward-thinking and inspiring',
+            'calm|balance|zen|mindful' => 'Calm and balanced',
+            'urgent|fast|quick|speed' => 'Dynamic and fast-paced',
+            'learn|education|training|skill' => 'Engaged and learning-focused',
+            'confident|professional|expert' => 'Confident and professional',
+        ];
+
+        foreach ($moods as $pattern => $mood) {
+            if (preg_match("/$pattern/i", $content)) {
+                return $mood;
+            }
+        }
+
+        return 'Professional and approachable';
     }
 
     /**

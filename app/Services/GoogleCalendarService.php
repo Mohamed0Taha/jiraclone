@@ -51,7 +51,7 @@ class GoogleCalendarService
      * Synchronise local events with Google Calendar. Returns an array containing
      * the merged event list or instructions to authorise Google access.
      */
-    public function sync(User $user, array $localEvents): array
+    public function sync(User $user, array $localEvents, array $deletedGoogleEvents = []): array
     {
         if (! $this->hasCalendarConnection($user)) {
             return [
@@ -89,8 +89,40 @@ class GoogleCalendarService
         });
 
         $createdEvents = collect();
+        $deletedCount = 0;
 
         if ($this->allowsWriteOperations()) {
+            // Handle deletions first
+            if (!empty($deletedGoogleEvents)) {
+                foreach ($deletedGoogleEvents as $googleEventId) {
+                    if (empty($googleEventId)) {
+                        continue;
+                    }
+
+                    $response = $this->makeRequest(
+                        $user, 
+                        'DELETE', 
+                        self::GOOGLE_CALENDAR_BASE.'/calendars/'.self::CALENDAR_ID.'/events/'.$googleEventId
+                    );
+
+                    if ($response && $response->successful()) {
+                        $deletedCount++;
+                        Log::info('[GoogleCalendarService] Deleted event from Google Calendar', [
+                            'user_id' => $user->id,
+                            'google_event_id' => $googleEventId,
+                        ]);
+                    } else {
+                        Log::warning('[GoogleCalendarService] Failed to delete event from Google', [
+                            'user_id' => $user->id,
+                            'google_event_id' => $googleEventId,
+                            'status' => optional($response)->status(),
+                            'body' => optional($response)->json(),
+                        ]);
+                    }
+                }
+            }
+
+            // Create new events
             $unsynced = $normalizedLocal->filter(fn ($event) => empty($event['google_event_id']));
 
             foreach ($unsynced as $event) {
@@ -207,10 +239,19 @@ class GoogleCalendarService
 
         $merged = $this->mergeEvents($normalizedLocal, $remoteEvents);
 
+        $message = 'Google Calendar synced.';
+        if ($deletedCount > 0 && $createdEvents->isNotEmpty()) {
+            $message = "Synced: {$createdEvents->count()} created, {$deletedCount} deleted.";
+        } elseif ($deletedCount > 0) {
+            $message = "Synced: {$deletedCount} event(s) deleted from Google Calendar.";
+        } elseif ($createdEvents->isNotEmpty()) {
+            $message = "Synced: {$createdEvents->count()} event(s) created in Google Calendar.";
+        }
+
         return [
             'success' => true,
             'events' => $merged->values()->all(),
-            'message' => 'Google Calendar synced.',
+            'message' => $message,
             'last_synced_at' => Carbon::now()->toIso8601String(),
         ];
     }
