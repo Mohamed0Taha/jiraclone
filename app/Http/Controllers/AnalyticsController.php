@@ -165,16 +165,31 @@ class AnalyticsController extends Controller
 
         // Transform the paginated data
         $visitors->getCollection()->transform(function ($visitor) {
-            return [
-                'ip' => $visitor->ip_address ?? $visitor['ip'],
-                'city' => $visitor->city ?? $visitor['city'] ?? 'Unknown',
-                'region' => $visitor->region ?? $visitor['region'] ?? 'Unknown',
-                'country' => $visitor->country ?? $visitor['country'] ?? 'Unknown',
-                'country_flag' => $this->getCountryFlag($visitor->country_code ?? $visitor['country_flag'] ?? 'US'),
-                'last_visit' => $visitor->last_visit ?? $visitor['last_visit'],
-                'page_views' => $visitor->page_views ?? $visitor['page_views'] ?? 1,
-                'is_unique' => $visitor['is_unique'] ?? true,
-            ];
+            // Handle both stdClass objects (from DB) and arrays (sample data)
+            if (is_object($visitor)) {
+                return [
+                    'ip' => $visitor->ip_address ?? 'Unknown',
+                    'city' => $visitor->city ?? 'Unknown',
+                    'region' => $visitor->region ?? 'Unknown',
+                    'country' => $visitor->country ?? 'Unknown',
+                    'country_flag' => $this->getCountryFlag($visitor->country_code ?? 'US'),
+                    'last_visit' => $visitor->last_visit,
+                    'page_views' => $visitor->page_views ?? 1,
+                    'is_unique' => true,
+                ];
+            } else {
+                // Handle array (sample data)
+                return [
+                    'ip' => $visitor['ip'] ?? 'Unknown',
+                    'city' => $visitor['city'] ?? 'Unknown',
+                    'region' => $visitor['region'] ?? 'Unknown',
+                    'country' => $visitor['country'] ?? 'Unknown',
+                    'country_flag' => $visitor['country_flag'] ?? $this->getCountryFlag('US'),
+                    'last_visit' => $visitor['last_visit'],
+                    'page_views' => $visitor['page_views'] ?? 1,
+                    'is_unique' => $visitor['is_unique'] ?? true,
+                ];
+            }
         });
 
         return $visitors;
