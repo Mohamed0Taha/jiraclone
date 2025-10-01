@@ -11,15 +11,21 @@ class AnalyticsController extends Controller
 {
     public function index(Request $request)
     {
+        // Get date filters from request
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $searchIp = $request->input('search_ip');
+        $perPage = $request->input('per_page', 25);
+
         // Get visitor statistics
         $stats = [
-            'total_visitors' => $this->getTotalVisitors(),
-            'unique_visitors' => $this->getUniqueVisitors(),
-            'page_views' => $this->getPageViews(),
+            'total_visitors' => $this->getTotalVisitors($startDate, $endDate),
+            'unique_visitors' => $this->getUniqueVisitors($startDate, $endDate),
+            'page_views' => $this->getPageViews($startDate, $endDate),
         ];
 
-        // Get unique visitors with location data
-        $visitors = $this->getVisitorsWithLocation();
+        // Get unique visitors with location data (paginated)
+        $visitors = $this->getVisitorsWithLocation($startDate, $endDate, $searchIp, $perPage);
 
         // Get chart data for different periods
         $chartData = $this->getChartData();
@@ -28,41 +34,93 @@ class AnalyticsController extends Controller
             'stats' => $stats,
             'visitors' => $visitors,
             'chartData' => $chartData,
+            'filters' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'search_ip' => $searchIp,
+                'per_page' => $perPage,
+            ],
         ]);
     }
 
-    protected function getTotalVisitors()
+    protected function getTotalVisitors($startDate = null, $endDate = null)
     {
-        // This would typically come from your analytics table
-        // For now, return a sample number or implement based on your tracking
-        return DB::table('visitor_logs')->count() ?? 1247;
+        $query = DB::table('visitor_logs');
+        
+        if ($startDate) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+        
+        return $query->count() ?? 1247;
     }
 
-    protected function getUniqueVisitors()
+    protected function getUniqueVisitors($startDate = null, $endDate = null)
     {
-        // Count unique IP addresses
-        return DB::table('visitor_logs')->distinct('ip_address')->count('ip_address') ?? 892;
+        $query = DB::table('visitor_logs');
+        
+        if ($startDate) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+        
+        return $query->distinct('ip_address')->count('ip_address') ?? 892;
     }
 
-    protected function getPageViews()
+    protected function getPageViews($startDate = null, $endDate = null)
     {
-        // Total page views
-        return DB::table('visitor_logs')->sum('page_views') ?? 3420;
+        $query = DB::table('visitor_logs');
+        
+        if ($startDate) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+        
+        return $query->sum('page_views') ?? 3420;
     }
 
-    protected function getVisitorsWithLocation()
+    protected function getVisitorsWithLocation($startDate = null, $endDate = null, $searchIp = null, $perPage = 25)
     {
-        // Get recent unique visitors with their location data
-        $visitors = DB::table('visitor_logs')
-            ->select('ip_address', 'city', 'region', 'country', 'country_code', 'created_at as last_visit')
-            ->distinct('ip_address')
-            ->orderBy('created_at', 'desc')
-            ->limit(50)
-            ->get();
+        // Build query for unique visitors with their location data
+        $query = DB::table('visitor_logs')
+            ->select(
+                'ip_address',
+                'city',
+                'region',
+                'country',
+                'country_code',
+                DB::raw('MAX(created_at) as last_visit'),
+                DB::raw('SUM(page_views) as page_views')
+            )
+            ->groupBy('ip_address', 'city', 'region', 'country', 'country_code');
 
-        if ($visitors->isEmpty()) {
-            // Return sample data if no visitors exist
-            return [
+        // Apply date filters
+        if ($startDate) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+
+        // Apply IP search filter
+        if ($searchIp) {
+            $query->where('ip_address', 'like', '%' . $searchIp . '%');
+        }
+
+        $query->orderBy('last_visit', 'desc');
+
+        // Paginate results
+        $visitors = $query->paginate($perPage);
+
+        // If no real data, return sample data
+        if ($visitors->isEmpty() && !$startDate && !$endDate && !$searchIp) {
+            $sampleData = collect([
                 [
                     'ip' => '192.168.1.1',
                     'city' => 'New York',
@@ -70,6 +128,7 @@ class AnalyticsController extends Controller
                     'country' => 'United States',
                     'country_flag' => '🇺🇸',
                     'last_visit' => now()->subHours(2),
+                    'page_views' => 5,
                     'is_unique' => true,
                 ],
                 [
@@ -79,6 +138,7 @@ class AnalyticsController extends Controller
                     'country' => 'United Kingdom',
                     'country_flag' => '🇬🇧',
                     'last_visit' => now()->subHours(5),
+                    'page_views' => 3,
                     'is_unique' => false,
                 ],
                 [
@@ -88,23 +148,36 @@ class AnalyticsController extends Controller
                     'country' => 'Canada',
                     'country_flag' => '🇨🇦',
                     'last_visit' => now()->subDays(1),
+                    'page_views' => 8,
                     'is_unique' => true,
                 ],
-            ];
+            ]);
+            
+            // Create a manual paginator for sample data
+            $visitors = new \Illuminate\Pagination\LengthAwarePaginator(
+                $sampleData,
+                $sampleData->count(),
+                $perPage,
+                1,
+                ['path' => request()->url()]
+            );
         }
 
-        return $visitors->map(function ($visitor) {
+        // Transform the paginated data
+        $visitors->getCollection()->transform(function ($visitor) {
             return [
-                'ip' => $visitor->ip_address,
-                'city' => $visitor->city ?? 'Unknown',
-                'region' => $visitor->region ?? 'Unknown',
-                'country' => $visitor->country ?? 'Unknown',
-                'country_flag' => $this->getCountryFlag($visitor->country_code ?? 'US'),
-                'last_visit' => $visitor->last_visit,
-                'page_views' => $visitor->page_views ?? 1,
-                'is_unique' => true, // You can implement logic to determine if visitor is new
+                'ip' => $visitor->ip_address ?? $visitor['ip'],
+                'city' => $visitor->city ?? $visitor['city'] ?? 'Unknown',
+                'region' => $visitor->region ?? $visitor['region'] ?? 'Unknown',
+                'country' => $visitor->country ?? $visitor['country'] ?? 'Unknown',
+                'country_flag' => $this->getCountryFlag($visitor->country_code ?? $visitor['country_flag'] ?? 'US'),
+                'last_visit' => $visitor->last_visit ?? $visitor['last_visit'],
+                'page_views' => $visitor->page_views ?? $visitor['page_views'] ?? 1,
+                'is_unique' => $visitor['is_unique'] ?? true,
             ];
-        })->toArray();
+        });
+
+        return $visitors;
     }
 
     protected function getCountryFlag($countryCode)
