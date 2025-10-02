@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { Head, router } from '@inertiajs/react';
 import { route } from 'ziggy-js';
+import { Helmet } from 'react-helmet';
 
 import {
     Container,
@@ -39,6 +40,17 @@ export default function VerifyEmail({ status }) {
     return (
         <>
             <Head title={t('head.auth.verifyEmail')} />
+            <Helmet>
+                <script async src="https://www.googletagmanager.com/gtag/js?id=AW-978034290"></script>
+                <script>
+                    {`
+                        window.dataLayer = window.dataLayer || [];
+                        function gtag(){dataLayer.push(arguments);}
+                        gtag('js', new Date());
+                        gtag('config', 'AW-978034290');
+                    `}
+                </script>
+            </Helmet>
             <Box
                 sx={{
                     minHeight: '100vh',
