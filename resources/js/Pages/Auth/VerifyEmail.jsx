@@ -2,7 +2,6 @@
 import * as React from 'react';
 import { Head, router } from '@inertiajs/react';
 import { route } from 'ziggy-js';
-import { Helmet } from 'react-helmet';
 
 import {
     Container,
@@ -37,20 +36,35 @@ const colors = {
 
 export default function VerifyEmail({ status }) {
   const { t } = useTranslation();
+  
+  // Load Google Ads tracking on mount
+  React.useEffect(() => {
+    // Load gtag.js script
+    const script1 = document.createElement('script');
+    script1.async = true;
+    script1.src = 'https://www.googletagmanager.com/gtag/js?id=AW-978034290';
+    document.head.appendChild(script1);
+    
+    // Initialize gtag
+    const script2 = document.createElement('script');
+    script2.innerHTML = `
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'AW-978034290');
+    `;
+    document.head.appendChild(script2);
+    
+    return () => {
+      // Cleanup on unmount
+      document.head.removeChild(script1);
+      document.head.removeChild(script2);
+    };
+  }, []);
+  
     return (
         <>
             <Head title={t('head.auth.verifyEmail')} />
-            <Helmet>
-                <script async src="https://www.googletagmanager.com/gtag/js?id=AW-978034290"></script>
-                <script>
-                    {`
-                        window.dataLayer = window.dataLayer || [];
-                        function gtag(){dataLayer.push(arguments);}
-                        gtag('js', new Date());
-                        gtag('config', 'AW-978034290');
-                    `}
-                </script>
-            </Helmet>
             <Box
                 sx={{
                     minHeight: '100vh',
