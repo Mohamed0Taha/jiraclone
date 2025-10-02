@@ -55,10 +55,25 @@ export default function VerifyEmail({ status }) {
     `;
     document.head.appendChild(script2);
     
+    // Fire conversion event after gtag is loaded
+    script1.onload = () => {
+      // Wait a bit for gtag to initialize
+      setTimeout(() => {
+        if (window.gtag) {
+          window.gtag('event', 'conversion', {'send_to': 'AW-978034290/Vn0OCJzWjqYbEPK8rtID'});
+          console.log('Google Ads Sign-up conversion tracked');
+        }
+      }, 500);
+    };
+    
     return () => {
       // Cleanup on unmount
-      document.head.removeChild(script1);
-      document.head.removeChild(script2);
+      if (document.head.contains(script1)) {
+        document.head.removeChild(script1);
+      }
+      if (document.head.contains(script2)) {
+        document.head.removeChild(script2);
+      }
     };
   }, []);
   
