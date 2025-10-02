@@ -566,26 +566,25 @@ Route::middleware('auth')->group(function () {
         Route::get('/timeline', [TaskController::class, 'timeline'])->name('tasks.timeline');
 
         /* CUSTOM VIEWS */
-        Route::get('/custom-views/{name}', [CustomViewPageController::class, 'show'])
-        // Prevent collisions with API-like endpoints so they don't get caught by {name}
-        ->where('name', '^(?!get$|delete$|chat$|list$)[A-Za-z0-9_-]+')
-        ->name('custom-views.show');
-
+        // API endpoints must come BEFORE the dynamic {name} route
         Route::get('/custom-views/get', [ProjectViewsController::class, 'getCustomView'])->name('custom-views.get');
         Route::get('/custom-views/list', [ProjectViewsController::class, 'listCustomViews'])->name('custom-views.list');
+        Route::get('/custom-views/load-data', [ProjectViewsController::class, 'loadComponentData'])->name('custom-views.load-data');
 
         Route::delete('/custom-views/delete', [ProjectViewsController::class, 'deleteCustomView'])->name('custom-views.delete');
 
         Route::post('/custom-views/save', [ProjectViewsController::class, 'saveCustomView'])->name('custom-views.save');
         Route::post('/custom-views/pin', [ProjectViewsController::class, 'pinMicroApp'])->name('custom-views.pin');
         Route::delete('/custom-views/pin', [ProjectViewsController::class, 'unpinMicroApp'])->name('custom-views.unpin');
-
         Route::post('/custom-views/save-data', [ProjectViewsController::class, 'saveComponentData'])->name('custom-views.save-data');
-
-        Route::get('/custom-views/load-data', [ProjectViewsController::class, 'loadComponentData'])->name('custom-views.load-data');
 
         // Chat endpoint (JSON; client falls back when streaming unavailable)
         Route::post('/custom-views/chat', [ProjectViewsController::class, 'chat'])->name('custom-views.chat');
+        
+        // Dynamic custom view route - MUST come last to avoid catching API endpoints
+        Route::get('/custom-views/{name}', [CustomViewPageController::class, 'show'])
+        ->where('name', '[A-Za-z0-9_-]+')
+        ->name('custom-views.show');
 
         // TEMP: E2E realtime test route - emits a sample workflow_step event
         // Visit: /projects/{project}/custom-views/test-realtime?view_name=default
