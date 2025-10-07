@@ -535,6 +535,288 @@ class OpenAIService
     }
 
     /**
+     * Chat completion with function calling support
+     */
+    public function chatWithFunctions(array $messages, array $functions, float $temperature = 0.1): array
+    {
+        $apiKey = $this->apiKey();
+        $model = $this->model('gpt-4o');
+        if ($apiKey === '') {
+            throw new Exception('OpenAI API key missing');
+        }
+
+        $prompt = $this->extractPromptFromMessages($messages);
+        $userId = Auth::id();
+
+        try {
+            $timeout = (int) config('openai.request_timeout', 30);
+            $res = Http::timeout($timeout)->withHeaders([
+                'Authorization' => 'Bearer '.$apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($this->baseUri().'/chat/completions', [
+                'model' => $model,
+                'temperature' => $temperature,
+                'messages' => $messages,
+                'tools' => array_map(function($func) {
+                    return ['type' => 'function', 'function' => $func];
+                }, $functions),
+                'tool_choice' => 'auto'
+            ]);
+
+            if (!$res->ok()) {
+                throw new Exception('OpenAI function call request failed: ' . $res->body());
+            }
+
+            $payload = $res->json();
+            $message = $payload['choices'][0]['message'] ?? null;
+
+            // Calculate tokens and cost
+            $tokensUsed = $payload['usage']['total_tokens'] ?? 0;
+            $cost = $this->calculateCost($model, $tokensUsed);
+
+            // Log successful request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'function_completion',
+                    tokens: $tokensUsed,
+                    cost: $cost,
+                    model: $model,
+                    prompt: $prompt,
+                    response: substr(json_encode($message), 0, 1000),
+                    successful: true
+                );
+            }
+
+            return [
+                'message' => $message,
+                'function_calls' => $message['tool_calls'] ?? [],
+                'content' => $message['content'] ?? '',
+                'usage' => $payload['usage'] ?? []
+            ];
+
+        } catch (Exception $e) {
+            // Log failed request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'function_completion',
+                    tokens: 0,
+                    cost: 0,
+                    model: $model,
+                    prompt: $prompt,
+                    response: null,
+                    successful: false,
+                    error: $e->getMessage()
+                );
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Audio transcription using Whisper
+     */
+    public function transcribeAudio($audioFile, string $language = null): array
+    {
+        $apiKey = $this->apiKey();
+        if ($apiKey === '') {
+            throw new Exception('OpenAI API key missing');
+        }
+
+        $userId = Auth::id();
+
+        try {
+            $res = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+            ])->attach('file', $audioFile, 'audio.mp3')
+              ->post($this->baseUri() . '/audio/transcriptions', [
+                  'model' => 'whisper-1',
+                  'language' => $language,
+                  'response_format' => 'json'
+              ]);
+
+            if (!$res->ok()) {
+                throw new Exception('Audio transcription failed: ' . $res->body());
+            }
+
+            $response = $res->json();
+
+            // Log successful request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'audio_transcription',
+                    tokens: 0, // Whisper doesn't use tokens
+                    cost: 0.006, // $0.006 per minute (approximate)
+                    model: 'whisper-1',
+                    prompt: 'Audio transcription',
+                    response: substr($response['text'] ?? '', 0, 1000),
+                    successful: true
+                );
+            }
+
+            return $response;
+
+        } catch (Exception $e) {
+            // Log failed request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'audio_transcription',
+                    tokens: 0,
+                    cost: 0,
+                    model: 'whisper-1',
+                    prompt: 'Audio transcription failed',
+                    response: null,
+                    successful: false,
+                    error: $e->getMessage()
+                );
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Text-to-speech generation
+     */
+    public function generateSpeech(string $text, string $voice = 'alloy', string $model = 'tts-1'): string
+    {
+        $apiKey = $this->apiKey();
+        if ($apiKey === '') {
+            throw new Exception('OpenAI API key missing');
+        }
+
+        $userId = Auth::id();
+
+        try {
+            $res = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($this->baseUri() . '/audio/speech', [
+                'model' => $model,
+                'input' => $text,
+                'voice' => $voice,
+                'response_format' => 'mp3'
+            ]);
+
+            if (!$res->ok()) {
+                throw new Exception('Text-to-speech failed: ' . $res->body());
+            }
+
+            // Return raw audio data
+            $audioData = $res->body();
+
+            // Log successful request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'text_to_speech',
+                    tokens: 0,
+                    cost: strlen($text) * 0.000015, // $0.015 per 1K characters
+                    model: $model,
+                    prompt: substr($text, 0, 500),
+                    response: 'Audio generated (' . strlen($audioData) . ' bytes)',
+                    successful: true
+                );
+            }
+
+            return $audioData;
+
+        } catch (Exception $e) {
+            // Log failed request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'text_to_speech',
+                    tokens: 0,
+                    cost: 0,
+                    model: $model,
+                    prompt: substr($text, 0, 500),
+                    response: null,
+                    successful: false,
+                    error: $e->getMessage()
+                );
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Generate embeddings for semantic search
+     */
+    public function generateEmbeddings(array $texts, string $model = 'text-embedding-3-small'): array
+    {
+        $apiKey = $this->apiKey();
+        if ($apiKey === '') {
+            throw new Exception('OpenAI API key missing');
+        }
+
+        $userId = Auth::id();
+
+        try {
+            $res = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($this->baseUri() . '/embeddings', [
+                'model' => $model,
+                'input' => $texts,
+                'encoding_format' => 'float'
+            ]);
+
+            if (!$res->ok()) {
+                throw new Exception('Embeddings generation failed: ' . $res->body());
+            }
+
+            $response = $res->json();
+            $embeddings = [];
+            
+            foreach ($response['data'] as $item) {
+                $embeddings[] = $item['embedding'];
+            }
+
+            $tokensUsed = $response['usage']['total_tokens'] ?? 0;
+            $cost = ($tokensUsed / 1000) * 0.00002; // $0.02 per 1M tokens for text-embedding-3-small
+
+            // Log successful request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'embeddings',
+                    tokens: $tokensUsed,
+                    cost: $cost,
+                    model: $model,
+                    prompt: 'Embeddings for ' . count($texts) . ' texts',
+                    response: count($embeddings) . ' embeddings generated',
+                    successful: true
+                );
+            }
+
+            return [
+                'embeddings' => $embeddings,
+                'usage' => $response['usage']
+            ];
+
+        } catch (Exception $e) {
+            // Log failed request
+            if ($userId) {
+                OpenAiRequest::logRequest(
+                    userId: $userId,
+                    type: 'embeddings',
+                    tokens: 0,
+                    cost: 0,
+                    model: $model,
+                    prompt: 'Embeddings generation failed',
+                    response: null,
+                    successful: false,
+                    error: $e->getMessage()
+                );
+            }
+            throw $e;
+        }
+    }
+
+    /**
      * Generate an image using DALL-E
      */
     public function generateImage(string $prompt, string $size = '1024x1024', string $quality = 'standard'): array
