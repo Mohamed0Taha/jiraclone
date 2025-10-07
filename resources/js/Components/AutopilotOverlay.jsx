@@ -279,6 +279,16 @@ export default function AutopilotOverlay({ open, onClose, projectId, onComplete 
                     setStatusStep(step);
                     if (typeof data.can_manage !== 'undefined') {
                         setCanManage(!!data.can_manage);
+                        if (!data.can_manage) {
+                            setBanner({
+                                severity: 'warning',
+                                message:
+                                    'You do not have permission to manage this project. Tip: ask the owner to start Autopilot or grant you project admin rights.',
+                            });
+                        } else {
+                            // Clear any previous warning if user now can manage
+                            if (banner && banner.severity === 'warning') setBanner(null);
+                        }
                     }
                 }
             } catch (e) {}
