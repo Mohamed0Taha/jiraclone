@@ -110,9 +110,12 @@ class AutopilotController extends Controller
 
         try {
             $status = $this->autopilotService->getAutopilotStatus($project);
+            $canManage = $this->canModify($project);
 
-            // Return status directly (not wrapped) for frontend compatibility
-            return response()->json($status);
+            // Return status with permission hint for UI
+            return response()->json(array_merge($status, [
+                'can_manage' => $canManage,
+            ]));
 
         } catch (Throwable $e) {
             Log::error('Failed to get autopilot status', [

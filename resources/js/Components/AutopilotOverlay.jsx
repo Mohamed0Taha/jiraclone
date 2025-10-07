@@ -84,6 +84,7 @@ export default function AutopilotOverlay({ open, onClose, projectId, onComplete 
     const appUrl = (typeof window !== 'undefined' && window.Laravel && window.Laravel.appUrl) || (document.querySelector('meta[name="app-url"]')?.getAttribute('content')) || '';
     const [autopilotEnabled, setAutopilotEnabled] = useState(false);
     const [statusStep, setStatusStep] = useState(null);
+    const [canManage, setCanManage] = useState(true);
 
     const handleStartAutopilot = async () => {
         console.log('Starting AI Autopilot session...');
@@ -276,6 +277,9 @@ export default function AutopilotOverlay({ open, onClose, projectId, onComplete 
                     const step = data.step || (data.status && data.status.step) || null;
                     setAutopilotEnabled(enabled);
                     setStatusStep(step);
+                    if (typeof data.can_manage !== 'undefined') {
+                        setCanManage(!!data.can_manage);
+                    }
                 }
             } catch (e) {}
         }
@@ -347,6 +351,7 @@ export default function AutopilotOverlay({ open, onClose, projectId, onComplete 
                                             size="large"
                                             startIcon={<PlayArrowIcon />}
                                             onClick={handleOptimizeNow}
+                                            disabled={!canManage}
                                             sx={{
                                                 background: 'linear-gradient(45deg, #FF6B35 30%, #F7931E 90%)',
                                                 color: 'white',
@@ -376,6 +381,7 @@ export default function AutopilotOverlay({ open, onClose, projectId, onComplete 
                                                 variant="outlined"
                                                 size="large"
                                                 onClick={handleStartStandby}
+                                                disabled={!canManage}
                                                 sx={{
                                                     color: 'white',
                                                     borderColor: 'rgba(255,255,255,0.6)',
@@ -392,6 +398,7 @@ export default function AutopilotOverlay({ open, onClose, projectId, onComplete 
                                                 size="large"
                                                 startIcon={<PlayArrowIcon />}
                                                 onClick={handleStartAutopilot}
+                                                disabled={!canManage}
                                                 sx={{
                                                     background: 'linear-gradient(45deg, #4caf50 30%, #8bc34a 90%)',
                                                     color: 'white',

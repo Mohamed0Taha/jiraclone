@@ -7,6 +7,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 export default function AutopilotDock({ projectId, onOpen }) {
   const [enabled, setEnabled] = useState(false);
   const [step, setStep] = useState(null);
+  const [canManage, setCanManage] = useState(true);
   const appUrl = (typeof window !== 'undefined' && window.Laravel && window.Laravel.appUrl) || (document.querySelector('meta[name="app-url"]')?.getAttribute('content')) || '';
 
   useEffect(() => {
@@ -21,6 +22,7 @@ export default function AutopilotDock({ projectId, onOpen }) {
           const s = data.step || (data.status && data.status.step) || null;
           setEnabled(enabledNow);
           setStep(s);
+          if (typeof data.can_manage !== 'undefined') setCanManage(!!data.can_manage);
         }
       } catch (e) { /* noop */ }
       timer = setTimeout(poll, 10000);
@@ -109,8 +111,8 @@ export default function AutopilotDock({ projectId, onOpen }) {
             <PauseRoundedIcon fontSize="small" />
           </IconButton>
         </Tooltip> */}
-        <Tooltip title="Stop Autopilot">
-          <IconButton size="small" sx={{ color: '#fff', opacity: 0.9 }} onClick={stopAutopilot}>
+        <Tooltip title={canManage ? 'Stop Autopilot' : 'Only the project owner/admin can stop Autopilot'}>
+          <IconButton size="small" sx={{ color: '#fff', opacity: canManage ? 0.9 : 0.4 }} onClick={canManage ? stopAutopilot : (e)=>e.preventDefault()} disabled={!canManage}>
             <StopRoundedIcon fontSize="small" />
           </IconButton>
         </Tooltip>
