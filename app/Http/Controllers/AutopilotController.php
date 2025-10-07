@@ -199,7 +199,20 @@ class AutopilotController extends Controller
             return false;
         }
 
-        // Only project owner can modify (can be extended for admin roles)
-        return $user->id === (int) $project->user_id;
+        // Allow project owner
+        if ($user->id === (int) $project->user_id) {
+            return true;
+        }
+
+        // Allow platform admins
+        if (property_exists($user, 'is_admin') && $user->is_admin) {
+            return true;
+        }
+
+        // Allow project admins (members with role=admin)
+        return $project->members()
+            ->where('users.id', $user->id)
+            ->wherePivot('role', 'admin')
+            ->exists();
     }
 }

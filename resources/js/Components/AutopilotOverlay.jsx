@@ -34,6 +34,7 @@ export default function AutopilotOverlay({ open, onClose, projectId, onComplete 
     const [steps, setSteps] = useState([]);
     const [isComplete, setIsComplete] = useState(false);
     const [changesSummary, setChangesSummary] = useState({});
+    const [banner, setBanner] = useState(null); // {severity, message}
 
     const autopilotSteps = [
         {
@@ -136,8 +137,16 @@ export default function AutopilotOverlay({ open, onClose, projectId, onComplete 
         } catch (error) {
             console.error('Failed to start autopilot session:', error);
             setIsRunning(false);
-            // Show error to user
-            setSteps(prev => prev.map(step => ({ ...step, status: 'error', error: 'Failed to start autopilot session' })));
+            // Show friendly alert
+            if (error?.response?.status === 403) {
+                const msg = error?.response?.data?.message || 'Only the project owner can start Autopilot for this project.';
+                setBanner({ severity: 'warning', message: msg + ' Tip: ask the owner to start Autopilot or grant you project admin rights.' });
+            } else if (error?.response?.status === 402) {
+                const msg = error?.response?.data?.message || 'Autopilot requires a premium subscription.';
+                setBanner({ severity: 'info', message: msg });
+            } else {
+                setBanner({ severity: 'error', message: 'Could not start Autopilot. Please try again.' });
+            }
         }
     };
 
@@ -162,6 +171,15 @@ export default function AutopilotOverlay({ open, onClose, projectId, onComplete 
             setChangesSummary({});
         } catch (e) {
             console.error('Failed to start autopilot (standby):', e);
+            if (e?.response?.status === 403) {
+                const msg = e?.response?.data?.message || 'Only the project owner can start Autopilot for this project.';
+                setBanner({ severity: 'warning', message: msg + ' Tip: ask the owner to start Autopilot or grant you project admin rights.' });
+            } else if (e?.response?.status === 402) {
+                const msg = e?.response?.data?.message || 'Autopilot requires a premium subscription.';
+                setBanner({ severity: 'info', message: msg });
+            } else {
+                setBanner({ severity: 'error', message: 'Could not start Autopilot. Please try again.' });
+            }
         }
     };
 
@@ -306,6 +324,11 @@ export default function AutopilotOverlay({ open, onClose, projectId, onComplete 
 
             <DialogContent sx={{ p: 0 }}>
                 <Box sx={{ p: 3 }}>
+                    {banner && (
+                        <Alert severity={banner.severity} sx={{ mb: 2 }} onClose={() => setBanner(null)}>
+                            {banner.message}
+                        </Alert>
+                    )}
                     {/* Control panel when idle */}
                     {!isRunning && !isComplete && (
                         <Card sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)', textAlign: 'center' }}>
