@@ -411,7 +411,7 @@ Your capabilities:
 Project Context:
 - Project Name: {$project->name}
 - Description: {$project->description}
-- Team Size: " . $project->users()->count() . " members
+- Team Size: " . $project->members()->count() . " members
 - Current Status: Active
 
 Guidelines:
