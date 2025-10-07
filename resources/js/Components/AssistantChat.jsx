@@ -28,10 +28,12 @@ import {
     Minimize as MinimizeIcon,
     ExpandMore as ExpandMoreIcon,
     Lock as LockIcon,
+    AutoAwesome as AutoAwesomeIcon,
 } from '@mui/icons-material';
 import { keyframes } from '@emotion/react';
 import { useSubscription } from '../Hooks/useSubscription';
 import { router } from '@inertiajs/react';
+import { route } from 'ziggy-js';
 // FeatureOverlay removed for inline upgrade card approach
 
 const Transition = React.forwardRef(function Transition(props, ref) {
@@ -186,6 +188,8 @@ export default function AssistantChat({ project, open, onClose }) {
     const [showSuggestions, setShowSuggestions] = useState(true);
     const [chatLocked, setChatLocked] = useState(false); // disables further input
     const [upgradeUrl, setUpgradeUrl] = useState(null);
+    const [aiEnhanced, setAiEnhanced] = useState(false);
+    const [capabilities, setCapabilities] = useState({});
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
@@ -225,9 +229,10 @@ export default function AssistantChat({ project, open, onClose }) {
         if (open && !minimized) {
             setTimeout(() => inputRef.current?.focus(), 100);
 
-            // Fetch suggestions when chat opens
+            // Fetch suggestions and capabilities when chat opens
             if (suggestions.length === 0) {
                 fetchSuggestions();
+                fetchCapabilities();
             }
         }
     }, [open, minimized]);
@@ -241,6 +246,53 @@ export default function AssistantChat({ project, open, onClose }) {
             }
         } catch (err) {
             console.error('Failed to fetch suggestions:', err);
+        }
+    };
+
+    const fetchCapabilities = async () => {
+        try {
+            console.log('🔍 Fetching AI capabilities for project:', project.id);
+            const response = await fetch(route('projects.assistant.capabilities', project.id));
+            const data = await response.json();
+            console.log('📊 Capabilities response:', data);
+            if (data.success) {
+                setCapabilities(data.capabilities);
+                setAiEnhanced(data.capabilities.ai_enhanced || false);
+                console.log('✅ AI Enhanced state:', data.capabilities.ai_enhanced || false);
+            }
+        } catch (err) {
+            console.error('❌ Failed to fetch capabilities:', err);
+        }
+    };
+
+    const toggleAIEnhancement = async () => {
+        try {
+            const response = await fetch(route('projects.assistant.toggle-enhancement', project.id), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                },
+                body: JSON.stringify({
+                    enabled: !aiEnhanced,
+                }),
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setAiEnhanced(data.ai_enhanced);
+                // Add a system message to indicate the change
+                setConversation(prev => [...prev, {
+                    role: 'assistant',
+                    content: data.message + (data.ai_enhanced ? ' 🚀 Your assistant now has enhanced reasoning capabilities!' : ''),
+                    timestamp: new Date()
+                }]);
+            } else if (data.show_overlay) {
+                // Handle subscription overlay
+                pushUpgradeCard(data.message);
+            }
+        } catch (err) {
+            console.error('Failed to toggle AI enhancement:', err);
         }
     };
 
@@ -426,9 +478,46 @@ export default function AssistantChat({ project, open, onClose }) {
 
             {/* Project Info */}
             <Box sx={{ p: 2, bgcolor: 'grey.50', borderBottom: 1, borderColor: 'grey.200' }}>
-                <Typography variant="body2" color="text.secondary">
-                    {t('chat.chattingAbout')} <strong>{project.name}</strong>
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                        {t('chat.chattingAbout')} <strong>{project.name}</strong>
+                    </Typography>
+                    
+                    {/* AI Enhancement Toggle - Show for all users but handle premium requirement in click */}
+                    <Tooltip title={
+                        shouldShowOverlay 
+                            ? 'AI Enhancement (Premium Feature)' 
+                            : aiEnhanced 
+                                ? 'AI Enhanced Assistant Active' 
+                                : 'Enable AI Enhancement'
+                    }>
+                        <Chip
+                            icon={<AutoAwesomeIcon />}
+                            label={aiEnhanced ? "AI Enhanced ✨" : "Enable AI"}
+                            size="small"
+                            color={aiEnhanced ? 'primary' : shouldShowOverlay ? 'secondary' : 'default'}
+                            onClick={toggleAIEnhancement}
+                            sx={{
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                opacity: shouldShowOverlay ? 0.7 : 1,
+                                fontWeight: 'bold',
+                                '&:hover': {
+                                    bgcolor: aiEnhanced ? 'primary.dark' : 'primary.light',
+                                    color: aiEnhanced ? 'white' : 'primary.main',
+                                },
+                            }}
+                        />
+                    </Tooltip>
+                    
+                    {/* Debug indicator - remove this later */}
+                    <Chip 
+                        label="🔧 DEBUG" 
+                        size="small" 
+                        color="error"
+                        sx={{ ml: 1, fontSize: '0.7rem' }}
+                    />
+                </Box>
             </Box>
 
             {/* Messages */}

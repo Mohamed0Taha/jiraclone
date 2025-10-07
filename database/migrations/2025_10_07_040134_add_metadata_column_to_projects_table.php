@@ -12,7 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('projects', function (Blueprint $table) {
-            $table->json('metadata')->nullable()->after('meta');
+            // This migration is a safety net. Earlier migrations already add `meta`.
+            // Keep idempotent to avoid errors in different environments.
+            if (! Schema::hasColumn('projects', 'meta')) {
+                $table->json('meta')->nullable()->after('description');
+            }
         });
     }
 
@@ -22,7 +26,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('projects', function (Blueprint $table) {
-            $table->dropColumn('metadata');
+            if (Schema::hasColumn('projects', 'meta')) {
+                $table->dropColumn('meta');
+            }
         });
     }
 };

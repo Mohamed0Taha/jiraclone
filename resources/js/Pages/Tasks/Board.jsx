@@ -70,6 +70,8 @@ import MembersManagerDialog from './MembersManagerDialog';
 import AIPdfReportDialog from './ProjectReportDialog';
 import ProjectDetailsDialog from './ProjectDetailsDialog';
 import AssistantChat from './AssistantChat';
+import AutopilotOverlay from '@/Components/AutopilotOverlay';
+import AutopilotDock from '@/Components/AutopilotDock';
 import { useSubscription } from '@/Hooks/useSubscription';
 
 /** Visual tokens per methodology */
@@ -270,13 +272,13 @@ export default function Board({
     const STATUS_ORDER = useMemo(() => getStatusOrder(methodology), [methodology]);
     const methodStyles = METHOD_STYLES[methodology] || METHOD_STYLES[METHODOLOGIES.KANBAN];
 
-    // Debug: Monitor task state changes
-    useEffect(() => {
-        console.log('Task state changed:', taskState);
-        Object.keys(taskState).forEach((status) => {
-            console.log(`${status}:`, taskState[status]?.length || 0, 'tasks');
-        });
-    }, [taskState]);
+    // Optional debugging (disabled for performance)
+    // useEffect(() => {
+    //     if (process.env.NODE_ENV !== 'development') return;
+    //     // Lightweight summary only in dev
+    //     const summary = Object.fromEntries(Object.entries(taskState).map(([k, v]) => [k, v?.length || 0]));
+    //     console.debug('Task columns:', summary);
+    // }, [taskState]);
 
     const COLUMN_WIDTH = 320;
     const COLUMN_GAP = 12;
@@ -342,18 +344,17 @@ export default function Board({
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingDeleteId, setPendingDeleteId] = useState(null);
     const [formImageUploading, setFormImageUploading] = useState(false);
-    // Track tasks whose status change is in-flight (drag + server patch)
     const [pendingMoves, setPendingMoves] = useState(() => new Set());
 
     const [searchQuery, setSearchQuery] = useState('');
     const [priorityFilter, setPriorityFilter] = useState('');
     const [teamMemberFilter, setTeamMemberFilter] = useState('');
-
-    const [membersOpen, setMembersOpen] = useState(false);
-    const [reportOpen, setReportOpen] = useState(false);
-    const [upgradeOpen, setUpgradeOpen] = useState(false);
-    const [detailsOpen, setDetailsOpen] = useState(false);
     const [assistantOpen, setAssistantOpen] = useState(false);
+    const [autopilotOpen, setAutopilotOpen] = useState(false);
+    const [upgradeOpen, setUpgradeOpen] = useState(false);
+    const [reportOpen, setReportOpen] = useState(false);
+    const [membersOpen, setMembersOpen] = useState(false);
+    const [detailsOpen, setDetailsOpen] = useState(false);
 
     // Custom Views state
     const [customViewsDrawerOpen, setCustomViewsDrawerOpen] = useState(false);
@@ -1629,6 +1630,7 @@ export default function Board({
                                 setTimeout(() => titleRef.current?.focus(), 60);
                             }}
                             onOpenAssistant={() => setAssistantOpen(true)}
+                            onOpenAutopilot={() => setAutopilotOpen(true)}
                             onOpenCustomViews={() => setCustomViewsDrawerOpen(true)}
                             methodStyles={methodStyles}
                             assistantOpen={assistantOpen}
@@ -2122,6 +2124,17 @@ export default function Board({
                             open={assistantOpen}
                             onClose={() => setAssistantOpen(false)}
                         />
+                        <AutopilotOverlay
+                            projectId={project?.id}
+                            open={autopilotOpen}
+                            onClose={() => setAutopilotOpen(false)}
+                            onComplete={(summary) => {
+                                console.log('Autopilot completed with summary:', summary);
+                                // Refresh tasks to show the changes
+                                refreshTasks();
+                            }}
+                        />
+                        <AutopilotDock projectId={project?.id} onOpen={() => setAutopilotOpen(true)} />
                     </Box>
 
                     {/* Custom Views Drawer */}

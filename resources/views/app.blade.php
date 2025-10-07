@@ -48,7 +48,13 @@
     @vite(['resources/js/app.jsx', 'resources/css/app.css'])
     @inertiaHead
   </head>
-  <body class="antialiased h-full">
+  <body class="antialiased h-full" style="background:#F7FAFF;">
+    <style>
+      html,body { min-height:100%; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0f172a; }
+      }
+    </style>
     <script>
       window.Laravel = {
         csrfToken: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',

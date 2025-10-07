@@ -52,4 +52,28 @@ class Comment extends Model
     {
         return $query->whereNull('parent_id');
     }
+
+    protected static function booted()
+    {
+        static::created(function (Comment $comment) {
+            try {
+                $task = $comment->task;
+                if (! $task) return;
+                $project = $task->project;
+                if (! $project) return;
+                $meta = $project->meta ?? [];
+                $autopilotEnabled = data_get($meta, 'autopilot.enabled', ($meta['autopilot_enabled'] ?? false));
+
+                // Only react when autopilot is enabled and the commenter is not the project owner (to avoid loops)
+                if ($autopilotEnabled && (int) $comment->user_id !== (int) $project->user_id) {
+                    app(\App\Services\AutopilotService::class)->handleTaskComment($project, $task, $comment);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Autopilot comment hook failed', [
+                    'comment_id' => $comment->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        });
+    }
 }

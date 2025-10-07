@@ -1,0 +1,391 @@
+import React, { useState, useEffect } from 'react';
+import {
+    Box,
+    Dialog,
+    DialogContent,
+    Typography,
+    IconButton,
+    LinearProgress,
+    Chip,
+    Stack,
+    Card,
+    CardContent,
+    Button,
+    Alert,
+    Fade,
+    CircularProgress,
+    useTheme,
+    alpha,
+} from '@mui/material';
+import {
+    Close as CloseIcon,
+    PlayArrow as PlayArrowIcon,
+    Stop as StopIcon,
+    AutoAwesome as AutoAwesomeIcon,
+    Speed as SpeedIcon,
+    Assignment as AssignmentIcon,
+    Timeline as TimelineIcon,
+    Notifications as NotificationsIcon,
+} from '@mui/icons-material';
+import { keyframes } from '@emotion/react';
+import { route } from 'ziggy-js';
+
+// Animation for the autopilot pulse effect
+const autopilotPulse = keyframes`
+  0% { 
+    transform: scale(1); 
+    box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.7);
+  }
+  70% { 
+    transform: scale(1.05); 
+    box-shadow: 0 0 0 10px rgba(255, 107, 53, 0);
+  }
+  100% { 
+    transform: scale(1); 
+    box-shadow: 0 0 0 0 rgba(255, 107, 53, 0);
+  }
+`;
+
+const taskIcons = {
+    optimize_priorities: SpeedIcon,
+    assign_tasks: AssignmentIcon,
+    request_updates: NotificationsIcon,
+    analyze_timeline: TimelineIcon,
+};
+
+export default function AutopilotOverlay({ open, onClose, project }) {
+    const theme = useTheme();
+    const [autopilotStatus, setAutopilotStatus] = useState({
+        enabled: false,
+        active_tasks: [],
+        session_id: null
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    // Fetch autopilot status when overlay opens
+    useEffect(() => {
+        if (open && project?.id) {
+            fetchAutopilotStatus();
+            
+            // Poll for updates every 3 seconds while open
+            const interval = setInterval(fetchAutopilotStatus, 3000);
+            return () => clearInterval(interval);
+        }
+    }, [open, project?.id]);
+
+    const fetchAutopilotStatus = async () => {
+        try {
+            const response = await fetch(route('projects.autopilot.status', project.id));
+            const data = await response.json();
+            
+            if (data.success) {
+                setAutopilotStatus(data.status);
+            }
+        } catch (err) {
+            console.error('Failed to fetch autopilot status:', err);
+        }
+    };
+
+    const handleStartAutopilot = async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch(route('projects.autopilot.start', project.id), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                },
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                setAutopilotStatus(prev => ({ ...prev, enabled: true }));
+                fetchAutopilotStatus(); // Refresh status
+            } else {
+                setError(data.message || 'Failed to start autopilot');
+            }
+        } catch (err) {
+            setError('Failed to start autopilot: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleStopAutopilot = async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch(route('projects.autopilot.stop', project.id), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                },
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                setAutopilotStatus(prev => ({ ...prev, enabled: false, active_tasks: [] }));
+            } else {
+                setError(data.message || 'Failed to stop autopilot');
+            }
+        } catch (err) {
+            setError('Failed to stop autopilot: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{
+                sx: {
+                    borderRadius: 3,
+                    background: theme.palette.mode === 'dark'
+                        ? 'linear-gradient(140deg, rgba(15,23,42,0.95) 0%, rgba(17,24,39,0.9) 100%)'
+                        : 'linear-gradient(140deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.9) 100%)',
+                    backdropFilter: 'blur(20px)',
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                }
+            }}
+        >
+            <DialogContent sx={{ p: 0 }}>
+                {/* Header */}
+                <Box
+                    sx={{
+                        background: 'linear-gradient(45deg, #FF6B35 30%, #F7931E 90%)',
+                        color: 'white',
+                        p: 3,
+                        position: 'relative',
+                        overflow: 'hidden',
+                    }}
+                >
+                    <Box sx={{ position: 'relative', zIndex: 2 }}>
+                        <Stack direction="row" alignItems="center" justifyContent="space-between">
+                            <Stack direction="row" alignItems="center" spacing={2}>
+                                <Box
+                                    sx={{
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: '50%',
+                                        background: 'rgba(255,255,255,0.2)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        animation: autopilotStatus.enabled ? `${autopilotPulse} 2s infinite` : 'none',
+                                    }}
+                                >
+                                    <AutoAwesomeIcon sx={{ fontSize: 24 }} />
+                                </Box>
+                                <Box>
+                                    <Typography variant="h5" fontWeight="bold">
+                                        AI Autopilot
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                                        Autonomous Project Management
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                            
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                                <Chip
+                                    label={autopilotStatus.enabled ? 'ACTIVE' : 'INACTIVE'}
+                                    size="small"
+                                    sx={{
+                                        background: autopilotStatus.enabled 
+                                            ? 'rgba(76, 175, 80, 0.2)' 
+                                            : 'rgba(158, 158, 158, 0.2)',
+                                        color: 'white',
+                                        fontWeight: 'bold',
+                                        border: `1px solid ${autopilotStatus.enabled ? '#4CAF50' : '#9E9E9E'}`,
+                                    }}
+                                />
+                                <IconButton onClick={onClose} sx={{ color: 'white' }}>
+                                    <CloseIcon />
+                                </IconButton>
+                            </Stack>
+                        </Stack>
+                    </Box>
+
+                    {/* Background decoration */}
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: -50,
+                            right: -50,
+                            width: 200,
+                            height: 200,
+                            borderRadius: '50%',
+                            background: 'rgba(255,255,255,0.1)',
+                            zIndex: 1,
+                        }}
+                    />
+                </Box>
+
+                {/* Content */}
+                <Box sx={{ p: 3 }}>
+                    {error && (
+                        <Alert severity="error" sx={{ mb: 3 }}>
+                            {error}
+                        </Alert>
+                    )}
+
+                    {/* Control Panel */}
+                    <Card sx={{ mb: 3, borderRadius: 2 }}>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                                Control Panel
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                {autopilotStatus.enabled 
+                                    ? 'AI Autopilot is actively managing your project. It will optimize tasks, request updates, and make strategic decisions automatically.'
+                                    : 'Start AI Autopilot to enable autonomous project management. The AI will analyze your project and begin optimizing workflow automatically.'
+                                }
+                            </Typography>
+                            
+                            <Stack direction="row" spacing={2}>
+                                {!autopilotStatus.enabled ? (
+                                    <Button
+                                        variant="contained"
+                                        startIcon={loading ? <CircularProgress size={20} /> : <PlayArrowIcon />}
+                                        onClick={handleStartAutopilot}
+                                        disabled={loading}
+                                        sx={{
+                                            background: 'linear-gradient(45deg, #FF6B35 30%, #F7931E 90%)',
+                                            '&:hover': {
+                                                background: 'linear-gradient(45deg, #E55A2B 30%, #E8841A 90%)',
+                                            }
+                                        }}
+                                    >
+                                        {loading ? 'Starting...' : 'Start Autopilot'}
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={loading ? <CircularProgress size={20} /> : <StopIcon />}
+                                        onClick={handleStopAutopilot}
+                                        disabled={loading}
+                                        color="error"
+                                    >
+                                        {loading ? 'Stopping...' : 'Stop Autopilot'}
+                                    </Button>
+                                )}
+                            </Stack>
+                        </CardContent>
+                    </Card>
+
+                    {/* Active Tasks */}
+                    {autopilotStatus.enabled && (
+                        <Card sx={{ borderRadius: 2 }}>
+                            <CardContent>
+                                <Typography variant="h6" gutterBottom>
+                                    Active Autopilot Tasks
+                                </Typography>
+                                
+                                {autopilotStatus.active_tasks?.length > 0 ? (
+                                    <Stack spacing={2}>
+                                        {autopilotStatus.active_tasks.map((task, index) => {
+                                            const IconComponent = taskIcons[task.type] || AutoAwesomeIcon;
+                                            
+                                            return (
+                                                <Fade in key={task.id || index} timeout={300 * (index + 1)}>
+                                                    <Card 
+                                                        variant="outlined" 
+                                                        sx={{ 
+                                                            borderRadius: 2,
+                                                            background: theme.palette.mode === 'dark' 
+                                                                ? alpha(theme.palette.primary.main, 0.05)
+                                                                : alpha(theme.palette.primary.main, 0.02)
+                                                        }}
+                                                    >
+                                                        <CardContent sx={{ py: 2 }}>
+                                                            <Stack direction="row" alignItems="center" spacing={2}>
+                                                                <Box
+                                                                    sx={{
+                                                                        width: 40,
+                                                                        height: 40,
+                                                                        borderRadius: 2,
+                                                                        background: alpha(theme.palette.primary.main, 0.1),
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                    }}
+                                                                >
+                                                                    <IconComponent 
+                                                                        sx={{ 
+                                                                            color: theme.palette.primary.main,
+                                                                            fontSize: 20 
+                                                                        }} 
+                                                                    />
+                                                                </Box>
+                                                                
+                                                                <Box sx={{ flex: 1 }}>
+                                                                    <Typography variant="subtitle2" fontWeight="medium">
+                                                                        {task.title}
+                                                                    </Typography>
+                                                                    <Typography variant="body2" color="text.secondary">
+                                                                        {task.description || 'Processing...'}
+                                                                    </Typography>
+                                                                    
+                                                                    {task.progress !== undefined && (
+                                                                        <Box sx={{ mt: 1 }}>
+                                                                            <LinearProgress 
+                                                                                variant="determinate" 
+                                                                                value={task.progress} 
+                                                                                sx={{ 
+                                                                                    height: 6, 
+                                                                                    borderRadius: 3,
+                                                                                    background: alpha(theme.palette.primary.main, 0.1),
+                                                                                    '& .MuiLinearProgress-bar': {
+                                                                                        borderRadius: 3,
+                                                                                        background: 'linear-gradient(45deg, #FF6B35 30%, #F7931E 90%)',
+                                                                                    }
+                                                                                }} 
+                                                                            />
+                                                                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                                                                                {task.progress}% complete
+                                                                            </Typography>
+                                                                        </Box>
+                                                                    )}
+                                                                </Box>
+                                                                
+                                                                <Chip
+                                                                    label={task.status.replace('_', ' ')}
+                                                                    size="small"
+                                                                    color={task.status === 'in_progress' ? 'primary' : 'default'}
+                                                                    sx={{ textTransform: 'capitalize' }}
+                                                                />
+                                                            </Stack>
+                                                        </CardContent>
+                                                    </Card>
+                                                </Fade>
+                                            );
+                                        })}
+                                    </Stack>
+                                ) : (
+                                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                                        <AutoAwesomeIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                                        <Typography variant="body2" color="text.secondary">
+                                            Autopilot is analyzing your project...
+                                        </Typography>
+                                    </Box>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+                </Box>
+            </DialogContent>
+        </Dialog>
+    );
+}

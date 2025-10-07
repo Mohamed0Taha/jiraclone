@@ -7,6 +7,7 @@ import {
     Close as CloseIcon,
     Lock as LockIcon,
     ViewList as ViewListIcon,
+    PlayArrow as PlayArrowIcon,
 } from '@mui/icons-material';
 import GetAppIcon from '@mui/icons-material/GetApp';
 import { useSubscription } from '../Hooks/useSubscription';
@@ -16,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 export default function FloatingActionGroup({
     onAddTask,
     onOpenAssistant,
+    onOpenAutopilot,
     methodStyles,
     assistantOpen,
     projectId,
@@ -44,6 +46,11 @@ export default function FloatingActionGroup({
 
     const handleExportJira = () => {
         window.location.href = route('projects.export.jira', projectId);
+    };
+
+    const handleOpenAutopilot = () => {
+        setExpanded(false);
+        onOpenAutopilot?.();
     };
 
     return (
@@ -82,6 +89,32 @@ export default function FloatingActionGroup({
                             }}
                         >
                             <ViewListIcon />
+                        </Fab>
+                    </Tooltip>
+                </Zoom>
+
+                {/* Autopilot Button */}
+                <Zoom
+                    in={expanded}
+                    timeout={200}
+                    style={{ transitionDelay: expanded ? '250ms' : '0ms' }}
+                >
+                    <Tooltip title="AI Autopilot - Autonomous Project Management" placement="left">
+                        <Fab
+                            size="medium"
+                            onClick={handleOpenAutopilot}
+                            sx={{
+                                background: 'linear-gradient(45deg, #FF6B35 30%, #F7931E 90%)',
+                                color: 'white',
+                                boxShadow: '0 8px 16px -8px rgba(255,107,53,.4)',
+                                '&:hover': {
+                                    background: 'linear-gradient(45deg, #E55A2B 30%, #E8841A 90%)',
+                                    transform: 'scale(1.05)',
+                                },
+                                transition: 'all 0.2s ease',
+                            }}
+                        >
+                            <PlayArrowIcon />
                         </Fab>
                     </Tooltip>
                 </Zoom>

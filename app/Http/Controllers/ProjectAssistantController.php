@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use App\Services\AssistantManagerService;
 use App\Services\ProjectAssistantService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,10 @@ use Throwable;
 
 class ProjectAssistantController extends Controller
 {
-    public function __construct(private ProjectAssistantService $service) {}
+    public function __construct(
+        private ProjectAssistantService $service,
+        private AssistantManagerService $assistantManager
+    ) {}
 
     /** POST /projects/{project}/assistant/chat */
     public function chat(Request $request, Project $project): JsonResponse
@@ -197,5 +201,66 @@ class ProjectAssistantController extends Controller
         }
 
         return false;
+    }
+
+    /** GET /projects/{project}/assistant/capabilities */
+    public function getCapabilities(Request $request, Project $project): JsonResponse
+    {
+        $this->authorizeView($project);
+
+        $capabilities = $this->assistantManager->getAssistantCapabilities($project);
+
+        return response()->json([
+            'success' => true,
+            'capabilities' => $capabilities,
+        ]);
+    }
+
+    /** POST /projects/{project}/assistant/toggle-enhancement */
+    public function toggleEnhancement(Request $request, Project $project): JsonResponse
+    {
+        $this->authorizeView($project);
+
+        if (!$this->canModify($project)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to modify this project.',
+            ], 403);
+        }
+
+        $enabled = $request->boolean('enabled', true);
+        
+        // Check subscription for AI enhancement
+        $user = $request->user();
+        if ($enabled && $user->shouldShowOverlay('ai_chat')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'AI Enhancement requires a premium subscription.',
+                'show_overlay' => true,
+                'upgrade_url' => route('billing.show'),
+            ], 402);
+        }
+
+        try {
+            $this->assistantManager->toggleAIEnhancement($project, $enabled);
+
+            return response()->json([
+                'success' => true,
+                'message' => $enabled ? 'AI Enhancement enabled successfully.' : 'AI Enhancement disabled.',
+                'ai_enhanced' => $enabled,
+            ]);
+
+        } catch (Throwable $e) {
+            Log::error('Failed to toggle AI enhancement', [
+                'project_id' => $project->id,
+                'enabled' => $enabled,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to toggle AI enhancement: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

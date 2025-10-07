@@ -10,8 +10,10 @@ use App\Agents\Support\AgentException;
 use App\Agents\Tools\CommandPlanningTool;
 use App\Agents\Tools\FallbackHelpTool;
 use App\Agents\Tools\IntentAnalysisTool;
+use App\Agents\Tools\OpenAIAssistantTool;
 use App\Agents\Tools\QuestionAnswerTool;
 use App\Models\Project;
+use App\Services\AssistantManagerService;
 use App\Services\ConversationHistoryManager;
 use App\Services\IntentClassifierService;
 use App\Services\QuestionAnsweringService;
@@ -29,12 +31,14 @@ class ProjectAssistantAgent implements ConversationalAgent
         ConversationHistoryManager $historyManager,
         IntentClassifierService $classifier,
         QuestionAnsweringService $qaService,
-        CommandProcessingService $commandProcessor
+        CommandProcessingService $commandProcessor,
+        AssistantManagerService $assistantManager
     ) {
         $this->historyManager = $historyManager;
 
         $this->kernel = new AgentKernel([
             new IntentAnalysisTool($classifier),
+            new OpenAIAssistantTool($assistantManager),  // Add OpenAI Assistant as second priority
             new QuestionAnswerTool($qaService),
             new CommandPlanningTool($commandProcessor),
             new FallbackHelpTool($qaService),

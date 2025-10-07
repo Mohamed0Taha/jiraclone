@@ -642,6 +642,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/assistant/suggestions', [ProjectAssistantController::class, 'suggestions'])->name('projects.assistant.suggestions'); // Remove middleware
         Route::post('/assistant/execute', [ProjectAssistantController::class, 'execute'])->middleware('subscription:ai_chat')->name('projects.assistant.execute'); // Keep middleware for actual execution
         Route::get('/assistant/test', [ProjectAssistantController::class, 'test'])->name('projects.assistant.test'); // Remove middleware
+        
+        /* AI ENHANCEMENT FEATURES */
+        Route::get('/assistant/capabilities', [ProjectAssistantController::class, 'getCapabilities'])->name('projects.assistant.capabilities');
+        Route::post('/assistant/toggle-enhancement', [ProjectAssistantController::class, 'toggleEnhancement'])->name('projects.assistant.toggle-enhancement');
+        
+        /* AI AUTOPILOT FEATURES */
+        // Canonical endpoints under /projects/{project}/autopilot/*
+        Route::post('/autopilot/start', [App\Http\Controllers\AutopilotController::class, 'start'])->name('projects.autopilot.start');
+        Route::post('/autopilot/stop', [App\Http\Controllers\AutopilotController::class, 'stop'])->name('projects.autopilot.stop');
+        Route::get('/autopilot/status', [App\Http\Controllers\AutopilotController::class, 'status'])->name('projects.autopilot.status');
+        Route::post('/autopilot/execute', [App\Http\Controllers\AutopilotController::class, 'execute'])->name('projects.autopilot.execute');
     });
 
     /* AI SDK compatible chat route for component generation */
@@ -851,3 +862,5 @@ if (app()->environment('local')) {
 
 // Debug route
 // Removed deprecated debug controller-check route
+
+Route::post("projects/{project}/autopilott/execute", [AutopilotController::class, "execute"])->name("projects.autopilott.execute");

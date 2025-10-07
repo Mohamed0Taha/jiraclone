@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { generateCustomView } from '@/lib/ai-actions';
 import { router, usePage } from '@inertiajs/react';
 import { csrfFetch } from '@/utils/csrf';
+import { route } from 'ziggy-js';
 import { useIsolatedSpeechRecognition } from '@/hooks/useIsolatedSpeechRecognition';
 import {
     Avatar,
@@ -439,6 +440,10 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
     const [voiceMode, setVoiceMode] = useState(false);
     const [isProcessingVoice, setIsProcessingVoice] = useState(false);
 
+    // AI Enhancement state - Default to enabled
+    const [aiEnhanced, setAiEnhanced] = useState(true);
+    const [capabilities, setCapabilities] = useState({});
+
     const scrollRef = useRef(null);
     const inputRef = useRef(null);
     const silenceTimerRef = useRef(null);
@@ -473,8 +478,30 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
         }
     };
 
+    const fetchCapabilities = async () => {
+        try {
+            console.log('🔍 Fetching AI capabilities for project:', project.id);
+            const response = await fetch(route('projects.assistant.capabilities', project.id));
+            const data = await response.json();
+            console.log('📊 Capabilities response:', data);
+            if (data.success) {
+                setCapabilities(data.capabilities);
+                setAiEnhanced(data.capabilities.ai_enhanced ?? true); // Default to true
+                console.log('✅ AI Enhanced state:', data.capabilities.ai_enhanced ?? true);
+            }
+        } catch (err) {
+            console.error('❌ Failed to fetch capabilities:', err);
+        }
+    };
+
+    // AI Enhancement is now always enabled by default
+    // No toggle function needed
+
     useEffect(() => {
         if (!open) return;
+
+        // Fetch AI capabilities when dialog opens
+        fetchCapabilities();
 
         // Use different suggestions for custom view
         if (isCustomView) {
@@ -1132,6 +1159,7 @@ export default function AssistantChat({ project, tasks, allTasks, users, methodo
                         textTransform: 'none',
                     }}
                 />
+
 
                 {/* Voice Mode Toggle */}
                 <FormControlLabel

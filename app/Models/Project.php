@@ -16,7 +16,6 @@ class Project extends Model
         'key',
         'description',
         'meta',
-        'metadata',
         'start_date',
         'end_date',
         'status',
@@ -24,7 +23,6 @@ class Project extends Model
 
     protected $casts = [
         'meta' => 'array',
-        'metadata' => 'array',
         'start_date' => 'date:Y-m-d',
         'end_date' => 'date:Y-m-d',
     ];
