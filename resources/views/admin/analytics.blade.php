@@ -21,6 +21,57 @@
             </div>
         </div>
 
+        <!-- Insights Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Top Countries -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clip-rule="evenodd" />
+                    </svg>
+                    Top Countries
+                </h3>
+                <div class="space-y-3">
+                    @foreach($insights['top_countries'] as $country)
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-2xl">{{ $country['flag'] }}</span>
+                                <span class="font-medium text-gray-900">{{ $country['country'] }}</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-lg font-bold text-blue-600">{{ number_format($country['count']) }}</span>
+                                <span class="text-sm text-gray-500">visitors</span>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <!-- Top Cities -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                    </svg>
+                    Top Cities
+                </h3>
+                <div class="space-y-3">
+                    @foreach($insights['top_cities'] as $city)
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-2xl">{{ $city['flag'] }}</span>
+                                <span class="font-medium text-gray-900">{{ $city['city'] }}</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-lg font-bold text-green-600">{{ number_format($city['count']) }}</span>
+                                <span class="text-sm text-gray-500">visitors</span>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
         <!-- Dashboard Tiles -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <!-- Total Visitors -->
@@ -69,18 +120,43 @@
             </div>
         </div>
 
-        <!-- Unique Visitors Table -->
+        <!-- Latest Visitors Table -->
         <div class="bg-white rounded-lg shadow overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-200">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-800">Unique Visitors by Location</h3>
-                        <p class="text-sm text-gray-600 mt-1">All visitor IP addresses and their locations</p>
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                            </svg>
+                            @if($showAll || $filters['search_ip'])
+                                All Visitors by Location
+                            @else
+                                Latest Visitors
+                            @endif
+                        </h3>
+                        <p class="text-sm text-gray-600 mt-1">
+                            @if($showAll || $filters['search_ip'])
+                                All visitor IP addresses and their locations
+                            @else
+                                Most recent 15 unique visitors
+                            @endif
+                        </p>
                     </div>
+                    @if(!$showAll && !$filters['search_ip'])
+                        <a href="{{ route('admin.analytics', ['show_all' => 1] + $filters) }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                            </svg>
+                            View All Visitors
+                        </a>
+                    @endif
                 </div>
                 
                 <!-- Filters -->
+                @if($showAll || $filters['search_ip'])
                 <form method="GET" action="{{ route('admin.analytics') }}" class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <input type="hidden" name="show_all" value="1">
                     <div>
                         <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                         <input 
@@ -150,11 +226,14 @@
                             Clear Filters
                         </a>
                         
-                        <div class="ml-auto text-sm text-gray-600 flex items-center">
-                            Showing {{ $visitors->firstItem() ?? 0 }} to {{ $visitors->lastItem() ?? 0 }} of {{ $visitors->total() }} visitors
-                        </div>
+                        @if(is_object($visitors) && method_exists($visitors, 'total'))
+                            <div class="ml-auto text-sm text-gray-600 flex items-center">
+                                Showing {{ $visitors->firstItem() ?? 0 }} to {{ $visitors->lastItem() ?? 0 }} of {{ $visitors->total() }} visitors
+                            </div>
+                        @endif
                     </div>
                 </form>
+                @endif
             </div>
             
             <div class="overflow-x-auto">
@@ -221,8 +300,30 @@
                 </table>
             </div>
             
+            <!-- Summary Footer for Latest View -->
+            @if(!$showAll && !$filters['search_ip'])
+                <div class="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="text-sm text-gray-700">
+                            <svg class="w-5 h-5 inline-block mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="font-medium">Showing latest 15 visitors</span>
+                            <span class="text-gray-600 ml-1">• Total: {{ number_format($stats['unique_visitors']) }} unique visitors</span>
+                        </div>
+                        <a href="{{ route('admin.analytics', ['show_all' => 1] + $filters) }}" class="inline-flex items-center px-4 py-2 bg-white border border-blue-300 text-blue-700 text-sm font-medium rounded-md hover:bg-blue-50 transition-colors shadow-sm">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            View All {{ number_format($stats['unique_visitors']) }} Visitors
+                        </a>
+                    </div>
+                </div>
+            @endif
+
             <!-- Pagination -->
-            @if($visitors->hasPages())
+            @if($showAll && is_object($visitors) && method_exists($visitors, 'hasPages') && $visitors->hasPages())
                 <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div class="text-sm text-gray-700">
