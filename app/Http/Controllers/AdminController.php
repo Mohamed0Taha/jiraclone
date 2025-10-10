@@ -76,6 +76,59 @@ class AdminController extends Controller
             ->latest()
             ->paginate(20);
 
+        // Enrich each user with last seen session IP and last city from visitor_logs
+        try {
+            $userIds = $users->pluck('id');
+            if ($userIds->isNotEmpty()) {
+                // Get most recent session per user (by last_activity) to get IP
+                $sessionRows = DB::table('sessions')
+                    ->select('user_id', 'ip_address', 'last_activity')
+                    ->whereIn('user_id', $userIds)
+                    ->orderBy('last_activity', 'desc')
+                    ->get();
+
+                $lastSessions = [];
+                foreach ($sessionRows as $row) {
+                    if ($row->user_id === null) {
+                        continue;
+                    }
+                    if (!isset($lastSessions[$row->user_id])) {
+                        $lastSessions[$row->user_id] = $row; // first row after desc sort = latest
+                    }
+                }
+
+                $ips = collect($lastSessions)->pluck('ip_address')->filter()->unique()->values();
+
+                $visitorRows = $ips->isEmpty() ? collect() : DB::table('visitor_logs')
+                    ->whereIn('ip_address', $ips)
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+
+                $lastVisitorByIp = [];
+                foreach ($visitorRows as $vr) {
+                    if (!isset($lastVisitorByIp[$vr->ip_address])) {
+                        $lastVisitorByIp[$vr->ip_address] = $vr; // first occurrence is latest due to desc
+                    }
+                }
+
+                // Attach computed fields onto the paginated collection items
+                $users->getCollection()->transform(function ($u) use ($lastSessions, $lastVisitorByIp) {
+                    $sess = $lastSessions[$u->id] ?? null;
+                    $ip = $sess->ip_address ?? null;
+                    $loc = $ip && isset($lastVisitorByIp[$ip]) ? $lastVisitorByIp[$ip] : null;
+                    $u->last_ip = $ip;
+                    $u->last_city = $loc->city ?? null;
+                    $u->last_region = $loc->region ?? null;
+                    $u->last_country = $loc->country ?? null;
+                    $u->last_country_code = $loc->country_code ?? null;
+                    $u->last_seen_at = isset($sess->last_activity) ? \Carbon\Carbon::createFromTimestamp($sess->last_activity) : null;
+                    return $u;
+                });
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Admin users enrichment failed: ' . $e->getMessage());
+        }
+
         // Count total admin users
         $adminCount = User::where('is_admin', true)->count();
 

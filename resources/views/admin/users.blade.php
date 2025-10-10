@@ -34,6 +34,8 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User Type</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last City</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
@@ -96,6 +98,28 @@
                                                 </span>
                                             </div>
                                         @endif
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    @php
+                                        $hasLoc = !empty($user->last_city) || !empty($user->last_country);
+                                    @endphp
+                                    <div class="text-gray-900">
+                                        {{ $user->last_city ?? '—' }}
+                                    </div>
+                                    @if($hasLoc)
+                                        <div class="text-xs text-gray-500">
+                                            {{ $user->last_country ?? '' }}
+                                            @if(!empty($user->last_ip))<span class="ml-1 text-gray-400">({{ $user->last_ip }})</span>@endif
+                                        </div>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    @if(!empty($user->last_seen_at))
+                                        <div class="text-gray-900">{{ $user->last_seen_at->format('M j, Y H:i') }}</div>
+                                        <div class="text-xs text-gray-500">{{ $user->last_seen_at->diffForHumans() }}</div>
+                                    @else
+                                        —
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
