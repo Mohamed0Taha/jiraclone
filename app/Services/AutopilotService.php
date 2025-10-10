@@ -1083,6 +1083,12 @@ class AutopilotService
             ->doesntHave('children') // Skip tasks already broken down
             ->get();
 
+        // Respect platform (Heroku) 30s router timeout with a conservative budget
+        $startTs = microtime(true);
+        $maxSeconds = (int) env('AUTOPILOT_MAX_EXEC_SECONDS', 20); // default 20s
+        $maxTasksPerRun = (int) env('AUTOPILOT_BREAKDOWN_MAX_TASKS', 1); // process 1 task per request by default
+        $onHeroku = getenv('DYNO') !== false; // Heroku dynos set DYNO env var
+
         $broken_down = 0;
         $subtasks_created = 0;
         $tasks_broken_down = [];
@@ -1103,11 +1109,20 @@ class AutopilotService
                 continue;
             }
             
-            // Limit to 5 tasks to avoid very long processing
-            if ($broken_down >= 5) {
+            // Limit tasks per run via env (default 1) to avoid timeouts
+            if ($broken_down >= $maxTasksPerRun) {
                 Log::info('Autopilot: Reached task breakdown limit', [
-                    'limit' => 5,
+                    'limit' => $maxTasksPerRun,
                     'message' => 'Completed batch of AI-generated subtasks'
+                ]);
+                break;
+            }
+
+            // Respect time budget (router kills >30s). Leave headroom.
+            if ((microtime(true) - $startTs) >= $maxSeconds) {
+                Log::info('Autopilot: Exiting early due to time budget', [
+                    'elapsed' => (microtime(true) - $startTs),
+                    'budget' => $maxSeconds,
                 ]);
                 break;
             }
@@ -1119,8 +1134,9 @@ class AutopilotService
                 'progress' => ($broken_down + 1) . '/' . min($largeTasks->count(), 5)
             ]);
 
-            // Create subtasks based on task type/context using AI
-            $subtasks = $this->generateSubtasks($task);
+            // Create subtasks based on task type/context
+            // On Heroku, prefer faster fallback to avoid timeouts
+            $subtasks = $onHeroku ? $this->generateSubtasksFallback($task) : $this->generateSubtasks($task);
 
             foreach ($subtasks as $subtask_data) {
                 try {
