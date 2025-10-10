@@ -22,6 +22,7 @@ import CommentIcon from '@mui/icons-material/Comment';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import ImageIcon from '@mui/icons-material/Image';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import ImageModal from '@/Components/ImageModal';
 
 /**
@@ -404,6 +405,25 @@ export default function TaskCard({ task, onEdit, onDelete, onClick, onImageUploa
                                         fontSize: '0.7rem',
                                         fontWeight: 600,
                                         backgroundColor: 'secondary.main',
+                                        color: 'white',
+                                        '& .MuiChip-icon': {
+                                            color: 'white',
+                                        },
+                                    }}
+                                />
+                            )}
+
+                            {/* Subtasks count */}
+                            {(task?.has_sub_tasks || (task?.children && task.children.length > 0)) && (
+                                <Chip
+                                    label={`${task.children?.length || 0} ${task.children?.length === 1 ? 'subtask' : 'subtasks'}`}
+                                    size="small"
+                                    icon={<AccountTreeIcon style={{ fontSize: 14 }} />}
+                                    sx={{
+                                        height: 20,
+                                        fontSize: '0.7rem',
+                                        fontWeight: 600,
+                                        backgroundColor: 'success.main',
                                         color: 'white',
                                         '& .MuiChip-icon': {
                                             color: 'white',

@@ -26,7 +26,8 @@ use Exception;
 class AutopilotService
 {
     public function __construct(
-        private AssistantManagerService $assistantManager
+        private AssistantManagerService $assistantManager,
+        private OpenAIService $openAI
     ) {}
 
     /**
@@ -43,13 +44,13 @@ class AutopilotService
     ];
 
     private const STEP_DURATIONS = [
-        // Keep short so users see actions within ~30s total
+        // AI-powered steps take longer but provide better results
         'analyze' => 6,
         'optimize_priorities' => 5,
         'assign_tasks' => 5,
-        'request_updates' => 3,
-        'analyze_timeline' => 5,
-        'break_down_tasks' => 6,
+        'request_updates' => 15,  // AI generates detailed questions (2-3s per task)
+        'analyze_timeline' => 8,   // AI assesses complexity and timelines
+        'break_down_tasks' => 20,  // AI generates detailed subtasks (3-5s per task)
     ];
 
     /**
@@ -65,6 +66,9 @@ class AutopilotService
             $startTime = now();
             $sessionId = 'autopilot-' . time() . '-' . uniqid();
 
+            // Take snapshot of current tasks to detect changes later
+            $taskSnapshot = $project->tasks()->pluck('id')->sort()->values()->toArray();
+            
             $autopilot = [
                 'enabled' => true,
                 'session_id' => $sessionId,
@@ -75,6 +79,7 @@ class AutopilotService
                 'history' => [],
                 'completed_steps' => [],
                 'update_requests' => [],
+                'task_snapshot' => $taskSnapshot,  // Save task IDs to detect changes
             ];
 
             $project->update([
@@ -505,6 +510,35 @@ class AutopilotService
             $autopilot = $meta['autopilot'] ?? [];
             $completedSteps = $autopilot['completed_steps'] ?? [];
 
+            // Check if tasks have changed since last session (detect task deletions/additions)
+            $currentTaskIds = $project->tasks()->pluck('id')->sort()->values()->toArray();
+            $lastTaskIds = $autopilot['task_snapshot'] ?? [];
+            
+            $tasksChanged = $currentTaskIds !== $lastTaskIds;
+            
+            if ($tasksChanged && !empty($lastTaskIds)) {
+                Log::info('Autopilot: Tasks changed, resetting session', [
+                    'project_id' => $project->id,
+                    'old_count' => count($lastTaskIds),
+                    'new_count' => count($currentTaskIds)
+                ]);
+                
+                // Reset completed steps since tasks have changed
+                $completedSteps = [];
+                $autopilot['completed_steps'] = [];
+                $autopilot['history'] = [];
+                $autopilot['task_snapshot'] = $currentTaskIds;
+                
+                // Save reset state
+                $meta['autopilot'] = $autopilot;
+                $project->update(['meta' => $meta]);
+            } elseif (empty($lastTaskIds)) {
+                // First time, save task snapshot
+                $autopilot['task_snapshot'] = $currentTaskIds;
+                $meta['autopilot'] = $autopilot;
+                $project->update(['meta' => $meta]);
+            }
+
             if (in_array($actionType, $completedSteps, true)) {
                 return [
                     'success' => true,
@@ -788,6 +822,7 @@ class AutopilotService
             ->where('status', '!=', 'done')
             ->whereNotNull('assignee_id')
             ->with(['assignee'])
+            ->limit(10) // Limit to 10 tasks - AI-powered but reasonable
             ->get();
 
         $requestsSent = 0;
@@ -800,7 +835,21 @@ class AutopilotService
         $autopilot = $meta['autopilot'] ?? [];
         $requestLog = $autopilot['update_requests'] ?? [];
 
+        Log::info('Autopilot: Requesting AI-powered status updates', [
+            'project_id' => $project->id,
+            'active_tasks' => $activeTasks->count(),
+            'message' => 'Using AI to generate detailed, task-specific questions'
+        ]);
+
         foreach ($activeTasks as $task) {
+            // Limit to 10 requests per run for performance
+            if ($requestsSent >= 10) {
+                Log::info('Autopilot: Reached update request limit', [
+                    'limit' => 10,
+                    'message' => 'Completed batch of AI-generated status requests'
+                ]);
+                break;
+            }
             $logTimestamp = isset($requestLog[$task->id]) ? Carbon::parse($requestLog[$task->id]) : null;
             if ($logTimestamp && $logTimestamp->greaterThan($cutoff)) {
                 continue; // already pinged recently this session/window
@@ -828,14 +877,30 @@ class AutopilotService
                 continue;
             }
 
-            // Build a task-specific prompt
+            // Generate AI-powered task-specific questions based on task description
             $dueStr = $task->end_date ? $task->end_date->format('M d, Y') : 'no due date';
-            $daysLeft = $task->end_date ? now()->diffInDays($task->end_date, false) : null;
-            $duePhrase = $task->end_date ? ($daysLeft < 0 ? abs($daysLeft) . ' days overdue' : ($daysLeft === 0 ? 'due today' : 'due in ' . $daysLeft . ' day' . ($daysLeft === 1 ? '' : 's'))) : 'due date not set';
+            $daysLeft = $task->end_date ? (int) now()->diffInDays($task->end_date, false) : null;
+            $duePhrase = $task->end_date ? ($daysLeft < 0 ? abs($daysLeft) . ' day' . (abs($daysLeft) === 1 ? '' : 's') . ' overdue' : ($daysLeft === 0 ? 'due today' : 'due in ' . $daysLeft . ' day' . ($daysLeft === 1 ? '' : 's'))) : 'due date not set';
             $priority = $task->priority ?: 'medium';
-            $contextLine = "Title: {$task->title}\nPriority: {$priority}\nDeadline: {$dueStr} ({$duePhrase})";
+            $contextLine = "📋 **Task**: {$task->title}\n⚡ **Priority**: {$priority}\n📅 **Deadline**: {$dueStr} ({$duePhrase})";
 
-            $content = $prefix . "\n\n@{$task->assignee->name}, quick status check for this task:\n\n" . $contextLine . "\n\nPlease share:\n- Current progress/ETA\n- Any blockers or support needed\n- If dates/priority need adjustment\n\n_Automated by AI Autopilot_";
+            // Generate AI-powered detailed questions based on task description
+            Log::info('Autopilot: Generating AI status update', [
+                'task_id' => $task->id,
+                'task_title' => $task->title,
+                'progress' => ($requestsSent + 1) . '/' . min($activeTasks->count(), 10)
+            ]);
+            
+            try {
+                $aiQuestions = $this->generateUpdateRequest($task, $project, $prefix);
+                $content = $aiQuestions;
+            } catch (\Throwable $e) {
+                Log::warning('AI update request failed, using template', [
+                    'task_id' => $task->id,
+                    'error' => $e->getMessage()
+                ]);
+                $content = $prefix . "\n\n@{$task->assignee->name}, quick status check for this task:\n\n" . $contextLine . "\n\nPlease share:\n- Current progress/ETA\n- Any blockers or support needed\n- If dates/priority need adjustment\n\n_Automated by AI Autopilot_";
+            }
 
             $comment = \App\Models\Comment::create([
                 'task_id' => $task->id,
@@ -857,6 +922,12 @@ class AutopilotService
         $autopilot['update_requests'] = $requestLog;
         $meta['autopilot'] = $autopilot;
         $project->update(['meta' => $meta]);
+
+        Log::info('Autopilot: AI-powered status updates completed', [
+            'project_id' => $project->id,
+            'requests_sent' => $requestsSent,
+            'message' => 'Generated detailed, task-specific questions using AI'
+        ]);
 
         return [
             'success' => true,
@@ -881,7 +952,17 @@ class AutopilotService
         foreach ($tasks as $task) {
             $changed = false;
 
-            $estimatedDays = $task->estimated_hours ? max(1, (int) ceil($task->estimated_hours / 6)) : 2; // 6h/day pace
+            // Calculate estimated days based on complexity and workload
+            $complexity = $this->assessTaskComplexity($task);
+            $baseHours = $task->estimated_hours ?? $this->estimateHoursFromDescription($task);
+            $estimatedDays = max(1, (int) ceil($baseHours / 6)); // 6h/day pace
+            
+            // Adjust for complexity: high complexity tasks get more buffer time
+            if ($complexity === 'high') {
+                $estimatedDays = (int) ceil($estimatedDays * 1.3);
+            } elseif ($complexity === 'medium') {
+                $estimatedDays = (int) ceil($estimatedDays * 1.15);
+            }
 
             // If both dates missing, set pragmatic window within project
             if (!$task->start_date && !$task->end_date) {
@@ -906,7 +987,7 @@ class AutopilotService
 
             // Fix overdue deadlines but clamp to project end if set
             if ($task->end_date && $task->end_date->isPast()) {
-                $daysOverdue = now()->diffInDays($task->end_date);
+                $daysOverdue = (int) ceil(now()->diffInDays($task->end_date));
                 $proposed = now()->addDays(min(10, $daysOverdue + max(2, (int) ceil($estimatedDays / 2))));
                 $newDeadline = $projectEnd && $proposed->greaterThan($projectEnd) ? $projectEnd->copy() : $proposed;
                 if ($newDeadline->lte(now())) {
@@ -914,10 +995,15 @@ class AutopilotService
                 }
                 $oldDeadline = $task->end_date;
                 $task->update(['end_date' => $newDeadline]);
+                
+                // Human-readable overdue message
+                $overdueText = $daysOverdue === 1 ? '1 day' : "{$daysOverdue} days";
+                $oldDeadlineText = $oldDeadline->format('M d, Y');
+                
                 \App\Models\Comment::create([
                     'task_id' => $task->id,
                     'user_id' => $project->user_id,
-                    'content' => "🤖 **AI Autopilot Timeline Optimization**\n\nThis task was {$daysOverdue} days overdue. Deadline adjusted to " . $newDeadline->format('M d, Y') . " considering the project timeline.\n\n_Automated by AI Autopilot_",
+                    'content' => "🤖 **AI Autopilot Timeline Optimization**\n\nThis task was {$overdueText} overdue (original deadline: {$oldDeadlineText}). Deadline adjusted to " . $newDeadline->format('M d, Y') . " considering the project timeline.\n\n_Automated by AI Autopilot_",
                 ]);
                 $changed = true;
                 $timeline_changes[] = [
@@ -1000,6 +1086,14 @@ class AutopilotService
         $broken_down = 0;
         $subtasks_created = 0;
         $tasks_broken_down = [];
+        
+        $largeTasks = $tasks->filter(fn($t) => strlen($t->description ?? '') > 500);
+
+        Log::info('Autopilot: Breaking down large tasks with AI', [
+            'project_id' => $project->id,
+            'large_tasks_found' => $largeTasks->count(),
+            'message' => 'Using AI to generate detailed, actionable subtasks'
+        ]);
 
         foreach ($tasks as $task) {
             // Consider a task "large" if description is very long (>500 chars)
@@ -1008,8 +1102,24 @@ class AutopilotService
             if (!$is_large) {
                 continue;
             }
+            
+            // Limit to 5 tasks to avoid very long processing
+            if ($broken_down >= 5) {
+                Log::info('Autopilot: Reached task breakdown limit', [
+                    'limit' => 5,
+                    'message' => 'Completed batch of AI-generated subtasks'
+                ]);
+                break;
+            }
 
-            // Create subtasks based on task type/context
+            Log::info('Autopilot: Generating AI subtasks', [
+                'task_id' => $task->id,
+                'task_title' => $task->title,
+                'description_length' => strlen($task->description ?? ''),
+                'progress' => ($broken_down + 1) . '/' . min($largeTasks->count(), 5)
+            ]);
+
+            // Create subtasks based on task type/context using AI
             $subtasks = $this->generateSubtasks($task);
 
             foreach ($subtasks as $subtask_data) {
@@ -1057,6 +1167,13 @@ class AutopilotService
             }
         }
 
+        Log::info('Autopilot: AI-powered task breakdown completed', [
+            'project_id' => $project->id,
+            'tasks_broken_down' => $broken_down,
+            'subtasks_created' => $subtasks_created,
+            'message' => 'Generated detailed, actionable subtasks using AI'
+        ]);
+
         return [
             'success' => true,
             'message' => "Broke down {$broken_down} large tasks into {$subtasks_created} subtasks",
@@ -1067,66 +1184,90 @@ class AutopilotService
     }
 
     /**
-     * Generate subtasks for a large task
+     * Generate subtasks for a large task using AI for detailed, actionable descriptions
      */
     private function generateSubtasks(Task $task): array
     {
+        // Try AI-powered subtask generation first
+        try {
+            $aiSubtasks = $this->generateSubtasksWithAI($task);
+            if (!empty($aiSubtasks)) {
+                return $aiSubtasks;
+            }
+        } catch (\Exception $e) {
+            Log::warning('AI subtask generation failed, falling back to pattern-based', [
+                'task_id' => $task->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // Fallback to pattern-based with enhanced descriptions
+        return $this->generateSubtasksFallback($task);
+    }
+
+    /**
+     * Fallback pattern-based subtask generation with detailed descriptions
+     */
+    private function generateSubtasksFallback(Task $task): array
+    {
         $subtasks = [];
         $title_lower = strtolower($task->title);
+        $description = $task->description ?? '';
+        $descriptionSnippet = strlen($description) > 100 ? substr($description, 0, 100) . '...' : $description;
 
-        // Pattern-based subtask generation
+        // Pattern-based subtask generation with detailed descriptions
         if (str_contains($title_lower, 'develop') || str_contains($title_lower, 'build') || str_contains($title_lower, 'implement')) {
             $subtasks[] = [
-                'title' => 'Design and Architecture for: ' . $task->title,
-                'description' => 'Plan the architecture and design approach',
+                'title' => 'Design and Architecture',
+                'description' => "Design Phase for: {$task->title}\n\nObjective: Create a comprehensive technical design and architecture plan.\n\nTasks:\n- Review requirements and constraints\n- Design system architecture and component structure\n- Define data models and API contracts\n- Identify dependencies and integration points\n- Document design decisions and trade-offs\n\nParent Task Context: {$descriptionSnippet}",
                 'estimated_hours' => ceil(($task->estimated_hours ?? 10) * 0.2)
             ];
             $subtasks[] = [
-                'title' => 'Implementation of: ' . $task->title,
-                'description' => 'Core development work',
+                'title' => 'Core Implementation',
+                'description' => "Implementation Phase for: {$task->title}\n\nObjective: Develop the core functionality according to design specifications.\n\nTasks:\n- Set up development environment and dependencies\n- Implement core business logic and features\n- Integrate with existing systems and APIs\n- Handle edge cases and error scenarios\n- Follow coding standards and best practices\n\nParent Task Context: {$descriptionSnippet}",
                 'estimated_hours' => ceil(($task->estimated_hours ?? 10) * 0.5)
             ];
             $subtasks[] = [
-                'title' => 'Testing for: ' . $task->title,
-                'description' => 'Write and execute tests',
+                'title' => 'Testing and Quality Assurance',
+                'description' => "Testing Phase for: {$task->title}\n\nObjective: Ensure implementation meets quality standards and requirements.\n\nTasks:\n- Write unit tests for core functionality\n- Perform integration testing\n- Test edge cases and error handling\n- Conduct performance and security testing\n- Document test results and coverage\n\nParent Task Context: {$descriptionSnippet}",
                 'estimated_hours' => ceil(($task->estimated_hours ?? 10) * 0.2)
             ];
             $subtasks[] = [
-                'title' => 'Documentation for: ' . $task->title,
-                'description' => 'Document the implementation',
+                'title' => 'Documentation and Handoff',
+                'description' => "Documentation Phase for: {$task->title}\n\nObjective: Create comprehensive documentation for maintenance and knowledge transfer.\n\nTasks:\n- Write technical documentation\n- Document API endpoints and usage examples\n- Create user guides or README\n- Add inline code comments\n- Prepare deployment and maintenance notes\n\nParent Task Context: {$descriptionSnippet}",
                 'estimated_hours' => ceil(($task->estimated_hours ?? 10) * 0.1)
             ];
         } elseif (str_contains($title_lower, 'research') || str_contains($title_lower, 'analysis')) {
             $subtasks[] = [
-                'title' => 'Data Collection: ' . $task->title,
-                'description' => 'Gather relevant data and information',
+                'title' => 'Data Collection and Research',
+                'description' => "Research Phase for: {$task->title}\n\nObjective: Gather comprehensive data and background information.\n\nTasks:\n- Identify relevant data sources\n- Collect quantitative and qualitative data\n- Research industry best practices\n- Interview stakeholders if needed\n- Organize and catalog findings\n\nParent Task Context: {$descriptionSnippet}",
                 'estimated_hours' => ceil(($task->estimated_hours ?? 10) * 0.3)
             ];
             $subtasks[] = [
-                'title' => 'Analysis: ' . $task->title,
-                'description' => 'Analyze collected data',
+                'title' => 'Analysis and Insights',
+                'description' => "Analysis Phase for: {$task->title}\n\nObjective: Analyze collected data and extract actionable insights.\n\nTasks:\n- Process and clean collected data\n- Identify patterns and trends\n- Conduct comparative analysis\n- Evaluate options and alternatives\n- Develop recommendations based on findings\n\nParent Task Context: {$descriptionSnippet}",
                 'estimated_hours' => ceil(($task->estimated_hours ?? 10) * 0.4)
             ];
             $subtasks[] = [
-                'title' => 'Report: ' . $task->title,
-                'description' => 'Create findings report',
+                'title' => 'Report and Presentation',
+                'description' => "Reporting Phase for: {$task->title}\n\nObjective: Create comprehensive report documenting findings and recommendations.\n\nTasks:\n- Write executive summary\n- Document methodology and approach\n- Present data visualizations and charts\n- Detail key findings and insights\n- Provide actionable recommendations\n- Prepare presentation materials\n\nParent Task Context: {$descriptionSnippet}",
                 'estimated_hours' => ceil(($task->estimated_hours ?? 10) * 0.3)
             ];
         } else {
-            // Generic breakdown
+            // Generic breakdown with detailed descriptions
             $subtasks[] = [
-                'title' => 'Planning: ' . $task->title,
-                'description' => 'Plan the approach and requirements',
+                'title' => 'Planning and Requirements',
+                'description' => "Planning Phase for: {$task->title}\n\nObjective: Define clear requirements and create execution plan.\n\nTasks:\n- Clarify objectives and success criteria\n- Break down requirements into actionable items\n- Identify resources and dependencies\n- Estimate effort and timeline\n- Define acceptance criteria\n\nParent Task Context: {$descriptionSnippet}",
                 'estimated_hours' => ceil(($task->estimated_hours ?? 10) * 0.25)
             ];
             $subtasks[] = [
-                'title' => 'Execution: ' . $task->title,
-                'description' => 'Execute the main work',
+                'title' => 'Execution and Delivery',
+                'description' => "Execution Phase for: {$task->title}\n\nObjective: Execute the main work according to plan.\n\nTasks:\n- Follow planned approach and timeline\n- Complete all deliverables\n- Track progress against milestones\n- Communicate updates and blockers\n- Adapt plan as needed based on feedback\n\nParent Task Context: {$descriptionSnippet}",
                 'estimated_hours' => ceil(($task->estimated_hours ?? 10) * 0.5)
             ];
             $subtasks[] = [
-                'title' => 'Review: ' . $task->title,
-                'description' => 'Review and finalize',
+                'title' => 'Review and Finalization',
+                'description' => "Review Phase for: {$task->title}\n\nObjective: Ensure quality and completeness before delivery.\n\nTasks:\n- Conduct thorough review of deliverables\n- Verify all requirements are met\n- Get stakeholder feedback\n- Make necessary revisions\n- Prepare final handoff\n\nParent Task Context: {$descriptionSnippet}",
                 'estimated_hours' => ceil(($task->estimated_hours ?? 10) * 0.25)
             ];
         }
@@ -1160,19 +1301,22 @@ class AutopilotService
                 $changed = true; $notes[] = 'priority set to high';
             }
             if ($task->end_date && $task->end_date->lte(now())) {
-                $task->update(['end_date' => now()->addDays(2)]);
-                $changed = true; $notes[] = 'deadline extended by 2 days';
+                $newDate = now()->addDays(2);
+                $task->update(['end_date' => $newDate]);
+                $changed = true; $notes[] = 'deadline extended to ' . $newDate->format('M d, Y');
             }
         }
 
         // If mentions delay/extend/more time -> extend deadline moderately
         if (preg_match('/\b(delay|extend|more\s+time|push|postpone)\b/', $text)) {
             if ($task->end_date) {
-                $task->update(['end_date' => $task->end_date->copy()->addDays(2)]);
-                $changed = true; $notes[] = 'deadline extended by 2 days';
+                $newDate = $task->end_date->copy()->addDays(2);
+                $task->update(['end_date' => $newDate]);
+                $changed = true; $notes[] = 'deadline extended to ' . $newDate->format('M d, Y');
             } else {
-                $task->update(['end_date' => now()->addDays(3)]);
-                $changed = true; $notes[] = 'deadline set in 3 days';
+                $newDate = now()->addDays(3);
+                $task->update(['end_date' => $newDate]);
+                $changed = true; $notes[] = 'deadline set to ' . $newDate->format('M d, Y');
             }
         }
 
@@ -1183,5 +1327,223 @@ class AutopilotService
                 'content' => '🤖 AI Autopilot: Noted your update and ' . implode(', ', $notes) . '. If this needs further adjustment, reply here and I will adapt.',
             ]);
         }
+    }
+
+    /**
+     * Generate AI-powered update request with detailed, task-specific questions
+     */
+    private function generateUpdateRequest(Task $task, Project $project, string $prefix): string
+    {
+        try {
+            $dueStr = $task->end_date ? $task->end_date->format('M d, Y') : 'no due date';
+            $daysLeft = $task->end_date ? (int) now()->diffInDays($task->end_date, false) : null;
+            $duePhrase = $task->end_date ? ($daysLeft < 0 ? abs($daysLeft) . ' day' . (abs($daysLeft) === 1 ? '' : 's') . ' overdue' : ($daysLeft === 0 ? 'due today' : 'due in ' . $daysLeft . ' day' . ($daysLeft === 1 ? '' : 's'))) : 'due date not set';
+            
+            // Get project owner's name for signature
+            $projectOwner = $project->user;
+            $ownerName = $projectOwner ? $projectOwner->name : 'Project Manager';
+
+            $prompt = "Generate a thoughtful status update request for this task. Ask 2-3 specific, relevant questions based on the task context. Be professional but friendly.
+
+Task Title: {$task->title}
+Task Description: " . ($task->description ? substr($task->description, 0, 500) : 'No description provided') . "
+Priority: {$task->priority}
+Due Date: {$duePhrase}
+Assignee: {$task->assignee->name}
+From: {$ownerName} (project owner)
+
+IMPORTANT FORMATTING RULES:
+1. DO NOT use markdown bold formatting (no **text** or __text__)
+2. Use plain text with natural emphasis through wording
+3. Write in a friendly, conversational tone
+4. Sign the message with '{$ownerName}' at the end (not 'Best regards,' or '[Your Name]')
+5. Keep paragraphs short and readable
+6. Use simple bullet points with hyphens if needed (no special formatting)
+
+Format as a brief, friendly email-style check-in:
+- Start with a friendly greeting
+- Ask 2-3 specific questions about the task deliverables and progress
+- Mention any timeline concerns if overdue
+- Close with the sender's name: {$ownerName}
+
+Keep it concise (max 150 words) and natural.";
+
+            $messages = [
+                ['role' => 'system', 'content' => 'You are a helpful project management assistant. Write natural, friendly status update requests without markdown formatting. Use plain text only.'],
+                ['role' => 'user', 'content' => $prompt]
+            ];
+            
+            $response = $this->openAI->chatText($messages, 0.7);
+            $aiQuestions = trim($response);
+            
+            // Remove any markdown bold that AI might have added anyway
+            $aiQuestions = preg_replace('/\*\*(.*?)\*\*/', '$1', $aiQuestions);
+            $aiQuestions = preg_replace('/__(.*?)__/', '$1', $aiQuestions);
+            
+            return $prefix . "\n\n@{$task->assignee->name}, checking in on \"{$task->title}\"\n\n📊 Status: {$task->status} | Priority: {$task->priority} | Due: {$duePhrase}\n\n" . $aiQuestions . "\n\n_Automated by AI Autopilot_";
+            
+        } catch (\Throwable $e) {
+            Log::warning('AI update request failed, using fallback', [
+                'task_id' => $task->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Fallback to generic request
+            $dueStr = $task->end_date ? $task->end_date->format('M d, Y') : 'no due date';
+            $daysLeft = $task->end_date ? (int) now()->diffInDays($task->end_date, false) : null;
+            $duePhrase = $task->end_date ? ($daysLeft < 0 ? abs($daysLeft) . ' day' . (abs($daysLeft) === 1 ? '' : 's') . ' overdue' : ($daysLeft === 0 ? 'due today' : 'due in ' . $daysLeft . ' day' . ($daysLeft === 1 ? '' : 's'))) : 'due date not set';
+            
+            $projectOwner = $project->user;
+            $ownerName = $projectOwner ? $projectOwner->name : 'Project Manager';
+            
+            return $prefix . "\n\n@{$task->assignee->name}, checking in on \"{$task->title}\"\n\n📊 Status: {$task->status} | Priority: {$task->priority} | Due: {$duePhrase}\n\nPlease share:\n- Current progress and estimated completion\n- Any blockers or support needed\n- If timeline or priority needs adjustment\n\nThanks,\n{$ownerName}\n\n_Automated by AI Autopilot_";
+        }
+    }
+
+    /**
+     * Generate AI-powered subtasks with detailed, actionable descriptions
+     */
+    private function generateSubtasksWithAI(Task $task): array
+    {
+        $prompt = "Break down this complex task into 3-4 smaller, actionable subtasks. For each subtask, provide:
+1. A clear, concise title
+2. A detailed description (3-5 bullet points) explaining exactly what needs to be done
+3. Estimated effort as percentage of parent task
+
+Parent Task: {$task->title}
+Description: " . ($task->description ?? 'No description') . "
+Estimated Hours: " . ($task->estimated_hours ?? 10) . "
+
+IMPORTANT: Use PLAIN TEXT formatting only. NO markdown bold (**text**) or other formatting.
+
+Return JSON array of subtasks with this structure:
+[
+  {
+    \"title\": \"Subtask title\",
+    \"description\": \"Objective: Brief objective\\n\\nTasks:\\n- Specific action 1\\n- Specific action 2\\n- Specific action 3\\n\\nParent Task Context: Brief context from parent\",
+    \"effort_percentage\": 25
+  }
+]
+
+Use plain text headings (like 'Objective:' and 'Tasks:') without any markdown formatting.
+Make descriptions actionable and specific to the parent task context.";
+
+        $messages = [
+            ['role' => 'system', 'content' => 'You are a helpful project management assistant that breaks down complex tasks into detailed, actionable subtasks. Always respond with valid JSON. Use plain text only, no markdown formatting.'],
+            ['role' => 'user', 'content' => $prompt]
+        ];
+        
+        $response = $this->openAI->chatText($messages, 0.7);
+
+        // Parse JSON response
+        $cleaned = preg_replace('/^```json\s*/m', '', $response);
+        $cleaned = preg_replace('/^```\s*/m', '', $cleaned);
+        $cleaned = trim($cleaned);
+        
+        $subtasksData = json_decode($cleaned, true);
+        
+        if (!is_array($subtasksData) || empty($subtasksData)) {
+            return [];
+        }
+
+        $totalHours = $task->estimated_hours ?? 10;
+        $subtasks = [];
+        
+        foreach ($subtasksData as $data) {
+            if (!isset($data['title']) || !isset($data['description'])) {
+                continue;
+            }
+            
+            // Strip any markdown bold that AI might have added
+            $description = preg_replace('/\*\*(.*?)\*\*/', '$1', $data['description']);
+            $description = preg_replace('/__(.*?)__/', '$1', $description);
+            
+            $subtasks[] = [
+                'title' => $data['title'],
+                'description' => $description,
+                'estimated_hours' => ceil($totalHours * (($data['effort_percentage'] ?? 25) / 100))
+            ];
+        }
+
+        return $subtasks;
+    }
+
+    /**
+     * Assess task complexity based on description length, title, and priority
+     */
+    private function assessTaskComplexity(Task $task): string
+    {
+        $score = 0;
+        
+        // Description length indicator
+        $descLength = strlen($task->description ?? '');
+        if ($descLength > 1000) {
+            $score += 3;
+        } elseif ($descLength > 500) {
+            $score += 2;
+        } elseif ($descLength > 200) {
+            $score += 1;
+        }
+        
+        // Title complexity indicators
+        $title_lower = strtolower($task->title);
+        $complexWords = ['integrate', 'architecture', 'framework', 'system', 'complex', 'comprehensive', 'full', 'complete', 'entire'];
+        foreach ($complexWords as $word) {
+            if (str_contains($title_lower, $word)) {
+                $score += 1;
+                break;
+            }
+        }
+        
+        // Priority indicator
+        if ($task->priority === 'high') {
+            $score += 1;
+        }
+        
+        // Estimated hours indicator
+        if (($task->estimated_hours ?? 0) > 40) {
+            $score += 2;
+        } elseif (($task->estimated_hours ?? 0) > 20) {
+            $score += 1;
+        }
+        
+        // Return complexity level
+        if ($score >= 5) {
+            return 'high';
+        } elseif ($score >= 3) {
+            return 'medium';
+        }
+        return 'low';
+    }
+
+    /**
+     * Estimate hours from task description if not explicitly set
+     */
+    private function estimateHoursFromDescription(Task $task): int
+    {
+        $descLength = strlen($task->description ?? '');
+        $title_lower = strtolower($task->title);
+        
+        // Base estimate on description length
+        if ($descLength > 1000) {
+            $baseHours = 24;
+        } elseif ($descLength > 500) {
+            $baseHours = 16;
+        } elseif ($descLength > 200) {
+            $baseHours = 10;
+        } else {
+            $baseHours = 6;
+        }
+        
+        // Adjust based on task type keywords
+        if (preg_match('/\b(implement|develop|build|create|design)\b/i', $title_lower)) {
+            $baseHours = (int) ceil($baseHours * 1.2);
+        } elseif (preg_match('/\b(fix|bug|issue|patch)\b/i', $title_lower)) {
+            $baseHours = (int) ceil($baseHours * 0.7);
+        } elseif (preg_match('/\b(research|analyze|investigate)\b/i', $title_lower)) {
+            $baseHours = (int) ceil($baseHours * 0.9);
+        }
+        
+        return max(2, min(40, $baseHours)); // Clamp between 2 and 40 hours
     }
 }

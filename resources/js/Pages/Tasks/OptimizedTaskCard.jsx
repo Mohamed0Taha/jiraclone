@@ -155,6 +155,12 @@ const OptimizedTaskCard = memo(
 
         const cardAccent = accent || defaultAccent;
 
+        // Derived counts/flags used for chips
+        const commentsCount = Number(task?.comments_count || 0);
+        const attachmentsCount = Number(task?.attachments_count || 0);
+        const subCount = Array.isArray(task?.children) ? task.children.length : 0;
+        const hasSubs = !!task?.has_sub_tasks || subCount > 0;
+
         // Render skeleton if not visible yet (for lazy loading)
         if (lazy && !visible) {
             return (
@@ -589,27 +595,44 @@ const OptimizedTaskCard = memo(
                                     pl: 0.5,
                                 }}
                             />
-                            {task.comments_count > 0 && (
+                            {commentsCount > 0 && (
                                 <Chip
                                     size="small"
-                                    label={task.comments_count}
+                                    label={commentsCount}
                                     icon={<CommentIcon sx={{ fontSize: 14 }} />}
                                     sx={{
                                         height: 22,
                                         fontSize: '0.55rem',
                                         backgroundColor: alpha(cardAccent, 0.1),
+                                        border: `1px solid ${alpha(cardAccent, 0.25)}`,
                                     }}
                                 />
                             )}
-                            {task.attachments_count > 0 && (
+                            {attachmentsCount > 0 && (
                                 <Chip
                                     size="small"
-                                    label={task.attachments_count}
+                                    label={attachmentsCount}
                                     icon={<ImageIcon sx={{ fontSize: 14 }} />}
                                     sx={{
                                         height: 22,
                                         fontSize: '0.55rem',
                                         backgroundColor: alpha(cardAccent, 0.1),
+                                        border: `1px solid ${alpha(cardAccent, 0.25)}`,
+                                    }}
+                                />
+                            )}
+                            {task?.is_sub_task && (
+                                <Chip
+                                    size="small"
+                                    label={'Subtask'}
+                                    icon={<SubdirectoryArrowRightIcon sx={{ fontSize: 14 }} />}
+                                    sx={{
+                                        height: 22,
+                                        fontSize: '0.55rem',
+                                        backgroundColor: alpha(theme.palette.info.main, 0.12),
+                                        color: theme.palette.info.main,
+                                        border: `1px solid ${alpha(theme.palette.info.main, 0.3)}`,
+                                        fontWeight: 600,
                                     }}
                                 />
                             )}

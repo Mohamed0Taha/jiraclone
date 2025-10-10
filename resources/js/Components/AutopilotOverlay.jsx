@@ -215,11 +215,13 @@ export default function AutopilotOverlay({ open, onClose, projectId, onComplete 
 
         let result = null;
         try {
-            // Simulate progress animation
-            for (let progress = 0; progress <= 100; progress += 20) {
-                await new Promise(resolve => setTimeout(resolve, 500));
+            // Simulate progress animation up to 90-95% max before backend completes
+            // Keep under 100% to avoid showing 100% while still running
+            const preCap = step.id === 'request_updates' ? 95 : 90;
+            for (let progress = 0; progress <= preCap; progress += 10) {
+                await new Promise(resolve => setTimeout(resolve, 400));
                 setSteps(prev => prev.map((s, i) => 
-                    i === index ? { ...s, progress } : s
+                    i === index ? { ...s, progress: Math.min(preCap, progress) } : s
                 ));
             }
 

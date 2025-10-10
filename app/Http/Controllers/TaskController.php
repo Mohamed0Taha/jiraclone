@@ -100,10 +100,19 @@ class TaskController extends Controller
 
         // Check if this is an AJAX request for cache updates
         if (request()->wantsJson()) {
-            $projectUsers = $project->members()->select('users.id', 'users.name')->get()
-                ->push(User::select('id', 'name')->find($project->user_id))
-                ->unique('id')
-                ->values();
+            // Get project members
+            $members = $project->members()->select('users.id', 'users.name')->get();
+            
+            // Get project owner
+            $owner = User::select('id', 'name')->find($project->user_id);
+            
+            // Combine and remove duplicates
+            $projectUsers = $members->push($owner)->unique('id')->values()->map(function($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                ];
+            });
 
             return response()->json([
                 'tasks' => $this->getTasksData($project),
@@ -112,10 +121,15 @@ class TaskController extends Controller
         }
 
         // Only expose project members (including owner) instead of every system user
-        $projectUsers = $project->members()->select('users.id', 'users.name')->get()
-            ->push(User::select('id', 'name')->find($project->user_id))
-            ->unique('id')
-            ->values();
+        $members = $project->members()->select('users.id', 'users.name')->get();
+        $owner = User::select('id', 'name')->find($project->user_id);
+        
+        $projectUsers = $members->push($owner)->unique('id')->values()->map(function($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+            ];
+        });
 
         return Inertia::render('Tasks/Board', [
             'project' => $project,
@@ -157,14 +171,14 @@ class TaskController extends Controller
                     'is_duplicate' => (bool) $t->duplicate_of,
                     'duplicates' => $t->duplicates->map(function ($duplicate) {
                         return ['id' => $duplicate->id, 'title' => $duplicate->title];
-                    }),
+                    })->values()->toArray(),
                     'has_duplicates' => $t->duplicates->count() > 0,
                     // Parent/child information
                     'parent' => $t->parent ? ['id' => $t->parent->id, 'title' => $t->parent->title] : null,
                     'is_sub_task' => (bool) $t->parent_id,
                     'children' => $t->children->map(function ($child) {
                         return ['id' => $child->id, 'title' => $child->title];
-                    }),
+                    })->values()->toArray(),
                     'has_sub_tasks' => $t->children->count() > 0,
                 ];
             });

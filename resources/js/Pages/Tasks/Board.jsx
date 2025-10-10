@@ -214,7 +214,7 @@ export default function Board({
     auth,
     project = {},
     tasks: initialTasks = {},
-    users = [],
+    users: initialUsers = [],
     isPro: isProProp,
 }) {
     const page = usePage();
@@ -223,6 +223,20 @@ export default function Board({
     const isPro = typeof isProProp === 'boolean' ? isProProp : !!(page?.props && page.props.isPro);
     const { shouldShowOverlay, userPlan } = useSubscription();
     const automationLocked = shouldShowOverlay('automation');
+    
+    // Add state for users so they can be updated when tasks refresh
+    const [users, setUsers] = useState(initialUsers);
+
+    // On mount, if users are empty, pull fresh users via the lightweight refresh endpoint
+    useEffect(() => {
+        if (!Array.isArray(initialUsers) || initialUsers.length === 0) {
+            // Populate users ASAP for the filter
+            refreshTasks();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // (moved below taskState declaration)
 
     // Function to create slug from name
     const createSlug = (name) => {
@@ -271,6 +285,30 @@ export default function Board({
     const STATUS_META = useMemo(() => getStatusMeta(methodology), [methodology]);
     const STATUS_ORDER = useMemo(() => getStatusOrder(methodology), [methodology]);
     const methodStyles = METHOD_STYLES[methodology] || METHOD_STYLES[METHODOLOGIES.KANBAN];
+
+    // Derive users from current tasks as a fallback (collect assignees)
+    const usersFromTasks = useMemo(() => {
+        const uniq = new Map();
+        Object.values(taskState || {}).forEach((arr) => {
+            (arr || []).forEach((t) => {
+                const a = t?.assignee;
+                if (a && a.id && a.name && !uniq.has(String(a.id))) {
+                    uniq.set(String(a.id), { id: a.id, name: a.name });
+                }
+            });
+        });
+        return Array.from(uniq.values());
+    }, [taskState]);
+
+    // Prefer server-provided users; if empty, show derived users
+    const usersToShow = (Array.isArray(users) && users.length > 0) ? users : usersFromTasks;
+
+    // If server users are empty but we have derived users, adopt them so Select shows values
+    useEffect(() => {
+        if ((!users || users.length === 0) && usersFromTasks.length > 0) {
+            setUsers(usersFromTasks);
+        }
+    }, [users, usersFromTasks]);
 
     // Optional debugging (disabled for performance)
     // useEffect(() => {
@@ -503,6 +541,12 @@ export default function Board({
             .then((response) => response.json())
             .then((data) => {
                 const serverTasks = data.tasks || {};
+                
+                // Update users if provided in response
+                if (data.users && Array.isArray(data.users)) {
+                    setUsers(data.users);
+                }
+                
                 setTaskState((prev) => {
                     // Build new columns but keep existing tasks not yet on server (e.g. just added) and preserve local phases via phaseMap
                     const next = { ...prev };
@@ -1430,8 +1474,8 @@ export default function Board({
                                 >
                                     <MenuItem value="">{t('board.allMembers')}</MenuItem>
                                     <MenuItem value="unassigned">{t('board.unassigned')}</MenuItem>
-                                    {Array.isArray(users) &&
-                                        users.map((user) => (
+                                    {Array.isArray(usersToShow) &&
+                                        usersToShow.map((user) => (
                                             <MenuItem key={user.id} value={user.id}>
                                                 {user.name}
                                             </MenuItem>
