@@ -33,6 +33,13 @@ class TrackVisitor
         try {
             $ip = $request->ip();
             $userAgent = $request->userAgent();
+            $utmSource = $request->query('utm_source');
+            if ($utmSource) {
+                // Persist campaign source for the session
+                $request->session()->put('utm_source', $utmSource);
+            } else {
+                $utmSource = $request->session()->get('utm_source');
+            }
 
             // Skip if this is a bot or internal request
             if ($this->isBot($userAgent) || $this->isLocalIP($ip)) {
@@ -52,6 +59,7 @@ class TrackVisitor
                 DB::table('visitor_logs')->insert([
                     'ip_address' => $ip,
                     'user_agent' => $userAgent,
+                    'utm_source' => $utmSource,
                     'city' => $locationData['city'] ?? null,
                     'region' => $locationData['region'] ?? null,
                     'country' => $locationData['country'] ?? null,
@@ -62,9 +70,19 @@ class TrackVisitor
                 ]);
             } else {
                 // Update page views for existing visitor
-                DB::table('visitor_logs')
-                    ->where('id', $existingVisitor->id)
-                    ->increment('page_views');
+                $query = DB::table('visitor_logs')
+                    ->where('id', $existingVisitor->id);
+
+                // If we have a utm_source now and it's not set yet for today, set it
+                if ($utmSource && empty($existingVisitor->utm_source)) {
+                    $query->update([
+                        'utm_source' => $utmSource,
+                        'page_views' => DB::raw('page_views + 1'),
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    $query->increment('page_views');
+                }
             }
         } catch (\Exception $e) {
             // Silently fail to not break the user experience

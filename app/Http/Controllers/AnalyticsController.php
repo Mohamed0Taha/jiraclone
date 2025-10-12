@@ -106,7 +106,8 @@ class AnalyticsController extends Controller
                 'country',
                 'country_code',
                 DB::raw('MAX(created_at) as last_visit'),
-                DB::raw('SUM(page_views) as page_views')
+                DB::raw('SUM(page_views) as page_views'),
+                DB::raw('MAX(NULLIF(utm_source, "")) as utm_source')
             )
             ->groupBy('ip_address', 'city', 'region', 'country', 'country_code');
 
@@ -186,6 +187,7 @@ class AnalyticsController extends Controller
                     'last_visit' => $visitor->last_visit,
                     'page_views' => $visitor->page_views ?? 1,
                     'is_unique' => true,
+                    'source' => $visitor->utm_source ?: 'direct',
                 ];
             } else {
                 // Handle array (sample data)
@@ -198,6 +200,7 @@ class AnalyticsController extends Controller
                     'last_visit' => $visitor['last_visit'],
                     'page_views' => $visitor['page_views'] ?? 1,
                     'is_unique' => $visitor['is_unique'] ?? true,
+                    'source' => $visitor['source'] ?? 'direct',
                 ];
             }
         });
@@ -221,6 +224,12 @@ class AnalyticsController extends Controller
     {
         $ip = $request->ip();
         $userAgent = $request->userAgent();
+        $utmSource = $request->query('utm_source');
+        if ($utmSource) {
+            $request->session()->put('utm_source', $utmSource);
+        } else {
+            $utmSource = $request->session()->get('utm_source');
+        }
 
         // Check if visitor already exists today
         $existingVisitor = DB::table('visitor_logs')
@@ -235,6 +244,7 @@ class AnalyticsController extends Controller
             DB::table('visitor_logs')->insert([
                 'ip_address' => $ip,
                 'user_agent' => $userAgent,
+                'utm_source' => $utmSource,
                 'city' => $locationData['city'] ?? null,
                 'region' => $locationData['region'] ?? null,
                 'country' => $locationData['country'] ?? null,
@@ -245,9 +255,18 @@ class AnalyticsController extends Controller
             ]);
         } else {
             // Update page views for existing visitor
-            DB::table('visitor_logs')
-                ->where('id', $existingVisitor->id)
-                ->increment('page_views');
+            $query = DB::table('visitor_logs')
+                ->where('id', $existingVisitor->id);
+
+            if ($utmSource && empty($existingVisitor->utm_source)) {
+                $query->update([
+                    'utm_source' => $utmSource,
+                    'page_views' => DB::raw('page_views + 1'),
+                    'updated_at' => now(),
+                ]);
+            } else {
+                $query->increment('page_views');
+            }
         }
     }
 
@@ -417,6 +436,7 @@ class AnalyticsController extends Controller
                     'last_visit' => $visitor->last_visit,
                     'page_views' => $visitor->page_views ?? 1,
                     'is_unique' => true,
+                    'source' => $visitor->utm_source ?: 'direct',
                 ];
             } else {
                 // Handle array (sample data) - already in correct format
@@ -429,6 +449,7 @@ class AnalyticsController extends Controller
                     'last_visit' => $visitor['last_visit'],
                     'page_views' => $visitor['page_views'] ?? 1,
                     'is_unique' => true,
+                    'source' => $visitor['source'] ?? 'direct',
                 ];
             }
         });
@@ -498,9 +519,31 @@ class AnalyticsController extends Controller
             ]);
         }
 
+        $topSources = (clone $query)
+            ->selectRaw('COALESCE(NULLIF(utm_source, ""), "direct") as source, COUNT(DISTINCT ip_address) as visitor_count')
+            ->groupBy('source')
+            ->orderByDesc('visitor_count')
+            ->limit(5)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'source' => $item->source,
+                    'count' => $item->visitor_count,
+                ];
+            });
+
+        if ($topSources->isEmpty()) {
+            $topSources = collect([
+                ['source' => 'direct', 'count' => 120],
+                ['source' => 'reddit', 'count' => 45],
+                ['source' => 'newsource', 'count' => 18],
+            ]);
+        }
+
         return [
             'top_countries' => $topCountries,
             'top_cities' => $topCities,
+            'top_sources' => $topSources,
         ];
     }
 }

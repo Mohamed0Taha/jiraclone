@@ -22,7 +22,7 @@
         </div>
 
         <!-- Insights Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             <!-- Top Countries -->
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -64,6 +64,29 @@
                             </div>
                             <div class="flex items-center space-x-2">
                                 <span class="text-lg font-bold text-green-600">{{ number_format($city['count']) }}</span>
+                                <span class="text-sm text-gray-500">visitors</span>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <!-- Top Traffic Sources -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 11a1 1 0 011-1h4a1 1 0 010 2H5.414l2.293 2.293a1 1 0 11-1.414 1.414L4 13.414V15a1 1 0 11-2 0v-4zm16-2a1 1 0 00-1-1h-4a1 1 0 100 2h1.586l-2.293 2.293a1 1 0 101.414 1.414L15 11.414V13a1 1 0 102 0V9z" />
+                    </svg>
+                    Top Traffic Sources
+                </h3>
+                <div class="space-y-3">
+                    @foreach($insights['top_sources'] as $source)
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800 capitalize">{{ $source['source'] }}</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-lg font-bold text-purple-600">{{ number_format($source['count']) }}</span>
                                 <span class="text-sm text-gray-500">visitors</span>
                             </div>
                         </div>
@@ -245,6 +268,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Page Views</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         </tr>
                     </thead>
@@ -269,6 +293,11 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                         {{ $visitor['page_views'] ?? 1 }} views
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 capitalize">
+                                        {{ $visitor['source'] ?? 'direct' }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
