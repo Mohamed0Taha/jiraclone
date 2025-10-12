@@ -81,9 +81,12 @@
                 </h3>
                 <div class="space-y-3">
                     @foreach($insights['top_sources'] as $source)
+                        @php
+                            $colors = $getSourceColor($source['source']);
+                        @endphp
                         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                             <div class="flex items-center space-x-3">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800 capitalize">{{ $source['source'] }}</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $colors['bg'] }} {{ $colors['text'] }} capitalize">{{ $source['source'] }}</span>
                             </div>
                             <div class="flex items-center space-x-2">
                                 <span class="text-lg font-bold text-purple-600">{{ number_format($source['count']) }}</span>
@@ -296,7 +299,10 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 capitalize">
+                                    @php
+                                        $sourceColors = $getSourceColor($visitor['source'] ?? 'direct');
+                                    @endphp
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $sourceColors['bg'] }} {{ $sourceColors['text'] }} capitalize">
                                         {{ $visitor['source'] ?? 'direct' }}
                                     </span>
                                 </td>

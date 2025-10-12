@@ -44,6 +44,7 @@ class AnalyticsController extends Controller
             'visitors' => $visitors,
             'chartData' => $chartData,
             'showAll' => $showAll,
+            'getSourceColor' => [$this, 'getSourceColor'],
             'filters' => [
                 'start_date' => $startDate,
                 'end_date' => $endDate,
@@ -218,6 +219,25 @@ class AnalyticsController extends Controller
         ];
 
         return $flags[$countryCode] ?? '🌍';
+    }
+
+    protected function getSourceColor($source)
+    {
+        $colors = [
+            'direct' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'],
+            'reddit' => ['bg' => 'bg-orange-100', 'text' => 'text-orange-800'],
+            'twitter' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800'],
+            'facebook' => ['bg' => 'bg-indigo-100', 'text' => 'text-indigo-800'],
+            'google' => ['bg' => 'bg-green-100', 'text' => 'text-green-800'],
+            'linkedin' => ['bg' => 'bg-cyan-100', 'text' => 'text-cyan-800'],
+            'youtube' => ['bg' => 'bg-red-100', 'text' => 'text-red-800'],
+            'instagram' => ['bg' => 'bg-pink-100', 'text' => 'text-pink-800'],
+            'tiktok' => ['bg' => 'bg-slate-100', 'text' => 'text-slate-800'],
+            'newsource' => ['bg' => 'bg-emerald-100', 'text' => 'text-emerald-800'],
+        ];
+
+        // Default color for unknown sources
+        return $colors[$source] ?? ['bg' => 'bg-purple-100', 'text' => 'text-purple-800'];
     }
 
     public function trackVisitor(Request $request)
@@ -524,7 +544,6 @@ class AnalyticsController extends Controller
             ->selectRaw('COALESCE(NULLIF(utm_source, ""), "direct") as source, COUNT(DISTINCT ip_address) as visitor_count')
             ->groupBy('source')
             ->orderByDesc('visitor_count')
-            ->limit(5)
             ->get()
             ->map(function ($item) {
                 return [
