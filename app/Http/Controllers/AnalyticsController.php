@@ -373,7 +373,8 @@ class AnalyticsController extends Controller
                 'country',
                 'country_code',
                 DB::raw('MAX(created_at) as last_visit'),
-                DB::raw('SUM(page_views) as page_views')
+                DB::raw('SUM(page_views) as page_views'),
+                DB::raw('MAX(NULLIF(utm_source, "")) as utm_source')
             )
             ->groupBy('ip_address', 'city', 'region', 'country', 'country_code');
 
@@ -436,7 +437,7 @@ class AnalyticsController extends Controller
                     'last_visit' => $visitor->last_visit,
                     'page_views' => $visitor->page_views ?? 1,
                     'is_unique' => true,
-                    'source' => $visitor->utm_source ?: 'direct',
+                    'source' => $visitor->utm_source ?? 'direct',
                 ];
             } else {
                 // Handle array (sample data) - already in correct format
