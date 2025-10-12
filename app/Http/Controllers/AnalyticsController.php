@@ -221,7 +221,7 @@ class AnalyticsController extends Controller
         return $flags[$countryCode] ?? '🌍';
     }
 
-    protected function getSourceColor($source)
+    public function getSourceColor($source)
     {
         $colors = [
             'direct' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'],
