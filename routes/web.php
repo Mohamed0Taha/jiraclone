@@ -401,6 +401,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.delete');
     Route::post('/users/{user}/upgrade', [AdminController::class, 'upgradeUser'])->name('users.upgrade');
     Route::post('/users/{user}/verify', [AdminController::class, 'verifyUser'])->name('users.verify');
+    Route::post('/users/{user}/manual-access', [AdminController::class, 'grantManualAccess'])->name('users.manual');
+    Route::post('/users/{user}/manual-access/remove', [AdminController::class, 'removeManualAccess'])->name('users.manual.remove');
 
     // Analytics routes
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');

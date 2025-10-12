@@ -20,6 +20,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'google_id', 'google_avatar', 'google_token', 'google_refresh_token',
         'trial_used', 'trial_plan', 'ai_tasks_used', 'usage_reset_date',
         'cancellation_reason', 'cancelled_at',
+        'manual_plan', 'manual_is_lifetime', 'manual_access_until', 'manual_note',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -34,6 +35,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'is_admin' => 'boolean',
             'usage_reset_date' => 'date',
             'cancelled_at' => 'datetime',
+            'manual_is_lifetime' => 'boolean',
+            'manual_access_until' => 'datetime',
         ];
     }
 
@@ -139,7 +142,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function hasActiveSubscription(): bool
     {
-        return $this->subscribed('default') || $this->onTrial('default');
+        return $this->subscribed('default') || $this->onTrial('default') || $this->manualIsActive();
     }
 
     /**
@@ -147,6 +150,10 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function getCurrentPlan(): string
     {
+        if ($this->manualIsActive()) {
+            return $this->manual_plan ?: 'pro';
+        }
+
         $subscription = $this->subscription('default');
 
         if ($subscription) {
@@ -156,6 +163,19 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return 'free';
+    }
+
+    public function manualIsActive(): bool
+    {
+        if (! $this->manual_plan) {
+            return false;
+        }
+
+        if ($this->manual_is_lifetime) {
+            return true;
+        }
+
+        return $this->manual_access_until && now()->lt($this->manual_access_until);
     }
 
     /**
@@ -200,6 +220,10 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         if ($this->hasAppSumoAccess()) {
             return 'AppSumo';
+        }
+
+        if ($this->manualIsActive()) {
+            return 'Manual';
         }
 
         if ($this->hasActiveSubscription()) {

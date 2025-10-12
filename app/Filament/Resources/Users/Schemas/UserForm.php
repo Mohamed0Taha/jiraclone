@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Users\Schemas;
 
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
@@ -52,6 +53,24 @@ class UserForm
                 TextInput::make('pm_type'),
                 TextInput::make('pm_last_four'),
                 DateTimePicker::make('trial_ends_at'),
+                Select::make('manual_plan')
+                    ->options([
+                        'basic' => 'Basic',
+                        'pro' => 'Pro',
+                        'business' => 'Business',
+                    ])
+                    ->searchable()
+                    ->placeholder('Select manual plan')
+                    ->nullable(),
+                Toggle::make('manual_is_lifetime')
+                    ->label('Manual is lifetime'),
+                DateTimePicker::make('manual_access_until')
+                    ->label('Manual access until')
+                    ->seconds(false)
+                    ->hidden(fn ($get) => (bool) $get('manual_is_lifetime')),
+                TextInput::make('manual_note')
+                    ->label('Manual note')
+                    ->maxLength(255),
             ]);
     }
 }

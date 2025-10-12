@@ -80,6 +80,15 @@
                                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ $currentPlan === 'basic' ? 'bg-blue-100 text-blue-800' : ($currentPlan === 'pro' ? 'bg-purple-100 text-purple-800' : 'bg-yellow-100 text-yellow-800') }}">
                                             {{ ucfirst($currentPlan) }}{{ $user->onTrial() ? ' (Trial)' : '' }}
                                         </span>
+                                        @if(method_exists($user, 'manualIsActive') && $user->manualIsActive())
+                                            <div class="mt-1">
+                                                @if($user->manual_is_lifetime)
+                                                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800">Manual Lifetime</span>
+                                                @else
+                                                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800">Manual until {{ optional($user->manual_access_until)->format('M j, Y') }}</span>
+                                                @endif
+                                            </div>
+                                        @endif
                                         @if($user->cancellation_reason)
                                             <div class="mt-1">
                                                 <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800" title="Cancelled {{ $user->cancelled_at ? $user->cancelled_at->format('M j, Y') : '' }}">
@@ -210,6 +219,20 @@
                                             @csrf
                                             @method('DELETE')
                                         </form>
+
+                                        <!-- Manual Access -->
+                                        <button type="button" onclick="openManualModal('{{ $user->id }}')" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded text-sm font-semibold hover:bg-emerald-200 border border-emerald-300">
+                                            🎟️ Manual Access
+                                        </button>
+                                        @if(method_exists($user, 'manualIsActive') && $user->manualIsActive())
+                                            <form method="POST" action="{{ route('admin.users.manual.remove', $user) }}" class="inline">
+                                                @csrf
+                                                <button type="submit" class="bg-rose-100 text-rose-700 px-3 py-1 rounded text-sm font-semibold hover:bg-rose-200 border border-rose-300"
+                                                    onclick="return confirm('Remove manual access from {{ $user->name }}?')">
+                                                    ❌ Remove Manual
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -278,6 +301,48 @@
         @csrf
         @method('DELETE')
     </form>
+
+    @foreach($users as $user)
+        <div id="manualAccessModal-{{ $user->id }}" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                <div class="mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Grant Manual Access</h3>
+                    <p class="text-sm text-gray-600">{{ $user->name }} ({{ $user->email }})</p>
+                </div>
+                <form method="POST" action="{{ route('admin.users.manual', $user) }}">
+                    @csrf
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Plan</label>
+                            <select name="manual_plan" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                                <option value="pro" {{ old('manual_plan', $user->manual_plan) === 'pro' ? 'selected' : '' }}>Pro</option>
+                                <option value="basic" {{ old('manual_plan', $user->manual_plan) === 'basic' ? 'selected' : '' }}>Basic</option>
+                                <option value="business" {{ old('manual_plan', $user->manual_plan) === 'business' ? 'selected' : '' }}>Business</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="flex items-center text-sm font-medium text-gray-700">
+                                <input type="checkbox" name="manual_is_lifetime" value="1" class="mr-2 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" {{ old('manual_is_lifetime', $user->manual_is_lifetime) ? 'checked' : '' }} onchange="toggleEndDate('{{ $user->id }}', this.checked)">
+                                Lifetime access
+                            </label>
+                        </div>
+                        <div id="endDateContainer-{{ $user->id }}" class="{{ old('manual_is_lifetime', $user->manual_is_lifetime) ? 'hidden' : '' }}">
+                            <label class="block text-sm font-medium text-gray-700">Ends at</label>
+                            <input type="datetime-local" name="manual_access_until" value="{{ old('manual_access_until', optional($user->manual_access_until)->format('Y-m-d\TH:i')) }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Note (optional)</label>
+                            <input type="text" name="manual_note" value="{{ old('manual_note', $user->manual_note) }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" maxlength="255">
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" onclick="closeManualModal('{{ $user->id }}')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">Cancel</button>
+                        <button type="submit" class="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endforeach
 
     <x-slot name="scripts">
         <script>
@@ -378,6 +443,22 @@
                     });
                 }
             });
+
+            function openManualModal(userId) {
+                const m = document.getElementById('manualAccessModal-' + userId);
+                if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+            }
+
+            function closeManualModal(userId) {
+                const m = document.getElementById('manualAccessModal-' + userId);
+                if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+            }
+
+            function toggleEndDate(userId, isLifetime) {
+                const c = document.getElementById('endDateContainer-' + userId);
+                if (!c) return;
+                if (isLifetime) { c.classList.add('hidden'); } else { c.classList.remove('hidden'); }
+            }
         </script>
     </x-slot>
 

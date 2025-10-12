@@ -1049,6 +1049,39 @@ class AdminController extends Controller
         return redirect()->back()->with('success', $user->name.' has been manually verified.');
     }
 
+    public function grantManualAccess(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'manual_plan' => ['required', 'in:basic,pro,business'],
+            'manual_is_lifetime' => ['nullable', 'boolean'],
+            'manual_access_until' => ['nullable', 'date', 'required_without:manual_is_lifetime'],
+            'manual_note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $isLifetime = $request->boolean('manual_is_lifetime');
+
+        $user->update([
+            'manual_plan' => $data['manual_plan'],
+            'manual_is_lifetime' => $isLifetime,
+            'manual_access_until' => $isLifetime ? null : ($data['manual_access_until'] ?? null),
+            'manual_note' => $data['manual_note'] ?? null,
+        ]);
+
+        return redirect()->back()->with('success', 'Manual access granted to '.$user->name.'.');
+    }
+
+    public function removeManualAccess(Request $request, User $user)
+    {
+        $user->update([
+            'manual_plan' => null,
+            'manual_is_lifetime' => false,
+            'manual_access_until' => null,
+            'manual_note' => null,
+        ]);
+
+        return redirect()->back()->with('success', 'Manual access removed from '.$user->name.'.');
+    }
+
     private function getRecentEmails()
     {
         try {
