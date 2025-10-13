@@ -48,24 +48,18 @@
                                     <div class="text-xs text-gray-500 truncate" title="{{ $user->email }}">{{ Str::limit($user->email, 25) }}</div>
                                 </td>
                                 <td class="px-2 py-2">
-                                    <span class="px-1 inline-flex text-xs font-semibold rounded {{ $user->is_admin ? 'bg-red-100 text-red-800' : ($user->email_verified_at ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800') }}">
-                                        {{ $user->is_admin ? 'Admin' : ($user->email_verified_at ? '✓' : '✗') }}
+                                    <span class="px-2 py-1 inline-flex text-xs font-semibold rounded {{ $user->is_admin ? 'bg-red-100 text-red-800' : ($user->email_verified_at ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800') }}">
+                                        {{ $user->is_admin ? 'Admin' : ($user->email_verified_at ? 'Verified' : 'Unverified') }}
                                     </span>
                                 </td>
                                 <td class="px-2 py-2">
                                     @php
                                         $userType = $user->getUserType();
                                     @endphp
-                                    <span class="inline-flex px-1 text-xs font-semibold rounded 
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded 
                                         {{ $userType === 'AppSumo' ? 'bg-orange-100 text-orange-800' : 
                                            ($userType === 'Stripe' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800') }}">
-                                        @if($userType === 'AppSumo')
-                                            🏷️
-                                        @elseif($userType === 'Stripe')
-                                            💳
-                                        @else
-                                            Free
-                                        @endif
+                                        {{ $userType }}
                                     </span>
                                 </td>
                                 <td class="px-2 py-2 text-xs">
@@ -120,17 +114,17 @@
                                     <div class="flex flex-wrap gap-1">
                                         <!-- Edit User -->
                                         <a href="{{ route('admin.users.edit', $user) }}" 
-                                           class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs hover:bg-blue-200 border border-blue-300" title="Edit User">
-                                            ✏️
+                                           class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs hover:bg-blue-200 border border-blue-300">
+                                            Edit
                                         </a>
                                         
                                         <!-- Manual Verification (only show if not verified) -->
                                         @if(!$user->email_verified_at)
                                             <form method="POST" action="{{ route('admin.users.verify', $user) }}" class="inline">
                                                 @csrf
-                                                <button type="submit" class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs hover:bg-emerald-200 border border-emerald-300" title="Verify Email"
+                                                <button type="submit" class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs hover:bg-emerald-200 border border-emerald-300"
                                                         onclick="return confirm('Manually verify {{ $user->name }}? This will mark their email as verified.')">
-                                                    ✅
+                                                    Verify
                                                 </button>
                                             </form>
                                         @endif
@@ -146,8 +140,8 @@
                                         
                                         @if(!empty($availableUpgrades))
                                         <div class="relative inline-block text-left">
-                                            <button type="button" class="inline-flex justify-center rounded border border-purple-300 px-2 py-1 bg-purple-100 text-xs text-purple-700 hover:bg-purple-200" onclick="toggleUpgradeDropdown('{{ $user->id }}')" title="Upgrade Plan">
-                                                📈
+                                            <button type="button" class="inline-flex justify-center rounded border border-purple-300 px-2 py-1 bg-purple-100 text-xs text-purple-700 hover:bg-purple-200" onclick="toggleUpgradeDropdown('{{ $user->id }}')">
+                                                Upgrade
                                             </button>
                                             
                                             <div class="origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 hidden" id="upgrade-dropdown-{{ $user->id }}">
@@ -170,17 +164,17 @@
                                         @if(!$user->is_admin)
                                             <form method="POST" action="{{ route('admin.make-admin', $user) }}" class="inline">
                                                 @csrf
-                                                <button type="submit" class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs hover:bg-green-200 border border-green-300" title="Make Admin"
+                                                <button type="submit" class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs hover:bg-green-200 border border-green-300"
                                                         onclick="return confirm('Make {{ $user->name }} an admin? They will have full system access.')">
-                                                    👑
+                                                    Make Admin
                                                 </button>
                                             </form>
                                         @else
                                             <form method="POST" action="{{ route('admin.demote-admin', $user) }}" class="inline">
                                                 @csrf
                         <button type="submit" class="px-2 py-1 rounded text-xs border {{ $adminCount <= 1 ? 'bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300' }}"
-                            @if($adminCount <= 1) disabled title="Cannot demote the only admin" @else title="Demote Admin" onclick="return confirm('Remove admin privileges from {{ $user->name }}? They will become a regular user.')" @endif>
-                                                    👤
+                            @if($adminCount <= 1) disabled title="Cannot demote the only admin" @else onclick="return confirm('Remove admin privileges from {{ $user->name }}? They will become a regular user.')" @endif>
+                                                    {{ $adminCount <= 1 ? 'Sole Admin' : 'Demote' }}
                                                 </button>
                                             </form>
                                         @endif
@@ -191,8 +185,8 @@
                                                 data-user-id="{{ $user->id }}"
                                                 data-user-name="{{ $user->name }}"
                                                 data-user-email="{{ $user->email }}"
-                                                {{ ($user->is_admin && $adminCount <= 1) ? 'disabled title=\'Cannot delete the only admin\'' : 'title="Delete User"' }}>
-                                            🗑️
+                                                {{ ($user->is_admin && $adminCount <= 1) ? 'disabled title=\'Cannot delete the only admin\'' : '' }}>
+                                            Delete
                                         </button>
                                         <form method="POST" action="{{ route('admin.users.delete', $user) }}" class="hidden" id="fallback-delete-{{ $user->id }}">
                                             @csrf
@@ -200,15 +194,15 @@
                                         </form>
 
                                         <!-- Manual Access -->
-                                        <button type="button" onclick="openManualModal('{{ $user->id }}')" class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs hover:bg-emerald-200 border border-emerald-300" title="Manual Access">
-                                            🎟️
+                                        <button type="button" onclick="openManualModal('{{ $user->id }}')" class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs hover:bg-emerald-200 border border-emerald-300">
+                                            Manual
                                         </button>
                                         @if(method_exists($user, 'manualIsActive') && $user->manualIsActive())
                                             <form method="POST" action="{{ route('admin.users.manual.remove', $user) }}" class="inline">
                                                 @csrf
-                                                <button type="submit" class="bg-rose-100 text-rose-700 px-2 py-1 rounded text-xs hover:bg-rose-200 border border-rose-300" title="Remove Manual Access"
+                                                <button type="submit" class="bg-rose-100 text-rose-700 px-2 py-1 rounded text-xs hover:bg-rose-200 border border-rose-300"
                                                     onclick="return confirm('Remove manual access from {{ $user->name }}?')">
-                                                    ❌
+                                                    Remove
                                                 </button>
                                             </form>
                                         @endif
