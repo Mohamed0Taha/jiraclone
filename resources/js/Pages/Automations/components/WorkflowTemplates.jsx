@@ -618,22 +618,22 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                         gap: 3,
                     }}
                 >
-                    {filtered.map((t) => (
+                    {filtered.map((tmpl) => (
                         <GlowCard
-                            key={t.id}
-                            color={t.color}
-                            onMouseEnter={() => setHoveredCard(t.id)}
+                            key={tmpl.id}
+                            color={tmpl.color}
+                            onMouseEnter={() => setHoveredCard(tmpl.id)}
                             onMouseLeave={() => setHoveredCard(null)}
                             sx={{
                                 borderRadius: 4,
                                 transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                                transform: hoveredCard === t.id ? 'translateY(-8px)' : 'none',
+                                transform: hoveredCard === tmpl.id ? 'translateY(-8px)' : 'none',
                                 boxShadow:
-                                    hoveredCard === t.id
-                                        ? `0 16px 40px ${alpha(theme.palette[t.color].main, 0.2)}`
+                                    hoveredCard === tmpl.id
+                                        ? `0 16px 40px ${alpha(theme.palette[tmpl.color].main, 0.2)}`
                                         : theme.shadows[4],
-                                border: `1px solid ${alpha(theme.palette[t.color].main, 0.2)}`,
-                                background: `linear-gradient(to bottom, ${theme.palette.background.paper}, ${alpha(theme.palette[t.color].light, 0.05)})`,
+                                border: `1px solid ${alpha(theme.palette[tmpl.color].main, 0.2)}`,
+                                background: `linear-gradient(to bottom, ${theme.palette.background.paper}, ${alpha(theme.palette[tmpl.color].light, 0.05)})`,
                             }}
                         >
                             <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
@@ -646,9 +646,9 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                                     <Box
                                         sx={{
                                             p: 1,
-                                            bgcolor: alpha(theme.palette[t.color].main, 0.1),
+                                            bgcolor: alpha(theme.palette[tmpl.color].main, 0.1),
                                             borderRadius: '50%',
-                                            color: theme.palette[t.color].main,
+                                            color: theme.palette[tmpl.color].main,
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -656,38 +656,38 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                                             height: 40,
                                         }}
                                     >
-                                        {t.icon}
+                                        {tmpl.icon}
                                     </Box>
                                     <Typography
                                         variant="caption"
                                         fontWeight={700}
-                                        color={theme.palette[t.color].main}
+                                        color={theme.palette[tmpl.color].main}
                                         textTransform="uppercase"
                                         letterSpacing={0.5}
                                         sx={{
-                                            bgcolor: alpha(theme.palette[t.color].main, 0.1),
+                                            bgcolor: alpha(theme.palette[tmpl.color].main, 0.1),
                                             px: 1.5,
                                             py: 0.5,
                                             borderRadius: 3,
                                         }}
                                     >
-                                        {t.cat}
+                                        {tmpl.cat}
                                     </Typography>
                                     <Box sx={{ flex: 1 }} />
                                     <Box
                                         sx={{
                                             width: 60,
                                             height: 4,
-                                            bgcolor: alpha(theme.palette[t.color].main, 0.2),
+                                            bgcolor: alpha(theme.palette[tmpl.color].main, 0.2),
                                             borderRadius: 2,
                                             overflow: 'hidden',
                                         }}
                                     >
                                         <Box
                                             sx={{
-                                                width: `${t.pop}%`,
+                                                width: `${tmpl.pop}%`,
                                                 height: '100%',
-                                                bgcolor: theme.palette[t.color].main,
+                                                bgcolor: theme.palette[tmpl.color].main,
                                                 transition: 'width 0.5s ease',
                                             }}
                                         />
@@ -699,12 +699,12 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                                     fontWeight={700}
                                     sx={{
                                         mb: 1,
-                                        background: `linear-gradient(90deg, ${theme.palette.text.primary}, ${alpha(theme.palette[t.color].main, 0.9)})`,
+                                        background: `linear-gradient(90deg, ${theme.palette.text.primary}, ${alpha(theme.palette[tmpl.color].main, 0.9)})`,
                                         WebkitBackgroundClip: 'text',
                                         WebkitTextFillColor: 'transparent',
                                     }}
                                 >
-                                    {t.name}
+                                    {tmpl.name}
                                 </Typography>
 
                                 <Typography
@@ -717,7 +717,7 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                                         lineHeight: 1.5,
                                     }}
                                 >
-                                    {t.desc}
+                                    {tmpl.desc}
                                 </Typography>
 
                                 <Stack
@@ -727,12 +727,12 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                                     sx={{ mb: 2 }}
                                 >
                                     <Chip
-                                        label={t.trig}
+                                        label={tmpl.trig}
                                         size="small"
                                         variant="outlined"
                                         sx={{
-                                            borderColor: alpha(theme.palette[t.color].main, 0.5),
-                                            color: theme.palette[t.color].main,
+                                            borderColor: alpha(theme.palette[tmpl.color].main, 0.5),
+                                            color: theme.palette[tmpl.color].main,
                                             fontWeight: 600,
                                             fontSize: '0.7rem',
                                         }}
@@ -742,21 +742,21 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                                         color="text.secondary"
                                         sx={{ ml: 'auto', fontSize: '0.75rem' }}
                                     >
-                                        {t.actions.length} action{t.actions.length > 1 ? 's' : ''}
+                                        {tmpl.actions.length} action{tmpl.actions.length > 1 ? 's' : ''}
                                     </Typography>
                                 </Stack>
 
                                 <FloatingButton
                                     fullWidth
                                     variant="contained"
-                                    color={t.color}
+                                    color={tmpl.color}
                                     onClick={() =>
                                         onSelectTemplate({
-                                            name: t.name,
-                                            description: t.desc,
-                                            trigger: t.trigger,
-                                            triggerConfig: t.triggerConfig || {},
-                                            actions: t.actions || [],
+                                            name: tmpl.name,
+                                            description: tmpl.desc,
+                                            trigger: tmpl.trigger,
+                                            triggerConfig: tmpl.triggerConfig || {},
+                                            actions: tmpl.actions || [],
                                             status: 'active',
                                         })
                                     }
@@ -766,9 +766,9 @@ export default function WorkflowTemplates({ project, onBack, onSelectTemplate })
                                         borderRadius: 3,
                                         py: 1,
                                         letterSpacing: 0.5,
-                                        background: `linear-gradient(90deg, ${theme.palette[t.color].main}, ${theme.palette[t.color].dark})`,
+                                        background: `linear-gradient(90deg, ${theme.palette[tmpl.color].main}, ${theme.palette[tmpl.color].dark})`,
                                         '&:hover': {
-                                            background: `linear-gradient(90deg, ${theme.palette[t.color].dark}, ${theme.palette[t.color].dark})`,
+                                            background: `linear-gradient(90deg, ${theme.palette[tmpl.color].dark}, ${theme.palette[tmpl.color].dark})`,
                                         },
                                     }}
                                 >
