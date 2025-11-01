@@ -31,9 +31,6 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
 
-    <!-- GDPR Cookie Consent -->
-    <script type="text/javascript" charset="UTF-8" src="//cdn.cookie-script.com/s/b9ca5ac0de6429cd35cedc328b8808e7.js"></script>
-
     @php
         $page ??= [
             'component' => 'Landing',
