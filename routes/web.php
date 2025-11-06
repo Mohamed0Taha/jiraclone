@@ -21,6 +21,7 @@ use App\Http\Controllers\ProjectAssistantController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TwilioController;
+use App\Http\Controllers\LandingController;
 use App\Models\CertificationAttempt;
 use App\Models\Project;
 use App\Models\User;
@@ -53,6 +54,11 @@ Route::get('/', function (\App\Services\SubscriptionPlanService $planService) {
         'plans' => $planService->allWithPricing(),
     ]);
 })->name('landing');
+
+// Public: Landing prompt → AI tasks preview (no auth, rate limited)
+Route::post('/landing/generate', [LandingController::class, 'generatePreview'])
+    ->middleware('throttle:10,1')
+    ->name('landing.generate');
 
 // Blog routes (public, unauthenticated)
 Route::middleware([])->group(function () {
