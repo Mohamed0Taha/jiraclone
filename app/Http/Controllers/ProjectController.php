@@ -556,7 +556,7 @@ class ProjectController extends Controller
         // Increment usage (guard inside model ensures monthly reset)
         $user->incrementReportsUsage();
 
-        // Persist report record
+        // Persist report record with base64 PDF content for Heroku ephemeral filesystem
         try {
             \App\Models\ProjectReport::create([
                 'project_id' => $project->id,
@@ -564,13 +564,14 @@ class ProjectController extends Controller
                 'plan' => $user->getCurrentPlan(),
                 'storage_path' => $result['path'],
                 'public_url' => $result['download_url'],
+                'pdf_content' => base64_encode($result['pdf_output']),
                 'meta' => [
                     'summary' => $result['json']['summary'] ?? null,
                     'executive_summary' => $result['json']['executive_summary'] ?? null,
                     'charts' => $result['charts'] ?? null,
                     'generated_at' => $result['generated_at'] ?? now()->toISOString(),
                 ],
-                'size_bytes' => \Illuminate\Support\Facades\Storage::disk('public')->size($result['path']) ?? null,
+                'size_bytes' => strlen($result['pdf_output']),
                 'generated_at' => now(),
             ]);
         } catch (\Throwable $e) {
@@ -587,6 +588,36 @@ class ProjectController extends Controller
                 'limit' => $user->getReportsLimit(),
                 'remaining' => $user->getRemainingReports(),
             ],
+        ]);
+    }
+
+    /**
+     * Download the latest report PDF from database (Heroku-compatible)
+     */
+    public function downloadReport(Project $project)
+    {
+        $this->authorize('view', $project);
+
+        // Get the most recent report for this project
+        $report = \App\Models\ProjectReport::where('project_id', $project->id)
+            ->whereNotNull('pdf_content')
+            ->latest('generated_at')
+            ->first();
+
+        if (!$report || !$report->pdf_content) {
+            abort(404, 'Report not found or PDF content not available');
+        }
+
+        // Decode the base64 PDF content
+        $pdfContent = base64_decode($report->pdf_content);
+
+        // Generate filename
+        $filename = 'report-'.$project->id.'-'.now()->format('Ymd-His').'.pdf';
+
+        return response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Length' => strlen($pdfContent),
         ]);
     }
 

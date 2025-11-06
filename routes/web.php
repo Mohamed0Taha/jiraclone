@@ -491,6 +491,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/projects/{project}/report', [ProjectController::class, 'generateReport'])
         ->middleware('subscription:reports')
         ->name('projects.report.generate');
+    
+    // Download report from database (works with Heroku ephemeral filesystem)
+    Route::get('/projects/{project}/report/download', [ProjectController::class, 'downloadReport'])
+        ->name('projects.report.download');
 
     // Edit/Update before show
     Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])->name('projects.edit');

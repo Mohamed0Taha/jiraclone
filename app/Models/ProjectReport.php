@@ -10,7 +10,7 @@ class ProjectReport extends Model
     use HasFactory;
 
     protected $fillable = [
-        'project_id', 'user_id', 'plan', 'storage_path', 'public_url', 'meta', 'size_bytes', 'generated_at',
+        'project_id', 'user_id', 'plan', 'storage_path', 'public_url', 'pdf_content', 'meta', 'size_bytes', 'generated_at',
     ];
 
     protected $casts = [

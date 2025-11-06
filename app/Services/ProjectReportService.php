@@ -41,13 +41,14 @@ class ProjectReportService
 
         // Render professional HTML and create PDF
         $html = $this->renderProfessionalHtml($project, $json, $context, $analytics);
-        $path = $this->storePdf($project, $html);
+        $pdfResult = $this->storePdf($project, $html);
 
         return [
             'json' => $json,
             'html' => $html,
-            'path' => $path,
-            'download_url' => Storage::url($path),
+            'path' => $pdfResult['path'],
+            'pdf_output' => $pdfResult['output'],
+            'download_url' => Storage::url($pdfResult['path']),
             'analytics' => $analytics,
             'charts' => $charts,
             'generated_at' => now()->toISOString(),
@@ -1321,9 +1322,9 @@ HTML;
 
     /**
      * Render and store the PDF on the public disk.
-     * Returns the relative path (e.g. 'reports/projects/{id}/report-20250809-123456.pdf').
+     * Returns array with path and raw PDF output for database storage.
      */
-    protected function storePdf(Project $project, string $html): string
+    protected function storePdf(Project $project, string $html): array
     {
         $options = new Options;
         $options->set('isRemoteEnabled', true);
@@ -1347,6 +1348,9 @@ HTML;
             // some drivers don't support explicit visibility changes; ignore
         }
 
-        return $path;
+        return [
+            'path' => $path,
+            'output' => $output,
+        ];
     }
 }

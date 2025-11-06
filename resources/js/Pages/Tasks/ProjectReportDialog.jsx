@@ -172,10 +172,9 @@ export default function ProjectReportDialog({ open, onClose, project, tasks }) {
 
             const json = await res.json();
 
-            const stampedUrl =
-                json.download_url != null
-                    ? `${json.download_url}${json.download_url.includes('?') ? '&' : '?'}t=${Date.now()}&nonce=${nonce}`
-                    : null;
+            // Use database download route instead of storage URL (Heroku-compatible)
+            const downloadRoute = route('projects.report.download', { project: project.id });
+            const stampedUrl = `${downloadRoute}${downloadRoute.includes('?') ? '&' : '?'}t=${Date.now()}&nonce=${nonce}`;
 
             setDownloadUrl(stampedUrl);
             setSummary(json.summary ?? '');
